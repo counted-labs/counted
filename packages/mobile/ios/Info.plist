@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+	Checked-in iOS Info.plist, wired via `[application] ios_info_plist` in Dioxus.toml.
+
+	Why: dx 0.7.9 names the bundle from the cargo target (`mobile` -> `Mobile`) and ignores
+	`[application] name`, so the generated plist labelled the app "Mobile" on the Home Screen.
+
+	dx REPLACES its template with this file — it does not merge. Consequences:
+	  - `[permissions]`, `[deep_links]`, `[background]` and `[ios.plist]` sections in Dioxus.toml
+	    have no effect on iOS; add those keys here by hand.
+	  - CFBundleExecutable must stay `mobile` (the cargo target name) — it is the binary in the .app.
+	  - CFBundleShortVersionString is overridden from packages/mobile/Cargo.toml by codemagic.yaml.
+
+	Otherwise a verbatim copy of dioxus-cli v0.7.9 packages/cli/assets/ios/ios.plist.hbs.
+-->
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Counted</string>
+
+	<key>CFBundleExecutable</key>
+	<string>mobile</string>
+
+	<key>CFBundleIdentifier</key>
+	<string>fr.counted.app</string>
+
+	<key>CFBundleName</key>
+	<string>Counted</string>
+
+	<key>CFBundleVersion</key>
+	<string>0.2.0</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.2.0</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>fr_FR</string>
+
+	<!--
+		Deep links. Must be kept in sync with APP_SCHEME in packages/ui/src/common/share_link.rs
+		and with [deep_links] schemes in ../Dioxus.toml (which does nothing on iOS — see above).
+
+		This covers counted:// only. Universal links (https://counted.fr/projects/...) need the
+		com.apple.developer.associated-domains entitlement, which codemagic.yaml derives from the
+		provisioning profile — so it is enabled on the App ID in the Apple Developer portal, not
+		here. AltStore-signed builds re-sign with a personal team and never get it; counted:// is
+		the only handoff they have.
+
+		tao delivers both forms to Rust as Event::Opened — see packages/mobile/src/main.rs.
+	-->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>fr.counted.app</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>counted</string>
+			</array>
+		</dict>
+	</array>
+	<!--
+		UILaunchScreen, not UILaunchStoryboardName. dx renders the latter pointing at a `LaunchScreen`
+		storyboard it never generates, so iOS resolved it to nothing and painted BLACK until the webview
+		drew — see docs/dioxus-issues/mobile-no-native-splash-screen.md, where a dangling key is noted
+		as worse than no key at all. Upstream still has the bug; this repo ships its own plist, so it is
+		fixed here.
+
+		An empty dict is valid from iOS 13 and paints systemBackground (white). That is not the
+		#F4F8F6 the other three cold-start layers use (DOCUMENTATION.md §5.2.1) — the exact colour needs
+		UIColorName plus an asset catalog dx does not generate. White against #F4F8F6 is imperceptible;
+		black against either is the bug this closes.
+
+		info_plist_guard.rs fails the build if UILaunchStoryboardName comes back.
+	-->
+	<!--
+		Receipt scanning. The Scan button opens a `<input type="file" capture="environment">`, and
+		WKWebView presents the system camera for it — iOS TERMINATES the app if
+		NSCameraUsageDescription is absent when that happens, so this key is not optional. The
+		photo-library key covers the "Choose Photo" branch of the same sheet.
+
+		The OS renders both strings verbatim, in the bundle's development region (fr_FR).
+		info_plist_guard.rs fails the build if either goes missing.
+	-->
+	<key>NSCameraUsageDescription</key>
+	<string>Pour lire un ticket de caisse et pré-remplir la dépense. La photo est analysée sur votre téléphone, n'est jamais envoyée et n'est pas conservée.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Pour lire un ticket de caisse déjà photographié. L'image est analysée sur votre téléphone, n'est jamais envoyée et n'est pas conservée.</string>
+
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UISupportsTrueScreenSizeOnMac</key>
+	<true/>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+		<string>metal</string>
+	</array>
+	<key>UIDeviceFamily</key>
+	<array>
+		<integer>1</integer>
+		<integer>2</integer>
+	</array>
+	<key>CFBundleSupportedPlatforms</key>
+	<array>
+		<string>iPhoneOS</string>
+		<string>iPadOS</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+</dict>
+</plist>

@@ -1,0 +1,81 @@
+[package]
+name = "api"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+dioxus = { workspace = true, features = ["fullstack"] }
+shared = { path = "../shared" }
+
+# server deps
+# tokio = { version = "1", features = ["full"] }
+# tower-http = { version = "0.5.0", features = ["fs", "trace"] }
+
+# Serialisation
+serde = "1.0"
+serde_json = "1.0"
+
+# Tools
+anyhow = "1.0"
+# thiserror = "1.0"
+# Not optional, for the same reason as sha2: the security events live in `#[cfg(feature = "server")]`
+# bodies, but gating the dependency too would mean every call site needs its own cfg. The subscriber
+# is not here — `packages/web` installs one; a library that installs a subscriber steals the
+# binary's choice.
+tracing = "0.1"
+dotenvy = "0.15"
+uuid = "1.6"
+# rust_decimal = "1.37.1"
+chrono = "0.4.41"
+itertools = "0.13"
+sha2 = "0.10"
+
+# optional
+sqlx = { version = "0.8.6", features = [
+	"runtime-tokio",
+	"postgres",
+	"uuid",
+	"chrono",
+	"rust_decimal",
+	"derive",
+], optional = true }
+axum = { version = "0.7", optional = true }
+tokio = { version = "1.43.0", features = ["sync", "rt"], optional = true }
+reqwest = { version = "0.12", features = [
+	"json",
+	"rustls-tls",
+], optional = true }
+lettre = { version = "0.11", features = [
+	"smtp-transport",
+	"builder",
+	"tokio1-rustls-tls",
+], default-features = false, optional = true }
+rsa = { version = "0.9", features = ["pem"], optional = true }
+base64 = { version = "0.22", optional = true }
+rand = { version = "0.8", optional = true }
+hmac = { version = "0.12", optional = true }
+# Pure-Rust backend on purpose: aws-lc-rs needs cmake in the Docker builder and would move the
+# reproducible-build digest table for one ES256 and one RS256 signature.
+jsonwebtoken = { version = "11", default-features = false, features = ["use_pem", "rust_crypto"], optional = true }
+subtle = { version = "2.6", optional = true }
+dioxus-fullstack = { version = "0.7.9", optional = true }
+once_cell = "1.21.3"
+
+[features]
+server = [
+	"dioxus/server",
+	"shared/server",
+	"sqlx",
+	"axum",
+	"tokio",
+	"reqwest",
+	"rsa",
+	"base64",
+	"rand",
+	"hmac",
+	"jsonwebtoken",
+	"subtle",
+	"dioxus-fullstack",
+	"lettre",
+]

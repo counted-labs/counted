@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="@style/Theme.AppCompat.Light.NoActionBar">
+        <item name="windowActionModeOverlay">true</item>
+        <!-- The keyboard must not resize the window. Every modal is height-capped in dvh, so a
+             resize shrinks the sheet out from under whatever field is being edited. The WebView
+             still learns the IME height from the insets and scrolls the focused input into view
+             on its own. Switch to adjustPan if a field ever ends up under the keyboard. -->
+        <item name="android:windowSoftInputMode">adjustNothing</item>
+        <!-- The app is light-only (data-theme="counted") and targetSdk 35+ forces a transparent
+             status bar. Without this the system tints the clock/battery icons white and they
+             disappear against our white background. -->
+        <item name="android:windowLightStatusBar">true</item>
+        <!-- Painted by the system before wry has a surface, i.e. ahead of the in-webview splash in
+             index_html(). Defaulting to white made the launch flash white then base-200. #F4F8F6 is
+             the sRGB of the color-base-200 token (oklch(97.5% 0.004 165)). -->
+        <item name="android:windowBackground">#F4F8F6</item>
+    </style>
+</resources>

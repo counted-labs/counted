@@ -1,0 +1,42 @@
+# The public client build: the WASM bundle counted.fr serves, rebuilt from the public sources
+# alone, and the sha256 of every file it produces. Anyone can run it; nothing here needs the
+# private registry, the server module or a database.
+#
+#   docker buildx build --platform linux/amd64 -f Dockerfile.client --target sums --output type=local,dest=out .
+#   curl -s https://counted.fr/SHA256SUMS.txt | grep -v '  server$' | diff - out/SHA256SUMS.txt
+#
+# Same compiler digest as the private build (libraries/docker/tools/Dockerfile) and the same dx,
+# installed the same way. No `--fullstack`: packages/web does not name that feature directly, so
+# dx builds the client alone — the server pass would fail here, `packages/api/src/server/` being
+# absent from the mirror by design. docs/reproducible-builds.md has the whole argument.
+FROM rust:1.98-trixie@sha256:bf5a9aa29062a6cb03c49bd59a46eb55e3cc770caf598a221a7866e500be3082 AS builder
+
+ARG DIOXUS_CLI_VERSION=0.7.9
+
+WORKDIR /app
+
+RUN rustup target add wasm32-unknown-unknown
+
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+	--mount=type=cache,target=/usr/local/cargo/git \
+	cargo install dioxus-cli --locked --version "$DIOXUS_CLI_VERSION" --root /.cargo
+ENV PATH="/.cargo/bin:$PATH"
+
+COPY . .
+
+# `cmp` guards the lockfile exactly as the private Dockerfile does: a silently rewritten
+# Cargo.lock is the likeliest way two builds of one commit stop matching.
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+	--mount=type=cache,target=/usr/local/cargo/git \
+	cp Cargo.lock /tmp/Cargo.lock.before \
+	&& dx bundle --web --release --package web \
+	&& cmp Cargo.lock /tmp/Cargo.lock.before
+
+# Every file of the bundle by its URL path, minus index.html (the SSR handler answers that URL).
+# The private build's list has one extra line, `server`, which this build cannot produce.
+RUN cd /app/target/dx/web/release/web/public \
+	&& find . -type f ! -path ./index.html | LC_ALL=C sort | sed 's|^\./||' | xargs sha256sum \
+	> /app/SHA256SUMS.txt
+
+FROM scratch AS sums
+COPY --from=builder /app/SHA256SUMS.txt /

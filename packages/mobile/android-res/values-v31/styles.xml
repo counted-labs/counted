@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ variant of values/styles.xml. A qualified resource REPLACES the style rather
+         than merging into it, so every item from values/styles.xml has to be repeated here — drop
+         one and it silently reverts to the AppCompat default on API 31+. -->
+    <style name="AppTheme" parent="@style/Theme.AppCompat.Light.NoActionBar">
+        <item name="windowActionModeOverlay">true</item>
+        <item name="android:windowSoftInputMode">adjustNothing</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowBackground">#F4F8F6</item>
+
+        <!-- API 31+ always draws a system splash before the activity. It is documented to fall back
+             to windowBackground, but in practice it came up black with white status-bar icons, so
+             the cold start was black -> base-200 -> in-app SplashScreen. Setting it explicitly is
+             the whole fix: no androidx.core:core-splashscreen, no gradle or MainActivity change.
+             #F4F8F6 is the sRGB of the color-base-200 token, the value the in-app splash paints. -->
+        <item name="android:windowSplashScreenBackground">#F4F8F6</item>
+        <!-- Selects the system's "icon with background" branch (240dp window / 160dp icon), whose
+             1/3 mask lines up exactly with the adaptive icon's 108dp/72dp safe zone, so the mark
+             is centred here for the same reason it is on the launcher. White, to match the icon's
+             own ground in drawable/ic_launcher_background.xml — it reads as a white disc on
+             base-200, which is what the in-app splash hands over to. -->
+        <item name="android:windowSplashScreenIconBackgroundColor">#FFFFFF</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+    </style>
+</resources>

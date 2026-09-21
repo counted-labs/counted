@@ -1,0 +1,67 @@
+# cargo-deny configuration. Run locally with `cargo deny check`; CI gates on the `advisories`
+# section (see the `audit` job in .gitlab-ci.yml).
+
+[advisories]
+# Anything in the RustSec database fails the build unless it is listed below, with a reason.
+yanked = "deny"
+
+# Only unmaintained crates the workspace depends on directly. The desktop and mobile targets pull
+# the gtk-rs GTK3 bindings through wry, which are flagged unmaintained wholesale — nine advisories
+# for a dependency chain we neither chose nor can replace without leaving Dioxus. Gating on those
+# would mean an unfixable red build, which trains people to ignore the job that also reports real
+# vulnerabilities.
+unmaintained = "workspace"
+
+ignore = [
+  # RUSTSEC-2023-0071 — Marvin attack, a timing sidechannel in RSA private-key operations. No fixed
+  # release of the `rsa` crate exists, so this cannot be resolved by upgrading.
+  #
+  # Not reachable here. The only use of `rsa` is `RsaPrivateKey::new` — keygen — in the Tricount
+  # import handshake (packages/api/src/tricount/tricount_client.rs). The key is minted per request,
+  # used to receive a session token, and dropped on return. Nothing in this codebase performs an
+  # RSA *decryption*, and the Marvin oracle needs a decryption it can time repeatedly against a
+  # long-lived key. Re-check this if the Tricount client ever decrypts with the private key, or if
+  # the key stops being per-request.
+  "RUSTSEC-2023-0071",
+]
+
+# Gated in CI since 2026-09-11 (the `audit` job). The workspace crates are proprietary and
+# `publish = false`, which `private.ignore` exempts from the licence check — no licence field to
+# invent for code that is not distributed as a crate.
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"
+# The only "wildcards" on this tree are `{ workspace = true }` path dependencies between the
+# workspace crates, which carry no version because they are never published.
+allow-wildcard-paths = true
+
+[licenses]
+version = 2
+private = { ignore = true }
+# Permissive plus the weak-copyleft licences that show up in the TLS and compression stacks.
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Unicode-3.0",
+  "Zlib",
+  "MPL-2.0",
+  "CDLA-Permissive-2.0",
+  # Public-domain-equivalent and permissive, met on the server tree: base16 (CC0), quoted_printable
+  # via lettre (0BSD), xxhash-rust via rten (BSL-1.0), libfuzzer-sys via rten-imageproc (NCSA).
+  "CC0-1.0",
+  "0BSD",
+  "BSL-1.0",
+  "NCSA",
+]
+confidence-threshold = 0.9
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+# Nothing is vendored from git today, and this keeps it that way: a git dependency is an
+# unreviewable moving target in a build that produces a production binary.
+allow-git = []

@@ -1,0 +1,9 @@
+.git
+target
+**/target
+node_modules
+packages/ocr/models
+packages/ocr/tests
+*.md
+Dockerfile*
+.dockerignore

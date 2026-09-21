@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The status-bar icon Android tints itself, so it is the assets/counted.svg mark in one flat
+     colour: the five-edge hexagonal C and the solid core. Vector so it stays crisp at every
+     density without another set of generated PNGs. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <path
+        android:pathData="M408.42 168 L256 80 L103.58 168 L103.58 344 L256 432 L408.42 344"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="64"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M256 180 L321.82 218 L321.82 294 L256 332 L190.18 294 L190.18 218 Z"
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="18"
+        android:strokeLineJoin="round" />
+</vector>

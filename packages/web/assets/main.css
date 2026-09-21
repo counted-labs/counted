@@ -1,0 +1,165 @@
+/* iOS Safari auto-zooms on focus when font-size < 16px; force 16px to prevent it. */
+input, textarea, select {
+  font-size: 16px !important;
+}
+
+/* Brand gradient utilities (emerald → teal) */
+.bg-gradient-brand {
+  background-image: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+}
+
+.text-gradient-brand {
+  background-image: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* iOS renders input[type=date]'s value centred inside its shadow root, and gives the control a
+   large intrinsic width that overflows a flex parent. Both make a date field look unlike every
+   other field in the app; fixed once here rather than at each call site. */
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+input[type="date"] {
+  min-width: 0;
+}
+
+/* Elevation token. Three stops, not one: the tight 1px contact stop is what makes an edge
+   readable on a base-100 page (cards and shells are the same white), the mid stop carries the
+   lift, the wide stop the ambient.
+
+   `.filter .btn` rides along: DaisyUI's own `.btn` box-shadow is transparent under this theme's
+   `--depth: 0`, so the filter chips in `expenses_tab.rs` — the only remaining `.filter` on any
+   page — would otherwise be the one flat surface in their toolbar row. This file is unlayered,
+   so it outranks DaisyUI's `@layer components` without !important. */
+.shadow-soft,
+.filter .btn {
+  box-shadow:
+    0 1px 2px oklch(30% 0.02 60 / 0.06),
+    0 3px 6px -2px oklch(30% 0.02 60 / 0.07),
+    0 8px 18px -6px oklch(30% 0.02 60 / 0.10);
+}
+
+/* Focus. DaisyUI paints a 2px `base-content` (near-black) outline 2px off the field, on
+   :focus as well as :focus-within — a hard, browser-default-looking box. `--depth: 0`
+   makes its companion box-shadow transparent, so that ring is the whole affordance.
+   Replace it with the brand colour: the field's own border turns primary, wrapped in a
+   soft primary halo, nothing detached.
+
+   `--input-color` is DaisyUI's own variable and the base border reads it, so redefining
+   it recolours the border with no extra rule. Only --input-color / outline / box-shadow
+   are overridden, so DaisyUI's `isolation: isolate; z-index: 1` still applies and keeps
+   the halo above neighbouring fields.
+
+   The 1px ring inside the box-shadow is not decoration: it doubles the solid primary
+   perimeter to ~2px next to the border, and it is the only indicator on the `border-0`
+   fields in charts.rs. The halo is --color-primary at 18%, written literally (as
+   .shadow-soft above already does) because color-mix() lands later in WebViews than the
+   oklch() the theme already requires. */
+.input:focus, .input:focus-within,
+.select:focus, .select:focus-within,
+.textarea:focus, .textarea:focus-within {
+  --input-color: var(--color-primary);
+  outline: none;
+  box-shadow: 0 0 0 5px oklch(62% 0.15 162 / 0.18);
+}
+
+/* Selection controls fire on :focus-visible (keyboard only) and have no border to
+   recolour, so the crisp ring carries the whole indicator — 2px here. */
+.checkbox:focus-visible,
+.radio:focus-visible,
+.toggle:focus-visible,
+.toggle:has(:focus-visible) {
+  outline: none;
+  box-shadow: 0 0 0 5px oklch(62% 0.15 162 / 0.18);
+}
+
+/* box-shadow is dropped in forced-colors mode — put a real outline back. */
+@media (forced-colors: active) {
+  .input:focus, .input:focus-within,
+  .select:focus, .select:focus-within,
+  .textarea:focus, .textarea:focus-within,
+  .checkbox:focus-visible, .radio:focus-visible,
+  .toggle:focus-visible, .toggle:has(:focus-visible) {
+    outline: 2px solid;
+    outline-offset: 2px;
+  }
+}
+
+/* Failsafe for #counted-splash (packages/ui/src/common/splash.rs). The splash is removed by
+   use_client_ready(), which never fires if the wasm bundle fails to boot — without this a wasm
+   failure would hide a perfectly good SSR'd page forever. opacity/visibility rather than display:
+   discrete `display` animation is too new for older Android WebViews. On the normal path the
+   element is gone long before this fires. */
+#counted-splash {
+  animation: counted-splash-failsafe 0.3s ease 8s forwards;
+}
+
+@keyframes counted-splash-failsafe {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+.card {
+  padding: 1rem;
+}
+
+/* user-select/callout off: the card is long-pressable (ProjectCard opens its actions menu on a
+   500ms hold), and without this the hold first raises the mobile browser's own text-selection
+   UI — iOS's callout, Android's floating toolbar — on top of the card's text. */
+.card-clickable {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  /* The pressed state touch actually gets. Without it a tap has no feedback at all: the hover
+     below is the only thing that ever painted, and on a touch device it paints at the wrong time. */
+  &:active {
+    background-color: var(--color-base-300);
+  }
+  /* Wrapped, unlike every other rule in this file, because this is the one hand-written hover in
+     the app — Tailwind already wraps its own `hover:` utilities the same way. iOS latches :hover
+     on tap and holds it until you tap elsewhere, so unwrapped it left a card highlighted behind
+     the page it had just opened. Guarded by stylesheet_guard.rs. */
+  @media (hover: hover) {
+    &:hover {
+      cursor: pointer;
+      background-color: var(--color-base-200);
+    }
+  }
+}
+
+.app-container {
+  height: calc(100dvh - 1rem);
+  border-radius: 1.5rem;
+}
+
+.modal-box {
+  max-height: calc(100dvh - 1rem);
+}
+
+/* Bottom dock / FAB offsets. Mobile's main.css re-declares these with the
+   safe-area insets added; on web the insets are always zero. */
+.safe-bottom-dock {
+  bottom: 1.5rem;
+}
+
+.safe-bottom-fab {
+  bottom: 6rem;
+}
+
+/* Honour the OS "reduce motion" setting. Unlayered, so it beats Tailwind transition
+   utilities without !important on every call site. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

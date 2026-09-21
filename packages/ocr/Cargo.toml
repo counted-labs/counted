@@ -1,0 +1,29 @@
+[package]
+name = "ocr"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[features]
+default = ["models"]
+# Off => no include_bytes!, no engine/detect/recognise/image. `parse` still compiles and tests.
+# That is what lets `cargo test -p ocr --no-default-features` run in a checkout whose LFS blobs were
+# never pulled, instead of failing on 130-byte pointer files with an unreadable rten error.
+models = ["dep:rten", "dep:rten-tensor", "dep:rten-imageproc", "dep:image"]
+
+[dependencies]
+# Pure Rust, no C dependency, Arm NEON — which is what makes aarch64-linux-android and
+# aarch64-apple-ios build with no NDK C++ toolchain and no CI change. See docs/plans/ocr-receipt-scan.md.
+rten = { version = "0.26", optional = true }
+rten-tensor = { version = "0.26", optional = true }
+rten-imageproc = { version = "0.26", optional = true }
+# `jpeg` alone, and default-features = false: that backend is zune-jpeg, pure Rust. Enabling
+# defaults would drag in codecs this never decodes, and the C-backed ones would break the above.
+image = { version = "0.25", default-features = false, features = ["jpeg"], optional = true }
+chrono = { version = "0.4.41", default-features = false, features = ["clock", "std"] }
+
+# Identical spec to the optional dependency above, so feature unification changes nothing in the
+# shipped binary — the `models` feature already enables exactly this. Integration tests link only
+# against this crate's public API, so `tests/framing.rs` cannot reach the dependency otherwise.
+[dev-dependencies]
+image = { version = "0.25", default-features = false, features = ["jpeg"] }

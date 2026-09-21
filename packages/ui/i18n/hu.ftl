@@ -1,0 +1,572 @@
+# Magyar. Teljes, a jogi szövegek (legal-, terms-, privacy-) kivételével, amelyek csak angolul és
+# franciául léteznek, és üzenetenként az en.ftl-re esnek vissza.
+
+### Common
+
+loading = Betöltés…
+cancel = Mégse
+confirm = Megerősítés
+retry = Újra
+delete = Törlés
+back = Vissza
+language = Nyelv
+
+### Navigation
+
+nav-main = Főnavigáció
+nav-projects = Projektek
+nav-charts = Statisztika
+nav-settings = Beállítások
+
+### Connectivity
+
+offline-banner = Offline
+offline-pending =
+    { $count ->
+        [one] { $count } függőben
+       *[other] { $count } függőben
+    }
+
+sync-conflict-edit = Ütközés: „{ $name }” szerkesztése nem sikerült (a tétel törölve). Kihagyva.
+sync-conflict-delete = Ütközés: „{ $name }” törlése nem sikerült (a tétel törölve). Kihagyva.
+sync-conflict-other = Ütközés: a művelet „{ $name }” tételen nem sikerült (a tétel törölve). Kihagyva.
+sync-error = Szinkronizálási hiba: { $reason }
+
+### Errors
+
+error-network = A szerver nem érhető el. Ellenőrizd az internetkapcsolatot.
+error-generic = Valami hiba történt. Próbáld újra.
+
+error-invalid-email = Ez az e-mail-cím érvénytelen.
+error-invalid-password = Ez a jelszó érvénytelen.
+error-password-too-short = A jelszónak legalább 8 karakter hosszúnak kell lennie.
+error-client-outdated = Az alkalmazás ezen verziója elavult. Frissítsd a bejelentkezéshez.
+error-invalid-link = Ez a link érvénytelen.
+error-batch-too-large = Túl sok elem egyszerre.
+error-payers-required = Válassz legalább egy fizetőt.
+error-debtors-required = Válassz legalább egy személyt, aki tartozik.
+error-duplicate-participant = Egy résztvevő kétszer szerepel ugyanazon az oldalon.
+error-participant-not-in-project = Ez a résztvevő nem tagja a projektnek.
+error-too-many-participants = Túl sok résztvevő egy kiadáshoz.
+error-invalid-credentials = Hibás e-mail-cím vagy jelszó.
+error-unauthenticated = Ehhez jelentkezz be.
+error-email-not-verified = Az e-mail-címed még nincs megerősítve.
+error-project-not-found = Ez a projekt már nem létezik.
+error-expense-not-found = Ez a kiadás már nem létezik.
+error-user-not-found = Ez a résztvevő már nem létezik.
+error-tricount-not-found = A Tricount nem található, vagy az API-ja hibát adott vissza.
+error-too-many-members = Ez a projekt elérte a tagok számának határát.
+error-identity-taken = Egy másik fiók már magáénak jelölte ezt a résztvevőt.
+error-claim-proof-invalid = Ez az eszköz nem rendelkezik a projekt kulcsával, így nem jelölhet meg résztvevőt. Nyisd meg újra a megosztási linket.
+error-user-has-payments = Ennek a résztvevőnek kiadásai vannak a projektben, ezért nem távolítható el.
+error-resend-cooldown = Várj 60 másodpercet, mielőtt újabb e-mailt kérsz.
+error-self-friend-request = Magadat nem veheted fel barátnak.
+error-not-a-friend = Csak a barátlistádon szereplőket hívhatod meg.
+error-friend-has-no-key = Ez a barátod még nem nyitotta meg az alkalmazás legújabb verzióját. Kérd meg, hogy egyszer jelentkezzen be, aztán próbáld újra.
+error-friend-request-not-found = Ez a barátkérelem már nem létezik.
+error-invitation-not-found = Ez a meghívó már nem létezik.
+error-too-many-friend-requests = Egyelőre túl sok barátkérelem. Próbáld holnap.
+error-too-many-invitations = Túl sok függőben lévő meghívó.
+
+### Auth
+
+field-email = E-mail
+field-email-placeholder = te@pelda.hu
+field-password = Jelszó
+field-name = Név
+field-name-placeholder = Kovács Anna
+
+login-title = Bejelentkezés
+login-submit = Bejelentkezés
+login-submitting = Bejelentkezés…
+login-password-placeholder = A jelszavad
+login-no-account = Még nincs fiókod?
+login-unverified = Az e-mail-címed még nincs megerősítve. Nézd meg a postaládád, vagy küldd el újra a linket.
+login-resend = Megerősítő link újraküldése
+login-resending = Küldés…
+login-resend-sent = E-mail elküldve - nézd meg a postaládád.
+
+register-submit = Fiók létrehozása
+register-submitting = Létrehozás…
+register-have-account = Már van fiókod?
+register-password-placeholder = Legalább 8 karakter
+register-password-warning = Írd fel a jelszavad. Ha elfelejted, a fiókod nem állítható helyre.
+register-check-email-title = Nézd meg az e-mailjeidet
+register-email-sent = E-mail elküldve
+register-email-sent-hint = Kattints a postaládádban lévő linkre a fiók aktiválásához.
+register-not-received-prefix = Nem kaptad meg? Nézd meg a spam mappát, vagy
+register-sign-in-link = jelentkezz be
+register-not-received-suffix = a link újraküldéséhez.
+register-terms-prefix = A fiók létrehozásával elfogadod a
+register-terms-link = felhasználási feltételeinket
+register-terms-and = és az
+register-privacy-link = adatvédelmi tájékoztatónkat
+
+settings-title = Beállítások
+settings-preferences = Beállítások
+settings-preferences-local = Ezen az eszközön tárolva.
+settings-preferences-synced = A fiókoddal szinkronizálva, titkosítva.
+settings-about = Névjegy
+settings-anonymous-title = Nem vagy bejelentkezve
+settings-upsell-title = A projektjeid, minden eszközön
+settings-upsell-free = Ingyenes
+settings-upsell-body = A Counted fiók nélkül is működik. Ingyenes fiókkal a projektjeid és beállításaid követnek a telefonodra, a laptopodra és a webre - továbbra is titkosítva, továbbra is olvashatatlanul számunkra.
+settings-locked-badge = Fiók
+settings-locked-friends = Hozz létre fiókot, hogy barátokat adj hozzá és meghívd őket egy projektbe az alkalmazásból - link küldözgetése nélkül.
+settings-locked-payment-methods = Mentsd el egyszer az IBAN-od vagy a fizetési appod, és oszd meg a választott projektekkel. Aki tartozik neked, a neved mellett látja.
+settings-friends-hint = Adj hozzá barátokat és hívd meg őket a projektjeidbe link megosztása nélkül.
+
+account-member-since = Tag ekkortól
+account-logout = Kijelentkezés
+account-logging-out = Kijelentkezés…
+account-delete-title = Fiókom törlése
+account-delete-warning = Azonnali és végleges, lomtár nélkül. A megosztott projektben rögzített kiadásaid a többi tag számára láthatók maradnak - az ő elszámolásuk része.
+account-delete-confirm-title = Fiók törlése
+account-delete-confirm-message = A fiókod, a munkameneteid és a projektlistád végleg törlődik. A jelszavad nélkül a megosztott projekt titkosított adatai olvashatatlanná válnak számodra - ez nem vonható vissza.
+
+settings-payment-methods = Fizetési adatok
+settings-payment-methods-hint = Hogyan szeretnéd visszakapni a pénzed. A fiókoddal titkosítva.
+payment-method-kind = Mód
+payment-method-kind-other = Egyéb
+payment-method-label = Név
+payment-method-label-placeholder = Fő számla
+payment-method-value = Adatok
+payment-method-value-placeholder = IBAN, telefonszám, felhasználónév…
+payment-method-add = Hozzáadás
+payment-method-remove = { $name } eltávolítása
+payment-method-empty = Még nem adtál meg fizetési adatokat.
+payment-method-deleted = Fizetési mód törölve.
+payment-method-value-required = Töltsd ki minden fizetési mód adatait, vagy távolítsd el.
+payment-method-label-required = Adj nevet az egyéni fizetési módnak.
+payment-method-too-long = Ez túl hosszú - rövidítsd le.
+payment-method-invalid-characters = Távolítsd el a sortöréseket vagy láthatatlan karaktereket.
+payment-method-limit = Legfeljebb { $max } fizetési módot menthetsz.
+payment-methods-saved = Fizetési adatok mentve.
+payment-methods-offline = A fizetési adatok mentéséhez online kell lenned.
+payment-methods-stale = A fizetési adataid egy másik eszközön módosultak. Újratöltöttük őket — próbáld újra.
+payment-methods-key-missing = Jelentkezz be újra a fizetési adatok kezeléséhez.
+settings-payment-methods-share-warning = A megosztott mód látható minden olyan projekt tagjai számára, ahol kiválasztottad a neved - bárkinek, aki rendelkezik az egyik linkkel.
+payment-method-share = Megosztás a projektjeimmel
+payment-method-share-hint = A neved mellett jelenik meg, ha valaki tartozik neked.
+payment-method-copy = { $name } másolása
+payment-method-copied = Másolva.
+payment-method-copy-failed = Nem sikerült másolni - jelöld ki a szöveget és másold kézzel.
+
+verify-email-checking = E-mail-cím megerősítése…
+verify-email-welcome = E-mail megerősítve - üdv a Countedben!
+verify-email-back-to-login = Vissza a bejelentkezéshez
+
+### Project status
+
+project-close = Lezárás
+project-archive = Archiválás
+project-reopen = Újranyitás
+project-unarchive = Visszaállítás archívumból
+
+### Dates
+
+date-long = { $year }. { $month } { $day }.
+
+month-1 = január
+month-2 = február
+month-3 = március
+month-4 = április
+month-5 = május
+month-6 = június
+month-7 = július
+month-8 = augusztus
+month-9 = szeptember
+month-10 = október
+month-11 = november
+month-12 = december
+
+month-short-1 = jan
+month-short-2 = feb
+month-short-3 = már
+month-short-4 = ápr
+month-short-5 = máj
+month-short-6 = jún
+month-short-7 = júl
+month-short-8 = aug
+month-short-9 = sze
+month-short-10 = okt
+month-short-11 = nov
+month-short-12 = dec
+
+### Actions
+
+add = Hozzáadás
+create = Létrehozás
+creating = Létrehozás…
+edit = Szerkesztés
+leave = Kilépés
+close = Bezárás
+paste = Beillesztés
+join = Csatlakozás
+import = Importálás
+importing = Importálás…
+field-description = Leírás
+field-date = Dátum
+field-optional = Nem kötelező
+
+### Projects
+
+projects-filter-active = Aktív
+projects-filter-all = Összes
+projects-count-label = Projektek
+projects-empty = Nincs projekt
+projects-empty-hint = Hozz létre egy projektet a lenti gombbal
+projects-offline-banner = Offline adatok - frissítéshez csatlakozz újra.
+projects-no-local-data = Nincsenek helyi adatok
+projects-no-local-data-hint = Jelentkezz be a projektjeid első betöltéséhez.
+projects-add = Projekt hozzáadása
+projects-create = Projekt létrehozása
+projects-join = Csatlakozás projekthez
+projects-import-tricount = Importálás Tricountból
+project-actions = Projektműveletek
+
+status-ongoing = Folyamatban
+status-closed = Lezárva
+status-archived = Archiválva
+
+nav-help = Súgó
+nav-privacy = Adatvédelmi tájékoztató
+nav-terms = Felhasználási feltételek
+nav-legal = Impresszum
+
+leave-project-title = Kilépsz a projektből?
+leave-project-message = Erről az eszközről elveszíted a hozzáférést. Ha nem marad egyetlen tag sem, a projekt és minden kiadása végleg törlődik.
+
+add-project-title = Új projekt
+add-project-name-label = Projekt neve
+add-project-name-placeholder = Utazásom, Lakótársak 2024…
+add-project-participants = Résztvevők
+add-project-participant-name = Résztvevő neve
+add-project-participant-placeholder = Clark Kent
+add-project-remove-participant = Résztvevő eltávolítása
+add-project-me-badge = Én
+add-project-thats-me = Ez én vagyok!
+add-project-offline = Offline nem hozhatsz létre projektet. Csatlakozz újra, és próbáld meg ismét.
+add-project-name-required = A projektnek névre van szüksége.
+add-project-need-two-participants = Adj hozzá legalább 2 résztvevőt.
+add-project-pick-yourself = Mondd meg, melyik résztvevő vagy te.
+
+join-link-label = Megosztási link
+join-link-hint = A link tartalmazza a visszafejtő kulcsot - másold ki teljes egészében.
+join-invalid-link = Ez a link érvénytelen. Illeszd be a teljes megosztási linket, a # utáni résszel együtt.
+join-wrong-project = Ez a link egy másik projekthez tartozik.
+
+import-tricount-link-label = Tricount link vagy kulcs
+import-tricount-key-required = Adj meg egy Tricount linket vagy kulcsot.
+import-tricount-encryption-failed = A titkosítás nem sikerült.
+
+### Expenses
+
+save = Mentés
+saving = Mentés…
+adding = Hozzáadás…
+link-copied = Link másolva
+missing-encryption-key = Hiányzik a titkosítási kulcs.
+missing-encryption-key-title = Hiányzik a titkosítási kulcs
+missing-encryption-key-hint = A használt link nem tartalmazza a projekt visszafejtéséhez szükséges kulcsot. Használd a teljes linket, amit a projekt létrehozója megosztott.
+project-locked-hint = Ezen az eszközön nincs meg a projekt kulcsa. Nyisd meg a megosztási linkjét a feloldáshoz.
+project-unlock = Feloldás
+project-no-local-data-hint = Jelentkezz be a projekt adatainak első betöltéséhez.
+project-gone-title = Ez a projekt már nem létezik
+project-gone-hint = Törlődött, amikor az utolsó tagja kilépett. A megosztási link már nem működik, akkor sem, ha újra megnyitod.
+
+expense-add = Kiadás hozzáadása
+transfer-add = Átutalás hozzáadása
+expense-edit-title = Kiadás szerkesztése
+expense-category = Kategória
+expense-category-auto = Auto · { $emoji }
+expense-currency = Az összeg pénzneme
+amount-op-add = Plusz
+amount-op-subtract = Mínusz
+amount-op-multiply = Szorzás
+amount-op-divide = Osztás
+expense-rate = Árfolyam (nem kötelező)
+expense-rate-hint = Hagyd üresen az Európai Bizottság (InforEuro) { $month } havi árfolyamához: 1 { $from } = { $rate } { $to }.
+expense-rate-invalid = Adj meg 0-nál nagyobb árfolyamot.
+expense-rate-unavailable = Nincs automatikus árfolyam - add meg kézzel.
+expense-delete-title = Kiadás törlése
+expense-delete-message = „{ $name }” végleg törlődik. Ez nem vonható vissza.
+expense-inconsistent-amounts = Az összegek nem egyeznek
+expenses-empty = Nincs kiadás
+expenses-empty-hint = Kezdd kiadások hozzáadásával a lenti gombbal
+expenses-show-more = Több mutatása (még { $count })
+
+expense-type-expense = Kiadás
+expense-type-transfer = Átutalás
+expense-type-gain = Bevétel
+expense-paid-by = fizette:
+expense-sent-by = küldte:
+expense-contributed-by = hozzájárult:
+
+expense-name-required = A név kötelező.
+expense-amount-not-positive = Az összegnek 0-nál nagyobbnak kell lennie.
+expense-no-payer = Válassz legalább egy fizetőt.
+expense-no-debtor = Válassz legalább egy személyt, aki tartozik.
+expense-invalid-date = Ez a dátum érvénytelen.
+expense-payers-mismatch = A fizetők összege { $sum }, ami nem egyezik a kiadás összegével ({ $total }).
+expense-debtors-mismatch = A tartozók összege { $sum }, ami nem egyezik a kiadás összegével ({ $total }).
+
+participants-none = Senki
+participants-everyone = Mindenki ({ $count })
+participants-some = { $count } / { $total }
+participants-select-all = Összes kijelölése
+participants-deselect-all = Kijelölés törlése
+participants-by-shares = Részarány szerint
+participants-remaining = Még { $amount }
+participants-over-by = { $amount } többlet
+participants-who-paid = Ki fizetett?
+participants-who-received = Ki kapta?
+participants-who-transfers = Ki utal?
+participants-who-receives = Ki kapja?
+participants-for-whom = Kinek?
+
+stats-total-expenses = Összes kiadás
+stats-my-expenses = Saját kiadásaim
+
+tab-expenses = Kiadások
+tab-balance = Egyenleg
+tab-reimbursements = Elszámolás
+reimbursements-empty-title = Minden el van számolva!
+reimbursements-empty-hint = Az elszámolási javaslatok itt jelennek meg, ha az egyenlegek nem egyeznek
+reimbursement-owes = { $debtor } tartozik { $creditor } részére
+reimbursement-record = Elszámolás
+reimbursement-pay-with = Fizetés
+reimbursement-pay-shared-by = { $name } osztotta meg - küldés előtt ellenőrizd az appod által mutatott címzett nevét.
+reimbursement-pay-title = Fizetés { $name } részére
+reimbursements-mine-title = Te tartozol
+reimbursements-others-title = Egyéb visszafizetések
+copy = Másolás
+
+user-selection-title = Melyik résztvevő vagy?
+user-selection-hint = Válaszd ki a neved a listából.
+user-selection-required = Válassz egy résztvevőt.
+identity-claimed = Fiókhoz kapcsolva
+identity-claimed-by = { $name } fiókja
+identity-taken-repick = Egy másik fiók magáénak jelölte az általad használt résztvevőt. Válassz másikat.
+participant-gone-repick = Az általad használt résztvevőt eltávolították a projektből. Válassz másikat.
+
+edit-project-title = Projekt szerkesztése
+edit-project-new-badge = új
+edit-project-deferred-new-members = új tagok hozzáadása
+edit-project-deferred-removals = tagok eltávolítása
+edit-project-deferred-me = az „Ez én vagyok” kijelölés
+edit-project-offline-deferred = Offline: { $items } újracsatlakozáskor lép érvénybe.
+
+export-saved = Fájl mentve:
+    { $path }
+export-failed = Az exportálás nem sikerült: { $reason }
+
+history-expense-added = Kiadás hozzáadva: { $name }
+history-expense-edited = Kiadás szerkesztve: { $name }
+history-expense-deleted = Kiadás törölve: { $name }
+history-project-edited = Projekt szerkesztve: { $name }
+history-name-changed = Név: „{ $from }” → „{ $to }”
+history-description-added = Leírás hozzáadva: „{ $value }”
+history-description-removed = Leírás eltávolítva: „{ $value }”
+history-description-changed = Leírás: „{ $from }” → „{ $to }”
+
+### Sweep
+
+field-amount = Összeg
+expense-name-placeholder = Étterem, bevásárlás…
+expense-actions = Kiadásműveletek
+expense-your-share = A te részed
+expense-your-share-value = A te részed: { $amount } { $currency }
+expense-inconsistent-detail = Az összegek nem egyeznek: { $paid } fizetve, { $owed } tartozás, egy { $total } összegű kiadásnál. Szerkeszd a kiadást a javításhoz.
+missing-access-key = Hiányzik a hozzáférési kulcs. Nyisd meg a projektet a megosztási linkjén keresztül.
+filter-all = Összes
+filter-my-payments = Saját fizetéseim
+filter-my-debts = Amivel tartozom
+participants-shares-for = { $name } részaránya
+participants-amount-for = { $name } összege
+reimbursement-add = Elszámolás hozzáadása
+project-forget = Eltávolítás a listámról
+project-history-title = Előzmények
+history-kind-add = Hozzáadva
+history-kind-delete = Törölve
+history-kind-edit = Szerkesztve
+export = Exportálás
+export-json = Exportálás JSON-ba
+export-csv = Exportálás CSV-be
+share-link = Megosztás
+copy-link-failed = A linket nem sikerült másolni
+open-in-app = Megnyitás az alkalmazásban
+not-found-title = Az oldal nem található
+not-found-back = Vissza a projektekhez
+
+### Charts
+
+charts-period = Időszak
+period-all = Összes
+period-month = Hónap
+period-3months = 3 hó
+period-year = Év
+period-custom = Egyéni
+charts-tab-categories = Kategóriák
+charts-tab-per-person = Személyenként
+charts-tab-trends = Trendek
+charts-by-category = Bontás kategóriák szerint
+charts-per-person = Kiadás személyenként
+charts-categories-by-month = Kategóriák havonta
+charts-total-spent = Összes költés
+charts-avg-per-person = Átlag/fő
+charts-expense-count =
+    { $count ->
+        [one] { $count } kiadás
+       *[other] { $count } kiadás
+    }
+charts-clear-category-filter = Kategóriaszűrő törlése
+charts-no-expenses = Nincs kiadás.
+charts-pick-a-project = Válassz egy projektet a személyenkénti kiadásokhoz.
+charts-nothing-to-show = Nincs megjeleníthető adat
+charts-my-share-note = Ezek a számok a te részed minden kiadásból.
+charts-my-share-skipped =
+    { $count ->
+        [one] 1 projekt nincs beszámítva — nincs kiválasztott résztvevő, vagy az adatai nem töltődtek be.
+       *[other] { $count } projekt nincs beszámítva — nincs kiválasztott résztvevő, vagy az adataik nem töltődtek be.
+    }
+
+### Categories
+
+category-food = Étel
+category-transport = Közlekedés
+category-accommodation = Szállás
+category-leisure = Szabadidő
+category-shopping = Vásárlás
+category-services = Szolgáltatások
+category-parties-gifts = Bulik és ajándékok
+category-other = Egyéb
+charts-person = Személy
+charts-project = Projekt
+charts-all-projects = Összes projekt
+charts-whole-project = Teljes projekt
+charts-date-from = Ettől
+charts-date-to = Eddig
+charts-total = Összesen
+charts-payments-per-person-by-month = Fizetések személyenként havonta
+history-empty = Nincs esemény
+history-by = { $name }
+not-found-hint = Ez az oldal nem létezik, vagy elköltözött.
+payers-title-paid-by = Fizette
+payers-title-sender = Küldő
+payers-title-contributors = Hozzájárulók
+debtors-title-debtors = Tartozik
+debtors-title-recipients = Címzettek
+debtors-title-beneficiaries = Kedvezményezettek
+
+### Welcome
+
+welcome-title = Az elszámolásod senki másra nem tartozik.
+welcome-subtitle = Oszd meg a kiadásokat a barátaiddal.
+welcome-e2ee-title = Minden titkosítva
+welcome-e2ee-body = Nevek, összegek, projektek: minden az eszközödön titkosítódik. Egyedül te birtoklod a kulcsot. Senki sem olvashatja el az elszámolásaidat. Még mi sem.
+welcome-e2ee-note = Olvashatatlan, még nekünk is (zéró szerveroldali hozzáférés)
+welcome-eu-title = 100% európai
+welcome-eu-body = Szerverek Németországban, e-mailek Franciaországból. Az adataid soha nem hagyják el az Európai Uniót.
+welcome-noads-title = Nincs reklám. Nincs nyomkövető.
+welcome-noads-body = Semmit nem gyűjtünk, és nem adjuk el az adataidat. Nem ez a modellünk.
+welcome-start = Kezdjük
+welcome-how-it-works = Pontosan hogyan működik?
+
+### Help
+
+help-intro = Gyakori kérdés? Koppints a válasz kibontásához.
+help-create-project-q = Hogyan hozok létre projektet?
+help-create-project-a = A kezdőképernyőn koppints az alsó + gombra. Adj nevet a projektnek, válassz pénznemet, és kész.
+help-add-participants-q = Hogyan adok hozzá résztvevőket?
+help-add-participants-a = Nyisd meg a projektet, majd add hozzá a résztvevőket a taglistából. Minden résztvevő fizethet vagy tartozhat egy kiadásnál.
+help-share-project-q = Hogyan osztok meg egy projektet?
+help-share-project-a = Oszd meg a projekt URL-jét (ami a címsorban van). Bárki, akinek megvan a link, megtekintheti és szerkesztheti a projektet.
+help-add-expense-q = Hogyan adok hozzá kiadást?
+help-add-expense-a = Egy projektben koppints a + gombra, add meg az összeget, hogy ki fizetett és kik között osztjuk el. A mai helyett más dátumot is választhatsz.
+help-types-q = Mi a különbség kiadás, átutalás és bevétel között?
+help-types-expense = - egy személy vásárlása, több személy között elosztva.
+help-types-transfer = - visszafizetés egyik személytől a másiknak, elosztás nélkül.
+help-types-gain = - kapott pénz (visszatérítés, ajándék), több személy között elosztva.
+help-past-date-q = Dátumozhatok kiadást a múltba?
+help-past-date-a = Igen, a dátummező szabad. A bejegyzés létrehozási ideje külön tárolódik.
+help-who-owes-q = Hogyan számolja ki a Counted, ki mivel tartozik?
+help-who-owes-a = A Counted kiszámolja minden résztvevő nettó egyenlegét (amit előlegezett mínusz amivel tartozik), majd a legrövidebb átutalás-sorozatot javasolja, ami mindenkit kiegyenlít.
+help-minimal-transfers-q = Miért minimális a javasolt átutalások száma?
+help-minimal-transfers-a = Az algoritmus először a pontosan kioltó egyenlegeket párosítja, majd a többit a legnagyobb hitelezőtől a legnagyobb adósig dolgozza fel. Az eredmény: kevesebb átutalás mindennek a rendezéséhez.
+help-import-tricount-q = Hogyan importálok projektet Tricountból?
+help-import-tricount-a = A kezdőképernyőn koppints az alsó „+” gombra, majd
+help-import-tricount-b = Illeszd be az importálni kívánt Tricount megosztási linkjét.
+help-encryption-q = Titkosítva vannak az adataim?
+help-encryption-a = Igen. A Counted két garanciát egyesít:
+help-encryption-e2ee-term = Végpontok közötti titkosítás
+help-encryption-e2ee-def = - minden titkosítva utazik közted és a szerver között.
+help-encryption-zero-term = Zéró hozzáférés
+help-encryption-zero-def = - küldés előtt titkosítod az adatokat, a szerver pedig csak a titkosított szöveget tárolja. Nincs módunk elolvasni.
+help-encryption-see = A részletekért lásd az
+help-forgot-password-q = Mi történik, ha elfelejtem a jelszavam?
+help-forgot-password-warning = Az adataid végleg elvesznek.
+help-forgot-password-a = A titkosítási kulcs a jelszavadból származik, így visszaállítás nem lehetséges: senki - mi sem - nem tudja visszafejteni a projektjeidet nélküle. Őrizd biztonságban, ideális esetben jelszókezelőben.
+help-archive-delete-q = Hogyan archiválok vagy törlök egy projektet?
+help-archive-delete-a = A projekt képernyőjén nyisd meg a menüt, és válaszd az
+help-archive-delete-b = lehetőséget, hogy elrejtsd, de megtartsd. A projekt végleg törlődik, amikor az utolsó tagja kilép belőle.
+help-delete-account-q = Hogyan törlöm a fiókomat?
+help-delete-account-a = Nyisd meg a Beállításokat, és használd a „Fiókom törlése” gombot. Azonnali és nem vonható vissza.
+help-contact = Más kérdésed van? Írj nekünk:
+
+# Receipt scanning (mobile only)
+expense-scan = Nyugta beolvasása
+scan-in-progress = Nyugta olvasása…
+scan-error-capture = Nem sikerült a fotó. Próbáld újra, vagy add meg a kiadást kézzel.
+scan-error-unreadable = Semmi olvasható ezen a nyugtán. Add meg a kiadást kézzel.
+scan-check-amount = Ellenőrizd a végösszeget - nem volt tisztán nyomtatva.
+expense-converted-from = Fizetve { $amount } { $from } · 1 { $from } = { $rate } { $to }
+project-currency = Pénznem
+project-currency-hint = Minden összeg ebben a pénznemben jelenik meg. Később nem módosítható.
+project-currency-locked = A pénznem a projekt létrehozásakor rögzül.
+
+update-required-title = Frissítés szükséges
+update-required-body = A Counted ezen verziója túl régi a szerverrel való kommunikációhoz. Frissítsd az alkalmazás további használatához.
+update-required-body-testflight = A Counted ezen verziója túl régi a szerverrel való kommunikációhoz. Nyisd meg a TestFlightot, és telepítsd a legújabb buildet az alkalmazás további használatához.
+update-required-button = Frissítés
+
+notifications-label = Értesítések
+notifications-title = Értesítések
+notifications-empty = Semmi új
+notifications-friend-request = Barátkérelem
+
+friends-title = Barátok
+friends-anonymous-body = A barátok a fiókodhoz tartoznak. Jelentkezz be, hogy személyeket adj hozzá és meghívd őket a projektjeidbe link megosztása nélkül.
+friends-add-title = Barát hozzáadása
+friends-add-hint = Bejelentkezéskor látni fogja a kérelmedet. Egyikőtök sem tudja meg, hogy a másiknak van-e fiókja, amíg a kérelmet el nem fogadják.
+friends-add-button = Hozzáadás
+friends-add-from-project = Hozzáadás barátként
+friends-request-sent = Kérelem elküldve
+friends-no-account-key = Jelentkezz be újra a barátaid kezeléséhez ezen az eszközön.
+friends-incoming-title = Kérelmek
+friends-accept = Elfogadás
+friends-decline = Elutasítás
+friends-list-title = Barátaim
+friends-list-empty = Még nincsenek barátaid. Adj hozzá valakit e-mailben fent, vagy egy közös projektből.
+friends-remove = Eltávolítás
+friends-no-key = Még nem áll készen
+friends-fingerprint = Biztonsági kód
+friends-fingerprint-hint = Két barát, akik ugyanazt a biztonsági kódot olvassák fel egymásnak, tudják, hogy senki nem áll közöttük - még a szerverünk sem.
+friends-outgoing-title = Elküldve
+friends-outgoing-hint = Válaszra vár. Elfogadás után megjelennek a barátaid között.
+friends-withdraw = Mégse
+invite-friends-title = Barátok meghívása
+invite-friends-hint = A projekt kulcsa minden barátnak ezen az eszközön titkosítódik. A szerver soha nem látja.
+invite-friends-empty = Még nincs meghívható barát.
+invite-friends-button = Meghívás
+invite-sent = { $count ->
+    [one] Meghívó elküldve
+   *[other] { $count } meghívó elküldve
+}
+invitation-badge = Meghívó
+invitation-to = Csatlakozás: „{ $name }”
+invitation-to-unnamed = Csatlakozás egy projekthez
+invitation-unreadable = Ez a meghívó nem nyitható meg ezen az eszközön
+invitation-from = Feladó: { $email }
+invitation-accept = Csatlakozás
+invitation-decline = Elutasítás

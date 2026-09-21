@@ -1,0 +1,22 @@
+<!-- The Counted mark, and the master every raster icon in the repo is generated from.
+     Regenerate them with: pwsh packages/mobile/gen-android-icons.ps1
+
+     A pointy-top regular hexagon, circumradius 176 on a 512 grid, stroked at a constant 64. The
+     path walks five of its six edges and stops: the missing right edge is the aperture that makes
+     it a C. The core is the same hexagon at radius 76, parted on the vertical axis into two shades
+     so it reads as a shield. Ring colours are the primary and accent tokens of the `counted`
+     daisyUI theme, in the same 135 degree order as .text-gradient-brand. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Counted">
+  <defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00A169"/>
+      <stop offset="1" stop-color="#00BEB7"/>
+    </linearGradient>
+    <clipPath id="core-half">
+      <rect x="256" y="0" width="256" height="512"/>
+    </clipPath>
+  </defs>
+  <path d="M408.42 168 L256 80 L103.58 168 L103.58 344 L256 432 L408.42 344" fill="none" stroke="url(#brand)" stroke-width="64" stroke-linecap="round" stroke-linejoin="round"/>
+  <polygon points="256,180 321.82,218 321.82,294 256,332 190.18,294 190.18,218" fill="#006940" stroke="#006940" stroke-width="18" stroke-linejoin="round"/>
+  <polygon points="256,180 321.82,218 321.82,294 256,332 190.18,294 190.18,218" fill="#00432B" stroke="#00432B" stroke-width="18" stroke-linejoin="round" clip-path="url(#core-half)"/>
+</svg>

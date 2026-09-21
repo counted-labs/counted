@@ -1,0 +1,43 @@
+@import "tailwindcss";
+@source "./src/**/*.{rs,html,css}";
+@source "../ui/src/**/*.rs";
+@plugin "daisyui";
+@plugin "daisyui/theme" {
+  name: "counted";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+  --color-base-100: oklch(100% 0 0);
+  --color-base-200: oklch(97.5% 0.004 165);
+  --color-base-300: oklch(93% 0.006 165);
+  --color-base-content: oklch(25% 0.02 165);
+  --color-primary: oklch(62% 0.15 162);
+  --color-primary-content: oklch(100% 0 0);
+  --color-secondary: oklch(72% 0.05 175);
+  --color-secondary-content: oklch(25% 0.02 165);
+  --color-accent: oklch(72% 0.13 190);
+  --color-accent-content: oklch(20% 0.03 190);
+  --color-neutral: oklch(22% 0.02 165);
+  --color-neutral-content: oklch(98% 0.002 165);
+  --color-info: oklch(70% 0.12 230);
+  --color-info-content: oklch(100% 0 0);
+  --color-success: oklch(64% 0.15 150);
+  --color-success-content: oklch(100% 0 0);
+  --color-warning: oklch(80% 0.15 80);
+  --color-warning-content: oklch(25% 0.02 165);
+  --color-error: oklch(62% 0.2 25);
+  --color-error-content: oklch(100% 0 0);
+  --radius-selector: 1rem;
+  --radius-field: 0.75rem;
+  --radius-box: 1.25rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+}

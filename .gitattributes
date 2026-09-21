@@ -1,0 +1,5 @@
+*.rs text eol=lf
+*.toml text eol=lf
+*.css text eol=lf
+*.sh text eol=lf
+packages/ocr/models/charset.txt text eol=lf

@@ -1,0 +1,11 @@
+# The one compiler that builds Counted — laptops, Codemagic, CI and the counted-tools image. Exact
+# patch on purpose: "stable" or "1.98" would let two builds of the same tag use two compilers, and a
+# reproducible build starts with a known one. Must equal the toolchain the pinned rust image in
+# libraries/docker/tools/Dockerfile ships, or every Docker stage downloads a second one; bump both
+# together. See docs/reproducible-builds.md.
+#
+# No `components`: the official rust image is `rustup --profile minimal`, and listing rustfmt/clippy
+# here would make every uncached Docker build fetch them. CI adds clippy where it needs it.
+[toolchain]
+channel = "1.98.1"
+targets = ["wasm32-unknown-unknown"]

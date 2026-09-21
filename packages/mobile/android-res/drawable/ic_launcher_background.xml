@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <!-- The icon's ground. mipmap-*/ic_launcher_foreground.png carries the mark alone on
+         transparency, so this is the only thing painting the tile and there is no seam to match. -->
+    <solid android:color="#FFFFFF"/>
+</shape>

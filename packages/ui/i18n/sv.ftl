@@ -1,0 +1,572 @@
+# Svenska. Komplett förutom de juridiska texterna (legal-, terms-, privacy-), som bara finns på
+# engelska och franska och faller tillbaka på en.ftl meddelande för meddelande.
+
+### Common
+
+loading = Laddar…
+cancel = Avbryt
+confirm = Bekräfta
+retry = Försök igen
+delete = Ta bort
+back = Tillbaka
+language = Språk
+
+### Navigation
+
+nav-main = Huvudnavigering
+nav-projects = Projekt
+nav-charts = Statistik
+nav-settings = Inställningar
+
+### Connectivity
+
+offline-banner = Offline
+offline-pending =
+    { $count ->
+        [one] { $count } väntar
+       *[other] { $count } väntar
+    }
+
+sync-conflict-edit = Konflikt: redigeringen av ”{ $name }” misslyckades (objektet borttaget). Hoppades över.
+sync-conflict-delete = Konflikt: borttagningen av ”{ $name }” misslyckades (objektet borttaget). Hoppades över.
+sync-conflict-other = Konflikt: åtgärden på ”{ $name }” misslyckades (objektet borttaget). Hoppades över.
+sync-error = Synkfel: { $reason }
+
+### Errors
+
+error-network = Det går inte att nå servern. Kontrollera din internetanslutning.
+error-generic = Något gick fel. Försök igen.
+
+error-invalid-email = Den e-postadressen är inte giltig.
+error-invalid-password = Det lösenordet är inte giltigt.
+error-password-too-short = Lösenordet måste vara minst 8 tecken.
+error-client-outdated = Den här versionen av appen är föråldrad. Uppdatera den för att logga in.
+error-invalid-link = Den här länken är inte giltig.
+error-batch-too-large = För många objekt på en gång.
+error-payers-required = Välj minst en betalare.
+error-debtors-required = Välj minst en person som är skyldig.
+error-duplicate-participant = En deltagare förekommer två gånger på samma sida.
+error-participant-not-in-project = Den deltagaren är inte med i projektet.
+error-too-many-participants = För många deltagare för en utgift.
+error-invalid-credentials = Fel e-post eller lösenord.
+error-unauthenticated = Logga in för att göra det.
+error-email-not-verified = Din e-postadress är inte verifierad ännu.
+error-project-not-found = Det här projektet finns inte längre.
+error-expense-not-found = Den här utgiften finns inte längre.
+error-user-not-found = Den här deltagaren finns inte längre.
+error-tricount-not-found = Tricount hittades inte, eller så gav dess API ett fel.
+error-too-many-members = Projektet har nått sin gräns för medlemmar.
+error-identity-taken = Ett annat konto har redan gjort anspråk på den här deltagaren.
+error-claim-proof-invalid = Den här enheten har inte projektnyckeln och kan därför inte göra anspråk på en deltagare. Öppna delningslänken igen.
+error-user-has-payments = Den här deltagaren har utgifter i projektet och kan inte tas bort.
+error-resend-cooldown = Vänta 60 sekunder innan du begär ett nytt mejl.
+error-self-friend-request = Du kan inte lägga till dig själv som vän.
+error-not-a-friend = Du kan bara bjuda in personer från din vänlista.
+error-friend-has-no-key = Den här vännen har inte öppnat den senaste versionen av appen ännu. Be hen logga in en gång och försök sedan igen.
+error-friend-request-not-found = Den här vänförfrågan finns inte längre.
+error-invitation-not-found = Den här inbjudan finns inte längre.
+error-too-many-friend-requests = För många vänförfrågningar just nu. Försök igen imorgon.
+error-too-many-invitations = För många väntande inbjudningar.
+
+### Auth
+
+field-email = E-post
+field-email-placeholder = du@exempel.se
+field-password = Lösenord
+field-name = Namn
+field-name-placeholder = Anna Andersson
+
+login-title = Logga in
+login-submit = Logga in
+login-submitting = Loggar in…
+login-password-placeholder = Ditt lösenord
+login-no-account = Har du inget konto än?
+login-unverified = Din e-postadress är inte verifierad ännu. Kolla din inkorg, eller skicka länken igen.
+login-resend = Skicka verifieringslänken igen
+login-resending = Skickar…
+login-resend-sent = Mejl skickat - kolla din inkorg.
+
+register-submit = Skapa ett konto
+register-submitting = Skapar…
+register-have-account = Har du redan ett konto?
+register-password-placeholder = Minst 8 tecken
+register-password-warning = Skriv ner ditt lösenord. Om du glömmer det kan kontot inte återställas.
+register-check-email-title = Kolla din e-post
+register-email-sent = Mejl skickat
+register-email-sent-hint = Klicka på länken i din inkorg för att aktivera ditt konto.
+register-not-received-prefix = Fick du inget? Kolla skräpposten, eller
+register-sign-in-link = logga in
+register-not-received-suffix = för att skicka länken igen.
+register-terms-prefix = Genom att skapa ett konto godkänner du våra
+register-terms-link = användarvillkor
+register-terms-and = och vår
+register-privacy-link = integritetspolicy
+
+settings-title = Inställningar
+settings-preferences = Inställningar
+settings-preferences-local = Sparade på den här enheten.
+settings-preferences-synced = Synkade med ditt konto, krypterade.
+settings-about = Om
+settings-anonymous-title = Du är inte inloggad
+settings-upsell-title = Dina projekt, på alla enheter
+settings-upsell-free = Gratis
+settings-upsell-body = Counted fungerar utan konto. Med ett gratis konto följer dina projekt och inställningar med till din mobil, din dator och webben - fortfarande krypterade, fortfarande oläsbara för oss.
+settings-locked-badge = Konto
+settings-locked-friends = Skapa ett konto för att lägga till vänner och bjuda in dem till ett projekt från appen - ingen länk att skicka runt.
+settings-locked-payment-methods = Spara ditt IBAN eller din betalapp en gång och dela med de projekt du väljer. Den som är skyldig dig ser det bredvid ditt namn.
+settings-friends-hint = Lägg till vänner och bjud in dem till dina projekt utan att dela en länk.
+
+account-member-since = Medlem sedan
+account-logout = Logga ut
+account-logging-out = Loggar ut…
+account-delete-title = Ta bort mitt konto
+account-delete-warning = Omedelbart och permanent, utan papperskorg. Utgifter du lagt in i ett delat projekt förblir synliga för de andra medlemmarna - de är en del av deras bokföring.
+account-delete-confirm-title = Ta bort konto
+account-delete-confirm-message = Ditt konto, dina sessioner och din projektlista tas bort permanent. Utan ditt lösenord blir den krypterade datan i ett delat projekt oläsbar för dig - det går inte att ångra.
+
+settings-payment-methods = Betalningsuppgifter
+settings-payment-methods-hint = Hur du vill få tillbaka pengar. Krypterat med ditt konto.
+payment-method-kind = Metod
+payment-method-kind-other = Annat
+payment-method-label = Namn
+payment-method-label-placeholder = Huvudkonto
+payment-method-value = Uppgifter
+payment-method-value-placeholder = IBAN, telefonnummer, användarnamn…
+payment-method-add = Lägg till
+payment-method-remove = Ta bort { $name }
+payment-method-empty = Du har inte lagt till några betalningsuppgifter än.
+payment-method-deleted = Betalningsmetod borttagen.
+payment-method-value-required = Fyll i uppgifterna för varje betalningsmetod, eller ta bort den.
+payment-method-label-required = Ge din egen metod ett namn.
+payment-method-too-long = Det är för långt - korta ner det.
+payment-method-invalid-characters = Ta bort radbrytningar eller osynliga tecken.
+payment-method-limit = Du kan spara upp till { $max } betalningsmetoder.
+payment-methods-saved = Betalningsuppgifter sparade.
+payment-methods-offline = Du måste vara online för att spara dina betalningsuppgifter.
+payment-methods-stale = Dina betalningsuppgifter ändrades på en annan enhet. De har laddats om — försök igen.
+payment-methods-key-missing = Logga in igen för att hantera dina betalningsuppgifter.
+settings-payment-methods-share-warning = En delad metod är synlig för alla medlemmar i de projekt där du valt ditt namn - alla som har en av de projektlänkarna.
+payment-method-share = Dela med mina projekt
+payment-method-share-hint = Visas bredvid ditt namn när någon är skyldig dig pengar.
+payment-method-copy = Kopiera { $name }
+payment-method-copied = Kopierat.
+payment-method-copy-failed = Det gick inte att kopiera - markera texten och kopiera den för hand.
+
+verify-email-checking = Verifierar din e-postadress…
+verify-email-welcome = E-post verifierad - välkommen till Counted!
+verify-email-back-to-login = Tillbaka till inloggning
+
+### Project status
+
+project-close = Stäng
+project-archive = Arkivera
+project-reopen = Öppna igen
+project-unarchive = Återställ från arkiv
+
+### Dates
+
+date-long = { $day } { $month } { $year }
+
+month-1 = januari
+month-2 = februari
+month-3 = mars
+month-4 = april
+month-5 = maj
+month-6 = juni
+month-7 = juli
+month-8 = augusti
+month-9 = september
+month-10 = oktober
+month-11 = november
+month-12 = december
+
+month-short-1 = jan
+month-short-2 = feb
+month-short-3 = mar
+month-short-4 = apr
+month-short-5 = maj
+month-short-6 = jun
+month-short-7 = jul
+month-short-8 = aug
+month-short-9 = sep
+month-short-10 = okt
+month-short-11 = nov
+month-short-12 = dec
+
+### Actions
+
+add = Lägg till
+create = Skapa
+creating = Skapar…
+edit = Redigera
+leave = Lämna
+close = Stäng
+paste = Klistra in
+join = Gå med
+import = Importera
+importing = Importerar…
+field-description = Beskrivning
+field-date = Datum
+field-optional = Valfritt
+
+### Projects
+
+projects-filter-active = Aktiva
+projects-filter-all = Alla
+projects-count-label = Projekt
+projects-empty = Inga projekt
+projects-empty-hint = Skapa ett projekt med knappen nedan
+projects-offline-banner = Offlinedata - anslut igen för att uppdatera.
+projects-no-local-data = Ingen lokal data
+projects-no-local-data-hint = Logga in för att ladda dina projekt för första gången.
+projects-add = Lägg till ett projekt
+projects-create = Skapa ett projekt
+projects-join = Gå med i ett projekt
+projects-import-tricount = Importera från Tricount
+project-actions = Projektåtgärder
+
+status-ongoing = Pågående
+status-closed = Avslutat
+status-archived = Arkiverat
+
+nav-help = Hjälp
+nav-privacy = Integritetspolicy
+nav-terms = Användarvillkor
+nav-legal = Juridisk information
+
+leave-project-title = Lämna projektet?
+leave-project-message = Du förlorar åtkomsten från den här enheten. Om ingen medlem finns kvar tas projektet och alla dess utgifter bort permanent.
+
+add-project-title = Nytt projekt
+add-project-name-label = Projektnamn
+add-project-name-placeholder = Min resa, Kollektivet 2024…
+add-project-participants = Deltagare
+add-project-participant-name = Deltagarens namn
+add-project-participant-placeholder = Clark Kent
+add-project-remove-participant = Ta bort deltagare
+add-project-me-badge = Jag
+add-project-thats-me = Det är jag!
+add-project-offline = Du kan inte skapa ett projekt offline. Anslut igen och försök på nytt.
+add-project-name-required = Projektet behöver ett namn.
+add-project-need-two-participants = Lägg till minst 2 deltagare.
+add-project-pick-yourself = Berätta vilken deltagare du är.
+
+join-link-label = Delningslänk
+join-link-hint = Länken innehåller dekrypteringsnyckeln - kopiera hela.
+join-invalid-link = Den länken är inte giltig. Klistra in hela delningslänken, inklusive delen efter #.
+join-wrong-project = Den länken gäller ett annat projekt.
+
+import-tricount-link-label = Tricount-länk eller -nyckel
+import-tricount-key-required = Ange en Tricount-länk eller -nyckel.
+import-tricount-encryption-failed = Krypteringen misslyckades.
+
+### Expenses
+
+save = Spara
+saving = Sparar…
+adding = Lägger till…
+link-copied = Länk kopierad
+missing-encryption-key = Krypteringsnyckel saknas.
+missing-encryption-key-title = Krypteringsnyckel saknas
+missing-encryption-key-hint = Länken du använde innehåller inte nyckeln som behövs för att dekryptera projektet. Använd hela länken som den som skapade det delade.
+project-locked-hint = Den här enheten har inte projektets nyckel. Öppna dess delningslänk för att låsa upp det.
+project-unlock = Lås upp
+project-no-local-data-hint = Logga in för att ladda projektets data för första gången.
+project-gone-title = Det här projektet finns inte längre
+project-gone-hint = Det togs bort när den sista medlemmen lämnade. Delningslänken fungerar inte längre, även om du öppnar den igen.
+
+expense-add = Lägg till en utgift
+transfer-add = Lägg till en överföring
+expense-edit-title = Redigera utgiften
+expense-category = Kategori
+expense-category-auto = Auto · { $emoji }
+expense-currency = Beloppets valuta
+amount-op-add = Plus
+amount-op-subtract = Minus
+amount-op-multiply = Gånger
+amount-op-divide = Delat med
+expense-rate = Växelkurs (valfritt)
+expense-rate-hint = Lämna tomt för att använda Europeiska kommissionens (InforEuro) kurs för { $month }: 1 { $from } = { $rate } { $to }.
+expense-rate-invalid = Ange en växelkurs större än 0.
+expense-rate-unavailable = Ingen automatisk kurs tillgänglig - ange en för hand.
+expense-delete-title = Ta bort utgiften
+expense-delete-message = ”{ $name }” tas bort permanent. Det går inte att ångra.
+expense-inconsistent-amounts = Beloppen stämmer inte
+expenses-empty = Inga utgifter
+expenses-empty-hint = Börja med att lägga till utgifter med knappen nedan
+expenses-show-more = Visa fler ({ $count } kvar)
+
+expense-type-expense = Utgift
+expense-type-transfer = Överföring
+expense-type-gain = Inkomst
+expense-paid-by = betald av
+expense-sent-by = skickad av
+expense-contributed-by = bidrag från
+
+expense-name-required = Ett namn krävs.
+expense-amount-not-positive = Beloppet måste vara större än 0.
+expense-no-payer = Välj minst en betalare.
+expense-no-debtor = Välj minst en person som är skyldig.
+expense-invalid-date = Det datumet är inte giltigt.
+expense-payers-mismatch = Betalarna summerar till { $sum }, vilket inte stämmer med utgiftens belopp ({ $total }).
+expense-debtors-mismatch = De skyldiga summerar till { $sum }, vilket inte stämmer med utgiftens belopp ({ $total }).
+
+participants-none = Ingen
+participants-everyone = Alla ({ $count })
+participants-some = { $count } av { $total }
+participants-select-all = Markera alla
+participants-deselect-all = Avmarkera alla
+participants-by-shares = Efter andelar
+participants-remaining = { $amount } kvar
+participants-over-by = { $amount } för mycket
+participants-who-paid = Vem betalade?
+participants-who-received = Vem tog emot?
+participants-who-transfers = Vem för över?
+participants-who-receives = Vem tar emot?
+participants-for-whom = För vem?
+
+stats-total-expenses = Totala utgifter
+stats-my-expenses = Mina utgifter
+
+tab-expenses = Utgifter
+tab-balance = Saldo
+tab-reimbursements = Gör upp
+reimbursements-empty-title = Allt är uppgjort!
+reimbursements-empty-hint = Förslag på uppgörelser visas här när räkenskaperna inte går ihop
+reimbursement-owes = { $debtor } är skyldig { $creditor }
+reimbursement-record = Gör upp
+reimbursement-pay-with = Betala
+reimbursement-pay-shared-by = Delat av { $name } - kontrollera mottagarnamnet som din app visar innan du skickar.
+reimbursement-pay-title = Betala { $name }
+reimbursements-mine-title = Du är skyldig
+reimbursements-others-title = Andra återbetalningar
+copy = Kopiera
+
+user-selection-title = Vilken deltagare är du?
+user-selection-hint = Välj ditt namn i listan.
+user-selection-required = Välj en deltagare.
+identity-claimed = Kopplad till ett konto
+identity-claimed-by = { $name }s konto
+identity-taken-repick = Ett annat konto har gjort anspråk på deltagaren du använde. Välj en annan.
+participant-gone-repick = Deltagaren du använde har tagits bort från projektet. Välj en annan.
+
+edit-project-title = Redigera projektet
+edit-project-new-badge = ny
+edit-project-deferred-new-members = tillägg av nya medlemmar
+edit-project-deferred-removals = borttagning av medlemmar
+edit-project-deferred-me = valet ”Det är jag”
+edit-project-offline-deferred = Offline: { $items } tillämpas när du ansluter igen.
+
+export-saved = Fil sparad:
+    { $path }
+export-failed = Exporten misslyckades: { $reason }
+
+history-expense-added = Utgift tillagd: { $name }
+history-expense-edited = Utgift redigerad: { $name }
+history-expense-deleted = Utgift borttagen: { $name }
+history-project-edited = Projekt redigerat: { $name }
+history-name-changed = Namn: ”{ $from }” → ”{ $to }”
+history-description-added = Beskrivning tillagd: ”{ $value }”
+history-description-removed = Beskrivning borttagen: ”{ $value }”
+history-description-changed = Beskrivning: ”{ $from }” → ”{ $to }”
+
+### Sweep
+
+field-amount = Belopp
+expense-name-placeholder = Restaurang, matvaror…
+expense-actions = Utgiftsåtgärder
+expense-your-share = Din andel
+expense-your-share-value = Din andel: { $amount } { $currency }
+expense-inconsistent-detail = Beloppen stämmer inte: { $paid } betalt, { $owed } skyldigt, för en utgift på { $total }. Redigera utgiften för att rätta till det.
+missing-access-key = Åtkomstnyckel saknas. Öppna projektet via dess delningslänk.
+filter-all = Alla
+filter-my-payments = Mina betalningar
+filter-my-debts = Vad jag är skyldig
+participants-shares-for = Andelar för { $name }
+participants-amount-for = Belopp för { $name }
+reimbursement-add = Lägg till en uppgörelse
+project-forget = Ta bort från min lista
+project-history-title = Historik
+history-kind-add = Tillagd
+history-kind-delete = Borttagen
+history-kind-edit = Redigerad
+export = Exportera
+export-json = Exportera JSON
+export-csv = Exportera CSV
+share-link = Dela
+copy-link-failed = Det gick inte att kopiera länken
+open-in-app = Öppna i appen
+not-found-title = Sidan hittades inte
+not-found-back = Tillbaka till projekten
+
+### Charts
+
+charts-period = Period
+period-all = Allt
+period-month = Månad
+period-3months = 3 mån
+period-year = År
+period-custom = Anpassad
+charts-tab-categories = Kategorier
+charts-tab-per-person = Per person
+charts-tab-trends = Trender
+charts-by-category = Fördelning per kategori
+charts-per-person = Utgifter per person
+charts-categories-by-month = Kategorier per månad
+charts-total-spent = Totalt spenderat
+charts-avg-per-person = Snitt per person
+charts-expense-count =
+    { $count ->
+        [one] { $count } utgift
+       *[other] { $count } utgifter
+    }
+charts-clear-category-filter = Rensa kategorifiltret
+charts-no-expenses = Inga utgifter.
+charts-pick-a-project = Välj ett projekt för att se utgifter per person.
+charts-nothing-to-show = Inget att visa
+charts-my-share-note = Dessa siffror är din andel av varje utgift.
+charts-my-share-skipped =
+    { $count ->
+        [one] 1 projekt räknas inte med — ingen deltagare vald, eller så laddades inte dess data.
+       *[other] { $count } projekt räknas inte med — ingen deltagare vald, eller så laddades inte deras data.
+    }
+
+### Categories
+
+category-food = Mat
+category-transport = Transport
+category-accommodation = Boende
+category-leisure = Fritid
+category-shopping = Shopping
+category-services = Tjänster
+category-parties-gifts = Fester & presenter
+category-other = Annat
+charts-person = Person
+charts-project = Projekt
+charts-all-projects = Alla projekt
+charts-whole-project = Hela projektet
+charts-date-from = Från
+charts-date-to = Till
+charts-total = Totalt
+charts-payments-per-person-by-month = Betalningar per person och månad
+history-empty = Inga händelser
+history-by = Av { $name }
+not-found-hint = Den här sidan finns inte, eller har flyttats.
+payers-title-paid-by = Betald av
+payers-title-sender = Avsändare
+payers-title-contributors = Bidragsgivare
+debtors-title-debtors = Skyldiga
+debtors-title-recipients = Mottagare
+debtors-title-beneficiaries = Förmånstagare
+
+### Welcome
+
+welcome-title = Din bokföring angår ingen annan.
+welcome-subtitle = Dela utgifter med vänner.
+welcome-e2ee-title = Allt krypterat
+welcome-e2ee-body = Namn, belopp, projekt: allt krypteras på din enhet. Bara du har nyckeln. Ingen kan läsa dina räkenskaper. Inte ens vi.
+welcome-e2ee-note = Oläsbart, även för oss (noll serveråtkomst)
+welcome-eu-title = 100 % europeiskt
+welcome-eu-body = Servrar i Tyskland, mejl som skickas från Frankrike. Din data lämnar aldrig Europeiska unionen.
+welcome-noads-title = Inga annonser. Inga spårare.
+welcome-noads-body = Vi samlar inget och säljer inte dina uppgifter. Det är inte vår modell.
+welcome-start = Kom igång
+welcome-how-it-works = Hur fungerar det, egentligen?
+
+### Help
+
+help-intro = En vanlig fråga? Tryck för att fälla ut svaret.
+help-create-project-q = Hur skapar jag ett projekt?
+help-create-project-a = Från startskärmen, tryck på +-knappen längst ner. Ge projektet ett namn, välj valuta, så är du klar.
+help-add-participants-q = Hur lägger jag till deltagare?
+help-add-participants-a = Öppna projektet och lägg till deltagare från medlemslistan. Varje deltagare kan betala för eller vara skyldig för en utgift.
+help-share-project-q = Hur delar jag ett projekt?
+help-share-project-a = Dela projektets URL (den i adressfältet). Alla med länken kan se och redigera projektet.
+help-add-expense-q = Hur lägger jag till en utgift?
+help-add-expense-a = I ett projekt, tryck på +, ange beloppet, vem som betalade och vilka det ska delas mellan. Du kan också välja ett annat datum än idag.
+help-types-q = Vad är skillnaden mellan utgift, överföring och inkomst?
+help-types-expense = - ett köp gjort av en person och delat mellan flera.
+help-types-transfer = - en återbetalning från en person till en annan, utan delning.
+help-types-gain = - pengar som tagits emot (en återbäring, en gåva) att dela mellan flera personer.
+help-past-date-q = Kan jag datera en utgift bakåt i tiden?
+help-past-date-a = Ja, datumfältet är fritt. Postens skapelsetid sparas separat.
+help-who-owes-q = Hur räknar Counted ut vem som är skyldig vad?
+help-who-owes-a = Counted beräknar varje deltagares nettosaldo (vad hen lagt ut minus vad hen är skyldig) och föreslår sedan den kortaste serien överföringar som gör upp för alla.
+help-minimal-transfers-q = Varför är antalet föreslagna överföringar minimalt?
+help-minimal-transfers-a = Algoritmen parar först ihop saldon som tar ut varandra exakt, och går sedan igenom resten från största fordringsägare till största gäldenär. Resultatet: färre överföringar för att göra upp allt.
+help-import-tricount-q = Hur importerar jag ett projekt från Tricount?
+help-import-tricount-a = Från startskärmen, tryck på ”+”-knappen längst ner, sedan
+help-import-tricount-b = Klistra in delningslänken för det Tricount du vill importera.
+help-encryption-q = Är min data krypterad?
+help-encryption-a = Ja. Counted kombinerar två garantier:
+help-encryption-e2ee-term = Totalsträckskryptering
+help-encryption-e2ee-def = - allt mellan dig och servern skickas krypterat.
+help-encryption-zero-term = Noll åtkomst
+help-encryption-zero-def = - du krypterar datan innan den skickas, och servern lagrar bara chiffertext. Vi har inget sätt att läsa den.
+help-encryption-see = För detaljer, se
+help-forgot-password-q = Vad händer om jag glömmer mitt lösenord?
+help-forgot-password-warning = Din data går förlorad permanent.
+help-forgot-password-a = Krypteringsnyckeln härleds från ditt lösenord, så ingen återställning är möjlig: ingen - inte ens vi - kan dekryptera dina projekt utan det. Förvara det säkert, helst i en lösenordshanterare.
+help-archive-delete-q = Hur arkiverar eller tar jag bort ett projekt?
+help-archive-delete-a = Från projektskärmen, öppna menyn och välj
+help-archive-delete-b = för att dölja det men behålla det. Ett projekt tas bort för gott när dess sista medlem lämnar det.
+help-delete-account-q = Hur tar jag bort mitt konto?
+help-delete-account-a = Öppna Inställningar och använd ”Ta bort mitt konto”. Det sker omedelbart och kan inte ångras.
+help-contact = En annan fråga? Skriv till oss på
+
+# Receipt scanning (mobile only)
+expense-scan = Skanna ett kvitto
+scan-in-progress = Läser kvittot…
+scan-error-capture = Det gick inte att ta bilden. Försök igen, eller ange utgiften för hand.
+scan-error-unreadable = Inget läsbart på det kvittot. Ange utgiften för hand.
+scan-check-amount = Kontrollera totalen - den var inte tydligt tryckt.
+expense-converted-from = Betalt { $amount } { $from } · 1 { $from } = { $rate } { $to }
+project-currency = Valuta
+project-currency-hint = Alla belopp visas i den här valutan. Den kan inte ändras senare.
+project-currency-locked = Valutan låses när projektet skapas.
+
+update-required-title = Uppdatering krävs
+update-required-body = Den här versionen av Counted är för gammal för att prata med servern. Uppdatera den för att fortsätta använda appen.
+update-required-body-testflight = Den här versionen av Counted är för gammal för att prata med servern. Öppna TestFlight och installera den senaste versionen för att fortsätta använda appen.
+update-required-button = Uppdatera
+
+notifications-label = Aviseringar
+notifications-title = Aviseringar
+notifications-empty = Inget nytt
+notifications-friend-request = Vänförfrågan
+
+friends-title = Vänner
+friends-anonymous-body = Vänner sparas med ditt konto. Logga in för att lägga till personer och bjuda in dem till dina projekt utan att dela en länk.
+friends-add-title = Lägg till en vän
+friends-add-hint = Hen ser din förfrågan när hen loggar in. Ingen av er får veta om den andra har ett konto förrän förfrågan accepterats.
+friends-add-button = Lägg till
+friends-add-from-project = Lägg till som vän
+friends-request-sent = Förfrågan skickad
+friends-no-account-key = Logga in igen för att hantera dina vänner på den här enheten.
+friends-incoming-title = Förfrågningar
+friends-accept = Acceptera
+friends-decline = Avböj
+friends-list-title = Mina vänner
+friends-list-empty = Inga vänner ännu. Lägg till någon via e-post ovan, eller från ett projekt ni delar.
+friends-remove = Ta bort
+friends-no-key = Inte redo ännu
+friends-fingerprint = Säkerhetskod
+friends-fingerprint-hint = Två vänner som läser upp samma säkerhetskod för varandra vet att ingen sitter emellan dem - inte ens vår server.
+friends-outgoing-title = Skickade
+friends-outgoing-hint = Väntar på svar. Du ser dem bland dina vänner när de accepterat.
+friends-withdraw = Avbryt
+invite-friends-title = Bjud in vänner
+invite-friends-hint = Projektnyckeln krypteras för varje vän på den här enheten. Servern ser den aldrig.
+invite-friends-empty = Inga vänner att bjuda in ännu.
+invite-friends-button = Bjud in
+invite-sent = { $count ->
+    [one] Inbjudan skickad
+   *[other] { $count } inbjudningar skickade
+}
+invitation-badge = Inbjudan
+invitation-to = Gå med i ”{ $name }”
+invitation-to-unnamed = Gå med i ett projekt
+invitation-unreadable = Den här inbjudan kan inte öppnas på den här enheten
+invitation-from = Från { $email }
+invitation-accept = Gå med
+invitation-decline = Avböj

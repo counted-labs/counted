@@ -1,0 +1,112 @@
+[workspace]
+resolver = "2"
+members = [
+	"packages/shared",
+	"packages/ui",
+	"packages/web",
+	"packages/desktop",
+	"packages/mobile",
+	"packages/api",
+	"packages/ocr",
+]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "unwind"
+incremental = false
+
+# `opt-level = "z"` above is chosen for the wasm bundle, where every byte is downloaded. It is the
+# wrong trade for OCR: this is dense numeric code with hand-written SIMD, and size-optimising it
+# costs several times the inference latency — on the phone's UI thread budget, not the network's.
+# These add a few hundred KB to a binary that already carries 31 MB of model weights, and none of
+# them is reachable from the web or server build, so the bundle is untouched. Same reasoning as
+# CARGO_PROFILE_SERVER_RELEASE_OPT_LEVEL=2 in the Dockerfile.
+#
+# **The list must cover every rten-* crate, not just `rten`.** The hot path is `rten-gemm`; missing
+# it leaves the matrix multiply size-optimised while everything around it is fast, which measured
+# as a 3x penalty and looks exactly like a slow model. `cargo tree -p ocr` is the check when
+# upgrading rten — it has split into more crates before.
+[profile.release.package.ocr]
+opt-level = 3
+[profile.release.package.rten]
+opt-level = 3
+[profile.release.package.rten-base]
+opt-level = 3
+[profile.release.package.rten-gemm]
+opt-level = 3
+[profile.release.package.rten-imageproc]
+opt-level = 3
+[profile.release.package.rten-model-file]
+opt-level = 3
+[profile.release.package.rten-onnx]
+opt-level = 3
+[profile.release.package.rten-parallel]
+opt-level = 3
+[profile.release.package.rten-shape-inference]
+opt-level = 3
+[profile.release.package.rten-simd]
+opt-level = 3
+[profile.release.package.rten-tensor]
+opt-level = 3
+[profile.release.package.rten-vecmath]
+opt-level = 3
+[profile.release.package.image]
+opt-level = 3
+[profile.release.package.zune-jpeg]
+opt-level = 3
+[profile.release.package.zune-core]
+opt-level = 3
+
+# The same list again for `dev`, and it is not redundant: `make android`/`make android-build` both
+# bundle the debug profile (dx writes to `dx/mobile/debug/`, and neither passes --release), so a
+# phone build gets `opt-level = 0` for every crate here unless this block exists. Measured on the
+# `receipts` fixture on an x86_64 desktop: 0.52 s built as release, 29.6 s built as dev — 57x, and
+# a phone is several times slower again. That reads as a hung spinner, not as a slow scan, which
+# is how it was found. Debug info and overflow checks for our own code are unaffected.
+[profile.dev.package.ocr]
+opt-level = 3
+[profile.dev.package.rten]
+opt-level = 3
+[profile.dev.package.rten-base]
+opt-level = 3
+[profile.dev.package.rten-gemm]
+opt-level = 3
+[profile.dev.package.rten-imageproc]
+opt-level = 3
+[profile.dev.package.rten-model-file]
+opt-level = 3
+[profile.dev.package.rten-onnx]
+opt-level = 3
+[profile.dev.package.rten-parallel]
+opt-level = 3
+[profile.dev.package.rten-shape-inference]
+opt-level = 3
+[profile.dev.package.rten-simd]
+opt-level = 3
+[profile.dev.package.rten-tensor]
+opt-level = 3
+[profile.dev.package.rten-vecmath]
+opt-level = 3
+[profile.dev.package.image]
+opt-level = 3
+[profile.dev.package.zune-jpeg]
+opt-level = 3
+[profile.dev.package.zune-core]
+opt-level = 3
+
+[workspace.dependencies]
+dioxus = { version = "0.7.9" }
+
+# workspace
+ui = { path = "packages/ui" }
+api = { path = "packages/api" }
+shared = { path = "packages/shared" }
+ocr = { path = "packages/ocr" }
+
+# tao 0.34.8 + tauri-apps/tao#1211 backported: every 0.34.x aborts at launch on Android < 11, and
+# dioxus-desktop 0.7 pins 0.34. See docs/dioxus-overrides.md.
+[patch.crates-io]
+tao = { path = "vendor/tao" }

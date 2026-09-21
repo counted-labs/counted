@@ -1,0 +1,51 @@
+[application]
+name = "Counted"
+default_platform = "android"
+# dx ignores `name` for the iOS bundle (it uses the cargo target name -> "Mobile"), so ship our own
+# plist. Path is relative to the dx cwd (repo root), not to this file.
+ios_info_plist = "packages/mobile/ios/Info.plist"
+
+[bundle]
+identifier = "fr.counted.app"
+publisher = "Counted"
+# The 1024 master, not assets/counted.png — that is the 96px in-app logo, and dx upscales whatever
+# it is given. Written by gen-android-icons.ps1; iOS ignores this anyway, since codemagic.yaml
+# builds its own AppIcon.appiconset from the same file.
+icon = ["assets/counted-1024.png"]
+
+[bundle.ios]
+deployment_target = "16.0"
+
+# Android only — dx renders this into the generated AndroidManifest.xml (one intent-filter per
+# scheme, one autoVerify filter per host). It is inert for iOS, because `ios_info_plist` above
+# makes dx replace its plist template wholesale: the iOS side of this lives in ios/Info.plist
+# (custom scheme) and in the App ID's Associated Domains capability (universal links).
+#
+# `hosts` claims every path on counted.fr, not just /projects/* — dx 0.7.9's template emits no
+# pathPrefix. That is handled in the app: parse_share_link accepts only project routes, so any
+# other URL opens the app on the projects list instead of a dead screen.
+[deep_links]
+schemes = ["counted"]
+hosts = ["counted.fr"]
+
+# Package visibility, Android 11+ (targetSdk >= 30). wry's `onShowFileChooser` calls
+# `takePictureIntent.resolveActivity(activity.packageManager)` and returns false when it is null —
+# and without this declaration it *is* null, because the platform hides other packages from an app
+# that has not said which intents it needs to see. Capture is then skipped and the document picker
+# opens instead, so **the Scan button silently shows the gallery**. `startActivity` alone would not
+# need this; `resolveActivity` does. The action string is `MediaStore.ACTION_IMAGE_CAPTURE`, which
+# is `android.media.action.IMAGE_CAPTURE` — not `android.intent.action.*`, a mistake that fails the
+# same silent way.
+#
+# This belongs at `<manifest>` level, which is where dx interpolates `[android.raw.manifest]`, so
+# unlike the `<provider>` — which must sit inside `<application>` and still needs the Makefile — it
+# reaches `dx serve` builds too.
+[android.raw]
+manifest = """
+<queries>
+    <intent>
+        <action android:name="android.media.action.IMAGE_CAPTURE" />
+    </intent>
+</queries>
+"""
+

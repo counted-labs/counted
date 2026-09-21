@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+	FileProvider paths for the receipt-scan camera capture.
+
+	The root of `external-files-path` is Context.getExternalFilesDir(null); wry's
+	RustWebChromeClient.createImageFile writes into its Pictures/ subdirectory via
+	getExternalFilesDir(Environment.DIRECTORY_PICTURES), so that is the only subtree exposed.
+
+	Referenced by the <provider> the Makefile's patch_file_provider adds — see
+	docs/plans/ocr-receipt-scan.md.
+-->
+<paths>
+    <external-files-path name="captures" path="Pictures/" />
+</paths>

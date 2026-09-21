@@ -1,0 +1,12 @@
+[application]
+name = "Counted"
+default_platform = "web"
+
+[web.app]
+title = "Counted"
+
+# Brotli the wasm and assets at bundle time. dx defaults this off, so everything shipped raw;
+# the Dioxus server already serves `.br` siblings (`ServeFile::precompressed_br`), it just had
+# none to find. Release-only, so `dx serve` is unaffected.
+[web]
+pre_compress = true
