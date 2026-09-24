@@ -285,6 +285,7 @@ amount-op-add = Plusz
 amount-op-subtract = Mínusz
 amount-op-multiply = Szorzás
 amount-op-divide = Osztás
+amount-op-equals = Egyenlő
 expense-rate = Árfolyam (nem kötelező)
 expense-rate-hint = Hagyd üresen az Európai Bizottság (InforEuro) { $month } havi árfolyamához: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Adj meg 0-nál nagyobb árfolyamot.
@@ -520,6 +521,8 @@ scan-in-progress = Nyugta olvasása…
 scan-error-capture = Nem sikerült a fotó. Próbáld újra, vagy add meg a kiadást kézzel.
 scan-error-unreadable = Semmi olvasható ezen a nyugtán. Add meg a kiadást kézzel.
 scan-check-amount = Ellenőrizd a végösszeget - nem volt tisztán nyomtatva.
+scan-take-photo = Fotó készítése
+scan-choose-photo = Fotó kiválasztása
 expense-converted-from = Fizetve { $amount } { $from } · 1 { $from } = { $rate } { $to }
 project-currency = Pénznem
 project-currency-hint = Minden összeg ebben a pénznemben jelenik meg. Később nem módosítható.
@@ -549,6 +552,8 @@ friends-decline = Elutasítás
 friends-list-title = Barátaim
 friends-list-empty = Még nincsenek barátaid. Adj hozzá valakit e-mailben fent, vagy egy közös projektből.
 friends-remove = Eltávolítás
+friends-remove-confirm-title = Barát eltávolítása
+friends-remove-confirm-message = { $email } többé nem lesz a barátaid között, és te sem az övéi között. Bármelyikőtök küldhet később új kérést.
 friends-no-key = Még nem áll készen
 friends-fingerprint = Biztonsági kód
 friends-fingerprint-hint = Két barát, akik ugyanazt a biztonsági kódot olvassák fel egymásnak, tudják, hogy senki nem áll közöttük - még a szerverünk sem.

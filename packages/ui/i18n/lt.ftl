@@ -287,6 +287,7 @@ amount-op-add = Plius
 amount-op-subtract = Minus
 amount-op-multiply = Dauginti
 amount-op-divide = Dalyti
+amount-op-equals = Lygu
 expense-rate = Valiutos kursas (neprivaloma)
 expense-rate-hint = Palik tuščią, kad būtų naudojamas Europos Komisijos (InforEuro) { $month } kursas: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Įvesk kursą, didesnį nei 0.
@@ -526,6 +527,8 @@ scan-in-progress = Skaitomas kvitas…
 scan-error-capture = Nepavyko nufotografuoti. Bandyk dar kartą arba įvesk išlaidą rankiniu būdu.
 scan-error-unreadable = Šiame kvite nieko įskaitomo. Įvesk išlaidą rankiniu būdu.
 scan-check-amount = Patikrink bendrą sumą - ji buvo neaiškiai išspausdinta.
+scan-take-photo = Nufotografuoti
+scan-choose-photo = Pasirinkti nuotrauką
 expense-converted-from = Sumokėta { $amount } { $from } · 1 { $from } = { $rate } { $to }
 project-currency = Valiuta
 project-currency-hint = Visos sumos rodomos šia valiuta. Vėliau jos pakeisti negalima.
@@ -555,6 +558,8 @@ friends-decline = Atmesti
 friends-list-title = Mano draugai
 friends-list-empty = Draugų dar nėra. Pridėk ką nors el. paštu aukščiau arba iš bendro projekto.
 friends-remove = Pašalinti
+friends-remove-confirm-title = Pašalinti draugą
+friends-remove-confirm-message = { $email } nebebus tarp jūsų draugų, o jūs – tarp jo. Bet kuris iš jūsų vėliau galės išsiųsti naują prašymą.
 friends-no-key = Dar neparuošta
 friends-fingerprint = Saugos kodas
 friends-fingerprint-hint = Du draugai, perskaitę vienas kitam tą patį saugos kodą, žino, kad tarp jų nėra nieko - net mūsų serverio.

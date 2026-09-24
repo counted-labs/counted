@@ -84,29 +84,38 @@ fn the_wire_shape_deserialises() {
 /// element inside its root and routes them to `rfd`, which does nothing on a phone.
 #[test]
 fn the_input_is_appended_outside_the_dioxus_root() {
-    let js = capture_js();
+    let js = capture_js(ScanSource::Camera);
     assert!(js.contains("document.body.appendChild(input)"), "{js}");
     assert!(!js.contains("getElementById"), "must not attach inside the app's own tree");
 }
 
 #[test]
-fn the_input_asks_for_the_camera() {
-    let js = capture_js();
+fn the_camera_source_asks_for_the_camera() {
+    let js = capture_js(ScanSource::Camera);
     assert!(js.contains("input.accept = 'image/*'"), "{js}");
     assert!(js.contains("input.capture = 'environment'"), "{js}");
+}
+
+/// `capture` is decisive on Android: with it wry launches the camera intent and nothing else, so
+/// the library source must leave it off to reach the document picker at all.
+#[test]
+fn the_library_source_leaves_capture_off() {
+    let js = capture_js(ScanSource::Library);
+    assert!(js.contains("input.accept = 'image/*'"), "{js}");
+    assert!(!js.contains("input.capture"), "{js}");
 }
 
 /// Dioxus runs the script as an async function *body*; without a top-level await the caller
 /// resumes immediately and the photo never arrives.
 #[test]
 fn the_script_awaits_at_the_top_level() {
-    let js = capture_js();
+    let js = capture_js(ScanSource::Camera);
     assert!(js.contains("return await new Promise"), "{js}");
 }
 
 #[test]
 fn the_script_carries_the_transport_constants() {
-    let js = capture_js();
+    let js = capture_js(ScanSource::Camera);
     assert!(js.contains(&CHUNK_BYTES.to_string()), "chunk size missing: {js}");
     assert!(js.contains(&MAX_EDGE.to_string()), "downscale edge missing: {js}");
 }
@@ -115,7 +124,7 @@ fn the_script_carries_the_transport_constants() {
 /// two and the UI would sit on a spinner forever.
 #[test]
 fn cancellation_has_a_fallback_signal() {
-    let js = capture_js();
+    let js = capture_js(ScanSource::Camera);
     assert!(js.contains("'cancel'"), "{js}");
     assert!(js.contains("addEventListener('cancel'"), "{js}");
     assert!(js.contains("window.addEventListener('focus'"), "{js}");
@@ -123,7 +132,7 @@ fn cancellation_has_a_fallback_signal() {
 
 #[test]
 fn the_photo_is_downscaled_before_transport() {
-    let js = capture_js();
+    let js = capture_js(ScanSource::Camera);
     assert!(js.contains("toDataURL('image/jpeg'"), "{js}");
     assert!(js.contains("drawImage"), "{js}");
 }

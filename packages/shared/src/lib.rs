@@ -497,9 +497,18 @@ pub struct ProjectInvitation {
     pub created_at: NaiveDateTime,
 }
 
-/// The shipped locales, by code. `ui::i18n::SUPPORTED` pairs them with endonyms; the server
-/// validates a push token's `lang` against this list.
+/// The locales push bodies are hand-written for (`api::server::push::texts`), *not* the shipped
+/// locales — those are `UI_LANGS`. A push token's `lang` is validated against this list; a code
+/// outside it would render an English body anyway.
 pub const SUPPORTED_LANGS: [&str; 7] = ["en", "fr", "es", "de", "it", "pt", "nl"];
+
+/// Every locale the app ships, by code — the same set as `ui::i18n::SUPPORTED`, which pairs them
+/// with endonyms and is asserted equal to this list in its tests. Lives here because `api` cannot
+/// depend on `ui` and needs a fixed list to bucket the aggregate language counters against.
+pub const UI_LANGS: [&str; 32] = [
+    "bs", "cs", "da", "de", "et", "en", "es", "fr", "ga", "hr", "is", "it", "lv", "lt", "hu", "mt",
+    "nl", "no", "pl", "pt", "ro", "sq", "sk", "sl", "sr", "fi", "sv", "tr", "bg", "mk", "uk", "el",
+];
 
 /// APNs tokens are 64 hex characters and FCM tokens ~160; this is an abuse bound, not a format.
 pub const MAX_PUSH_TOKEN_LENGTH: usize = 4096;
@@ -645,6 +654,10 @@ pub struct RegisterPayload {
     /// it at its first login on a newer build.
     #[serde(default)]
     pub keypair: Option<Keypair>,
+    /// The interface language at the time of the request. Feeds an aggregate daily counter only,
+    /// never the account row. `default` so app builds predating the field still register.
+    #[serde(default)]
+    pub lang: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -679,6 +692,10 @@ pub struct LoginPayload {
     pub proof: Vec<u8>,
     #[serde(default)]
     pub upgrade: Option<LoginUpgrade>,
+    /// The interface language at the time of the request. Feeds an aggregate daily counter only,
+    /// never the account row. `default` so app builds predating the field still log in.
+    #[serde(default)]
+    pub lang: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

@@ -469,6 +469,8 @@ scan-in-progress = A ler o recibo…
 scan-error-capture = Não foi possível tirar essa fotografia. Tente de novo, ou introduza a despesa à mão.
 scan-error-unreadable = Nada legível nesse recibo. Introduza a despesa à mão.
 scan-check-amount = Verifique o total - não estava impresso com clareza.
+scan-take-photo = Tirar uma fotografia
+scan-choose-photo = Escolher uma fotografia
 
 update-required-title = Atualização necessária
 update-required-body = Esta versão do Counted é demasiado antiga para comunicar com o servidor. Atualize-a para continuar a usar a aplicação.
@@ -509,6 +511,7 @@ amount-op-add = Mais
 amount-op-subtract = Menos
 amount-op-multiply = Multiplicar
 amount-op-divide = Dividir
+amount-op-equals = Igual
 expense-rate = Taxa de câmbio (opcional)
 expense-rate-hint = Deixa em branco para usar a taxa da Comissão Europeia (InforEuro) de { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Introduz uma taxa de câmbio superior a 0.
@@ -577,6 +580,8 @@ friends-decline = Recusar
 friends-list-title = Os meus amigos
 friends-list-empty = Ainda sem amigos. Adiciona alguém por e-mail acima, ou a partir de um projeto que partilhem.
 friends-remove = Remover
+friends-remove-confirm-title = Remover amigo
+friends-remove-confirm-message = { $email } deixará de estar nos seus amigos, e você deixará de estar nos dele. Qualquer um dos dois pode enviar um novo pedido mais tarde.
 friends-no-key = Ainda não está pronto
 friends-fingerprint = Código de segurança
 friends-fingerprint-hint = Dois amigos que leem um ao outro o mesmo código de segurança sabem que ninguém está entre eles - nem sequer o nosso servidor.

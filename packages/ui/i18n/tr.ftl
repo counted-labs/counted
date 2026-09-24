@@ -285,6 +285,7 @@ amount-op-add = Artı
 amount-op-subtract = Eksi
 amount-op-multiply = Çarp
 amount-op-divide = Böl
+amount-op-equals = Eşittir
 expense-rate = Döviz kuru (isteğe bağlı)
 expense-rate-hint = { $month } için Avrupa Komisyonu (InforEuro) kurunu kullanmak üzere boş bırak: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = 0'dan büyük bir döviz kuru gir.
@@ -520,6 +521,8 @@ scan-in-progress = Fiş okunuyor…
 scan-error-capture = Fotoğraf çekilemedi. Tekrar dene veya harcamayı elle gir.
 scan-error-unreadable = Bu fişte okunabilir bir şey yok. Harcamayı elle gir.
 scan-check-amount = Toplamı kontrol et - net basılmamıştı.
+scan-take-photo = Fotoğraf çek
+scan-choose-photo = Fotoğraf seç
 expense-converted-from = { $amount } { $from } ödendi · 1 { $from } = { $rate } { $to }
 project-currency = Para birimi
 project-currency-hint = Her tutar bu para biriminde gösterilir. Daha sonra değiştirilemez.
@@ -549,6 +552,8 @@ friends-decline = Reddet
 friends-list-title = Arkadaşlarım
 friends-list-empty = Henüz arkadaş yok. Yukarıdan e-postayla veya paylaştığın bir projeden birini ekle.
 friends-remove = Kaldır
+friends-remove-confirm-title = Arkadaşı kaldır
+friends-remove-confirm-message = { $email } artık arkadaşlarınız arasında olmayacak, siz de onunkiler arasında. İkinizden biri daha sonra yeni bir istek gönderebilir.
 friends-no-key = Henüz hazır değil
 friends-fingerprint = Güvenlik kodu
 friends-fingerprint-hint = Birbirine aynı güvenlik kodunu okuyan iki arkadaş, aralarına kimsenin girmediğini bilir - sunucumuzun bile.

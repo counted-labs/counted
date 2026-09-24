@@ -3,7 +3,7 @@
 use dioxus::prelude::*;
 
 use crate::common::{
-    capture_and_scan, haptic, scan_error_key, scanner_available, Haptic, ScanError,
+    capture_and_scan, haptic, scan_error_key, scanner_available, Haptic, ScanError, ScanSource,
 };
 use crate::expenses::helpers::scan_prefill::{prefill_from_scan, ScanPrefill};
 
@@ -14,7 +14,7 @@ pub struct ReceiptScan {
     /// A message key, or `None`. Rendered through the existing `Toast`.
     pub error: Signal<Option<&'static str>>,
     busy: Signal<bool>,
-    pub start: Callback<()>,
+    pub start: Callback<ScanSource>,
 }
 
 impl ReceiptScan {
@@ -35,7 +35,7 @@ pub fn use_receipt_scan(mut open_modal: Signal<bool>) -> ReceiptScan {
     let mut error: Signal<Option<&'static str>> = use_signal(|| None);
     let mut busy = use_signal(|| false);
 
-    let start = use_callback(move |_| {
+    let start = use_callback(move |source: ScanSource| {
         // The camera takes a moment to appear and the button stays visible behind it; without the
         // guard a second tap starts a second capture and a second inference thread.
         if busy() {
@@ -46,7 +46,7 @@ pub fn use_receipt_scan(mut open_modal: Signal<bool>) -> ReceiptScan {
         haptic(Haptic::Light);
 
         spawn(async move {
-            let outcome = capture_and_scan().await;
+            let outcome = capture_and_scan(source).await;
             busy.set(false);
             match outcome {
                 Ok(fields) => {

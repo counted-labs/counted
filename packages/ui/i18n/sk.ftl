@@ -287,6 +287,7 @@ amount-op-add = Plus
 amount-op-subtract = Mínus
 amount-op-multiply = Krát
 amount-op-divide = Delené
+amount-op-equals = Rovná sa
 expense-rate = Výmenný kurz (nepovinné)
 expense-rate-hint = Nechaj prázdne na použitie kurzu Európskej komisie (InforEuro) za { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Zadaj výmenný kurz väčší ako 0.
@@ -526,6 +527,8 @@ scan-in-progress = Číta sa účtenka…
 scan-error-capture = Fotku sa nepodarilo urobiť. Skús to znova alebo zadaj výdavok ručne.
 scan-error-unreadable = Na účtenke nie je nič čitateľné. Zadaj výdavok ručne.
 scan-check-amount = Skontroluj súčet - nebol zreteľne vytlačený.
+scan-take-photo = Odfotiť
+scan-choose-photo = Vybrať fotku
 expense-converted-from = Zaplatené { $amount } { $from } · 1 { $from } = { $rate } { $to }
 project-currency = Mena
 project-currency-hint = Každá suma sa zobrazuje v tejto mene. Neskôr ju nemožno zmeniť.
@@ -555,6 +558,8 @@ friends-decline = Odmietnuť
 friends-list-title = Moji priatelia
 friends-list-empty = Zatiaľ žiadni priatelia. Pridaj niekoho e-mailom vyššie alebo zo zdieľaného projektu.
 friends-remove = Odstrániť
+friends-remove-confirm-title = Odstrániť priateľa
+friends-remove-confirm-message = { $email } už nebude medzi vašimi priateľmi a vy medzi jeho. Ktokoľvek z vás môže neskôr poslať novú žiadosť.
 friends-no-key = Zatiaľ nie je pripravené
 friends-fingerprint = Bezpečnostný kód
 friends-fingerprint-hint = Dvaja priatelia, ktorí si prečítajú rovnaký bezpečnostný kód, vedia, že medzi nimi nikto nesedí - ani náš server.

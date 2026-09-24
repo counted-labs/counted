@@ -3,10 +3,11 @@ use crate::tid;
 use shared::{sums_to_total, ExpenseType};
 
 use super::super::helpers::expense_form_helpers::{
-    amount_field_text, debtors_label, effective_rate, parse_amount, participants_summary,
-    payers_label, project_total, redistribute, with_operator, UserEntry,
+    debtors_label, effective_rate, parse_amount, participants_summary, payers_label, project_total,
+    redistribute, UserEntry,
 };
-use super::amount_input::AmountInput;
+use super::amount_input::{AmountInput, FocusedAmount};
+use super::amount_operator_bar::AmountOperatorBar;
 use super::participants_fieldset::ParticipantsFieldset;
 use crate::categories::{category_label, infer_chart_category, parent_emoji, CHART_CATEGORIES as CATEGORIES};
 use crate::common::format_month_str;
@@ -168,13 +169,8 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
     let mut payers_open = use_signal(|| false);
     let mut debtors_open = use_signal(|| true);
 
-    let mut amount_draft: Signal<Option<String>> = use_signal(|| None);
-    let mut tap_operator = move |op: char| {
-        let shown = amount_field_text(amount_draft().as_deref(), source_amount());
-        if let Some(next) = with_operator(&shown, op) {
-            amount_draft.set(Some(next));
-        }
-    };
+    // Every `AmountInput` below publishes its draft here while focused; `AmountOperatorBar` reads it.
+    use_context_provider::<FocusedAmount>(|| Signal::new(None));
 
     // A side that stops adding up forces itself open — collapsing must never hide the shortfall.
     let payers_expanded = payers_open() || !side_balances(&payers(), total_amount());
@@ -261,7 +257,6 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                                 class: "grow text-2xl font-semibold tabular-nums",
                                 aria_required: "true",
                                 value: source_amount(),
-                                draft: amount_draft,
                                 oninput: move |raw: String| {
                                     let Some(v) = parse_amount(&raw) else { return };
                                     source_amount.set(v);
@@ -289,43 +284,6 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                                 for c in shared::CURRENCIES {
                                     option { value: c.code, "{c.code}" }
                                 }
-                            }
-                        }
-                        // Mobile numeric keyboards carry no operator keys, and no `inputmode`
-                        // can add one. `onpointerdown` preventDefault keeps the input focused so
-                        // the keyboard stays up across the tap.
-                        div { class: "hidden pointer-coarse:flex gap-2",
-                            button {
-                                r#type: "button",
-                                class: "btn btn-sm btn-ghost flex-1 text-lg",
-                                aria_label: tid!("amount-op-add"),
-                                onpointerdown: move |e| e.prevent_default(),
-                                onclick: move |_| tap_operator('+'),
-                                "+"
-                            }
-                            button {
-                                r#type: "button",
-                                class: "btn btn-sm btn-ghost flex-1 text-lg",
-                                aria_label: tid!("amount-op-subtract"),
-                                onpointerdown: move |e| e.prevent_default(),
-                                onclick: move |_| tap_operator('-'),
-                                "−"
-                            }
-                            button {
-                                r#type: "button",
-                                class: "btn btn-sm btn-ghost flex-1 text-lg",
-                                aria_label: tid!("amount-op-multiply"),
-                                onpointerdown: move |e| e.prevent_default(),
-                                onclick: move |_| tap_operator('*'),
-                                "×"
-                            }
-                            button {
-                                r#type: "button",
-                                class: "btn btn-sm btn-ghost flex-1 text-lg",
-                                aria_label: tid!("amount-op-divide"),
-                                onpointerdown: move |e| e.prevent_default(),
-                                onclick: move |_| tap_operator('/'),
-                                "÷"
                             }
                         }
                     }
@@ -503,6 +461,8 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                             }
                         }
                     }
+
+                    AmountOperatorBar {}
                 }
             }
 
@@ -518,7 +478,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
 mod tests {
     use super::*;
     use dioxus::dioxus_core::ElementId;
-    use crate::common::test_dom::{focus, form_input, listener_ids, value_writes};
+    use crate::common::test_dom::{click, focus, form_input, listener_ids, texts, value_writes};
     use crate::expenses::helpers::expense_form_helpers::init_entries;
     use shared::{EncryptedPair, User};
     use std::cell::RefCell;
@@ -774,6 +734,45 @@ mod tests {
         let m = dom.render_immediate_to_vec();
         assert_eq!(*spy.borrow(), (payers, debtors), "blur may settle the text, never the numbers");
         assert_eq!(value_writes(&m, field), vec!["83.33".to_string()]);
+    }
+
+    /// The bar is below the footer and targets whatever amount field has focus — here, the total.
+    /// Which row it targets when a participant is focused is covered in `participants_fieldset`.
+    #[test]
+    fn the_operator_bar_appears_on_focus_and_drives_the_total() {
+        let (mut dom, spy, ids) = harness();
+        let field = total(&ids);
+
+        dom.runtime().handle_event("input", form_input("320"), field);
+        let m = dom.render_immediate_to_vec();
+        assert!(listener_ids(&m, "click").is_empty(), "no bar until a field is focused");
+
+        dom.runtime().handle_event("focus", focus(), field);
+        let m = dom.render_immediate_to_vec();
+        let keys = listener_ids(&m, "click");
+        assert_eq!(keys.len(), 5, "the bar carries +, −, ×, ÷ and =");
+
+        // "−", then the keystroke the user types after it — the browser sends the whole value.
+        dom.runtime().handle_event("click", click(), keys[1]);
+        let m = dom.render_immediate_to_vec();
+        assert_eq!(value_writes(&m, field).last().map(String::as_str), Some("320-"));
+
+        dom.runtime().handle_event("input", form_input("320-25"), field);
+        let m = dom.render_immediate_to_vec();
+        let (payers, debtors) = spy.borrow().clone();
+        assert_eq!(payers, vec![(true, 147.5), (true, 147.5)], "295 split two ways");
+        assert_eq!(debtors, vec![(true, 147.5), (true, 147.5)]);
+        assert!(
+            texts(&m).iter().any(|t| t == "320-25"),
+            "the expression shows in the bubble: {:?}",
+            texts(&m)
+        );
+
+        // "=" settles the text without dropping focus, so the bar stays.
+        dom.runtime().handle_event("click", click(), keys[4]);
+        let m = dom.render_immediate_to_vec();
+        assert_eq!(value_writes(&m, field).last().map(String::as_str), Some("295"));
+        assert_eq!(*spy.borrow(), (payers, debtors), "settling the text moves no number");
     }
 
     /// A plain draft is left alone on blur: "12,50" must not come back as "12.5".

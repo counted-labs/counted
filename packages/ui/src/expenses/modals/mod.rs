@@ -1,5 +1,6 @@
 mod add_expense_modal;
 mod amount_input;
+mod amount_operator_bar;
 mod edit_expense_modal;
 mod edit_project_modal;
 mod expense_form;

@@ -88,11 +88,11 @@ pub mod fx_cache;
 pub use fx_cache::CachedFx;
 
 pub mod account_sync;
-pub use account_sync::{apply_pull, copy_missing, to_push};
+pub use account_sync::{apply_pull, copy_missing, left_elsewhere, to_push};
 
 pub mod local_storage;
 pub use local_storage::{
-    clear_user_id, initials, is_mobile, key_of, project_key, read_from_ls, remove_project,
+    clear_user_id, initials, is_mobile, key_of, mark_synced, project_key, read_from_ls, remove_project,
     set_anon_member_id, set_cached_projects_list, set_project_cache, update_ls,
     update_ls_if_changed, upsert_project, upsert_project_key, user_color_class, write_to_ls,
     LocalStorageProject, LocalStorageState,
@@ -206,5 +206,5 @@ pub type NativeClipboardReader = std::sync::Arc<dyn Fn() -> Option<String> + Sen
 mod scan;
 pub use scan::{
     capture_and_scan, scan_error_key, scanner_available, set_native_scan, NativeScan, ScanError,
-    ScanFields,
+    ScanFields, ScanSource,
 };

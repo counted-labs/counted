@@ -285,6 +285,7 @@ amount-op-add = Συν
 amount-op-subtract = Πλην
 amount-op-multiply = Επί
 amount-op-divide = Διά
+amount-op-equals = Ίσον
 expense-rate = Ισοτιμία (προαιρετικό)
 expense-rate-hint = Άφησέ το κενό για την ισοτιμία της Ευρωπαϊκής Επιτροπής (InforEuro) για { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Εισήγαγε ισοτιμία μεγαλύτερη από 0.
@@ -520,6 +521,8 @@ scan-in-progress = Ανάγνωση της απόδειξης…
 scan-error-capture = Δεν ήταν δυνατή η λήψη της φωτογραφίας. Δοκίμασε ξανά ή καταχώρισε τη δαπάνη με το χέρι.
 scan-error-unreadable = Τίποτα αναγνώσιμο σε αυτήν την απόδειξη. Καταχώρισε τη δαπάνη με το χέρι.
 scan-check-amount = Έλεγξε το σύνολο - δεν ήταν καθαρά τυπωμένο.
+scan-take-photo = Λήψη φωτογραφίας
+scan-choose-photo = Επιλογή φωτογραφίας
 expense-converted-from = Πληρώθηκαν { $amount } { $from } · 1 { $from } = { $rate } { $to }
 project-currency = Νόμισμα
 project-currency-hint = Κάθε ποσό εμφανίζεται σε αυτό το νόμισμα. Δεν μπορεί να αλλάξει αργότερα.
@@ -549,6 +552,8 @@ friends-decline = Απόρριψη
 friends-list-title = Οι φίλοι μου
 friends-list-empty = Δεν υπάρχουν φίλοι ακόμα. Πρόσθεσε κάποιον με email παραπάνω ή από ένα κοινό έργο.
 friends-remove = Αφαίρεση
+friends-remove-confirm-title = Αφαίρεση φίλου
+friends-remove-confirm-message = Ο/Η { $email } δεν θα είναι πια στους φίλους σας, ούτε εσείς στους δικούς του. Οποιοσδήποτε από τους δύο μπορεί να στείλει νέο αίτημα αργότερα.
 friends-no-key = Δεν είναι έτοιμο ακόμα
 friends-fingerprint = Κωδικός ασφαλείας
 friends-fingerprint-hint = Δύο φίλοι που διαβάζουν ο ένας στον άλλο τον ίδιο κωδικό ασφαλείας ξέρουν ότι κανείς δεν βρίσκεται ανάμεσά τους - ούτε καν ο διακομιστής μας.

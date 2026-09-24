@@ -32,7 +32,14 @@ pub fn password_error_key(password: &str) -> Option<&'static str> {
 /// the account carries. A legacy account is re-enrolled in the same request: the client already
 /// holds the password, so it derives the current proof alongside and the server swaps them once
 /// the legacy one verifies.
-pub async fn sign_in(email: String, password: &str) -> Result<(Account, [u8; 32]), ServerFnError> {
+///
+/// `lang` is read by the caller rather than here: `i18n::current_lang()` consumes the Dioxus
+/// context and panics outside a scope that holds it.
+pub async fn sign_in(
+    email: String,
+    password: &str,
+    lang: String,
+) -> Result<(Account, [u8; 32]), ServerFnError> {
     let salt = login_salt(Json(LoginSaltPayload { email: email.clone() })).await?;
     let proof = derive_login_proof(salt.auth_version, password, &salt.salt).to_vec();
     let upgrade = (salt.auth_version == AUTH_VERSION_LEGACY).then(|| {
@@ -42,7 +49,7 @@ pub async fn sign_in(email: String, password: &str) -> Result<(Account, [u8; 32]
             login_salt: login_salt.to_vec(),
         }
     });
-    let account = login(Json(LoginPayload { email, proof, upgrade })).await?;
+    let account = login(Json(LoginPayload { email, proof, upgrade, lang: Some(lang) })).await?;
     flush_session();
     let account_key = derive_account_key_v1(password, &account.kdf_salt);
     let account = ensure_keypair(account, &account_key).await;
@@ -75,6 +82,7 @@ pub async fn sign_up(
     display_name: EncryptedPair,
     kdf_salt: [u8; 16],
     had_anonymous_membership: bool,
+    lang: String,
 ) -> Result<(), ServerFnError> {
     let login_salt = generate_kdf_salt();
     let proof = derive_login_proof(AUTH_VERSION_CURRENT, password, &login_salt).to_vec();
@@ -86,6 +94,7 @@ pub async fn sign_up(
         kdf_salt: kdf_salt.to_vec(),
         had_anonymous_membership,
         keypair: new_keypair(account_key),
+        lang: Some(lang),
     }))
     .await
 }

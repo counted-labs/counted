@@ -288,6 +288,7 @@ amount-op-add = Móide
 amount-op-subtract = Lúide
 amount-op-multiply = Iolraigh
 amount-op-divide = Roinn
+amount-op-equals = Cothrom le
 expense-rate = Ráta malairte (roghnach)
 expense-rate-hint = Fág folamh chun ráta an Choimisiúin Eorpaigh (InforEuro) do { $month } a úsáid: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Cuir isteach ráta malairte níos mó ná 0.
@@ -529,6 +530,8 @@ scan-in-progress = An admháil á léamh…
 scan-error-capture = Níorbh fhéidir an grianghraf sin a thógáil. Bain triail eile as, nó cuir isteach an costas de láimh.
 scan-error-unreadable = Faic inléite ar an admháil sin. Cuir isteach an costas de láimh.
 scan-check-amount = Seiceáil an t-iomlán - ní raibh sé priontáilte go soiléir.
+scan-take-photo = Tóg grianghraf
+scan-choose-photo = Roghnaigh grianghraf
 expense-converted-from = Íoctha { $amount } { $from } · 1 { $from } = { $rate } { $to }
 project-currency = Airgeadra
 project-currency-hint = Taispeántar gach suim san airgeadra seo. Ní féidir é a athrú níos déanaí.
@@ -558,6 +561,8 @@ friends-decline = Diúltaigh
 friends-list-title = Mo chairde
 friends-list-empty = Gan cairde fós. Cuir duine leis trí ríomhphost thuas, nó ó thionscadal a chomhroinneann sibh.
 friends-remove = Bain
+friends-remove-confirm-title = Bain cara
+friends-remove-confirm-message = Ní bheidh { $email } i measc do chairde a thuilleadh, ná tusa i measc a chairde siúd. Is féidir le ceachtar agaibh iarratas nua a sheoladh níos déanaí.
 friends-no-key = Níl sé réidh fós
 friends-fingerprint = Cód sábháilteachta
 friends-fingerprint-hint = Tá a fhios ag beirt chairde a léann an cód sábháilteachta céanna dá chéile nach bhfuil duine ar bith eatarthu - fiú ár bhfreastalaí.

@@ -469,6 +469,8 @@ scan-in-progress = Beleg wird gelesen…
 scan-error-capture = Das Foto konnte nicht aufgenommen werden. Versuche es erneut oder gib die Ausgabe von Hand ein.
 scan-error-unreadable = Auf diesem Beleg ist nichts lesbar. Gib die Ausgabe von Hand ein.
 scan-check-amount = Prüfe die Summe - sie war nicht klar gedruckt.
+scan-take-photo = Foto aufnehmen
+scan-choose-photo = Foto auswählen
 
 update-required-title = Aktualisierung erforderlich
 update-required-body = Diese Version von Counted ist zu alt, um mit dem Server zu kommunizieren. Aktualisieren Sie sie, um die App weiter zu nutzen.
@@ -509,6 +511,7 @@ amount-op-add = Plus
 amount-op-subtract = Minus
 amount-op-multiply = Mal
 amount-op-divide = Geteilt
+amount-op-equals = Gleich
 expense-rate = Wechselkurs (optional)
 expense-rate-hint = Leer lassen, um den Kurs der Europäischen Kommission (InforEuro) für { $month } zu verwenden: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Gib einen Wechselkurs größer als 0 ein.
@@ -577,6 +580,8 @@ friends-decline = Ablehnen
 friends-list-title = Meine Freunde
 friends-list-empty = Noch keine Freunde. Füge oben jemanden per E-Mail hinzu, oder aus einem gemeinsamen Projekt.
 friends-remove = Entfernen
+friends-remove-confirm-title = Freund entfernen
+friends-remove-confirm-message = { $email } ist dann nicht mehr in deinen Freunden, und du nicht mehr in seinen. Jeder von euch kann später eine neue Anfrage senden.
 friends-no-key = Noch nicht bereit
 friends-fingerprint = Sicherheitscode
 friends-fingerprint-hint = Zwei Freunde, die sich denselben Sicherheitscode vorlesen, wissen, dass niemand zwischen ihnen sitzt - nicht einmal unser Server.

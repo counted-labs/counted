@@ -286,6 +286,7 @@ amount-op-add = Plus
 amount-op-subtract = Minus
 amount-op-multiply = Înmulțit
 amount-op-divide = Împărțit
+amount-op-equals = Egal
 expense-rate = Curs de schimb (opțional)
 expense-rate-hint = Lasă gol pentru a folosi cursul Comisiei Europene (InforEuro) pentru { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Introdu un curs de schimb mai mare decât 0.
@@ -523,6 +524,8 @@ scan-in-progress = Se citește bonul…
 scan-error-capture = Nu s-a putut face fotografia. Încearcă din nou sau introdu cheltuiala manual.
 scan-error-unreadable = Nimic lizibil pe acest bon. Introdu cheltuiala manual.
 scan-check-amount = Verifică totalul - nu era tipărit clar.
+scan-take-photo = Fă o fotografie
+scan-choose-photo = Alege o fotografie
 expense-converted-from = Plătit { $amount } { $from } · 1 { $from } = { $rate } { $to }
 project-currency = Monedă
 project-currency-hint = Toate sumele sunt afișate în această monedă. Nu poate fi schimbată ulterior.
@@ -552,6 +555,8 @@ friends-decline = Refuză
 friends-list-title = Prietenii mei
 friends-list-empty = Niciun prieten încă. Adaugă pe cineva prin e-mail mai sus sau dintr-un proiect partajat.
 friends-remove = Elimină
+friends-remove-confirm-title = Elimină prietenul
+friends-remove-confirm-message = { $email } nu va mai fi printre prietenii tăi, iar tu nu vei mai fi printre ai lui. Oricare dintre voi poate trimite o nouă cerere mai târziu.
 friends-no-key = Nu e gata încă
 friends-fingerprint = Cod de siguranță
 friends-fingerprint-hint = Doi prieteni care își citesc același cod de siguranță știu că nimeni nu stă între ei - nici măcar serverul nostru.

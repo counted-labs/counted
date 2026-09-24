@@ -6,7 +6,8 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::common::{
-    format_date, ConfirmModal, EmptyMagnifyingGlassIllustration, Flash, ProjectKey, QueuedOp, Toast,
+    format_date, haptic, ConfirmModal, EmptyMagnifyingGlassIllustration, Flash, Haptic, ProjectKey,
+    QueuedOp, ScanSource, SpeedDialAction, Toast,
 };
 use crate::crypto::{payments_are_inconsistent, DecryptedExpense, DecryptedPayment};
 use crate::expenses::helpers::delete_expense_action::{
@@ -15,7 +16,7 @@ use crate::expenses::helpers::delete_expense_action::{
 use crate::expenses::helpers::project_data::{LiveData, ProjectData, RowExpense};
 use crate::expenses::hooks::use_receipt_scan::use_receipt_scan;
 use crate::expenses::{AddExpenseModal, EditExpenseModal, ExpenseRow};
-use crate::icons::{CameraIcon, PlusIcon, ICON_INLINE};
+use crate::icons::{CameraIcon, CloseIcon, PhotoIcon, PlusIcon, ICON_INLINE};
 use crate::route::Route;
 
 #[cfg(test)]
@@ -647,6 +648,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
     let mut filter = use_signal(|| ExpenseFilter::All);
     let mut show_add_expense = use_signal(|| false);
     let mut scan = use_receipt_scan(show_add_expense);
+    let mut scan_menu = use_signal(|| false);
     // Delete carries the name so the confirmation can quote it — the expense may be gone by then.
     let mut confirming_delete: Signal<Option<(i32, String)>> = use_signal(|| None);
     let mut editing: Signal<Option<i32>> = use_signal(|| None);
@@ -810,38 +812,83 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                 // live here, and each action is a transparent target inside it. With no scanner
                 // the shell collapses back to a single circle, so web and desktop keep exactly
                 // the FAB they had — no second branch to hold in sync.
-                div { class: "fixed safe-bottom-fab left-1/2 -translate-x-1/2 z-40 flex items-center rounded-full text-primary-content bg-gradient-brand shadow-soft",
-                    // Mobile only: nothing installs a scanner on web, desktop or the server
-                    // binary, so `scanner_available()` is false there and this never renders.
-                    if scan.available() {
-                        button {
-                            id: "scan-expense-btn",
-                            r#type: "button",
-                            // `bg-transparent` over daisyUI's `--btn-bg` so the shell's gradient
-                            // shows through, and a white wash for press feedback — `brightness-*`
-                            // would tint the whole shell, not the half being touched.
-                            class: "btn btn-circle btn-lg border-0 bg-transparent shadow-none text-primary-content [&>svg]:size-6 hover:bg-white/15 active:bg-white/25 disabled:bg-transparent disabled:text-primary-content",
-                            "aria-label": if scan.busy() { tid!("scan-in-progress") } else { tid!("expense-scan") },
-                            disabled: scan.busy(),
-                            onclick: move |_| scan.start.call(()),
-                            if scan.busy() {
-                                span { class: "loading loading-spinner loading-md" }
-                            } else {
-                                CameraIcon { size: ICON_INLINE }
+                //
+                // The scan half opens a two-action dial, same shape as `SpeedDialFab`: wry offers
+                // no single file input that reaches both the camera and the gallery on Android
+                // (`ScanSource`), so the choice is made here. The scrim sits *outside* the
+                // translated shell — `fixed` inside a `transform` is positioned against the
+                // shell, not the viewport.
+                if scan_menu() {
+                    div {
+                        class: "fixed inset-0 z-30 bg-base-content/10",
+                        onclick: move |e| {
+                            e.stop_propagation();
+                            scan_menu.set(false);
+                        },
+                    }
+                }
+                div { class: "fixed safe-bottom-fab left-1/2 -translate-x-1/2 z-40 flex flex-col items-end gap-3",
+                    if scan_menu() {
+                        div {
+                            class: "flex flex-col items-end gap-3",
+                            onclick: move |e| {
+                                e.stop_propagation();
+                                scan_menu.set(false);
+                            },
+                            SpeedDialAction {
+                                id: "scan-camera-btn",
+                                label: tid!("scan-take-photo"),
+                                icon: rsx! { CameraIcon { size: ICON_INLINE } },
+                                onclick: move |_| scan.start.call(ScanSource::Camera),
+                            }
+                            SpeedDialAction {
+                                id: "scan-library-btn",
+                                label: tid!("scan-choose-photo"),
+                                icon: rsx! { PhotoIcon { size: ICON_INLINE } },
+                                onclick: move |_| scan.start.call(ScanSource::Library),
                             }
                         }
-                        // Two targets in one pill read as one button without it.
-                        div { class: "w-px h-6 bg-primary-content/25" }
                     }
-                    button {
-                        id: "add-expense-btn",
-                        r#type: "button",
-                        class: "btn btn-circle btn-lg border-0 bg-transparent shadow-none text-primary-content [&>svg]:size-6 hover:bg-white/15 active:bg-white/25",
-                        "aria-label": tid!("expense-add"),
-                        onclick: move |_| {
-                            show_add_expense.set(true);
-                        },
-                        PlusIcon { size: ICON_INLINE }
+                    div { class: "self-center flex items-center rounded-full text-primary-content bg-gradient-brand shadow-soft",
+                        // Mobile only: nothing installs a scanner on web, desktop or the server
+                        // binary, so `scanner_available()` is false there and this never renders.
+                        if scan.available() {
+                            button {
+                                id: "scan-expense-btn",
+                                r#type: "button",
+                                // `bg-transparent` over daisyUI's `--btn-bg` so the shell's gradient
+                                // shows through, and a white wash for press feedback — `brightness-*`
+                                // would tint the whole shell, not the half being touched.
+                                class: "btn btn-circle btn-lg border-0 bg-transparent shadow-none text-primary-content [&>svg]:size-6 hover:bg-white/15 active:bg-white/25 disabled:bg-transparent disabled:text-primary-content",
+                                "aria-label": if scan.busy() { tid!("scan-in-progress") } else { tid!("expense-scan") },
+                                "aria-expanded": scan_menu(),
+                                disabled: scan.busy(),
+                                onclick: move |e| {
+                                    e.stop_propagation();
+                                    haptic(Haptic::Light);
+                                    scan_menu.set(!scan_menu());
+                                },
+                                if scan.busy() {
+                                    span { class: "loading loading-spinner loading-md" }
+                                } else if scan_menu() {
+                                    CloseIcon { size: ICON_INLINE }
+                                } else {
+                                    CameraIcon { size: ICON_INLINE }
+                                }
+                            }
+                            // Two targets in one pill read as one button without it.
+                            div { class: "w-px h-6 bg-primary-content/25" }
+                        }
+                        button {
+                            id: "add-expense-btn",
+                            r#type: "button",
+                            class: "btn btn-circle btn-lg border-0 bg-transparent shadow-none text-primary-content [&>svg]:size-6 hover:bg-white/15 active:bg-white/25",
+                            "aria-label": tid!("expense-add"),
+                            onclick: move |_| {
+                                show_add_expense.set(true);
+                            },
+                            PlusIcon { size: ICON_INLINE }
+                        }
                     }
                 }
             }

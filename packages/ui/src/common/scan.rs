@@ -22,12 +22,22 @@ pub struct ScanFields {
 pub enum ScanError {
     /// No scanner installed — web, desktop, the server binary.
     Unsupported,
-    /// The user backed out of the camera. Not a failure, and never shown.
+    /// The user backed out of the camera or the picker. Not a failure, and never shown.
     Cancelled,
     /// The WebView handed back something that is not a decodable image.
     Capture,
     /// The models ran and found nothing usable.
     Unreadable,
+}
+
+/// Where the photo comes from. Only the `capture` attribute differs, and it is decisive: with it,
+/// wry's Android chooser launches `ACTION_IMAGE_CAPTURE` and nothing else, and WKWebView opens the
+/// camera directly; without it, Android gets the document picker only and iOS its own sheet. No
+/// single input yields both on Android, so the choice is made in the UI, before the input exists.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScanSource {
+    Camera,
+    Library,
 }
 
 /// A key, not a sentence — DOCUMENTATION §11.1. `Cancelled` and `Unsupported` have no key because
@@ -86,7 +96,7 @@ const MAX_EDGE: u32 = 1600;
 /// removed. The extra few hundred KB stay far inside `MAX_CAPTURE_BYTES`.
 const JPEG_QUALITY: f32 = 0.92;
 
-/// Opens the camera and streams the photo back, base64 in chunks.
+/// Opens the camera or the picker and streams the photo back, base64 in chunks.
 ///
 /// **The input is created in JS and appended to `document.body`, outside the Dioxus root, and that
 /// is load-bearing.** dioxus-interpreter's `native.js` installs a window click listener that
@@ -103,7 +113,11 @@ const JPEG_QUALITY: f32 = 0.92;
 ///
 /// Dioxus runs this as the body of an async function, so the top-level `await` is what suspends it
 /// — same contract as `sleep_js` and `copy_js`.
-fn capture_js() -> String {
+fn capture_js(source: ScanSource) -> String {
+    let capture = match source {
+        ScanSource::Camera => "input.capture = 'environment';",
+        ScanSource::Library => "",
+    };
     format!(
         r#"
         const CHUNK = {CHUNK_BYTES}, MAX_EDGE = {MAX_EDGE}, QUALITY = {JPEG_QUALITY};
@@ -111,7 +125,7 @@ fn capture_js() -> String {
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';
-            input.capture = 'environment';
+            {capture}
             input.style.cssText = 'position:fixed;left:-10000px;opacity:0';
             document.body.appendChild(input);
 
@@ -206,14 +220,15 @@ impl Assembler {
     }
 }
 
-/// Opens the camera, reads the photo, runs OCR. The whole feature, from the UI's point of view.
-pub async fn capture_and_scan() -> Result<ScanFields, ScanError> {
+/// Opens the camera or the picker, reads the photo, runs OCR. The whole feature, from the UI's
+/// point of view.
+pub async fn capture_and_scan(source: ScanSource) -> Result<ScanFields, ScanError> {
     let Some(native) = NATIVE.get() else {
         return Err(ScanError::Unsupported);
     };
 
     (native.arm)();
-    let captured = capture_jpeg().await;
+    let captured = capture_jpeg(source).await;
     // Unconditional, and before the `?`: the platform's own copy of the photo goes whether the scan
     // succeeded, failed, or the user backed out of the camera. That promise is in the privacy
     // policy, and it is not conditional on the happy path.
@@ -224,8 +239,8 @@ pub async fn capture_and_scan() -> Result<ScanFields, ScanError> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-async fn capture_jpeg() -> Result<Vec<u8>, ScanError> {
-    let mut eval = dioxus::prelude::document::eval(&capture_js());
+async fn capture_jpeg(source: ScanSource) -> Result<Vec<u8>, ScanError> {
+    let mut eval = dioxus::prelude::document::eval(&capture_js(source));
     let mut assembler = Assembler::default();
     while let Ok(msg) = eval.recv::<CaptureMsg>().await {
         if let Some(done) = assembler.push(&msg) {
@@ -238,7 +253,7 @@ async fn capture_jpeg() -> Result<Vec<u8>, ScanError> {
 /// Web installs no scanner, so this is unreachable — but `ui` is compiled for wasm and the eval
 /// path above is CSP-blocked there (DOCUMENTATION §8).
 #[cfg(target_arch = "wasm32")]
-async fn capture_jpeg() -> Result<Vec<u8>, ScanError> {
+async fn capture_jpeg(_source: ScanSource) -> Result<Vec<u8>, ScanError> {
     Err(ScanError::Unsupported)
 }
 

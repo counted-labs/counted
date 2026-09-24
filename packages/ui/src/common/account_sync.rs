@@ -13,13 +13,41 @@
 //! the server can store it without reading it, and unwrapped on any other device the account signs
 //! in to — the only thing that stops a second device from showing a list of projects it cannot
 //! decrypt. See `docs/e2ee.md`, "Key escrow".
+//!
+//! The push is not a blind union. Leaving a project on one device deletes the account's row, and
+//! a second device still holding that project locally would otherwise push it straight back on its
+//! next load — the leave undone, silently, and re-pulled onto the device that left. So every entry
+//! remembers which account it was last seen synced with ([`LocalStorageProject::synced_account`]),
+//! and an entry marked for *this* account that the server no longer lists is forgotten, not pushed
+//! ([`left_elsewhere`]). An entry with no mark, or marked for another account, is what the push was
+//! always for.
 
 use shared::{Account, AccountProject, UpsertAccountProject};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use super::local_storage::{key_of, LocalStorageState};
+use super::local_storage::{key_of, mark_synced, LocalStorageState};
 use crate::crypto::{claim_label, claim_token, unwrap_project_key, wrap_project_key};
+
+/// Projects this device holds that `account_id` was synced with and has since left elsewhere: the
+/// server no longer lists them for this account. The caller forgets them locally **before**
+/// [`to_push`] runs, so they are never sent back up.
+///
+/// Only a `leave` (or the project's own deletion) removes an `account_projects` row, so an absent
+/// row on a project this account was seen holding is never a stale-cache ambiguity.
+pub fn left_elsewhere(
+    state: &LocalStorageState,
+    server: &[AccountProject],
+    account_id: Uuid,
+) -> Vec<Uuid> {
+    state
+        .projects
+        .iter()
+        .filter(|local| local.synced_account == Some(account_id))
+        .filter(|local| !server.iter().any(|r| r.project_id == local.project_id))
+        .map(|local| local.project_id)
+        .collect()
+}
 
 /// What this device should send up, given what the server already has.
 ///
@@ -115,16 +143,21 @@ pub fn copy_missing(state: &LocalStorageState, server: &[AccountProject]) -> boo
 /// The local key wins over the escrowed one when both are present: it is the copy that came from a
 /// share link, and overwriting it with a blob the server handed us would let a compromised server
 /// swap in a key of its choosing on a device that already had the right one.
+///
+/// Every pulled entry is marked as synced with `account_id`, which is what makes a later absence
+/// from the server mean "left elsewhere" — see [`left_elsewhere`].
 pub fn apply_pull(
     state: &mut LocalStorageState,
     server: &[AccountProject],
     account_key: Option<&[u8; 32]>,
+    account_id: Uuid,
 ) {
     use super::local_storage::{upsert_project, upsert_project_key};
     use crate::crypto::key_to_fragment;
 
     for remote in server {
         upsert_project(state, remote.project_id, remote.user_id);
+        mark_synced(state, &[remote.project_id], account_id);
 
         let already_held = state
             .projects
@@ -225,7 +258,7 @@ mod tests {
             .collect();
 
         let pushed: Vec<Uuid> = to_push(&s, &server, None, None).iter().map(|p| p.project_id).collect();
-        apply_pull(&mut s, &server, None);
+        apply_pull(&mut s, &server, None, Uuid::new_v4());
 
         let mut local_ids: Vec<Uuid> = s.projects.iter().map(|p| p.project_id).collect();
         let mut union: Vec<Uuid> = pushed.iter().chain([c, d, e].iter()).copied().collect();
@@ -252,6 +285,7 @@ mod tests {
             &mut fresh,
             &[remote(id, None, Some(wrapped))],
             Some(&account_key),
+            Uuid::new_v4(),
         );
 
         assert_eq!(key_of(&fresh.projects[0]), Some(project_key));
@@ -319,6 +353,7 @@ mod tests {
             &mut s,
             &[remote(id, None, Some(wrapped))],
             Some(&generate_key()),
+            Uuid::new_v4(),
         );
 
         assert_eq!(s.projects.len(), 1, "the membership still lands");
@@ -337,9 +372,97 @@ mod tests {
             &mut s,
             &[remote(id, None, Some(wrap_project_key(&account_key, &other).unwrap()))],
             Some(&account_key),
+            Uuid::new_v4(),
         );
 
         assert_eq!(key_of(&s.projects[0]), Some(held));
+    }
+
+    /// The reported edge case. Devices 1 and 2 both hold A, B, C synced with the account. Device 1
+    /// leaves C. Device 2 must forget C, not push it back — otherwise the leave is undone and C
+    /// comes back onto device 1 at its next pull.
+    #[test]
+    fn a_project_left_on_another_device_is_forgotten_not_pushed_back() {
+        let (a, b, c) = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
+        let account = Uuid::new_v4();
+        let mut device_2 = state(vec![local(a, None, None), local(b, None, None), local(c, None, None)]);
+        let before_leave: Vec<AccountProject> = [a, b, c].iter().map(|id| remote(*id, None, None)).collect();
+        apply_pull(&mut device_2, &before_leave, None, account);
+
+        let after_leave = &before_leave[..2];
+        let left = left_elsewhere(&device_2, after_leave, account);
+        assert_eq!(left, vec![c]);
+
+        for id in &left {
+            crate::common::local_storage::remove_project(&mut device_2, *id);
+        }
+        assert!(to_push(&device_2, after_leave, None, None).is_empty(), "C is not pushed back");
+        let ids: Vec<Uuid> = device_2.projects.iter().map(|p| p.project_id).collect();
+        assert_eq!(ids, vec![a, b]);
+    }
+
+    /// Without the drop, the same state pushes C straight back: this is the bug, kept as the
+    /// negative of the test above so the two cannot silently diverge.
+    #[test]
+    fn to_push_alone_would_resurrect_the_left_project() {
+        let c = Uuid::new_v4();
+        let account = Uuid::new_v4();
+        let mut device_2 = state(vec![local(c, None, None)]);
+        apply_pull(&mut device_2, &[remote(c, None, None)], None, account);
+
+        let push = to_push(&device_2, &[], None, None);
+
+        assert_eq!(push.len(), 1, "to_push knows nothing about leaves; left_elsewhere must run first");
+    }
+
+    /// A project this device holds but the account has never held is exactly what the push exists
+    /// for — it is not "left elsewhere", whatever the server's silence.
+    #[test]
+    fn a_never_synced_project_is_not_treated_as_left() {
+        let id = Uuid::new_v4();
+        let s = state(vec![local(id, None, None)]);
+
+        assert!(left_elsewhere(&s, &[], Uuid::new_v4()).is_empty());
+        assert_eq!(to_push(&s, &[], None, None).len(), 1);
+    }
+
+    /// Logging in as a different account on the same device hands it the local list (documented as
+    /// deliberate in project-membership.md §4). The mark is per account, so account X's leaves
+    /// never make account Y forget anything.
+    #[test]
+    fn a_project_synced_with_another_account_is_still_pushed() {
+        let id = Uuid::new_v4();
+        let (x, y) = (Uuid::new_v4(), Uuid::new_v4());
+        let mut s = state(vec![local(id, None, None)]);
+        apply_pull(&mut s, &[remote(id, None, None)], None, x);
+
+        assert!(left_elsewhere(&s, &[], y).is_empty());
+        assert_eq!(to_push(&s, &[], None, None).len(), 1);
+    }
+
+    /// The device that pushed a project must also know it is now synced — otherwise a leave on
+    /// another device before this one's next pull would be undone all the same.
+    #[test]
+    fn an_accepted_push_marks_the_entry_synced() {
+        let id = Uuid::new_v4();
+        let account = Uuid::new_v4();
+        let mut s = state(vec![local(id, None, None)]);
+
+        mark_synced(&mut s, &[id], account);
+
+        assert_eq!(left_elsewhere(&s, &[], account), vec![id]);
+    }
+
+    /// A project still on the server is untouched, and the pull re-stamps the mark.
+    #[test]
+    fn a_project_the_server_still_lists_is_kept() {
+        let id = Uuid::new_v4();
+        let account = Uuid::new_v4();
+        let mut s = state(vec![local(id, None, None)]);
+        apply_pull(&mut s, &[remote(id, None, None)], None, account);
+
+        assert!(left_elsewhere(&s, &[remote(id, None, None)], account).is_empty());
+        assert_eq!(s.projects[0].synced_account, Some(account));
     }
 
     #[test]

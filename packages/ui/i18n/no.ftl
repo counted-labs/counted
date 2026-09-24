@@ -285,6 +285,7 @@ amount-op-add = Pluss
 amount-op-subtract = Minus
 amount-op-multiply = Ganger
 amount-op-divide = Delt på
+amount-op-equals = Er lik
 expense-rate = Valutakurs (valgfritt)
 expense-rate-hint = La stå tomt for å bruke Europakommisjonens (InforEuro) kurs for { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Skriv inn en valutakurs større enn 0.
@@ -520,6 +521,8 @@ scan-in-progress = Leser kvitteringen…
 scan-error-capture = Kunne ikke ta det bildet. Prøv igjen, eller skriv inn utgiften manuelt.
 scan-error-unreadable = Ingenting lesbart på den kvitteringen. Skriv inn utgiften manuelt.
 scan-check-amount = Sjekk totalen - den var ikke tydelig trykt.
+scan-take-photo = Ta et bilde
+scan-choose-photo = Velg et bilde
 expense-converted-from = Betalt { $amount } { $from } · 1 { $from } = { $rate } { $to }
 project-currency = Valuta
 project-currency-hint = Alle beløp vises i denne valutaen. Den kan ikke endres senere.
@@ -549,6 +552,8 @@ friends-decline = Avslå
 friends-list-title = Vennene mine
 friends-list-empty = Ingen venner ennå. Legg til noen via e-post ovenfor, eller fra et prosjekt dere deler.
 friends-remove = Fjern
+friends-remove-confirm-title = Fjern venn
+friends-remove-confirm-message = { $email } vil ikke lenger være blant vennene dine, og du ikke blant deres. Hver av dere kan sende en ny forespørsel senere.
 friends-no-key = Ikke klar ennå
 friends-fingerprint = Sikkerhetskode
 friends-fingerprint-hint = To venner som leser opp den samme sikkerhetskoden for hverandre, vet at ingen sitter imellom dem - ikke engang serveren vår.

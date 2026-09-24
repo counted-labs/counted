@@ -469,6 +469,8 @@ scan-in-progress = Bon wordt gelezen…
 scan-error-capture = Die foto kon niet worden gemaakt. Probeer het opnieuw, of voer de uitgave handmatig in.
 scan-error-unreadable = Niets leesbaars op deze bon. Voer de uitgave handmatig in.
 scan-check-amount = Controleer het totaal - het was niet duidelijk afgedrukt.
+scan-take-photo = Foto maken
+scan-choose-photo = Foto kiezen
 
 update-required-title = Update vereist
 update-required-body = Deze versie van Counted is te oud om met de server te communiceren. Werk hem bij om de app te blijven gebruiken.
@@ -509,6 +511,7 @@ amount-op-add = Plus
 amount-op-subtract = Min
 amount-op-multiply = Keer
 amount-op-divide = Gedeeld door
+amount-op-equals = Is gelijk aan
 expense-rate = Wisselkoers (optioneel)
 expense-rate-hint = Laat leeg om de koers van de Europese Commissie (InforEuro) voor { $month } te gebruiken: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Voer een wisselkoers groter dan 0 in.
@@ -577,6 +580,8 @@ friends-decline = Weigeren
 friends-list-title = Mijn vrienden
 friends-list-empty = Nog geen vrienden. Voeg hierboven iemand toe via e-mail, of vanuit een project dat jullie delen.
 friends-remove = Verwijderen
+friends-remove-confirm-title = Vriend verwijderen
+friends-remove-confirm-message = { $email } staat dan niet meer in je vrienden, en jij niet meer in die van hen. Elk van jullie kan later een nieuw verzoek sturen.
 friends-no-key = Nog niet klaar
 friends-fingerprint = Veiligheidscode
 friends-fingerprint-hint = Twee vrienden die elkaar dezelfde veiligheidscode voorlezen weten dat er niemand tussen hen zit - zelfs onze server niet.

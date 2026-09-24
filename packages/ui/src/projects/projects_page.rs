@@ -15,8 +15,9 @@ use std::collections::{HashSet, VecDeque};
 
 use crate::common::{
     apply_pull, clear_user_id, copy_missing, error_message, haptic, is_offline_error, key_of,
-    leave_project_and_forget, pending,
-    read_from_ls, set_cached_projects_list, sleep, to_push, update_ls, write_queue, write_to_ls,
+    leave_project_and_forget, left_elsewhere, mark_synced, pending,
+    read_from_ls, remove_project, set_cached_projects_list, sleep, to_push, update_ls, write_queue,
+    write_to_ls,
     AvatarGroup, ConfirmModal, DropdownButton, DropdownItem, EmptyMagnifyingGlassIllustration,
     Flash, Haptic, LocalStorageState, OpKind, ProjectKey, ProjectStatusItems, PullToRefresh,
     QueuedOp, SizeClass, SpeedDialAction, SpeedDialFab, LEAVE_CONFIRM_MESSAGE, LEAVE_CONFIRM_TITLE,
@@ -110,14 +111,28 @@ pub fn ProjectsPage() -> Element {
         spawn(async move {
             let Ok(server) = get_account_projects().await else { return };
 
-            // Push first: what this device holds and the account does not. Without it a project
+            // Forget first: a project this account was seen holding that it no longer holds was
+            // left on another device. Dropped before the push reads the store, or it would be
+            // pushed straight back and the leave undone. See common::account_sync.
+            let left = left_elsewhere(&read_from_ls(), &server, account.id);
+            if !left.is_empty() {
+                update_ls(ls_ctx, |state| {
+                    for project_id in &left {
+                        remove_project(state, *project_id);
+                    }
+                });
+            }
+
+            // Push next: what this device holds and the account does not. Without it a project
             // created while logged out never reaches `account_projects`, so no other device — and
-            // no escrow — ever learns about it. See common::account_sync.
+            // no escrow — ever learns about it.
             let push = to_push(&read_from_ls(), &server, account_key.as_ref(), Some(&account));
             let mut rejected: Vec<Uuid> = vec![];
+            let mut accepted: Vec<Uuid> = vec![];
             if !push.is_empty() {
                 if let Ok(result) = batch_upsert_account_projects(Json(push)).await {
                     rejected = result.identity_rejected;
+                    accepted = result.accepted;
                 }
             }
 
@@ -140,7 +155,8 @@ pub fn ProjectsPage() -> Element {
             }
 
             update_ls(ls_ctx, |state| {
-                apply_pull(state, &server, account_key.as_ref());
+                apply_pull(state, &server, account_key.as_ref(), account.id);
+                mark_synced(state, &accepted, account.id);
                 // The identity this device pushed is held by another account. Drop it locally so the
                 // "who am I?" picker reopens, and so `to_push` stops re-sending a claim that will be
                 // refused again on every load — the server has no second way to say no.

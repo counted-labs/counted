@@ -287,6 +287,7 @@ amount-op-add = Żid
 amount-op-subtract = Naqqas
 amount-op-multiply = Immultiplika
 amount-op-divide = Aqsam
+amount-op-equals = Ugwali
 expense-rate = Rata tal-kambju (fakultattiva)
 expense-rate-hint = Ħalli vojt biex tuża r-rata tal-Kummissjoni Ewropea (InforEuro) għal { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Daħħal rata tal-kambju akbar minn 0.
@@ -526,6 +527,8 @@ scan-in-progress = Qed tinqara l-irċevuta…
 scan-error-capture = Ma stajniex nieħdu dik ir-ritratt. Erġa' pprova, jew daħħal l-ispiża manwalment.
 scan-error-unreadable = Xejn ma jinqara fuq dik l-irċevuta. Daħħal l-ispiża manwalment.
 scan-check-amount = Iċċekkja t-total - ma kienx stampat ċar.
+scan-take-photo = Ħu ritratt
+scan-choose-photo = Agħżel ritratt
 expense-converted-from = Imħallas { $amount } { $from } · 1 { $from } = { $rate } { $to }
 project-currency = Munita
 project-currency-hint = Kull ammont jintwera f'din il-munita. Ma tistax tinbidel aktar tard.
@@ -555,6 +558,8 @@ friends-decline = Irrifjuta
 friends-list-title = Il-ħbieb tiegħi
 friends-list-empty = L-ebda ħabib għadu. Żid lil xi ħadd bl-email hawn fuq, jew minn proġett li taqsmu.
 friends-remove = Neħħi
+friends-remove-confirm-title = Neħħi ħabib
+friends-remove-confirm-message = { $email } ma jibqax fost il-ħbieb tiegħek, u int ma tibqax fost tiegħu. Kull wieħed minnkom jista' jibgħat talba ġdida aktar tard.
 friends-no-key = Għadu mhux lest
 friends-fingerprint = Kodiċi ta' sigurtà
 friends-fingerprint-hint = Żewġ ħbieb li jaqraw lil xulxin l-istess kodiċi ta' sigurtà jafu li ħadd ma hemm bejniethom - lanqas is-server tagħna.

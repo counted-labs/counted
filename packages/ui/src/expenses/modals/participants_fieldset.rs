@@ -183,6 +183,8 @@ pub fn ParticipantsFieldset(props: ParticipantsFieldsetProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::amount_input::FocusedAmount;
+    use super::super::amount_operator_bar::AmountOperatorBar;
     use dioxus::dioxus_core::ElementId;
     use crate::common::test_dom::{click, focus, form_input, listener_ids, texts, value_writes};
     use shared::{EncryptedPair, User};
@@ -449,5 +451,107 @@ mod tests {
         let m = dom.render_immediate_to_vec();
         assert_eq!(*spy.borrow(), before, "blur may settle the text, never the numbers");
         assert_eq!(value_writes(&m, ids[FIELD_0]), vec!["12.5".to_string()]);
+    }
+
+    /// `ExpenseForm` provides the context and renders the bar below the footer; this mirrors that
+    /// arrangement so a row's field can be driven by the operator keys.
+    #[component]
+    fn BarHarness(props: HarnessProps) -> Element {
+        // The bar is a sibling of `Harness`, so it needs its own provider above it.
+        crate::i18n::use_test_i18n();
+        use_context_provider::<FocusedAmount>(|| Signal::new(None));
+        rsx! {
+            Harness { spy: props.spy, share_mode: props.share_mode }
+            AmountOperatorBar {}
+        }
+    }
+
+    /// The bar's five keys, in template order.
+    const DIVIDE: usize = 3;
+    const EQUALS: usize = 4;
+
+    fn bar_harness() -> (VirtualDom, Spy, Vec<ElementId>) {
+        let spy: Spy = Rc::new(RefCell::new(Vec::new()));
+        let mut dom = VirtualDom::new_with_props(
+            BarHarness,
+            HarnessProps { spy: spy.clone(), share_mode: false },
+        );
+        let m = dom.rebuild_to_vec();
+        let ids = listener_ids(&m, "input");
+        assert_eq!(ids.len(), 5, "template changed — re-index the constants above");
+        assert_eq!(listener_ids(&m, "click").len(), 1, "no bar until a field is focused");
+        (dom, spy, ids)
+    }
+
+    /// The keys the bar registered on its last render.
+    fn keys(m: &dioxus::dioxus_core::Mutations) -> Vec<ElementId> {
+        let ids = listener_ids(m, "click");
+        assert_eq!(ids.len(), 5, "the bar carries +, −, ×, ÷ and =");
+        ids
+    }
+
+    #[test]
+    fn the_operator_bar_writes_into_the_focused_row() {
+        let (mut dom, spy, ids) = bar_harness();
+
+        dom.runtime().handle_event("input", form_input("20"), ids[FIELD_0]);
+        dom.render_immediate_to_vec();
+        dom.runtime().handle_event("focus", focus(), ids[FIELD_0]);
+        let keys = keys(&dom.render_immediate_to_vec());
+
+        dom.runtime().handle_event("click", click(), keys[DIVIDE]);
+        let m = dom.render_immediate_to_vec();
+        assert_eq!(value_writes(&m, ids[FIELD_0]).last().map(String::as_str), Some("20/"));
+
+        // The keystroke the user would now type, with the field's whole value as the browser sends it.
+        dom.runtime().handle_event("input", form_input("20/2"), ids[FIELD_0]);
+        let m = dom.render_immediate_to_vec();
+        assert_eq!(spy.borrow()[0], (true, 10.0, 0.0), "the row follows the expression");
+        assert!(rendered(&m).contains("20/2"), "the expression shows in the bubble: {:?}", texts(&m));
+
+        // "=" is what blur does, without dropping focus.
+        dom.runtime().handle_event("click", click(), keys[EQUALS]);
+        let m = dom.render_immediate_to_vec();
+        assert_eq!(value_writes(&m, ids[FIELD_0]).last().map(String::as_str), Some("10"));
+        assert_eq!(spy.borrow()[0], (true, 10.0, 0.0), "settling the text moves no number");
+    }
+
+    #[test]
+    fn the_bar_follows_focus_from_one_row_to_the_next() {
+        let (mut dom, _spy, ids) = bar_harness();
+
+        dom.runtime().handle_event("input", form_input("20"), ids[FIELD_0]);
+        dom.render_immediate_to_vec();
+        dom.runtime().handle_event("focus", focus(), ids[FIELD_0]);
+        let keys = keys(&dom.render_immediate_to_vec());
+
+        // Moving to the other row blurs before it focuses — the bar stays on screen (so its keys
+        // keep their ids) and must end up pointed at the new field.
+        dom.runtime().handle_event("input", form_input("10"), ids[FIELD_1]);
+        dom.render_immediate_to_vec();
+        dom.runtime().handle_event("blur", focus(), ids[FIELD_0]);
+        dom.runtime().handle_event("focus", focus(), ids[FIELD_1]);
+        let m = dom.render_immediate_to_vec();
+        assert!(listener_ids(&m, "click").is_empty(), "the bar must not flicker between fields");
+
+        dom.runtime().handle_event("click", click(), keys[DIVIDE]);
+        let m = dom.render_immediate_to_vec();
+        assert_eq!(value_writes(&m, ids[FIELD_1]).last().map(String::as_str), Some("10/"));
+        assert!(value_writes(&m, ids[FIELD_0]).is_empty(), "the row left behind is untouched");
+    }
+
+    /// Focusing again has to build the keys from scratch — which is only true if the blur took the
+    /// bar off screen.
+    #[test]
+    fn blurring_the_last_field_takes_the_bar_away() {
+        let (mut dom, _spy, ids) = bar_harness();
+
+        dom.runtime().handle_event("focus", focus(), ids[FIELD_0]);
+        keys(&dom.render_immediate_to_vec());
+
+        dom.runtime().handle_event("blur", focus(), ids[FIELD_0]);
+        dom.render_immediate_to_vec();
+        dom.runtime().handle_event("focus", focus(), ids[FIELD_0]);
+        keys(&dom.render_immediate_to_vec());
     }
 }

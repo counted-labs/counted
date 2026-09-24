@@ -11,6 +11,7 @@ use crate::{
         LocalStorageState,
     },
     crypto::key_to_fragment,
+    i18n::current_lang,
     route::Route,
 };
 
@@ -33,6 +34,7 @@ pub fn LoginPage() -> Element {
         e.prevent_default();
         let email_val = email();
         let password_val = password();
+        let lang = current_lang();
 
         async move {
             loading.set(true);
@@ -43,7 +45,7 @@ pub fn LoginPage() -> Element {
             // the spinner never shows.
             next_paint().await;
 
-            match sign_in(email_val, &password_val).await {
+            match sign_in(email_val, &password_val, lang).await {
                 Ok((account, account_key)) => {
                     // Persist so the key survives a reload — the password is gone once the
                     // session is restored from the cookie.

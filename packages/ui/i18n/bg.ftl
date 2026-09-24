@@ -285,6 +285,7 @@ amount-op-add = Плюс
 amount-op-subtract = Минус
 amount-op-multiply = Умножи
 amount-op-divide = Раздели
+amount-op-equals = Равно
 expense-rate = Обменен курс (по избор)
 expense-rate-hint = Остави празно, за да използваш курса на Европейската комисия (InforEuro) за { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Въведи обменен курс, по-голям от 0.
@@ -520,6 +521,8 @@ scan-in-progress = Четене на бележката…
 scan-error-capture = Снимката не се получи. Опитай отново или въведи разхода ръчно.
 scan-error-unreadable = Нищо четимо на тази бележка. Въведи разхода ръчно.
 scan-check-amount = Провери сумата - не беше отпечатана ясно.
+scan-take-photo = Направи снимка
+scan-choose-photo = Избери снимка
 expense-converted-from = Платени { $amount } { $from } · 1 { $from } = { $rate } { $to }
 project-currency = Валута
 project-currency-hint = Всяка сума се показва в тази валута. Не може да се променя по-късно.
@@ -549,6 +552,8 @@ friends-decline = Откажи
 friends-list-title = Моите приятели
 friends-list-empty = Още няма приятели. Добави някого по имейл по-горе или от проект, който споделяте.
 friends-remove = Премахни
+friends-remove-confirm-title = Премахване на приятел
+friends-remove-confirm-message = { $email } вече няма да е сред приятелите ви, а вие – сред неговите. Всеки от вас може да изпрати нова покана по-късно.
 friends-no-key = Още не е готово
 friends-fingerprint = Код за сигурност
 friends-fingerprint-hint = Двама приятели, които си прочетат един и същ код за сигурност, знаят, че никой не стои между тях - дори нашият сървър.

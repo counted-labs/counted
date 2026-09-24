@@ -287,6 +287,7 @@ amount-op-add = Plus
 amount-op-subtract = Minus
 amount-op-multiply = Krat
 amount-op-divide = Deljeno
+amount-op-equals = Enako
 expense-rate = Menjalni tečaj (neobvezno)
 expense-rate-hint = Pusti prazno za tečaj Evropske komisije (InforEuro) za { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Vnesi menjalni tečaj, večji od 0.
@@ -526,6 +527,8 @@ scan-in-progress = Branje računa…
 scan-error-capture = Fotografije ni bilo mogoče posneti. Poskusi znova ali vnesi strošek ročno.
 scan-error-unreadable = Na tem računu ni nič berljivega. Vnesi strošek ročno.
 scan-check-amount = Preveri skupni znesek - ni bil jasno natisnjen.
+scan-take-photo = Posnemi fotografijo
+scan-choose-photo = Izberi fotografijo
 expense-converted-from = Plačano { $amount } { $from } · 1 { $from } = { $rate } { $to }
 project-currency = Valuta
 project-currency-hint = Vsak znesek je prikazan v tej valuti. Pozneje je ni mogoče spremeniti.
@@ -555,6 +558,8 @@ friends-decline = Zavrni
 friends-list-title = Moji prijatelji
 friends-list-empty = Še ni prijateljev. Dodaj nekoga po e-pošti zgoraj ali iz projekta, ki ga delita.
 friends-remove = Odstrani
+friends-remove-confirm-title = Odstrani prijatelja
+friends-remove-confirm-message = { $email } ne bo več med vašimi prijatelji, vi pa ne več med njegovimi. Kdorkoli od vaju lahko kasneje pošlje novo prošnjo.
 friends-no-key = Še ni pripravljeno
 friends-fingerprint = Varnostna koda
 friends-fingerprint-hint = Dva prijatelja, ki si prebereta isto varnostno kodo, vesta, da med njima ni nikogar - niti našega strežnika.

@@ -480,6 +480,16 @@ fn locale_text(code: &str) -> String {
 mod tests {
     use super::*;
 
+    /// `shared::UI_LANGS` is the copy `api` validates the language counters against, and it cannot
+    /// import this crate. A locale added to `locales!` and not there would be counted as `other`.
+    #[test]
+    fn shared_ui_langs_lists_exactly_the_shipped_locales() {
+        let shipped: std::collections::BTreeSet<&str> =
+            SUPPORTED.iter().map(|(code, _)| *code).collect();
+        let shared: std::collections::BTreeSet<&str> = shared::UI_LANGS.iter().copied().collect();
+        assert_eq!(shipped, shared);
+    }
+
     #[test]
     fn cookie_wins_when_it_names_a_shipped_language() {
         assert_eq!(lang_from_cookie("counted_lang=de"), Some("de"));

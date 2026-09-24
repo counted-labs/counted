@@ -285,6 +285,7 @@ amount-op-add = Pluss
 amount-op-subtract = Miinus
 amount-op-multiply = Korruta
 amount-op-divide = Jaga
+amount-op-equals = Võrdub
 expense-rate = Vahetuskurss (valikuline)
 expense-rate-hint = Jäta tühjaks, et kasutada Euroopa Komisjoni (InforEuro) kurssi kuule { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Sisesta vahetuskurss, mis on suurem kui 0.
@@ -520,6 +521,8 @@ scan-in-progress = Tšeki lugemine…
 scan-error-capture = Fotot ei õnnestunud teha. Proovi uuesti või sisesta kulu käsitsi.
 scan-error-unreadable = Sellel tšekil pole midagi loetavat. Sisesta kulu käsitsi.
 scan-check-amount = Kontrolli kogusummat - see ei olnud selgelt trükitud.
+scan-take-photo = Tee foto
+scan-choose-photo = Vali foto
 expense-converted-from = Makstud { $amount } { $from } · 1 { $from } = { $rate } { $to }
 project-currency = Valuuta
 project-currency-hint = Kõik summad kuvatakse selles valuutas. Seda ei saa hiljem muuta.
@@ -549,6 +552,8 @@ friends-decline = Keeldu
 friends-list-title = Minu sõbrad
 friends-list-empty = Sõpru veel pole. Lisa keegi ülal e-posti kaudu või ühisest projektist.
 friends-remove = Eemalda
+friends-remove-confirm-title = Eemalda sõber
+friends-remove-confirm-message = { $email } ei ole enam sinu sõprade seas ja sina tema omade seas. Kumbki teist saab hiljem uue taotluse saata.
 friends-no-key = Pole veel valmis
 friends-fingerprint = Turvakood
 friends-fingerprint-hint = Kaks sõpra, kes loevad teineteisele sama turvakoodi, teavad, et keegi ei ole nende vahel - isegi mitte meie server.

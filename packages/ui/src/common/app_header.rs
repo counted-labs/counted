@@ -70,8 +70,13 @@ pub fn AppHeader(props: AppHeaderProps) -> Element {
         // `nav-material` overrides that fill on mobile only, where it is swapped for a blur that
         // appears on scroll — the class is undefined on web and desktop, so those keep the solid
         // bar and nothing changes for them.
-        header { class: if props.sticky { "navbar px-0 sticky top-0 z-20 bg-base-100 nav-material" } else { "navbar px-0" },
-            div { class: "navbar-start",
+        //
+        // Not daisyUI's `navbar-start/center/end`: that is `50% / shrink-0 / 50%`, built for a
+        // fixed-width logo, and a title longer than half the bar was pushed off-screen. The
+        // `1fr auto 1fr` grid keeps a short title centred; `min-w-0` on the middle cell is what
+        // lets a long one truncate instead of overflowing (e2e: web/tests/long-names.spec.ts).
+        header { class: if props.sticky { "grid grid-cols-[1fr_auto_1fr] items-center w-full min-h-16 py-2 sticky top-0 z-20 bg-base-100 nav-material" } else { "grid grid-cols-[1fr_auto_1fr] items-center w-full min-h-16 py-2" },
+            div { class: "flex items-center",
                 BackButtonArrow {
                     onclick: move |_| {
                         // `go_back` alone was a dead press on any page the dock reached by
@@ -91,14 +96,13 @@ pub fn AppHeader(props: AppHeaderProps) -> Element {
                     },
                 }
             }
-            div { class: "navbar-center flex-col",
-                h1 { class: "text-xl font-bold font-display", "{props.title}" }
+            div { class: "flex flex-col items-center min-w-0 text-center",
+                h1 { id: "page-title", class: "text-xl font-bold font-display truncate max-w-full", "{props.title}" }
                 if let Some(sub_title) = props.sub_title {
-                    div { class: "text-sm mb-3", "{sub_title}" }
+                    div { class: "text-sm mb-3 truncate max-w-full", "{sub_title}" }
                 }
-
             }
-            div { class: "navbar-end", {props.children} }
+            div { class: "flex items-center justify-self-end", {props.children} }
         }
     }
 }

@@ -11,7 +11,13 @@ fn every_key_the_hook_can_show_exists_in_the_fallback_locale() {
         let key = scan_error_key(error);
         assert!(known.contains(key), "{key} is not defined in {}.ftl", crate::i18n::FALLBACK);
     }
-    for key in ["expense-scan", "scan-in-progress", "scan-check-amount"] {
+    for key in [
+        "expense-scan",
+        "scan-in-progress",
+        "scan-check-amount",
+        "scan-take-photo",
+        "scan-choose-photo",
+    ] {
         assert!(known.contains(key), "{key} is not defined in {}.ftl", crate::i18n::FALLBACK);
     }
 }

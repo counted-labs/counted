@@ -74,6 +74,12 @@ pub struct LocalStorageProject {
     /// reports — see [`set_project_cache`].
     #[serde(default)]
     pub cached_data_version: Option<i64>,
+    /// The account whose `account_projects` row this entry was last seen in. What lets
+    /// reconciliation tell "the account never had this" (push it) from "the account left it on
+    /// another device" (forget it) — see `account_sync::left_elsewhere`. Keyed by account rather
+    /// than a flag so a different account signing in here still inherits the list.
+    #[serde(default)]
+    pub synced_account: Option<Uuid>,
 }
 
 /// How many expenses are cached per project. **Web is the only target with a ceiling.**
@@ -173,6 +179,14 @@ pub fn remove_project(state: &mut LocalStorageState, project_id: Uuid) {
     state.projects.retain(|p| p.project_id != project_id);
     if let Some(ref mut list) = state.cached_projects_list {
         list.retain(|p| p.id != project_id);
+    }
+}
+
+/// Records that `account_id`'s `account_projects` row for each of these projects exists — at the
+/// time of writing. Only touches entries this device holds; it never creates one.
+pub fn mark_synced(state: &mut LocalStorageState, project_ids: &[Uuid], account_id: Uuid) {
+    for entry in state.projects.iter_mut().filter(|p| project_ids.contains(&p.project_id)) {
+        entry.synced_account = Some(account_id);
     }
 }
 

@@ -285,6 +285,7 @@ amount-op-add = Plus
 amount-op-subtract = Minus
 amount-op-multiply = Shumëzo
 amount-op-divide = Pjesëto
+amount-op-equals = Baraz
 expense-rate = Kursi i këmbimit (opsional)
 expense-rate-hint = Lëre bosh për të përdorur kursin e Komisionit Evropian (InforEuro) për { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Fut një kurs këmbimi më të madh se 0.
@@ -520,6 +521,8 @@ scan-in-progress = Duke lexuar faturën…
 scan-error-capture = Fotoja nuk u bë dot. Provo sërish, ose fute shpenzimin me dorë.
 scan-error-unreadable = Asgjë e lexueshme në atë faturë. Fute shpenzimin me dorë.
 scan-check-amount = Kontrollo totalin - nuk ishte i printuar qartë.
+scan-take-photo = Bëj një foto
+scan-choose-photo = Zgjidh një foto
 expense-converted-from = Paguar { $amount } { $from } · 1 { $from } = { $rate } { $to }
 project-currency = Monedha
 project-currency-hint = Çdo shumë shfaqet në këtë monedhë. Nuk mund të ndryshohet më vonë.
@@ -549,6 +552,8 @@ friends-decline = Refuzo
 friends-list-title = Miqtë e mi
 friends-list-empty = Asnjë mik ende. Shto dikë me email më lart, ose nga një projekt që ndani.
 friends-remove = Hiq
+friends-remove-confirm-title = Hiq mikun
+friends-remove-confirm-message = { $email } nuk do të jetë më mes miqve tuaj, as ju mes të tijve. Secili nga ju mund të dërgojë një kërkesë të re më vonë.
 friends-no-key = Ende jo gati
 friends-fingerprint = Kodi i sigurisë
 friends-fingerprint-hint = Dy miq që i lexojnë njëri-tjetrit të njëjtin kod sigurie e dinë se askush nuk qëndron mes tyre - as serveri ynë.

@@ -287,6 +287,7 @@ amount-op-add = Plus
 amount-op-subtract = Minus
 amount-op-multiply = Razy
 amount-op-divide = Podziel
+amount-op-equals = Równa się
 expense-rate = Kurs wymiany (opcjonalnie)
 expense-rate-hint = Zostaw puste, aby użyć kursu Komisji Europejskiej (InforEuro) za { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Wpisz kurs wymiany większy niż 0.
@@ -526,6 +527,8 @@ scan-in-progress = Odczytywanie paragonu…
 scan-error-capture = Nie udało się zrobić zdjęcia. Spróbuj ponownie lub wpisz wydatek ręcznie.
 scan-error-unreadable = Nic czytelnego na tym paragonie. Wpisz wydatek ręcznie.
 scan-check-amount = Sprawdź sumę - nie była wyraźnie wydrukowana.
+scan-take-photo = Zrób zdjęcie
+scan-choose-photo = Wybierz zdjęcie
 expense-converted-from = Zapłacono { $amount } { $from } · 1 { $from } = { $rate } { $to }
 project-currency = Waluta
 project-currency-hint = Każda kwota jest pokazywana w tej walucie. Nie można jej później zmienić.
@@ -555,6 +558,8 @@ friends-decline = Odrzuć
 friends-list-title = Moi znajomi
 friends-list-empty = Nie masz jeszcze znajomych. Dodaj kogoś przez e-mail powyżej lub ze wspólnego projektu.
 friends-remove = Usuń
+friends-remove-confirm-title = Usuń znajomego
+friends-remove-confirm-message = { $email } nie będzie już wśród Twoich znajomych, a Ty wśród jego. Każde z was może później wysłać nowe zaproszenie.
 friends-no-key = Jeszcze niegotowe
 friends-fingerprint = Kod bezpieczeństwa
 friends-fingerprint-hint = Dwoje znajomych, którzy odczytają sobie ten sam kod bezpieczeństwa, wie, że nikt nie stoi między nimi - nawet nasz serwer.

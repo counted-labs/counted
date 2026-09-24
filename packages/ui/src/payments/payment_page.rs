@@ -44,8 +44,8 @@ fn ParticipantRow(name: String, user_id: i32, amount: f64, currency: String) -> 
                 initials: initials(&name),
                 color_class: user_color_class(user_id).to_string(),
             }
-            span { class: "flex-1 font-medium text-sm", "{name}" }
-            span { class: "font-bold text-sm", "{amount:.2} {currency}" }
+            span { class: "flex-1 min-w-0 truncate font-medium text-sm", "{name}" }
+            span { class: "shrink-0 font-bold text-sm", "{amount:.2} {currency}" }
         }
     }
 }

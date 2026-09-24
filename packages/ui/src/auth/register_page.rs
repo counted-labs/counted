@@ -4,6 +4,7 @@ use crate::tid;
 use crate::auth::credentials::{password_error_key, sign_up};
 use crate::common::{error_message, next_paint, read_from_ls, AppHeader, CheckMarkIllustration};
 use crate::crypto::{derive_account_key_v1, encrypt_json, generate_kdf_salt};
+use crate::i18n::current_lang;
 use crate::icons::{LockIcon, ICON_INLINE};
 use crate::route::Route;
 
@@ -21,6 +22,7 @@ pub fn RegisterPage() -> Element {
         let email_val = email();
         let password_val = password();
         let display_name_val = display_name();
+        let lang = current_lang();
 
         async move {
             if let Some(key) = password_error_key(&password_val) {
@@ -55,6 +57,7 @@ pub fn RegisterPage() -> Element {
                 encrypted_display_name,
                 kdf_salt,
                 had_anonymous_membership,
+                lang,
             )
             .await
             {

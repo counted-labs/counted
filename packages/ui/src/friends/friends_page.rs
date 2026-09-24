@@ -2,8 +2,10 @@ use dioxus::prelude::*;
 use crate::tid;
 use shared::Account;
 
+use super::friends_service::FriendRow;
 use super::use_friends::use_friends;
-use crate::common::{AppHeader, AuthResolved, PullToRefresh};
+use crate::common::{AppHeader, AuthResolved, ConfirmModal, PullToRefresh};
+use crate::icons::{TrashIcon, ICON_INLINE};
 use crate::route::Route;
 
 #[component]
@@ -12,6 +14,7 @@ pub fn FriendsPage() -> Element {
     let auth_ctx = use_context::<Signal<Option<Account>>>();
     let auth_resolved = use_context::<Signal<AuthResolved>>();
     let mut friends = use_friends();
+    let mut removing = use_signal(|| None::<FriendRow>);
 
     rsx! {
         div { class: "container app-container bg-base-100 p-4 pb-24 max-w-md mx-auto flex flex-col gap-4 overflow-auto",
@@ -121,10 +124,10 @@ pub fn FriendsPage() -> Element {
                                     ul { class: "list",
                                         for f in lists.friends.iter() {
                                             {
-                                                let id = f.id;
+                                                let row = f.clone();
                                                 rsx! {
                                                     li { class: "list-row items-center",
-                                                        div { class: "flex flex-col min-w-0",
+                                                        div { class: "list-col-grow flex flex-col min-w-0",
                                                             span { class: "font-medium truncate", "{f.email}" }
                                                             match &f.fingerprint {
                                                                 Some(fp) => rsx! {
@@ -141,10 +144,11 @@ pub fn FriendsPage() -> Element {
                                                         }
                                                         button {
                                                             r#type: "button",
-                                                            class: "btn btn-ghost btn-xs text-error",
+                                                            class: "btn btn-square btn-soft btn-error btn-sm",
+                                                            aria_label: tid!("friends-remove"),
                                                             disabled: (friends.busy)(),
-                                                            onclick: move |_| friends.remove(id),
-                                                            {tid!("friends-remove")}
+                                                            onclick: move |_| removing.set(Some(row.clone())),
+                                                            TrashIcon { size: ICON_INLINE }
                                                         }
                                                     }
                                                 }
@@ -183,6 +187,19 @@ pub fn FriendsPage() -> Element {
                                 }
                             }
                         }
+                    },
+                }
+            }
+
+            if let Some(row) = removing() {
+                ConfirmModal {
+                    title: tid!("friends-remove-confirm-title"),
+                    message: tid!("friends-remove-confirm-message", email: row.email.clone()),
+                    confirm_label: tid!("friends-remove"),
+                    on_cancel: move |_| removing.set(None),
+                    on_confirm: move |_| {
+                        removing.set(None);
+                        friends.remove(row.id);
                     },
                 }
             }

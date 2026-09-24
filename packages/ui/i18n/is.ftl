@@ -285,6 +285,7 @@ amount-op-add = Plús
 amount-op-subtract = Mínus
 amount-op-multiply = Margfalda
 amount-op-divide = Deila
+amount-op-equals = Jafnt og
 expense-rate = Gengi (valfrjálst)
 expense-rate-hint = Skildu eftir autt til að nota gengi Evrópusambandsins (InforEuro) fyrir { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Sláðu inn gengi hærra en 0.
@@ -520,6 +521,8 @@ scan-in-progress = Les kvittunina…
 scan-error-capture = Tókst ekki að taka myndina. Reyndu aftur eða sláðu útgjöldin inn handvirkt.
 scan-error-unreadable = Ekkert læsilegt á þessari kvittun. Sláðu útgjöldin inn handvirkt.
 scan-check-amount = Athugaðu heildarupphæðina - hún var ekki skýrt prentuð.
+scan-take-photo = Taka mynd
+scan-choose-photo = Velja mynd
 expense-converted-from = Greitt { $amount } { $from } · 1 { $from } = { $rate } { $to }
 project-currency = Gjaldmiðill
 project-currency-hint = Allar upphæðir eru sýndar í þessum gjaldmiðli. Honum er ekki hægt að breyta síðar.
@@ -549,6 +552,8 @@ friends-decline = Hafna
 friends-list-title = Vinir mínir
 friends-list-empty = Engir vinir enn. Bættu við einhverjum með netfangi hér að ofan, eða úr verkefni sem þið deilið.
 friends-remove = Fjarlægja
+friends-remove-confirm-title = Fjarlægja vin
+friends-remove-confirm-message = { $email } verður ekki lengur meðal vina þinna, og þú ekki meðal þeirra. Hvort ykkar sem er getur sent nýja beiðni síðar.
 friends-no-key = Ekki tilbúið enn
 friends-fingerprint = Öryggiskóði
 friends-fingerprint-hint = Tveir vinir sem lesa sama öryggiskóðann hvor fyrir annan vita að enginn situr á milli þeirra - ekki einu sinni þjónninn okkar.

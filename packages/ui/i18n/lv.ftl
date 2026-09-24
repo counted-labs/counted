@@ -286,6 +286,7 @@ amount-op-add = Plus
 amount-op-subtract = Mīnus
 amount-op-multiply = Reizināt
 amount-op-divide = Dalīt
+amount-op-equals = Vienāds ar
 expense-rate = Valūtas kurss (neobligāti)
 expense-rate-hint = Atstāj tukšu, lai izmantotu Eiropas Komisijas (InforEuro) kursu par { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Ievadi valūtas kursu, kas lielāks par 0.
@@ -523,6 +524,8 @@ scan-in-progress = Nolasa čeku…
 scan-error-capture = Neizdevās uzņemt fotoattēlu. Mēģini vēlreiz vai ievadi izdevumu manuāli.
 scan-error-unreadable = Šajā čekā nav nekā salasāma. Ievadi izdevumu manuāli.
 scan-check-amount = Pārbaudi kopsummu - tā nebija skaidri nodrukāta.
+scan-take-photo = Uzņemt fotoattēlu
+scan-choose-photo = Izvēlēties fotoattēlu
 expense-converted-from = Samaksāts { $amount } { $from } · 1 { $from } = { $rate } { $to }
 project-currency = Valūta
 project-currency-hint = Visas summas tiek rādītas šajā valūtā. To vēlāk nevar mainīt.
@@ -552,6 +555,8 @@ friends-decline = Noraidīt
 friends-list-title = Mani draugi
 friends-list-empty = Vēl nav draugu. Pievieno kādu pa e-pastu augstāk vai no kopīga projekta.
 friends-remove = Noņemt
+friends-remove-confirm-title = Noņemt draugu
+friends-remove-confirm-message = { $email } vairs nebūs starp jūsu draugiem, un jūs – starp viņa. Jebkurš no jums vēlāk var nosūtīt jaunu pieprasījumu.
 friends-no-key = Vēl nav gatavs
 friends-fingerprint = Drošības kods
 friends-fingerprint-hint = Divi draugi, kas viens otram nolasa vienādu drošības kodu, zina, ka starp viņiem neviena nav - pat ne mūsu servera.

@@ -285,6 +285,7 @@ amount-op-add = Plus
 amount-op-subtract = Miinus
 amount-op-multiply = Kerro
 amount-op-divide = Jaa
+amount-op-equals = Yhtä kuin
 expense-rate = Valuuttakurssi (valinnainen)
 expense-rate-hint = Jätä tyhjäksi käyttääksesi Euroopan komission (InforEuro) kurssia kuukaudelle { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Anna valuuttakurssi, joka on suurempi kuin 0.
@@ -520,6 +521,8 @@ scan-in-progress = Luetaan kuittia…
 scan-error-capture = Kuvan ottaminen ei onnistunut. Yritä uudelleen tai syötä kulu käsin.
 scan-error-unreadable = Kuitista ei löytynyt mitään luettavaa. Syötä kulu käsin.
 scan-check-amount = Tarkista loppusumma - se ei ollut selkeästi painettu.
+scan-take-photo = Ota kuva
+scan-choose-photo = Valitse kuva
 expense-converted-from = Maksettu { $amount } { $from } · 1 { $from } = { $rate } { $to }
 project-currency = Valuutta
 project-currency-hint = Kaikki summat näytetään tässä valuutassa. Sitä ei voi muuttaa myöhemmin.
@@ -549,6 +552,8 @@ friends-decline = Hylkää
 friends-list-title = Kaverini
 friends-list-empty = Ei vielä kavereita. Lisää joku sähköpostilla yllä tai yhteisestä projektista.
 friends-remove = Poista
+friends-remove-confirm-title = Poista kaveri
+friends-remove-confirm-message = { $email } ei ole enää kavereissasi, etkä sinä hänen. Kumpi tahansa voi lähettää uuden pyynnön myöhemmin.
 friends-no-key = Ei vielä valmis
 friends-fingerprint = Turvakoodi
 friends-fingerprint-hint = Kaksi kaveria, jotka lukevat toisilleen saman turvakoodin, tietävät, ettei kukaan ole heidän välissään - ei edes palvelimemme.
