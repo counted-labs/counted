@@ -207,6 +207,8 @@ import = İçe aktar
 importing = İçe aktarılıyor…
 field-description = Açıklama
 field-date = Tarih
+date-today = Bugün
+date-yesterday = Dün
 field-optional = İsteğe bağlı
 
 ### Projects
@@ -286,6 +288,7 @@ amount-op-subtract = Eksi
 amount-op-multiply = Çarp
 amount-op-divide = Böl
 amount-op-equals = Eşittir
+amount-op-done = Tamam
 expense-rate = Döviz kuru (isteğe bağlı)
 expense-rate-hint = { $month } için Avrupa Komisyonu (InforEuro) kurunu kullanmak üzere boş bırak: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = 0'dan büyük bir döviz kuru gir.
@@ -318,6 +321,7 @@ participants-some = { $count } / { $total }
 participants-select-all = Tümünü seç
 participants-deselect-all = Seçimi kaldır
 participants-by-shares = Paylara göre
+split-amounts = Tutarlar
 participants-remaining = { $amount } kaldı
 participants-over-by = { $amount } fazla
 participants-who-paid = Kim ödedi?

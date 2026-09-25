@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use crate::tid;
 
-use crate::common::{update_ls, LocalStorageState};
+use crate::common::{update_ls, LocalStorageState, Mascot, MascotPose, MASCOT_HERO};
 use crate::route::Route;
 
 #[component]
@@ -18,20 +18,7 @@ pub fn WelcomePage() -> Element {
 
                 // Header
                 div { class: "flex flex-col items-center gap-3 text-center",
-                    div { class: "w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center",
-                        svg {
-                            class: "w-8 h-8 text-primary",
-                            xmlns: "http://www.w3.org/2000/svg",
-                            "aria-hidden": "true",
-                            view_box: "0 0 24 24",
-                            fill: "none",
-                            stroke: "currentColor",
-                            stroke_width: "1.5",
-                            stroke_linecap: "round",
-                            stroke_linejoin: "round",
-                            path { d: "M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25z" }
-                        }
-                    }
+                    Mascot { pose: MascotPose::Secure, size: MASCOT_HERO }
                     h1 { class: "text-xl font-bold", {tid!("welcome-title")} }
                     p { class: "text-sm text-base-content/70", {tid!("welcome-subtitle")} }
                 }

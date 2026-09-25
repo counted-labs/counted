@@ -108,7 +108,7 @@ pub fn JoinProjectModal(props: JoinProjectModalProps) -> Element {
                     h3 { class: "font-bold text-lg font-display", {tid!("projects-join")} }
                     button {
                         r#type: "button",
-                        class: "btn btn-ghost btn-circle btn-sm",
+                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11 text-lg",
                         aria_label: tid!("close"),
                         onclick: move |_| on_close.call(()),
                         "✕"

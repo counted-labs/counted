@@ -208,6 +208,8 @@ import = Importēt
 importing = Importē…
 field-description = Apraksts
 field-date = Datums
+date-today = Šodien
+date-yesterday = Vakar
 field-optional = Neobligāti
 
 ### Projects
@@ -287,6 +289,7 @@ amount-op-subtract = Mīnus
 amount-op-multiply = Reizināt
 amount-op-divide = Dalīt
 amount-op-equals = Vienāds ar
+amount-op-done = Gatavs
 expense-rate = Valūtas kurss (neobligāti)
 expense-rate-hint = Atstāj tukšu, lai izmantotu Eiropas Komisijas (InforEuro) kursu par { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Ievadi valūtas kursu, kas lielāks par 0.
@@ -319,6 +322,7 @@ participants-some = { $count } no { $total }
 participants-select-all = Atlasīt visus
 participants-deselect-all = Noņemt atlasi
 participants-by-shares = Pēc daļām
+split-amounts = Summas
 participants-remaining = Atlicis { $amount }
 participants-over-by = Par { $amount } vairāk
 participants-who-paid = Kas maksāja?

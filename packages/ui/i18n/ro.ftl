@@ -208,6 +208,8 @@ import = Importă
 importing = Se importă…
 field-description = Descriere
 field-date = Dată
+date-today = Azi
+date-yesterday = Ieri
 field-optional = Opțional
 
 ### Projects
@@ -287,6 +289,7 @@ amount-op-subtract = Minus
 amount-op-multiply = Înmulțit
 amount-op-divide = Împărțit
 amount-op-equals = Egal
+amount-op-done = Gata
 expense-rate = Curs de schimb (opțional)
 expense-rate-hint = Lasă gol pentru a folosi cursul Comisiei Europene (InforEuro) pentru { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Introdu un curs de schimb mai mare decât 0.
@@ -319,6 +322,7 @@ participants-some = { $count } din { $total }
 participants-select-all = Selectează tot
 participants-deselect-all = Deselectează tot
 participants-by-shares = Pe cote
+split-amounts = Sume
 participants-remaining = Rămân { $amount }
 participants-over-by = { $amount } în plus
 participants-who-paid = Cine a plătit?

@@ -207,6 +207,8 @@ import = Importera
 importing = Importerar…
 field-description = Beskrivning
 field-date = Datum
+date-today = I dag
+date-yesterday = I går
 field-optional = Valfritt
 
 ### Projects
@@ -286,6 +288,7 @@ amount-op-subtract = Minus
 amount-op-multiply = Gånger
 amount-op-divide = Delat med
 amount-op-equals = Lika med
+amount-op-done = Klar
 expense-rate = Växelkurs (valfritt)
 expense-rate-hint = Lämna tomt för att använda Europeiska kommissionens (InforEuro) kurs för { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Ange en växelkurs större än 0.
@@ -318,6 +321,7 @@ participants-some = { $count } av { $total }
 participants-select-all = Markera alla
 participants-deselect-all = Avmarkera alla
 participants-by-shares = Efter andelar
+split-amounts = Belopp
 participants-remaining = { $amount } kvar
 participants-over-by = { $amount } för mycket
 participants-who-paid = Vem betalade?

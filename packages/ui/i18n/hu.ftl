@@ -207,6 +207,8 @@ import = Importálás
 importing = Importálás…
 field-description = Leírás
 field-date = Dátum
+date-today = Ma
+date-yesterday = Tegnap
 field-optional = Nem kötelező
 
 ### Projects
@@ -286,6 +288,7 @@ amount-op-subtract = Mínusz
 amount-op-multiply = Szorzás
 amount-op-divide = Osztás
 amount-op-equals = Egyenlő
+amount-op-done = Kész
 expense-rate = Árfolyam (nem kötelező)
 expense-rate-hint = Hagyd üresen az Európai Bizottság (InforEuro) { $month } havi árfolyamához: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Adj meg 0-nál nagyobb árfolyamot.
@@ -318,6 +321,7 @@ participants-some = { $count } / { $total }
 participants-select-all = Összes kijelölése
 participants-deselect-all = Kijelölés törlése
 participants-by-shares = Részarány szerint
+split-amounts = Összegek
 participants-remaining = Még { $amount }
 participants-over-by = { $amount } többlet
 participants-who-paid = Ki fizetett?

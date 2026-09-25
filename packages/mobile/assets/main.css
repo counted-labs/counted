@@ -1,9 +1,11 @@
 input, textarea, select {
   -webkit-touch-callout: default;
-  /* WKWebView auto-zooms on focus below 16px, so 16px is a floor, not a value: `1rem` carries the
-     user's Dynamic Type size (see --dt-scale below) and wins whenever they asked for larger text.
-     The !important stays — it is fighting DaisyUI's own `.input` font-size. */
-  font-size: max(16px, 1rem) !important;
+  /* WKWebView auto-zooms on focus below 16px, so 16px is a floor, not a value: `1em` carries the
+     user's Dynamic Type size (Tailwind sizes are rem, and `html` below is scaled by --dt-scale)
+     and wins whenever they asked for larger text. `em` rather than `rem` so a field wrapped in a
+     larger type scale — the expense sheet's amount — keeps that size instead of being clamped
+     back to 16px. The !important stays — it is fighting DaisyUI's own `.input` font-size. */
+  font-size: max(16px, 1em) !important;
 }
 input, textarea {
   -webkit-user-select: text;

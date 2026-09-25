@@ -13,7 +13,7 @@ use uuid::Uuid;
 use crate::categories::{category_label, CHART_CATEGORIES as CATEGORIES};
 use crate::common::{
     format_date, format_date_str, month_abbrev, key_of, pending, project_key, read_from_ls, AppHeader, DropdownButton,
-    DropdownItem, PullToRefresh,
+    DropdownItem, Mascot, MascotPose, PullToRefresh, MASCOT_INLINE,
 };
 use crate::crypto::{
     decrypt_expense, decrypt_json, decrypt_payment, decrypt_user, DecryptedExpense,
@@ -1375,7 +1375,7 @@ fn PersonTrendChart(props: PersonTrendProps) -> Element {
 fn EmptyState() -> Element {
     rsx! {
         div { class: "flex flex-col items-center gap-2 py-8 text-base-content/70",
-            span { class: "text-2xl", "📊" }
+            Mascot { pose: MascotPose::Searching, size: MASCOT_INLINE }
             span { class: "text-sm", {tid!("charts-nothing-to-show")} }
         }
     }

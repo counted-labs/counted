@@ -2,7 +2,7 @@ use dioxus::fullstack::{FullstackContext, StatusCode};
 use dioxus::prelude::*;
 use crate::tid;
 
-use crate::common::AppHeader;
+use crate::common::{AppHeader, Mascot, MascotPose};
 use crate::route::Route;
 
 // `segments` is deliberately never rendered: it is the raw, attacker-controlled URL path, and this
@@ -21,6 +21,7 @@ pub fn NotFoundPage(segments: Vec<String>) -> Element {
 
             div { class: "card bg-base-100 shadow-soft",
                 div { class: "card-body gap-4 text-sm leading-relaxed items-center text-center",
+                    Mascot { pose: MascotPose::Searching }
                     p { class: "text-5xl font-bold font-display text-base-content/20", "404" }
                     p { {tid!("not-found-hint")} }
                     Link {

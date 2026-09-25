@@ -6,7 +6,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::common::{
-    format_date, haptic, ConfirmModal, EmptyMagnifyingGlassIllustration, Flash, Haptic, ProjectKey,
+    format_date, haptic, ConfirmModal, Flash, Haptic, Mascot, MascotPose, ProjectKey,
     QueuedOp, ScanSource, SpeedDialAction, Toast,
 };
 use crate::crypto::{payments_are_inconsistent, DecryptedExpense, DecryptedPayment};
@@ -722,7 +722,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
 
             if is_empty {
                 div { class: "flex flex-col items-center gap-2 py-12 text-base-content/70",
-                    EmptyMagnifyingGlassIllustration {}
+                    Mascot { pose: MascotPose::Empty }
                     span { class: "font-semibold", {tid!("expenses-empty")} }
                     span { class: "text-sm text-center",
                         {tid!("expenses-empty-hint")}

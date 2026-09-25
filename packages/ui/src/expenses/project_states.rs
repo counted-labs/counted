@@ -3,6 +3,8 @@
 use dioxus::prelude::*;
 use crate::tid;
 
+use crate::common::{Mascot, MascotPose};
+
 /// The share link was opened without its `#fragment` and this device never stored the key.
 ///
 /// `on_unlock` is optional so the screen stays usable where there is nothing to open — the caller
@@ -17,6 +19,7 @@ pub struct MissingKeyScreenProps {
 pub fn MissingKeyScreen(props: MissingKeyScreenProps) -> Element {
     rsx! {
         div { class: "flex flex-col items-center gap-3 py-8 text-center",
+            Mascot { pose: MascotPose::Locked }
             p { class: "font-semibold", {tid!("missing-encryption-key-title")} }
             p { class: "text-sm text-base-content/70",
                 {tid!("missing-encryption-key-hint")}
@@ -39,6 +42,7 @@ pub fn MissingKeyScreen(props: MissingKeyScreenProps) -> Element {
 pub fn NoLocalDataScreen() -> Element {
     rsx! {
         div { class: "flex flex-col items-center gap-4 py-12 text-base-content/70",
+            Mascot { pose: MascotPose::Offline }
             p { class: "font-semibold", {tid!("projects-no-local-data")} }
             p { class: "text-sm text-center",
                 {tid!("project-no-local-data-hint")}

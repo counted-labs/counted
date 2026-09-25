@@ -210,6 +210,8 @@ import = Iompórtáil
 importing = Á iompórtáil…
 field-description = Cur síos
 field-date = Dáta
+date-today = Inniu
+date-yesterday = Inné
 field-optional = Roghnach
 
 ### Projects
@@ -289,6 +291,7 @@ amount-op-subtract = Lúide
 amount-op-multiply = Iolraigh
 amount-op-divide = Roinn
 amount-op-equals = Cothrom le
+amount-op-done = Déanta
 expense-rate = Ráta malairte (roghnach)
 expense-rate-hint = Fág folamh chun ráta an Choimisiúin Eorpaigh (InforEuro) do { $month } a úsáid: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Cuir isteach ráta malairte níos mó ná 0.
@@ -321,6 +324,7 @@ participants-some = { $count } as { $total }
 participants-select-all = Roghnaigh uile
 participants-deselect-all = Díroghnaigh uile
 participants-by-shares = De réir scaireanna
+split-amounts = Méideanna
 participants-remaining = { $amount } fágtha
 participants-over-by = { $amount } thar
 participants-who-paid = Cé a d'íoc?

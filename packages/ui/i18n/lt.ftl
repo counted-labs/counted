@@ -209,6 +209,8 @@ import = Importuoti
 importing = Importuojama…
 field-description = Aprašymas
 field-date = Data
+date-today = Šiandien
+date-yesterday = Vakar
 field-optional = Neprivaloma
 
 ### Projects
@@ -288,6 +290,7 @@ amount-op-subtract = Minus
 amount-op-multiply = Dauginti
 amount-op-divide = Dalyti
 amount-op-equals = Lygu
+amount-op-done = Atlikta
 expense-rate = Valiutos kursas (neprivaloma)
 expense-rate-hint = Palik tuščią, kad būtų naudojamas Europos Komisijos (InforEuro) { $month } kursas: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Įvesk kursą, didesnį nei 0.
@@ -320,6 +323,7 @@ participants-some = { $count } iš { $total }
 participants-select-all = Pažymėti visus
 participants-deselect-all = Atžymėti visus
 participants-by-shares = Pagal dalis
+split-amounts = Sumos
 participants-remaining = Liko { $amount }
 participants-over-by = { $amount } per daug
 participants-who-paid = Kas sumokėjo?

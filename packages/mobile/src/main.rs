@@ -925,6 +925,7 @@ fn app() -> Element {
         unsafe {
             let _: () = msg_send![&*webview, setAllowsBackForwardNavigationGestures: true];
         }
+        hide_form_accessory_bar();
     });
 
     // Dynamic Type. `-apple-system-body` is the only handle a WKWebView has on the user's Text Size
@@ -1080,6 +1081,59 @@ fn app() -> Element {
             Router::<Route> {}
         }
     }
+}
+
+/// Stops iOS drawing its form-assistant bar — the floating `↑ ↓ ✓` pill — over the web content.
+///
+/// `ui`'s `AmountOperatorBar` is the last row of `.modal-box` and is placed by that box's
+/// `padding-bottom: max(--sab, --kb)` alone, so it lands flush on the keyboard. `--kb` is measured
+/// from `visualViewport.height`, and that does not shrink for an accessory view which *floats*
+/// above the keyboard rather than docking to it — so the pill painted straight over the operator
+/// keys and none of them could be reached.
+///
+/// The override goes on the class, not on an instance: the first responder during text input is a
+/// `WKContentView`, a private class with no public handle, and finding the live one would mean
+/// walking the scroll view's subviews on every focus. Hence the name string — which is all this
+/// reaches for, no private selector is ever sent. It is the Cordova/Capacitor
+/// `hideFormAccessoryBar` pattern.
+///
+/// **`class_addMethod`, never `method_setImplementation`.** `-inputAccessoryView` is declared on
+/// `UIResponder`, so replacing the resolved IMP would clear the accessory view of every responder
+/// in the process. Adding the method to `WKContentView` overrides it for that class alone, and the
+/// call does nothing should WebKit ever declare one itself.
+///
+/// Called from the back-gesture effect rather than at launch, and for the same reason: the class
+/// is not registered with the runtime until WebKit has built a webview. A missing class is a
+/// silent skip — the same posture `haptic()` takes; the pill coming back is not worth a crash.
+///
+/// The cost is that the numeric keypad is left with no dismiss control — it has no return key and
+/// the `✓` was the only one — which is what `AmountOperatorBar`'s own `⌄` key replaces. See
+/// docs/ios.md.
+#[cfg(target_os = "ios")]
+fn hide_form_accessory_bar() {
+    use objc2::runtime::{AnyClass, AnyObject, Sel};
+    use objc2::{ffi, sel};
+
+    extern "C-unwind" fn no_accessory(_: &AnyObject, _: Sel) -> *mut AnyObject {
+        std::ptr::null_mut()
+    }
+
+    let Some(cls) = AnyClass::get(c"WKContentView") else {
+        tracing::info!("WKContentView not registered; form accessory bar left in place");
+        return;
+    };
+    let added = unsafe {
+        ffi::class_addMethod(
+            (cls as *const AnyClass).cast_mut(),
+            sel!(inputAccessoryView),
+            std::mem::transmute::<
+                extern "C-unwind" fn(&AnyObject, Sel) -> *mut AnyObject,
+                unsafe extern "C-unwind" fn(),
+            >(no_accessory),
+            c"@@:".as_ptr(),
+        )
+    };
+    tracing::info!("form accessory bar suppressed: {}", added.as_bool());
 }
 
 #[cfg(test)]

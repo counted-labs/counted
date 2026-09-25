@@ -46,11 +46,8 @@ pub use date_format::{format_date, format_date_str, format_month_str, month_abbr
 mod avatar_group;
 pub use avatar_group::AvatarGroup;
 
-mod check_mark_illustration;
-pub use check_mark_illustration::CheckMarkIllustration;
-
-mod empty_magnifying_glass_illustration;
-pub use empty_magnifying_glass_illustration::EmptyMagnifyingGlassIllustration;
+mod mascot;
+pub use mascot::{Mascot, MascotPose, MASCOT_EMPTY, MASCOT_HERO, MASCOT_INLINE};
 
 mod back_button_arrow;
 pub use back_button_arrow::BackButtonArrow;

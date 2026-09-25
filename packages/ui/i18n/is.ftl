@@ -207,6 +207,8 @@ import = Flytja inn
 importing = Flytur inn…
 field-description = Lýsing
 field-date = Dagsetning
+date-today = Í dag
+date-yesterday = Í gær
 field-optional = Valfrjálst
 
 ### Projects
@@ -286,6 +288,7 @@ amount-op-subtract = Mínus
 amount-op-multiply = Margfalda
 amount-op-divide = Deila
 amount-op-equals = Jafnt og
+amount-op-done = Lokið
 expense-rate = Gengi (valfrjálst)
 expense-rate-hint = Skildu eftir autt til að nota gengi Evrópusambandsins (InforEuro) fyrir { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Sláðu inn gengi hærra en 0.
@@ -318,6 +321,7 @@ participants-some = { $count } af { $total }
 participants-select-all = Velja alla
 participants-deselect-all = Afvelja alla
 participants-by-shares = Eftir hlutum
+split-amounts = Upphæðir
 participants-remaining = { $amount } eftir
 participants-over-by = { $amount } umfram
 participants-who-paid = Hver borgaði?

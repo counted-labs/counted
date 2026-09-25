@@ -207,6 +207,8 @@ import = Importo
 importing = Duke importuar…
 field-description = Përshkrimi
 field-date = Data
+date-today = Sot
+date-yesterday = Dje
 field-optional = Opsionale
 
 ### Projects
@@ -286,6 +288,7 @@ amount-op-subtract = Minus
 amount-op-multiply = Shumëzo
 amount-op-divide = Pjesëto
 amount-op-equals = Baraz
+amount-op-done = U krye
 expense-rate = Kursi i këmbimit (opsional)
 expense-rate-hint = Lëre bosh për të përdorur kursin e Komisionit Evropian (InforEuro) për { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Fut një kurs këmbimi më të madh se 0.
@@ -318,6 +321,7 @@ participants-some = { $count } nga { $total }
 participants-select-all = Zgjidh të gjithë
 participants-deselect-all = Hiq zgjedhjen
 participants-by-shares = Sipas pjesëve
+split-amounts = Shumat
 participants-remaining = Mbeten { $amount }
 participants-over-by = { $amount } më shumë
 participants-who-paid = Kush pagoi?

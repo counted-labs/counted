@@ -18,7 +18,7 @@ use crate::common::{
     leave_project_and_forget, left_elsewhere, mark_synced, pending,
     read_from_ls, remove_project, set_cached_projects_list, sleep, to_push, update_ls, write_queue,
     write_to_ls,
-    AvatarGroup, ConfirmModal, DropdownButton, DropdownItem, EmptyMagnifyingGlassIllustration,
+    AvatarGroup, ConfirmModal, DropdownButton, DropdownItem, Mascot, MascotPose,
     Flash, Haptic, LocalStorageState, OpKind, ProjectKey, ProjectStatusItems, PullToRefresh,
     QueuedOp, SizeClass, SpeedDialAction, SpeedDialFab, LEAVE_CONFIRM_MESSAGE, LEAVE_CONFIRM_TITLE,
 };
@@ -316,7 +316,7 @@ pub fn ProjectsPage() -> Element {
                                 }
                                 if filtered.is_empty() {
                                     div { class: "flex flex-col items-center gap-2 py-12 text-base-content/70",
-                                        EmptyMagnifyingGlassIllustration {}
+                                        Mascot { pose: MascotPose::Empty }
                                         span { class: "font-semibold", {tid!("projects-empty")} }
                                     }
                                 } else {
@@ -330,6 +330,7 @@ pub fn ProjectsPage() -> Element {
                         }
                         None => rsx! {
                             div { class: "flex flex-col items-center gap-4 py-12 text-base-content/70",
+                                Mascot { pose: MascotPose::Offline }
                                 p { class: "font-semibold", {tid!("projects-no-local-data")} }
                                 p { class: "text-sm text-center",
                                     {tid!("projects-no-local-data-hint")}
@@ -350,7 +351,7 @@ pub fn ProjectsPage() -> Element {
                     if filtered.is_empty() {
                         rsx! {
                             div { class: "flex flex-col items-center gap-2 py-12 text-base-content/70",
-                                EmptyMagnifyingGlassIllustration {}
+                                Mascot { pose: MascotPose::Empty }
                                 span { class: "font-semibold", {tid!("projects-empty")} }
                                 span { class: "text-sm text-center", {tid!("projects-empty-hint")} }
                             }

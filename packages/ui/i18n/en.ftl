@@ -218,6 +218,8 @@ import = Import
 importing = Importing…
 field-description = Description
 field-date = Date
+date-today = Today
+date-yesterday = Yesterday
 field-optional = Optional
 
 ### Projects
@@ -297,6 +299,7 @@ amount-op-subtract = Minus
 amount-op-multiply = Multiply
 amount-op-divide = Divide
 amount-op-equals = Equals
+amount-op-done = Done
 expense-rate = Exchange rate (optional)
 expense-rate-hint = Leave empty to use the European Commission (InforEuro) rate for { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Enter an exchange rate greater than 0.
@@ -330,6 +333,7 @@ participants-some = { $count } of { $total }
 participants-select-all = Select all
 participants-deselect-all = Deselect all
 participants-by-shares = By shares
+split-amounts = Amounts
 participants-remaining = { $amount } left
 participants-over-by = { $amount } over
 participants-who-paid = Who paid?

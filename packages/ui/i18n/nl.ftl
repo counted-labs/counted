@@ -482,6 +482,8 @@ update-required-button = Bijwerken
 confirm = Bevestigen
 copy = Kopiëren
 field-date = Datum
+date-today = Vandaag
+date-yesterday = Gisteren
 
 ### Errors (vrienden)
 
@@ -512,6 +514,7 @@ amount-op-subtract = Min
 amount-op-multiply = Keer
 amount-op-divide = Gedeeld door
 amount-op-equals = Is gelijk aan
+amount-op-done = Klaar
 expense-rate = Wisselkoers (optioneel)
 expense-rate-hint = Laat leeg om de koers van de Europese Commissie (InforEuro) voor { $month } te gebruiken: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Voer een wisselkoers groter dan 0 in.
@@ -523,6 +526,7 @@ project-currency-hint = Alle bedragen worden in deze valuta getoond. Dit kan lat
 project-currency-locked = De valuta wordt vastgelegd bij het aanmaken van het project.
 project-gone-title = Dit project bestaat niet meer
 participants-by-shares = Op aandelen
+split-amounts = Bedragen
 
 ### Reimbursements
 

@@ -85,6 +85,29 @@ pub fn AmountOperatorBar() -> Element {
                 },
                 "="
             }
+            // The one key here that must NOT preventDefault: letting the tap's default action run
+            // is what blurs the field, which is what lowers the keyboard — and blurring also
+            // clears `FocusedAmount`, so this bar goes with it. It exists because suppressing
+            // iOS's own accessory view (packages/mobile/src/main.rs) took away the ✓ that was the
+            // numeric keypad's only dismiss control; the keypad has no return key of its own.
+            button {
+                r#type: "button",
+                class: "btn btn-sm btn-ghost flex-1",
+                aria_label: tid!("amount-op-done"),
+                svg {
+                    xmlns: "http://www.w3.org/2000/svg",
+                    "aria-hidden": "true",
+                    class: "h-5 w-5 stroke-current",
+                    fill: "none",
+                    view_box: "0 0 24 24",
+                    path {
+                        stroke_linecap: "round",
+                        stroke_linejoin: "round",
+                        stroke_width: "2",
+                        d: "M19 9l-7 7-7-7",
+                    }
+                }
+            }
         }
     }
 }

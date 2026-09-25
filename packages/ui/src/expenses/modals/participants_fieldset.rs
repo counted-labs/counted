@@ -4,6 +4,7 @@ use shared::sums_to_total;
 
 use super::super::helpers::expense_form_helpers::{parse_amount, redistribute, UserEntry};
 use super::amount_input::AmountInput;
+use crate::common::{initials, user_color_class, Avatar, SizeClass};
 
 /// Same filter as `active_amounts` in `expense_modal_helpers`, so what is displayed is exactly
 /// what submitting would validate.
@@ -62,26 +63,33 @@ pub fn ParticipantsFieldset(props: ParticipantsFieldsetProps) -> Element {
                         {tid!("participants-select-all")}
                     }
                 }
-                label { class: "flex items-center gap-2 cursor-pointer",
-                    span { class: "text-xs", {tid!("participants-by-shares")} }
-                    input {
-                        r#type: "checkbox",
-                        class: "toggle toggle-sm",
-                        checked: share_mode(),
-                        oninput: move |_| {
-                            let t = total();
-                            let new_mode = !share_mode();
-                            share_mode.set(new_mode);
-                            let mut e = entries.write();
-                            if new_mode {
-                                for entry in e.iter_mut() {
-                                    if entry.checked && entry.shares == 0.0 {
-                                        entry.shares = 1.0;
+                // Deliberately unlike the type selector at the top of the sheet: outlined rather
+                // than filled, half the width, smaller type. Two segmented controls drawn the same
+                // way read as one repeated control, and neither says what it governs.
+                div { class: "join",
+                    for (shares , key) in [(false, "split-amounts"), (true, "participants-by-shares")] {
+                        button {
+                            r#type: "button",
+                            class: if share_mode() == shares { "join-item btn btn-xs btn-neutral" } else { "join-item btn btn-xs btn-outline" },
+                            aria_pressed: "{share_mode() == shares}",
+                            onclick: move |_| {
+                                if share_mode() == shares {
+                                    return;
+                                }
+                                let t = total();
+                                share_mode.set(shares);
+                                let mut e = entries.write();
+                                if shares {
+                                    for entry in e.iter_mut() {
+                                        if entry.checked && entry.shares == 0.0 {
+                                            entry.shares = 1.0;
+                                        }
                                     }
                                 }
-                            }
-                            redistribute(t, &mut e, new_mode);
-                        },
+                                redistribute(t, &mut e, shares);
+                            },
+                            {tid!(key)}
+                        }
                     }
                 }
             }
@@ -89,35 +97,47 @@ pub fn ParticipantsFieldset(props: ParticipantsFieldsetProps) -> Element {
                 for i in 0..entries().len() {
                     {
                         let name = entries().get(i).map(|e| e.display_name.clone()).unwrap_or_default();
+                        let user_id = entries().get(i).map(|e| e.user.id).unwrap_or(0);
                         let checked = entries().get(i).map(|e| e.checked).unwrap_or(false);
                         let amount_val = entries().get(i).map(|e| e.amount).unwrap_or(0.0);
                         let shares_val = entries().get(i).map(|e| e.shares).unwrap_or(0.0);
                         let sm = share_mode();
                         rsx! {
                             div { class: "flex items-center gap-3 min-h-11",
-                                input {
-                                    r#type: "checkbox",
-                                    class: "checkbox checkbox-sm",
-                                    aria_label: "{name}",
-                                    checked,
-                                    oninput: move |_| {
-                                        let t = total();
-                                        let sm = share_mode();
-                                        let mut e = entries.write();
-                                        if let Some(entry) = e.get_mut(i) {
-                                            entry.checked = !entry.checked;
-                                            if sm {
-                                                if entry.checked && entry.shares == 0.0 {
-                                                    entry.shares = 1.0;
-                                                } else if !entry.checked {
-                                                    entry.shares = 0.0;
+                                // The label wraps the checkbox, the avatar and the name — the whole
+                                // left of the row is one target instead of a 20px box with inert
+                                // text beside it. The amount field stays outside it: inside, a tap
+                                // meant for the field would toggle the row.
+                                label { class: "flex items-center gap-3 flex-1 min-w-0 min-h-11 cursor-pointer",
+                                    input {
+                                        r#type: "checkbox",
+                                        class: "checkbox checkbox-sm",
+                                        aria_label: "{name}",
+                                        checked,
+                                        oninput: move |_| {
+                                            let t = total();
+                                            let sm = share_mode();
+                                            let mut e = entries.write();
+                                            if let Some(entry) = e.get_mut(i) {
+                                                entry.checked = !entry.checked;
+                                                if sm {
+                                                    if entry.checked && entry.shares == 0.0 {
+                                                        entry.shares = 1.0;
+                                                    } else if !entry.checked {
+                                                        entry.shares = 0.0;
+                                                    }
                                                 }
                                             }
-                                        }
-                                        redistribute(t, &mut e, sm);
-                                    },
+                                            redistribute(t, &mut e, sm);
+                                        },
+                                    }
+                                    Avatar {
+                                        initials: initials(&name),
+                                        color_class: user_color_class(user_id).to_string(),
+                                        size: SizeClass::W6,
+                                    }
+                                    span { class: "flex-1 text-sm truncate", "{name}" }
                                 }
-                                span { class: "flex-1 text-sm truncate", "{name}" }
                                 if sm {
                                     span { class: "text-xs text-base-content/70 w-16 text-right tabular-nums", "{amount_val:.2}" }
                                     AmountInput {
@@ -236,20 +256,33 @@ mod tests {
         }
     }
 
-    /// Single template, so this is plain document order.
-    const SHARE_TOGGLE: usize = 0;
-    const CHECKBOX_0: usize = 1;
-    const FIELD_0: usize = 2;
-    const CHECKBOX_1: usize = 3;
-    const FIELD_1: usize = 4;
+    /// Single template, so this is plain document order. The mode control is two buttons, so it is
+    /// a `click` listener now and no longer shifts these.
+    const CHECKBOX_0: usize = 0;
+    const FIELD_0: usize = 1;
+    const CHECKBOX_1: usize = 2;
+    const FIELD_1: usize = 3;
+
+    /// The `click` listeners, same order: select-all, then the two mode segments.
+    const SELECT_ALL: usize = 0;
+    const SHARES_MODE: usize = 2;
 
     fn harness(share_mode: bool) -> (VirtualDom, Spy, Vec<ElementId>) {
+        let (dom, spy, ids, _) = harness_with_clicks(share_mode);
+        (dom, spy, ids)
+    }
+
+    /// Both listener sets have to come from the same rebuild, and a rebuild can only be taken once.
+    fn harness_with_clicks(share_mode: bool) -> (VirtualDom, Spy, Vec<ElementId>, Vec<ElementId>) {
         let spy: Spy = Rc::new(RefCell::new(Vec::new()));
         let mut dom =
             VirtualDom::new_with_props(Harness, HarnessProps { spy: spy.clone(), share_mode });
-        let ids = listener_ids(&dom.rebuild_to_vec(), "input");
-        assert_eq!(ids.len(), 5, "template changed — re-index the constants above");
-        (dom, spy, ids)
+        let m = dom.rebuild_to_vec();
+        let ids = listener_ids(&m, "input");
+        let clicks = listener_ids(&m, "click");
+        assert_eq!(ids.len(), 4, "template changed — re-index the constants above");
+        assert_eq!(clicks.len(), 3, "select-all plus the two mode segments");
+        (dom, spy, ids, clicks)
     }
 
     #[test]
@@ -348,14 +381,30 @@ mod tests {
 
     #[test]
     fn switching_to_share_mode_gives_checked_rows_one_share_each() {
-        let (mut dom, spy, ids) = harness(false);
+        let (mut dom, spy, ids, clicks) = harness_with_clicks(false);
 
         dom.runtime().handle_event("input", form_input("on"), ids[CHECKBOX_0]);
         dom.render_immediate_to_vec();
-        dom.runtime().handle_event("input", form_input("on"), ids[SHARE_TOGGLE]);
+        dom.runtime().handle_event("click", click(), clicks[SHARES_MODE]);
         dom.render_immediate_to_vec();
 
         assert_eq!(spy.borrow()[0], (true, 30.0, 1.0));
+    }
+
+    /// Tapping the segment already in force must not re-run the split — hand-typed amounts would
+    /// be wiped by a tap that changes nothing.
+    #[test]
+    fn tapping_the_current_mode_changes_nothing() {
+        let (mut dom, spy, ids, clicks) = harness_with_clicks(false);
+
+        dom.runtime().handle_event("input", form_input("7"), ids[FIELD_0]);
+        dom.render_immediate_to_vec();
+        let before = spy.borrow().clone();
+
+        dom.runtime().handle_event("click", click(), clicks[SELECT_ALL + 1]);
+        dom.render_immediate_to_vec();
+
+        assert_eq!(*spy.borrow(), before, "the amounts segment was already on");
     }
 
     /// Concatenated so an assertion doesn't depend on how the text splits across nodes.
@@ -413,15 +462,7 @@ mod tests {
 
     #[test]
     fn select_all_rebalances_the_counter() {
-        // Built by hand rather than through `harness`: the click listener ids have to come from
-        // the same rebuild as the input ones, and a rebuild can only be taken once.
-        let spy: Spy = Rc::new(RefCell::new(Vec::new()));
-        let mut dom =
-            VirtualDom::new_with_props(Harness, HarnessProps { spy, share_mode: false });
-        let m = dom.rebuild_to_vec();
-        let ids = listener_ids(&m, "input");
-        let click_ids = listener_ids(&m, "click");
-        assert_eq!(click_ids.len(), 1, "template changed — only select-all has a click handler");
+        let (mut dom, _spy, ids, click_ids) = harness_with_clicks(false);
 
         // Leave the side unbalanced by hand first…
         dom.runtime().handle_event("input", form_input("7"), ids[FIELD_0]);
@@ -429,7 +470,7 @@ mod tests {
         assert!(out.contains("left") && out.contains("23.00"), "expected a shortfall first: {out}");
 
         // …then let "Tout sélectionner" redistribute it.
-        dom.runtime().handle_event("click", click(), click_ids[0]);
+        dom.runtime().handle_event("click", click(), click_ids[SELECT_ALL]);
         let out = rendered(&dom.render_immediate_to_vec());
         assert!(!out.contains("left") && !out.contains("over"), "select-all must rebalance: {out}");
     }
@@ -478,8 +519,12 @@ mod tests {
         );
         let m = dom.rebuild_to_vec();
         let ids = listener_ids(&m, "input");
-        assert_eq!(ids.len(), 5, "template changed — re-index the constants above");
-        assert_eq!(listener_ids(&m, "click").len(), 1, "no bar until a field is focused");
+        assert_eq!(ids.len(), 4, "template changed — re-index the constants above");
+        assert_eq!(
+            listener_ids(&m, "click").len(),
+            3,
+            "select-all and the two mode segments, and no bar until a field is focused"
+        );
         (dom, spy, ids)
     }
 

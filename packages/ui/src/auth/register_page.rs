@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use crate::tid;
 
 use crate::auth::credentials::{password_error_key, sign_up};
-use crate::common::{error_message, next_paint, read_from_ls, AppHeader, CheckMarkIllustration};
+use crate::common::{error_message, next_paint, read_from_ls, AppHeader, Mascot, MascotPose};
 use crate::crypto::{derive_account_key_v1, encrypt_json, generate_kdf_salt};
 use crate::i18n::current_lang;
 use crate::icons::{LockIcon, ICON_INLINE};
@@ -80,7 +80,7 @@ pub fn RegisterPage() -> Element {
                     back_button_route: Route::ProjectsPage {},
                 }
                 div { class: "flex flex-col items-center gap-4 py-4 text-center",
-                    CheckMarkIllustration {}
+                    Mascot { pose: MascotPose::Mail }
                     div { class: "flex flex-col gap-1",
                         p { class: "font-semibold", {tid!("register-email-sent")} }
                         p { class: "text-sm text-base-content/70",

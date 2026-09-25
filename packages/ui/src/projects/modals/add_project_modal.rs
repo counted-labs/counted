@@ -173,7 +173,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                     h3 { class: "font-bold text-lg font-display", {tid!("add-project-title")} }
                     button {
                         r#type: "button",
-                        class: "btn btn-ghost btn-circle btn-sm",
+                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11 text-lg",
                         aria_label: tid!("close"),
                         onclick: move |_| on_close.call(()),
                         "✕"

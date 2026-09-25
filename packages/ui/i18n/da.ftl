@@ -207,6 +207,8 @@ import = Importér
 importing = Importerer…
 field-description = Beskrivelse
 field-date = Dato
+date-today = I dag
+date-yesterday = I går
 field-optional = Valgfrit
 
 ### Projects
@@ -286,6 +288,7 @@ amount-op-subtract = Minus
 amount-op-multiply = Gange
 amount-op-divide = Divideret med
 amount-op-equals = Lig med
+amount-op-done = Færdig
 expense-rate = Vekselkurs (valgfrit)
 expense-rate-hint = Lad feltet stå tomt for at bruge Europa-Kommissionens (InforEuro) kurs for { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Indtast en vekselkurs større end 0.
@@ -318,6 +321,7 @@ participants-some = { $count } af { $total }
 participants-select-all = Vælg alle
 participants-deselect-all = Fravælg alle
 participants-by-shares = Efter andele
+split-amounts = Beløb
 participants-remaining = { $amount } tilbage
 participants-over-by = { $amount } for meget
 participants-who-paid = Hvem betalte?

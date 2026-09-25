@@ -209,6 +209,8 @@ import = Importa
 importing = Qed jiġi importat…
 field-description = Deskrizzjoni
 field-date = Data
+date-today = Illum
+date-yesterday = Ilbieraħ
 field-optional = Fakultattiv
 
 ### Projects
@@ -288,6 +290,7 @@ amount-op-subtract = Naqqas
 amount-op-multiply = Immultiplika
 amount-op-divide = Aqsam
 amount-op-equals = Ugwali
+amount-op-done = Lest
 expense-rate = Rata tal-kambju (fakultattiva)
 expense-rate-hint = Ħalli vojt biex tuża r-rata tal-Kummissjoni Ewropea (InforEuro) għal { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Daħħal rata tal-kambju akbar minn 0.
@@ -320,6 +323,7 @@ participants-some = { $count } minn { $total }
 participants-select-all = Agħżel kollha
 participants-deselect-all = Neħħi l-għażla
 participants-by-shares = Skont l-ishma
+split-amounts = Ammonti
 participants-remaining = { $amount } fadal
 participants-over-by = { $amount } żejjed
 participants-who-paid = Min ħallas?

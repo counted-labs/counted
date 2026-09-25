@@ -1,6 +1,8 @@
-/* iOS Safari auto-zooms on focus when font-size < 16px; force 16px to prevent it. */
+/* iOS Safari auto-zooms on focus when font-size < 16px, so 16px is a floor, not a value. `1em`
+   resolves against the parent, so a field wrapped in a larger type scale — the expense sheet's
+   amount — renders at that size instead of being clamped back down to 16px. */
 input, textarea, select {
-  font-size: 16px !important;
+  font-size: max(16px, 1em) !important;
 }
 
 /* Brand gradient utilities (emerald → teal) */

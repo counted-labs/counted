@@ -207,6 +207,8 @@ import = Impordi
 importing = Importimine…
 field-description = Kirjeldus
 field-date = Kuupäev
+date-today = Täna
+date-yesterday = Eile
 field-optional = Valikuline
 
 ### Projects
@@ -286,6 +288,7 @@ amount-op-subtract = Miinus
 amount-op-multiply = Korruta
 amount-op-divide = Jaga
 amount-op-equals = Võrdub
+amount-op-done = Valmis
 expense-rate = Vahetuskurss (valikuline)
 expense-rate-hint = Jäta tühjaks, et kasutada Euroopa Komisjoni (InforEuro) kurssi kuule { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Sisesta vahetuskurss, mis on suurem kui 0.
@@ -318,6 +321,7 @@ participants-some = { $count } / { $total }
 participants-select-all = Vali kõik
 participants-deselect-all = Tühista valik
 participants-by-shares = Osade kaupa
+split-amounts = Summad
 participants-remaining = { $amount } jäänud
 participants-over-by = { $amount } üle
 participants-who-paid = Kes maksis?

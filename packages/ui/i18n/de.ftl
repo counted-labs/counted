@@ -482,6 +482,8 @@ update-required-button = Aktualisieren
 confirm = Bestätigen
 copy = Kopieren
 field-date = Datum
+date-today = Heute
+date-yesterday = Gestern
 
 ### Errors (Freunde)
 
@@ -512,6 +514,7 @@ amount-op-subtract = Minus
 amount-op-multiply = Mal
 amount-op-divide = Geteilt
 amount-op-equals = Gleich
+amount-op-done = Fertig
 expense-rate = Wechselkurs (optional)
 expense-rate-hint = Leer lassen, um den Kurs der Europäischen Kommission (InforEuro) für { $month } zu verwenden: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Gib einen Wechselkurs größer als 0 ein.
@@ -523,6 +526,7 @@ project-currency-hint = Alle Beträge werden in dieser Währung angezeigt. Sie k
 project-currency-locked = Die Währung wird beim Anlegen des Projekts festgelegt.
 project-gone-title = Dieses Projekt existiert nicht mehr
 participants-by-shares = Nach Anteilen
+split-amounts = Beträge
 
 ### Reimbursements
 

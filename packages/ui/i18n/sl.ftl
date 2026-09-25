@@ -209,6 +209,8 @@ import = Uvozi
 importing = Uvažanje…
 field-description = Opis
 field-date = Datum
+date-today = Danes
+date-yesterday = Včeraj
 field-optional = Neobvezno
 
 ### Projects
@@ -288,6 +290,7 @@ amount-op-subtract = Minus
 amount-op-multiply = Krat
 amount-op-divide = Deljeno
 amount-op-equals = Enako
+amount-op-done = Končano
 expense-rate = Menjalni tečaj (neobvezno)
 expense-rate-hint = Pusti prazno za tečaj Evropske komisije (InforEuro) za { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Vnesi menjalni tečaj, večji od 0.
@@ -320,6 +323,7 @@ participants-some = { $count } od { $total }
 participants-select-all = Izberi vse
 participants-deselect-all = Prekliči izbor
 participants-by-shares = Po deležih
+split-amounts = Zneski
 participants-remaining = Ostane { $amount }
 participants-over-by = { $amount } preveč
 participants-who-paid = Kdo je plačal?

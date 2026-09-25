@@ -207,6 +207,8 @@ import = Εισαγωγή
 importing = Εισαγωγή…
 field-description = Περιγραφή
 field-date = Ημερομηνία
+date-today = Σήμερα
+date-yesterday = Χθες
 field-optional = Προαιρετικό
 
 ### Projects
@@ -286,6 +288,7 @@ amount-op-subtract = Πλην
 amount-op-multiply = Επί
 amount-op-divide = Διά
 amount-op-equals = Ίσον
+amount-op-done = Τέλος
 expense-rate = Ισοτιμία (προαιρετικό)
 expense-rate-hint = Άφησέ το κενό για την ισοτιμία της Ευρωπαϊκής Επιτροπής (InforEuro) για { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Εισήγαγε ισοτιμία μεγαλύτερη από 0.
@@ -318,6 +321,7 @@ participants-some = { $count } από { $total }
 participants-select-all = Επιλογή όλων
 participants-deselect-all = Αποεπιλογή όλων
 participants-by-shares = Ανά μερίδια
+split-amounts = Ποσά
 participants-remaining = Απομένουν { $amount }
 participants-over-by = { $amount } επιπλέον
 participants-who-paid = Ποιος πλήρωσε;

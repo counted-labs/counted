@@ -209,6 +209,8 @@ import = Importovať
 importing = Importuje sa…
 field-description = Popis
 field-date = Dátum
+date-today = Dnes
+date-yesterday = Včera
 field-optional = Nepovinné
 
 ### Projects
@@ -288,6 +290,7 @@ amount-op-subtract = Mínus
 amount-op-multiply = Krát
 amount-op-divide = Delené
 amount-op-equals = Rovná sa
+amount-op-done = Hotovo
 expense-rate = Výmenný kurz (nepovinné)
 expense-rate-hint = Nechaj prázdne na použitie kurzu Európskej komisie (InforEuro) za { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Zadaj výmenný kurz väčší ako 0.
@@ -320,6 +323,7 @@ participants-some = { $count } z { $total }
 participants-select-all = Vybrať všetko
 participants-deselect-all = Zrušiť výber
 participants-by-shares = Podľa podielov
+split-amounts = Sumy
 participants-remaining = Zostáva { $amount }
 participants-over-by = O { $amount } navyše
 participants-who-paid = Kto platil?

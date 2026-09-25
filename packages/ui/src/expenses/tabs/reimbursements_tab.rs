@@ -4,7 +4,7 @@ use shared::{PaymentMethod, ProjectStatus, ReimbursementSuggestion, User};
 
 use crate::{
     common::{
-        copy_text, initials, user_color_class, Avatar, CheckMarkIllustration, Flash, ProjectKey,
+        copy_text, initials, user_color_class, Avatar, Flash, Mascot, MascotPose, ProjectKey,
     },
     crypto::{decrypt_user, DecryptedUser},
     icons::RightArrowIcon,
@@ -29,7 +29,7 @@ pub fn ReimbursementsTab(props: ReimbursementsTabProps) -> Element {
     if props.suggestions.is_empty() {
         return rsx! {
             div { class: "flex flex-col items-center gap-2 py-12 text-base-content/70",
-                CheckMarkIllustration {}
+                Mascot { pose: MascotPose::Settled }
                 span { class: "font-bold text-base-content", {tid!("reimbursements-empty-title")} }
                 span { class: "text-sm text-center",
                     {tid!("reimbursements-empty-hint")}

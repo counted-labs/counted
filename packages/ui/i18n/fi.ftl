@@ -207,6 +207,8 @@ import = Tuo
 importing = Tuodaan…
 field-description = Kuvaus
 field-date = Päivämäärä
+date-today = Tänään
+date-yesterday = Eilen
 field-optional = Valinnainen
 
 ### Projects
@@ -286,6 +288,7 @@ amount-op-subtract = Miinus
 amount-op-multiply = Kerro
 amount-op-divide = Jaa
 amount-op-equals = Yhtä kuin
+amount-op-done = Valmis
 expense-rate = Valuuttakurssi (valinnainen)
 expense-rate-hint = Jätä tyhjäksi käyttääksesi Euroopan komission (InforEuro) kurssia kuukaudelle { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Anna valuuttakurssi, joka on suurempi kuin 0.
@@ -318,6 +321,7 @@ participants-some = { $count } / { $total }
 participants-select-all = Valitse kaikki
 participants-deselect-all = Poista valinnat
 participants-by-shares = Osuuksittain
+split-amounts = Summat
 participants-remaining = { $amount } jäljellä
 participants-over-by = { $amount } yli
 participants-who-paid = Kuka maksoi?

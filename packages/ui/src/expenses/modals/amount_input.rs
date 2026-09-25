@@ -7,6 +7,11 @@ use super::super::helpers::expense_form_helpers::{amount_field_text, is_expressi
 /// `None` when no amount field is focused, which is also what hides the bar.
 pub type FocusedAmount = Signal<Option<Signal<Option<String>>>>;
 
+/// `focus_on_mount`'s retry budget: 1s total, comfortably past daisyUI's 0.3s modal transition,
+/// and abandoned rather than looping forever if something else holds the focus.
+const FOCUS_TRIES: usize = 20;
+const FOCUS_RETRY_MS: u32 = 50;
+
 /// A decimal text field bound to an `f64` that keeps showing the keystrokes as typed.
 ///
 /// Dioxus treats `value` as volatile and rewrites it on every render, and an `f64` cannot hold a
@@ -29,6 +34,14 @@ pub struct AmountInputProps {
     /// against. Everything in `attributes` (`id`, `aria_label`…) stays on the input.
     #[props(default)]
     pub class: String,
+    /// Takes the focus on mount. A prop rather than an `onmounted` the caller passes, because this
+    /// component already owns that handler for its own scroll-into-view. **Not** named `autofocus`:
+    /// that is a real `input` attribute, and `extends = input` below would swallow it.
+    #[props(default)]
+    pub focus_on_mount: bool,
+    /// Show an untouched 0.00 as the placeholder rather than as the character "0".
+    #[props(default)]
+    pub blank_zero: bool,
     #[props(extends = GlobalAttributes, extends = input)]
     pub attributes: Vec<Attribute>,
 }
@@ -41,7 +54,7 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
     // The participants tests mount the fieldset with no form above it, so there may be no bar.
     let bar = try_use_context::<FocusedAmount>();
 
-    let shown = amount_field_text(draft().as_deref(), props.value);
+    let shown = amount_field_text(draft().as_deref(), props.value, props.blank_zero);
     let calc = draft().as_deref().is_some_and(is_expression);
 
     // The bar appears below the scroll body once a field takes focus, shrinking it from the bottom
@@ -69,12 +82,32 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
                 r#type: "text",
                 inputmode: "decimal",
                 value: shown.clone(),
+                placeholder: "0",
                 class: "w-full",
                 // Chromium's UA sheet sets `text-align: start` on an input, so a `text-right` on
                 // the wrapper would not otherwise reach it.
                 text_align: "inherit",
                 class: if calc { "pointer-coarse:text-transparent pointer-coarse:caret-transparent" },
-                onmounted: move |e| mounted.set(Some(e.data())),
+                onmounted: move |e| {
+                    let node = e.data();
+                    mounted.set(Some(node.clone()));
+                    if props.focus_on_mount {
+                        // daisyUI animates the modal's `visibility` (0.3s, `allow-discrete`), and
+                        // `HTMLElement.focus()` on a still-hidden element is *silently* ignored —
+                        // `set_focus` reports `Ok(())` and nothing moves, which is exactly how this
+                        // read as "autofocus does not work". Retry until `onfocus` confirms it
+                        // landed, rather than hard-coding daisyUI's duration.
+                        spawn(async move {
+                            for _ in 0..FOCUS_TRIES {
+                                let _ = node.set_focus(true).await;
+                                if *focused.peek() {
+                                    return;
+                                }
+                                crate::common::sleep(FOCUS_RETRY_MS).await;
+                            }
+                        });
+                    }
+                },
                 onfocus: move |_| {
                     // Materialised so the bar always has a left operand to append to.
                     if draft.peek().is_none() {

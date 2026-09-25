@@ -137,8 +137,14 @@ pub fn with_operator(shown: &str, op: char) -> Option<String> {
 /// or "12,0", so binding the number directly erases the separator under a mobile keyboard. A
 /// draft that does not parse (empty, mid-typing) is kept too — the number it fails to be is what
 /// the field last held, and clobbering it would refuse a clear-and-retype.
-pub fn amount_field_text(draft: Option<&str>, value: f64) -> String {
+///
+/// `blank_zero` renders an untouched 0.00 as nothing, leaving the field's `placeholder` to show
+/// it. The total opens that way: a literal "0" is a character the caret sits next to, so the
+/// first keystroke made "05" or "50". The participant rows do not — a blank there reads as
+/// "unset" where `redistribute` means "zero".
+pub fn amount_field_text(draft: Option<&str>, value: f64, blank_zero: bool) -> String {
     match draft {
+        None if blank_zero && value == 0.0 => String::new(),
         Some(d) if parse_amount(d).is_none_or(|v| v == value) => d.to_string(),
         _ => value.to_string(),
     }
@@ -561,29 +567,39 @@ mod tests {
 
     #[test]
     fn amount_field_text_keeps_an_expression_that_evaluates_to_the_value() {
-        assert_eq!(amount_field_text(Some("250/3"), 83.33), "250/3");
-        assert_eq!(amount_field_text(Some("250/"), 83.33), "250/");
-        assert_eq!(amount_field_text(None, 83.33), "83.33");
+        assert_eq!(amount_field_text(Some("250/3"), 83.33, false), "250/3");
+        assert_eq!(amount_field_text(Some("250/"), 83.33, false), "250/");
+        assert_eq!(amount_field_text(None, 83.33, false), "83.33");
     }
 
     #[test]
     fn amount_field_text_keeps_a_draft_that_still_means_the_value() {
-        assert_eq!(amount_field_text(Some("12."), 12.0), "12.");
-        assert_eq!(amount_field_text(Some("12,"), 12.0), "12,");
-        assert_eq!(amount_field_text(Some("12,0"), 12.0), "12,0");
-        assert_eq!(amount_field_text(Some("12,50"), 12.5), "12,50");
+        assert_eq!(amount_field_text(Some("12."), 12.0, false), "12.");
+        assert_eq!(amount_field_text(Some("12,"), 12.0, false), "12,");
+        assert_eq!(amount_field_text(Some("12,0"), 12.0, false), "12,0");
+        assert_eq!(amount_field_text(Some("12,50"), 12.5, false), "12,50");
     }
 
     #[test]
     fn amount_field_text_keeps_a_draft_that_does_not_parse() {
-        assert_eq!(amount_field_text(Some(""), 12.0), "");
-        assert_eq!(amount_field_text(Some("-"), 12.0), "-");
+        assert_eq!(amount_field_text(Some(""), 12.0, false), "");
+        assert_eq!(amount_field_text(Some("-"), 12.0, false), "-");
     }
 
     #[test]
     fn amount_field_text_shows_a_value_changed_from_outside() {
-        assert_eq!(amount_field_text(None, 12.5), "12.5");
-        assert_eq!(amount_field_text(Some("7."), 15.0), "15");
+        assert_eq!(amount_field_text(None, 12.5, false), "12.5");
+        assert_eq!(amount_field_text(Some("7."), 15.0, false), "15");
+    }
+
+    #[test]
+    fn amount_field_text_blanks_an_untouched_zero_only_when_asked() {
+        assert_eq!(amount_field_text(None, 0.0, true), "");
+        assert_eq!(amount_field_text(None, 0.0, false), "0");
+        // The draft wins once there is one — including the "" that focus materialises.
+        assert_eq!(amount_field_text(Some(""), 0.0, true), "");
+        assert_eq!(amount_field_text(Some("5"), 5.0, true), "5");
+        assert_eq!(amount_field_text(None, 12.5, true), "12.5");
     }
 
     #[test]

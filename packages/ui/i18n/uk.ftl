@@ -209,6 +209,8 @@ import = Імпортувати
 importing = Імпортування…
 field-description = Опис
 field-date = Дата
+date-today = Сьогодні
+date-yesterday = Вчора
 field-optional = Необов’язково
 
 ### Projects
@@ -288,6 +290,7 @@ amount-op-subtract = Мінус
 amount-op-multiply = Помножити
 amount-op-divide = Поділити
 amount-op-equals = Дорівнює
+amount-op-done = Готово
 expense-rate = Курс обміну (необов’язково)
 expense-rate-hint = Залиш порожнім, щоб застосувати курс Європейської комісії (InforEuro) за { $month }: 1 { $from } = { $rate } { $to }.
 expense-rate-invalid = Введи курс обміну, більший за 0.
@@ -320,6 +323,7 @@ participants-some = { $count } з { $total }
 participants-select-all = Вибрати всіх
 participants-deselect-all = Зняти вибір
 participants-by-shares = За частками
+split-amounts = Суми
 participants-remaining = Залишилось { $amount }
 participants-over-by = На { $amount } більше
 participants-who-paid = Хто заплатив?

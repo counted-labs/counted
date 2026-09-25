@@ -10,7 +10,7 @@ use super::amount_input::{AmountInput, FocusedAmount};
 use super::amount_operator_bar::AmountOperatorBar;
 use super::participants_fieldset::ParticipantsFieldset;
 use crate::categories::{category_label, infer_chart_category, parent_emoji, CHART_CATEGORIES as CATEGORIES};
-use crate::common::format_month_str;
+use crate::common::{format_month_str, haptic, Haptic};
 
 /// The three type options, in the order the segmented control lays them out.
 /// The three type options, as (wire value, translation key).
@@ -26,6 +26,18 @@ fn type_value(t: &ExpenseType) -> &'static str {
         ExpenseType::Gain => "Gain",
         ExpenseType::Transfer => "Transfer",
     }
+}
+
+/// `date_str`'s shape, matching `AddExpenseModal::today_iso`. The chips both set and highlight
+/// against these, so a stale one would light up the wrong chip rather than write a wrong date.
+fn today_iso() -> String {
+    chrono::Utc::now().naive_utc().date().format("%Y-%m-%d").to_string()
+}
+
+fn yesterday_iso() -> String {
+    (chrono::Utc::now().naive_utc().date() - chrono::Duration::days(1))
+        .format("%Y-%m-%d")
+        .to_string()
 }
 
 fn type_from_value(v: &str) -> ExpenseType {
@@ -181,9 +193,9 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
     // bounded scroll body instead of making it scroll, clipping their own rows.
     let collapse_class = |expanded: bool| {
         if expanded {
-            "collapse collapse-arrow bg-base-200/60 rounded-box shrink-0 collapse-open"
+            "collapse collapse-arrow bg-base-200/60 rounded-box shrink-0 mx-5 mt-3 collapse-open"
         } else {
-            "collapse collapse-arrow bg-base-200/60 rounded-box shrink-0 collapse-close"
+            "collapse collapse-arrow bg-base-200/60 rounded-box shrink-0 mx-5 mt-3 collapse-close"
         }
     };
 
@@ -201,16 +213,35 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                 }
             },
             div { class: "modal-box max-w-md p-0 flex flex-col",
-                div { class: "flex items-center justify-between px-6 pt-5 pb-4 border-b border-base-200 flex-shrink-0",
-                    h3 {
-                        id: "expense-form-title",
-                        class: "font-bold text-lg font-display",
-                        "{props.title}"
+                div { class: "flex items-center gap-2 px-4 pt-3 pb-2 flex-shrink-0",
+                    h3 { id: "expense-form-title", class: "sr-only", "{props.title}" }
+                    // The type is a mode switch — it renames both participant sections and decides
+                    // whether the category field exists at all — so it leads, above everything it
+                    // governs. Ghost until checked: the loudest control on the sheet should not be
+                    // the one that is changed least.
+                    if props.show_type_selector {
+                        div { class: "join flex-1",
+                            for (value , label) in TYPES {
+                                input {
+                                    class: "join-item btn btn-sm btn-ghost flex-1",
+                                    r#type: "radio",
+                                    name: "expense-type",
+                                    aria_label: tid!(label),
+                                    checked: type_value(&expense_type()) == value,
+                                    oninput: move |_| {
+                                        haptic(Haptic::Light);
+                                        expense_type.set(type_from_value(value));
+                                    },
+                                }
+                            }
+                        }
+                    } else {
+                        span { class: "flex-1 font-bold text-lg font-display truncate", "{props.title}" }
                     }
                     button {
                         id: "expense-form-close",
                         r#type: "button",
-                        class: "btn btn-ghost btn-circle btn-sm",
+                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11 text-lg",
                         aria_label: tid!("close"),
                         onclick: move |_| on_close_x.call(()),
                         "✕"
@@ -218,44 +249,34 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                 }
 
                 form { class: "flex flex-col flex-1 overflow-hidden", onsubmit: props.on_submit,
-                div { class: "flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4",
+                div { class: "flex-1 overflow-y-auto flex flex-col",
                 if let Some(err) = error_msg() {
-                    div { id: "expense-form-error", role: "alert", class: "alert alert-error text-sm", "{err}" }
+                    div { id: "expense-form-error", role: "alert", class: "alert alert-error text-sm mx-5 mb-2", "{err}" }
                 }
 
-                    fieldset { class: "fieldset",
-                        label { class: "fieldset-legend", r#for: "expense-name", {tid!("field-name")} }
-                        input {
-                            id: "expense-name",
-                            class: "input w-full",
-                            r#type: "text",
-                            enterkeyhint: "next",
-                            aria_required: "true",
-                            aria_describedby: if error_msg().is_some() { "expense-form-error" },
-                            placeholder: tid!("expense-name-placeholder"),
-                            value: "{expense_name}",
-                            onmounted: move |e| {
-                                spawn(async move {
-                                    let _ = e.data().set_focus(true).await;
-                                });
-                            },
-                            oninput: move |e| expense_name.set(e.value()),
+                    if let Some(hint) = props.amount_hint {
+                        div {
+                            id: "amount-hint",
+                            class: "alert alert-info alert-soft text-sm py-2 mx-5 mb-2",
+                            role: "status",
+                            {tid!(hint)}
                         }
+                    }
 
-                        label { class: "fieldset-legend", r#for: "expense-amount", {tid!("field-amount")} }
-                        if let Some(hint) = props.amount_hint {
-                            div {
-                                id: "amount-hint",
-                                class: "alert alert-info alert-soft text-sm py-2",
-                                role: "status",
-                                {tid!(hint)}
-                            }
-                        }
-                        label { class: "input input-lg w-full",
+                    // The amount leads and takes the focus: it is the one figure the user always
+                    // knows, and its `inputmode="decimal"` makes the numeric keyboard the only one
+                    // the common case needs — the name, still being decided, follows it. No `input`
+                    // box: the rule below is the field's whole edge, so the currency `select` stops
+                    // reading as a second field sharing a frame.
+                    label { class: "flex items-baseline gap-2 px-5 pb-3 border-b border-base-200",
+                            span { class: "sr-only", {tid!("field-amount")} }
                             AmountInput {
                                 id: "expense-amount",
-                                class: "grow text-2xl font-semibold tabular-nums",
+                                class: "grow text-4xl font-semibold font-display tabular-nums",
                                 aria_required: "true",
+                                enterkeyhint: "next",
+                                blank_zero: true,
+                                focus_on_mount: true,
                                 value: source_amount(),
                                 oninput: move |raw: String| {
                                     let Some(v) = parse_amount(&raw) else { return };
@@ -265,7 +286,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                             }
                             select {
                                 id: "expense-currency",
-                                class: "label bg-transparent border-0 focus:outline-none cursor-pointer",
+                                class: "text-base font-medium text-base-content/70 bg-transparent border-0 focus:outline-none cursor-pointer",
                                 aria_label: tid!("expense-currency"),
                                 value: "{expense_currency}",
                                 onchange: move |e| {
@@ -285,6 +306,76 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                                     option { value: c.code, "{c.code}" }
                                 }
                             }
+                        }
+
+                    div { class: "flex items-center gap-2 px-5 py-1 border-b border-base-200",
+                        if expense_type() == ExpenseType::Expense {
+                            // Fixed width for the same reason the currency select above carries no
+                            // names: a browser sizes a closed `<select>` to its widest option, and
+                            // "Restaurants et bars" would push the name field off-screen.
+                            select {
+                                id: "expense-category",
+                                class: "select select-ghost w-28 shrink-0 px-1",
+                                aria_label: tid!("expense-category"),
+                                value: category().unwrap_or_default(),
+                                oninput: move |e| {
+                                    let v = e.value();
+                                    category.set(if v.is_empty() { None } else { Some(v) });
+                                },
+                                // The empty option previews what the name files under, so
+                                // "automatic" stops being a guess.
+                                {
+                                    let inferred = infer_chart_category(&expense_name());
+                                    rsx! {
+                                        option { value: "", {tid!("expense-category-auto", emoji: parent_emoji(inferred))} }
+                                    }
+                                }
+                                for cat in CATEGORIES.iter().copied() {
+                                    option {
+                                        value: "{cat}",
+                                        selected: category().as_deref() == Some(cat),
+                                        "{parent_emoji(cat)} {category_label(cat)}"
+                                    }
+                                }
+                            }
+                        }
+                        label { class: "sr-only", r#for: "expense-name", {tid!("field-name")} }
+                        input {
+                            id: "expense-name",
+                            class: "input input-ghost grow min-w-0 px-1",
+                            r#type: "text",
+                            enterkeyhint: "next",
+                            aria_required: "true",
+                            aria_describedby: if error_msg().is_some() { "expense-form-error" },
+                            placeholder: tid!("expense-name-placeholder"),
+                            value: "{expense_name}",
+                            oninput: move |e| expense_name.set(e.value()),
+                        }
+                    }
+
+                    // Nearly every expense is entered the day it happened or the day after, and
+                    // both used to cost opening the native calendar. The field itself stays — it is
+                    // the third chip, visible rather than hidden behind the other two.
+                    div { class: "flex items-center gap-2 px-5 py-2 border-b border-base-200",
+                        label { class: "sr-only", r#for: "expense-date", {tid!("field-date")} }
+                        button {
+                            r#type: "button",
+                            class: if date_str() == today_iso() { "btn btn-sm btn-neutral" } else { "btn btn-sm btn-outline" },
+                            onclick: move |_| date_str.set(today_iso()),
+                            {tid!("date-today")}
+                        }
+                        button {
+                            r#type: "button",
+                            class: if date_str() == yesterday_iso() { "btn btn-sm btn-neutral" } else { "btn btn-sm btn-outline" },
+                            onclick: move |_| date_str.set(yesterday_iso()),
+                            {tid!("date-yesterday")}
+                        }
+                        input {
+                            id: "expense-date",
+                            class: "input input-sm grow min-w-0 rounded-full tabular-nums",
+                            r#type: "date",
+                            value: "{date_str}",
+                            oninput: move |e| date_str.set(e.value()),
                         }
                     }
 
@@ -328,65 +419,6 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                                     id: "expense-rate-preview",
                                     class: "label text-xs font-semibold tabular-nums",
                                     "≈ {total:.2} {props.currency}"
-                                }
-                            }
-                        }
-                    }
-
-                    if props.show_type_selector {
-                        div { class: "join w-full",
-                            for (value , label) in TYPES {
-                                input {
-                                    class: "join-item btn btn-sm flex-1",
-                                    r#type: "radio",
-                                    name: "expense-type",
-                                    aria_label: tid!(label),
-                                    checked: type_value(&expense_type()) == value,
-                                    oninput: move |_| expense_type.set(type_from_value(value)),
-                                }
-                            }
-                        }
-                    }
-
-                    div {
-                        class: if expense_type() == ExpenseType::Expense { "grid grid-cols-2 gap-3" } else { "grid grid-cols-1" },
-                        fieldset { class: "fieldset min-w-0",
-                            label { class: "fieldset-legend", r#for: "expense-date", {tid!("field-date")} }
-                            input {
-                                id: "expense-date",
-                                class: "input w-full",
-                                r#type: "date",
-                                value: "{date_str}",
-                                oninput: move |e| date_str.set(e.value()),
-                            }
-                        }
-
-                        if expense_type() == ExpenseType::Expense {
-                            fieldset { class: "fieldset min-w-0",
-                                label { class: "fieldset-legend", r#for: "expense-category", {tid!("expense-category")} }
-                                select {
-                                    id: "expense-category",
-                                    class: "select w-full",
-                                    value: category().unwrap_or_default(),
-                                    oninput: move |e| {
-                                        let v = e.value();
-                                        category.set(if v.is_empty() { None } else { Some(v) });
-                                    },
-                                    // The empty option previews what the name files under, so
-                                    // "automatic" stops being a guess.
-                                    {
-                                        let inferred = infer_chart_category(&expense_name());
-                                        rsx! {
-                                            option { value: "", {tid!("expense-category-auto", emoji: parent_emoji(inferred))} }
-                                        }
-                                    }
-                                    for cat in CATEGORIES.iter().copied() {
-                                        option {
-                                            value: "{cat}",
-                                            selected: category().as_deref() == Some(cat),
-                                            "{parent_emoji(cat)} {category_label(cat)}"
-                                        }
-                                    }
                                 }
                             }
                         }
@@ -441,10 +473,12 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                     }
 
                 } // end scrollable body
-                    div { class: "modal-action m-0 flex justify-end gap-2 px-6 py-4 border-t border-base-200 flex-shrink-0",
+                    div { class: "modal-action m-0 flex justify-end gap-2 px-5 py-3 border-t border-base-200 flex-shrink-0",
+                        // On a phone the ✕, the backdrop and the swipe down all cancel already, so
+                        // the second button only competes with the one action worth a full target.
                         button {
                             r#type: "button",
-                            class: "btn btn-ghost flex-1 sm:flex-none",
+                            class: "btn btn-ghost hidden sm:inline-flex",
                             onclick: move |_| on_close_cancel.call(()),
                             {tid!("cancel")}
                         }
@@ -566,7 +600,7 @@ mod tests {
 
     /// The rate input, in the foreign-currency template only: inside an `if foreign` block, so
     /// after every static listener and before the amount component's.
-    const RATE: usize = 13;
+    const RATE: usize = 10;
 
     fn harness() -> (VirtualDom, Spy, Vec<ElementId>) {
         harness_with(HarnessProps {
@@ -581,7 +615,7 @@ mod tests {
         let foreign = props.expense_currency != "EUR";
         let mut dom = VirtualDom::new_with_props(Harness, props);
         let ids = listener_ids(&dom.rebuild_to_vec(), "input");
-        let expected = if foreign { 15 } else { 14 };
+        let expected = if foreign { 13 } else { 12 };
         assert_eq!(ids.len(), expected, "form template changed — re-index RATE above");
         (dom, spy, ids)
     }
