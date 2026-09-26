@@ -70,6 +70,11 @@ error-friend-request-not-found = Níl an iarraidh chairdis seo ann a thuilleadh.
 error-invitation-not-found = Níl an cuireadh seo ann a thuilleadh.
 error-too-many-friend-requests = An iomarca iarratas cairdis faoi láthair. Bain triail eile as amárach.
 error-too-many-invitations = An iomarca cuirí ar feitheamh.
+error-invalid-kdf-salt = Níl na socruithe criptithe bailí. Nuashonraigh an aip agus bain triail eile as.
+error-mixed-project-batch = Níl na rannpháirtithe sin go léir sa tionscadal céanna.
+error-invalid-payload = Sheol an leagan seo den aip sonraí nach nglacann an freastalaí leo. Nuashonraigh é agus bain triail eile as.
+error-invalid-public-key = Níl d'eochair chriptithe bailí. Nuashonraigh an aip agus bain triail eile as.
+error-payment-methods-stale = Athraíodh do shonraí íocaíochta ar ghléas eile. Athlódáil agus bain triail eile as.
 
 ### Auth
 
@@ -322,7 +327,6 @@ participants-none = Duine ar bith
 participants-everyone = Gach duine ({ $count })
 participants-some = { $count } as { $total }
 participants-select-all = Roghnaigh uile
-participants-deselect-all = Díroghnaigh uile
 participants-by-shares = De réir scaireanna
 split-amounts = Méideanna
 participants-remaining = { $amount } fágtha
@@ -543,7 +547,6 @@ project-currency-locked = Socraítear an t-airgeadra nuair a chruthaítear an ti
 
 update-required-title = Nuashonrú ag teastáil
 update-required-body = Tá an leagan seo de Counted róshean chun labhairt leis an bhfreastalaí. Nuashonraigh é chun leanúint ar aghaidh ag úsáid na haipe.
-update-required-body-testflight = Tá an leagan seo de Counted róshean chun labhairt leis an bhfreastalaí. Oscail TestFlight agus suiteáil an tógáil is déanaí chun leanúint ar aghaidh ag úsáid na haipe.
 update-required-button = Nuashonraigh
 
 notifications-label = Fógraí

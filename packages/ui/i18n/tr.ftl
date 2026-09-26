@@ -67,6 +67,11 @@ error-friend-request-not-found = Bu arkadaşlık isteği artık yok.
 error-invitation-not-found = Bu davet artık yok.
 error-too-many-friend-requests = Şimdilik çok fazla arkadaşlık isteği. Yarın tekrar dene.
 error-too-many-invitations = Çok fazla bekleyen davet.
+error-invalid-kdf-salt = Şifreleme ayarları geçerli değil. Uygulamayı güncelle ve tekrar dene.
+error-mixed-project-batch = Bu katılımcıların hepsi aynı projede değil.
+error-invalid-payload = Uygulamanın bu sürümü sunucunun kabul etmediği veri gönderdi. Güncelle ve tekrar dene.
+error-invalid-public-key = Şifreleme anahtarın geçerli değil. Uygulamayı güncelle ve tekrar dene.
+error-payment-methods-stale = Ödeme bilgilerin başka bir cihazda değiştirildi. Yeniden yükle ve tekrar dene.
 
 ### Auth
 
@@ -319,7 +324,6 @@ participants-none = Hiç kimse
 participants-everyone = Herkes ({ $count })
 participants-some = { $count } / { $total }
 participants-select-all = Tümünü seç
-participants-deselect-all = Seçimi kaldır
 participants-by-shares = Paylara göre
 split-amounts = Tutarlar
 participants-remaining = { $amount } kaldı
@@ -534,7 +538,6 @@ project-currency-locked = Para birimi proje oluşturulurken sabitlenir.
 
 update-required-title = Güncelleme gerekli
 update-required-body = Counted'ın bu sürümü sunucuyla konuşamayacak kadar eski. Uygulamayı kullanmaya devam etmek için güncelle.
-update-required-body-testflight = Counted'ın bu sürümü sunucuyla konuşamayacak kadar eski. Uygulamayı kullanmaya devam etmek için TestFlight'ı aç ve en son sürümü yükle.
 update-required-button = Güncelle
 
 notifications-label = Bildirimler

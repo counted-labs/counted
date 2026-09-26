@@ -69,6 +69,11 @@ error-friend-request-not-found = Цього запиту в друзі біль�
 error-invitation-not-found = Цього запрошення більше не існує.
 error-too-many-friend-requests = Наразі забагато запитів у друзі. Спробуй завтра.
 error-too-many-invitations = Забагато запрошень в очікуванні.
+error-invalid-kdf-salt = Налаштування шифрування недійсні. Онови застосунок і спробуй ще раз.
+error-mixed-project-batch = Ці учасники не всі в одному проєкті.
+error-invalid-payload = Ця версія застосунку надіслала дані, які сервер не приймає. Онови її і спробуй ще раз.
+error-invalid-public-key = Твій ключ шифрування недійсний. Онови застосунок і спробуй ще раз.
+error-payment-methods-stale = Твої платіжні дані змінено на іншому пристрої. Перезавантаж і спробуй ще раз.
 
 ### Auth
 
@@ -321,7 +326,6 @@ participants-none = Ніхто
 participants-everyone = Усі ({ $count })
 participants-some = { $count } з { $total }
 participants-select-all = Вибрати всіх
-participants-deselect-all = Зняти вибір
 participants-by-shares = За частками
 split-amounts = Суми
 participants-remaining = Залишилось { $amount }
@@ -540,7 +544,6 @@ project-currency-locked = Валюта фіксується під час ств
 
 update-required-title = Потрібне оновлення
 update-required-body = Ця версія Counted застара для зв’язку із сервером. Онови її, щоб продовжити користуватися застосунком.
-update-required-body-testflight = Ця версія Counted застара для зв’язку із сервером. Відкрий TestFlight і встанови останню збірку, щоб продовжити користуватися застосунком.
 update-required-button = Оновити
 
 notifications-label = Сповіщення

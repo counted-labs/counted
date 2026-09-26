@@ -74,6 +74,11 @@ error-friend-request-not-found = This friend request no longer exists.
 error-invitation-not-found = This invitation no longer exists.
 error-too-many-friend-requests = Too many friend requests for now. Try again tomorrow.
 error-too-many-invitations = Too many pending invitations.
+error-invalid-kdf-salt = Your encryption settings aren’t valid. Update the app and try again.
+error-mixed-project-batch = Those participants aren’t all in the same project.
+error-invalid-payload = This version of the app sent data the server couldn’t accept. Update it and try again.
+error-invalid-public-key = Your encryption key isn’t valid. Update the app and try again.
+error-payment-methods-stale = Your payment details were changed on another device. Reload and try again.
 
 ### Auth
 
@@ -331,7 +336,6 @@ participants-none = Nobody
 participants-everyone = Everyone ({ $count })
 participants-some = { $count } of { $total }
 participants-select-all = Select all
-participants-deselect-all = Deselect all
 participants-by-shares = By shares
 split-amounts = Amounts
 participants-remaining = { $amount } left
@@ -715,7 +719,6 @@ project-currency-locked = The currency is fixed when the project is created.
 
 update-required-title = Update required
 update-required-body = This version of Counted is too old to talk to the server. Update it to keep using the app.
-update-required-body-testflight = This version of Counted is too old to talk to the server. Open TestFlight and install the latest build to keep using the app.
 update-required-button = Update
 
 # Notification bell on the projects page - today only incoming friend requests.

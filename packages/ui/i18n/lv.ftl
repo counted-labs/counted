@@ -68,6 +68,11 @@ error-friend-request-not-found = Šis draudzības pieprasījums vairs nepastāv.
 error-invitation-not-found = Šis uzaicinājums vairs nepastāv.
 error-too-many-friend-requests = Pagaidām pārāk daudz draudzības pieprasījumu. Mēģini rīt.
 error-too-many-invitations = Pārāk daudz neapstiprinātu uzaicinājumu.
+error-invalid-kdf-salt = Šifrēšanas iestatījumi nav derīgi. Atjaunini lietotni un mēģini vēlreiz.
+error-mixed-project-batch = Šie dalībnieki nav visi vienā projektā.
+error-invalid-payload = Šī lietotnes versija nosūtīja datus, kurus serveris nepieņem. Atjaunini to un mēģini vēlreiz.
+error-invalid-public-key = Tava šifrēšanas atslēga nav derīga. Atjaunini lietotni un mēģini vēlreiz.
+error-payment-methods-stale = Tavi maksājumu dati tika mainīti citā ierīcē. Pārlādē un mēģini vēlreiz.
 
 ### Auth
 
@@ -320,7 +325,6 @@ participants-none = Neviens
 participants-everyone = Visi ({ $count })
 participants-some = { $count } no { $total }
 participants-select-all = Atlasīt visus
-participants-deselect-all = Noņemt atlasi
 participants-by-shares = Pēc daļām
 split-amounts = Summas
 participants-remaining = Atlicis { $amount }
@@ -537,7 +541,6 @@ project-currency-locked = Valūta tiek noteikta, izveidojot projektu.
 
 update-required-title = Nepieciešams atjauninājums
 update-required-body = Šī Counted versija ir pārāk veca, lai sazinātos ar serveri. Atjaunini to, lai turpinātu lietot lietotni.
-update-required-body-testflight = Šī Counted versija ir pārāk veca, lai sazinātos ar serveri. Atver TestFlight un instalē jaunāko versiju, lai turpinātu lietot lietotni.
 update-required-button = Atjaunināt
 
 notifications-label = Paziņojumi

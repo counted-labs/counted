@@ -5,11 +5,11 @@
 //! rather than waiting on a callback. Registration is idempotent server-side, which lets the effect
 //! re-run on every sign-in and language change without bookkeeping beyond "what did we last send".
 
-use api::push::push_controller::{register_push_token, unregister_push_token};
+use api::push::push_controller::{register_push_token, unregister_push_token, verify_push_token};
 use dioxus::{fullstack::Json, prelude::*};
-use shared::{Account, RegisterPushToken, UnregisterPushToken};
+use shared::{Account, RegisterPushToken, UnregisterPushToken, VerifyPushToken};
 
-use super::{native_push, read_push_token, sleep};
+use super::{native_push, push::parse_push_token, push::take_push_proof, read_push_token, sleep};
 use crate::i18n::current_lang;
 
 const TOKEN_POLL_MS: u32 = 1000;
@@ -33,13 +33,21 @@ pub fn use_push_registration() {
         (push.request)();
         spawn(async move {
             for _ in 0..TOKEN_POLL_ROUNDS {
-                if let Some(token) = read_push_token() {
-                    let sent = (token.clone(), lang.clone());
+                // The server's verification push lands here, usually a second or two after the
+                // registration below; answering it is what makes the endpoint receive anything.
+                if let (Some(proof), Some(raw)) = (take_push_proof(), read_push_token()) {
+                    let (token, _) = parse_push_token(&raw);
+                    let _ = verify_push_token(Json(VerifyPushToken { token, proof })).await;
+                }
+                if let Some(raw) = read_push_token() {
+                    let sent = (raw.clone(), lang.clone());
                     if registered.peek().as_ref() != Some(&sent) {
+                        let (token, keys) = parse_push_token(&raw);
                         let payload = RegisterPushToken {
                             platform: push.platform,
                             token,
                             lang: lang.clone(),
+                            keys,
                         };
                         if register_push_token(Json(payload)).await.is_ok() {
                             registered.set(Some(sent));
@@ -59,7 +67,8 @@ pub async fn unregister_push() {
     if native_push().is_none() {
         return;
     }
-    if let Some(token) = read_push_token() {
+    if let Some(raw) = read_push_token() {
+        let (token, _) = parse_push_token(&raw);
         let _ = unregister_push_token(Json(UnregisterPushToken { token })).await;
     }
 }

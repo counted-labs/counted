@@ -1,6 +1,6 @@
 [package]
 name = "mobile"
-version = "3.2.0"
+version = "3.2.1"
 edition = "2021"
 publish = false
 
@@ -20,14 +20,24 @@ chrono = "0.4.41"
 tracing = "0.1.41"
 
 # optional
-sqlx = { version = "0.8.6", features = ["runtime-tokio", "postgres", "uuid", "chrono", "rust_decimal", "derive"], optional = true }
+sqlx = { version = "0.8.6", features = [
+	"runtime-tokio",
+	"postgres",
+	"uuid",
+	"chrono",
+	"rust_decimal",
+	"derive",
+], optional = true }
 axum = { version = "0.7", optional = true }
 dioxus-logger = "0.6.2"
 web-sys = { version = "0.3.77", features = ["Window", "Storage"] }
 
 # Persistent cookie store for auth session (native only)
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-reqwest = { version = "0.12", features = ["cookies", "rustls-tls"], default-features = false }
+reqwest = { version = "0.12", features = [
+	"cookies",
+	"rustls-tls",
+], default-features = false }
 reqwest_cookie_store = "0.8"
 
 # On-device receipt OCR. **Target-scoped, not a plain dependency**, for the same reason
@@ -47,36 +57,39 @@ jni = { version = "0.21", default-features = false, features = ["invocation"] }
 [target.'cfg(target_os = "ios")'.dependencies]
 objc2 = "0.6"
 objc2-ui-kit = { version = "0.3", features = [
-    "UIPasteboard",
-    # All three: the two concrete generators are gated on their own features *and* on the base
-    # class's, which is where prepare() lives.
-    "UIFeedbackGenerator",
-    "UIImpactFeedbackGenerator",
-    "UINotificationFeedbackGenerator",
-    # Share sheet: the initializer is gated on UIActivity, keyWindow on UIView + UIWindow,
-    # popoverPresentationController on both popover features.
-    "UIActivityViewController",
-    "UIActivity",
-    "UIApplication",
-    "UIWindow",
-    "UIView",
-    "UIViewController",
-    "UIPopoverPresentationController",
-    "UIPresentationController",
+	"UIPasteboard",
+	# All three: the two concrete generators are gated on their own features *and* on the base
+	# class's, which is where prepare() lives.
+	"UIFeedbackGenerator",
+	"UIImpactFeedbackGenerator",
+	"UINotificationFeedbackGenerator",
+	# Share sheet: the initializer is gated on UIActivity, keyWindow on UIView + UIWindow,
+	# popoverPresentationController on both popover features.
+	"UIActivityViewController",
+	"UIActivity",
+	"UIApplication",
+	"UIWindow",
+	"UIView",
+	"UIViewController",
+	"UIPopoverPresentationController",
+	"UIPresentationController",
 ] }
 objc2-foundation = { version = "0.3", features = [
-    "NSArray",
-    "NSFileManager",
-    "NSURL",
-    "NSError",
-    "NSString",
-    "NSValue",
-    "NSPathUtilities",
-    "NSData",
+	"NSArray",
+	"NSFileManager",
+	"NSURL",
+	"NSError",
+	"NSString",
+	"NSValue",
+	"NSPathUtilities",
+	"NSData",
 ] }
 # Push: the permission prompt, the completion block it takes, and the hop back to the main queue
 # that registerForRemoteNotifications needs.
-objc2-user-notifications = { version = "0.3", features = ["UNUserNotificationCenter", "block2"] }
+objc2-user-notifications = { version = "0.3", features = [
+	"UNUserNotificationCenter",
+	"block2",
+] }
 block2 = "0.6"
 dispatch2 = "0.3"
 

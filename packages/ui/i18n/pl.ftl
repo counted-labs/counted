@@ -69,6 +69,11 @@ error-friend-request-not-found = To zaproszenie do znajomych już nie istnieje.
 error-invitation-not-found = To zaproszenie już nie istnieje.
 error-too-many-friend-requests = Na razie zbyt wiele zaproszeń do znajomych. Spróbuj jutro.
 error-too-many-invitations = Zbyt wiele oczekujących zaproszeń.
+error-invalid-kdf-salt = Ustawienia szyfrowania są nieprawidłowe. Zaktualizuj aplikację i spróbuj ponownie.
+error-mixed-project-batch = Ci uczestnicy nie należą wszyscy do tego samego projektu.
+error-invalid-payload = Ta wersja aplikacji wysłała dane, których serwer nie przyjmuje. Zaktualizuj ją i spróbuj ponownie.
+error-invalid-public-key = Twój klucz szyfrowania jest nieprawidłowy. Zaktualizuj aplikację i spróbuj ponownie.
+error-payment-methods-stale = Twoje dane płatności zostały zmienione na innym urządzeniu. Odśwież i spróbuj ponownie.
 
 ### Auth
 
@@ -321,7 +326,6 @@ participants-none = Nikt
 participants-everyone = Wszyscy ({ $count })
 participants-some = { $count } z { $total }
 participants-select-all = Zaznacz wszystkich
-participants-deselect-all = Odznacz wszystkich
 participants-by-shares = Według udziałów
 split-amounts = Kwoty
 participants-remaining = Pozostało { $amount }
@@ -540,7 +544,6 @@ project-currency-locked = Waluta jest ustalana przy tworzeniu projektu.
 
 update-required-title = Wymagana aktualizacja
 update-required-body = Ta wersja Counted jest za stara, by komunikować się z serwerem. Zaktualizuj ją, aby dalej korzystać z aplikacji.
-update-required-body-testflight = Ta wersja Counted jest za stara, by komunikować się z serwerem. Otwórz TestFlight i zainstaluj najnowszą kompilację, aby dalej korzystać z aplikacji.
 update-required-button = Aktualizuj
 
 notifications-label = Powiadomienia

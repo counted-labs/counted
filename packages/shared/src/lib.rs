@@ -510,10 +510,21 @@ pub const UI_LANGS: [&str; 32] = [
     "nl", "no", "pl", "pt", "ro", "sq", "sk", "sl", "sr", "fi", "sv", "tr", "bg", "mk", "uk", "el",
 ];
 
-/// APNs tokens are 64 hex characters and FCM tokens ~160; this is an abuse bound, not a format.
+/// APNs tokens are 64 hex characters and Web Push endpoints a URL of ~200; this is an abuse
+/// bound, not a format.
 pub const MAX_PUSH_TOKEN_LENGTH: usize = 4096;
+/// The server's RFC 8292 VAPID public key: uncompressed P-256, base64url without padding. Android
+/// hands it to its UnifiedPush distributor at registration, and push services (FCM included)
+/// reject pushes not signed by the matching private key (`VAPID_PRIVATE_KEY_BASE64`). Rotating it
+/// means a new app release: every device re-registers under the new key.
+pub const VAPID_PUBLIC_KEY: &str =
+    "BCNBjcs-UB1CqSwnyluLHXAuHisSuQGxmYLS_nUdU1WuK5xbPmqoGMNurR96xukb5annubzpNDDpTTcqWSGQLnA";
 /// Devices per account; the oldest rows are dropped beyond it.
 pub const MAX_PUSH_TOKENS_PER_ACCOUNT: i64 = 20;
+/// Verification pushes an account may cause per rolling hour. Each one is the only request the
+/// server sends to an endpoint before its owner proves they receive it, so this bounds what an
+/// account can aim at an arbitrary URL.
+pub const PUSH_CHALLENGES_PER_HOUR: i32 = 5;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy)]
 #[serde(rename_all = "camelCase")]
@@ -527,12 +538,25 @@ pub enum PushPlatform {
 /// `PUT /push/token`. `lang` is the two-letter code the device already sends as the
 /// `counted_lang` cookie — the server renders the notification sentence from it, so the platform
 /// vendor sees a localised sentence and never a name, email or project name.
+///
+/// iOS: `token` is the APNs device token and `keys` is absent. Android: `token` is the RFC 8030
+/// push endpoint URL and `keys` the RFC 8291 receiver keys the payload is encrypted to.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct RegisterPushToken {
     pub platform: PushPlatform,
     pub token: String,
     pub lang: String,
+    #[serde(default)]
+    pub keys: Option<WebPushKeys>,
+}
+
+/// Base64url, as the UnifiedPush connector's `PublicKeySet` emits them: `p256dh` an uncompressed
+/// P-256 point (65 bytes), `auth` a 16-byte secret.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct WebPushKeys {
+    pub p256dh: String,
+    pub auth: String,
 }
 
 /// `DELETE /push/token`.
@@ -540,6 +564,15 @@ pub struct RegisterPushToken {
 #[serde(rename_all = "camelCase")]
 pub struct UnregisterPushToken {
     pub token: String,
+}
+
+/// `POST /push/verify`: the proof the server pushed to `token`, returned by the device that
+/// received it. Until then the endpoint gets nothing but that one push.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct VerifyPushToken {
+    pub token: String,
+    pub proof: String,
 }
 
 /// UI preferences that follow the account rather than the device, serialised to JSON and encrypted

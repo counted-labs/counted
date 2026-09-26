@@ -4,6 +4,10 @@ The web and mobile clients of [counted.fr](https://counted.fr), a zero-knowledge
 app: every name, amount and project is encrypted on your device, and the server stores ciphertext
 it cannot read.
 
+Use it in the browser at [counted.fr](https://counted.fr), or install the app from the
+[App Store](https://apps.apple.com/app/id6772807915) or
+[Google Play](https://play.google.com/store/apps/details?id=fr.counted.app).
+
 This repository exists so that claim can be **checked rather than believed**. The WASM bundle
 counted.fr serves is built from exactly these files, reproducibly, and its hashes are published at
 [counted.fr/verify](https://counted.fr/verify) and at `https://counted.fr/SHA256SUMS.txt`.

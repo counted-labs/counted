@@ -67,6 +67,11 @@ error-friend-request-not-found = Kjo kërkesë miqësie nuk ekziston më.
 error-invitation-not-found = Kjo ftesë nuk ekziston më.
 error-too-many-friend-requests = Shumë kërkesa miqësie për momentin. Provo nesër.
 error-too-many-invitations = Shumë ftesa në pritje.
+error-invalid-kdf-salt = Cilësimet e enkriptimit nuk janë të vlefshme. Përditëso aplikacionin dhe provo sërish.
+error-mixed-project-batch = Këta pjesëmarrës nuk janë të gjithë në të njëjtin projekt.
+error-invalid-payload = Ky version i aplikacionit dërgoi të dhëna që serveri nuk i pranon. Përditësoje dhe provo sërish.
+error-invalid-public-key = Çelësi yt i enkriptimit nuk është i vlefshëm. Përditëso aplikacionin dhe provo sërish.
+error-payment-methods-stale = Të dhënat e tua të pagesës u ndryshuan në një pajisje tjetër. Ringarko dhe provo sërish.
 
 ### Auth
 
@@ -319,7 +324,6 @@ participants-none = Askush
 participants-everyone = Të gjithë ({ $count })
 participants-some = { $count } nga { $total }
 participants-select-all = Zgjidh të gjithë
-participants-deselect-all = Hiq zgjedhjen
 participants-by-shares = Sipas pjesëve
 split-amounts = Shumat
 participants-remaining = Mbeten { $amount }
@@ -534,7 +538,6 @@ project-currency-locked = Monedha fiksohet kur krijohet projekti.
 
 update-required-title = Kërkohet përditësim
 update-required-body = Ky version i Counted është shumë i vjetër për të komunikuar me serverin. Përditësoje për të vazhduar përdorimin e aplikacionit.
-update-required-body-testflight = Ky version i Counted është shumë i vjetër për të komunikuar me serverin. Hap TestFlight dhe instalo versionin e fundit për të vazhduar përdorimin e aplikacionit.
 update-required-button = Përditëso
 
 notifications-label = Njoftimet

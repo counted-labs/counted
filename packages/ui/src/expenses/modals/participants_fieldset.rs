@@ -36,32 +36,31 @@ pub fn ParticipantsFieldset(props: ParticipantsFieldsetProps) -> Element {
         fieldset { id: props.id, class: "min-w-0",
             legend { class: "sr-only", "{props.legend}" }
             div { class: "flex items-center justify-between mb-1",
-                button {
-                    r#type: "button",
-                    class: "btn btn-ghost btn-xs",
-                    onclick: move |_| {
-                        let t = total();
-                        let sm = share_mode();
-                        let new_checked = !entries().iter().all(|e| e.checked);
-                        let mut e = entries.write();
-                        for entry in e.iter_mut() {
-                            entry.checked = new_checked;
-                            if !new_checked {
-                                entry.amount = 0.0;
-                                entry.shares = 0.0;
-                            } else if sm && entry.shares == 0.0 {
-                                entry.shares = 1.0;
+                label { class: "flex items-center gap-3 min-h-11 cursor-pointer",
+                    input {
+                        r#type: "checkbox",
+                        class: "checkbox checkbox-sm",
+                        checked: entries().iter().all(|e| e.checked),
+                        oninput: move |_| {
+                            let t = total();
+                            let sm = share_mode();
+                            let new_checked = !entries().iter().all(|e| e.checked);
+                            let mut e = entries.write();
+                            for entry in e.iter_mut() {
+                                entry.checked = new_checked;
+                                if !new_checked {
+                                    entry.amount = 0.0;
+                                    entry.shares = 0.0;
+                                } else if sm && entry.shares == 0.0 {
+                                    entry.shares = 1.0;
+                                }
                             }
-                        }
-                        if new_checked {
-                            redistribute(t, &mut e, sm);
-                        }
-                    },
-                    if entries().iter().all(|e| e.checked) {
-                        {tid!("participants-deselect-all")}
-                    } else {
-                        {tid!("participants-select-all")}
+                            if new_checked {
+                                redistribute(t, &mut e, sm);
+                            }
+                        },
                     }
+                    span { class: "text-sm", {tid!("participants-select-all")} }
                 }
                 // Deliberately unlike the type selector at the top of the sheet: outlined rather
                 // than filled, half the width, smaller type. Two segmented controls drawn the same
@@ -257,15 +256,16 @@ mod tests {
     }
 
     /// Single template, so this is plain document order. The mode control is two buttons, so it is
-    /// a `click` listener now and no longer shifts these.
-    const CHECKBOX_0: usize = 0;
-    const FIELD_0: usize = 1;
-    const CHECKBOX_1: usize = 2;
-    const FIELD_1: usize = 3;
-
-    /// The `click` listeners, same order: select-all, then the two mode segments.
+    /// a `click` listener and does not shift these.
     const SELECT_ALL: usize = 0;
-    const SHARES_MODE: usize = 2;
+    const CHECKBOX_0: usize = 1;
+    const FIELD_0: usize = 2;
+    const CHECKBOX_1: usize = 3;
+    const FIELD_1: usize = 4;
+
+    /// The `click` listeners: the two mode segments.
+    const AMOUNTS_MODE: usize = 0;
+    const SHARES_MODE: usize = 1;
 
     fn harness(share_mode: bool) -> (VirtualDom, Spy, Vec<ElementId>) {
         let (dom, spy, ids, _) = harness_with_clicks(share_mode);
@@ -280,8 +280,8 @@ mod tests {
         let m = dom.rebuild_to_vec();
         let ids = listener_ids(&m, "input");
         let clicks = listener_ids(&m, "click");
-        assert_eq!(ids.len(), 4, "template changed — re-index the constants above");
-        assert_eq!(clicks.len(), 3, "select-all plus the two mode segments");
+        assert_eq!(ids.len(), 5, "template changed — re-index the constants above");
+        assert_eq!(clicks.len(), 2, "the two mode segments");
         (dom, spy, ids, clicks)
     }
 
@@ -401,7 +401,7 @@ mod tests {
         dom.render_immediate_to_vec();
         let before = spy.borrow().clone();
 
-        dom.runtime().handle_event("click", click(), clicks[SELECT_ALL + 1]);
+        dom.runtime().handle_event("click", click(), clicks[AMOUNTS_MODE]);
         dom.render_immediate_to_vec();
 
         assert_eq!(*spy.borrow(), before, "the amounts segment was already on");
@@ -462,7 +462,7 @@ mod tests {
 
     #[test]
     fn select_all_rebalances_the_counter() {
-        let (mut dom, _spy, ids, click_ids) = harness_with_clicks(false);
+        let (mut dom, _spy, ids) = harness(false);
 
         // Leave the side unbalanced by hand first…
         dom.runtime().handle_event("input", form_input("7"), ids[FIELD_0]);
@@ -470,7 +470,7 @@ mod tests {
         assert!(out.contains("left") && out.contains("23.00"), "expected a shortfall first: {out}");
 
         // …then let "Tout sélectionner" redistribute it.
-        dom.runtime().handle_event("click", click(), click_ids[SELECT_ALL]);
+        dom.runtime().handle_event("input", form_input("on"), ids[SELECT_ALL]);
         let out = rendered(&dom.render_immediate_to_vec());
         assert!(!out.contains("left") && !out.contains("over"), "select-all must rebalance: {out}");
     }
@@ -519,11 +519,11 @@ mod tests {
         );
         let m = dom.rebuild_to_vec();
         let ids = listener_ids(&m, "input");
-        assert_eq!(ids.len(), 4, "template changed — re-index the constants above");
+        assert_eq!(ids.len(), 5, "template changed — re-index the constants above");
         assert_eq!(
             listener_ids(&m, "click").len(),
-            3,
-            "select-all and the two mode segments, and no bar until a field is focused"
+            2,
+            "the two mode segments, and no bar until a field is focused"
         );
         (dom, spy, ids)
     }

@@ -67,6 +67,11 @@ error-friend-request-not-found = Den här vänförfrågan finns inte längre.
 error-invitation-not-found = Den här inbjudan finns inte längre.
 error-too-many-friend-requests = För många vänförfrågningar just nu. Försök igen imorgon.
 error-too-many-invitations = För många väntande inbjudningar.
+error-invalid-kdf-salt = Krypteringsinställningarna är ogiltiga. Uppdatera appen och försök igen.
+error-mixed-project-batch = De här deltagarna tillhör inte samma projekt.
+error-invalid-payload = Den här versionen av appen skickade data som servern inte accepterar. Uppdatera den och försök igen.
+error-invalid-public-key = Din krypteringsnyckel är ogiltig. Uppdatera appen och försök igen.
+error-payment-methods-stale = Dina betaluppgifter ändrades på en annan enhet. Ladda om och försök igen.
 
 ### Auth
 
@@ -319,7 +324,6 @@ participants-none = Ingen
 participants-everyone = Alla ({ $count })
 participants-some = { $count } av { $total }
 participants-select-all = Markera alla
-participants-deselect-all = Avmarkera alla
 participants-by-shares = Efter andelar
 split-amounts = Belopp
 participants-remaining = { $amount } kvar
@@ -534,7 +538,6 @@ project-currency-locked = Valutan låses när projektet skapas.
 
 update-required-title = Uppdatering krävs
 update-required-body = Den här versionen av Counted är för gammal för att prata med servern. Uppdatera den för att fortsätta använda appen.
-update-required-body-testflight = Den här versionen av Counted är för gammal för att prata med servern. Öppna TestFlight och installera den senaste versionen för att fortsätta använda appen.
 update-required-button = Uppdatera
 
 notifications-label = Aviseringar

@@ -68,6 +68,11 @@ error-friend-request-not-found = Această cerere de prietenie nu mai există.
 error-invitation-not-found = Această invitație nu mai există.
 error-too-many-friend-requests = Prea multe cereri de prietenie deocamdată. Încearcă mâine.
 error-too-many-invitations = Prea multe invitații în așteptare.
+error-invalid-kdf-salt = Setările de criptare nu sunt valide. Actualizează aplicația și încearcă din nou.
+error-mixed-project-batch = Acești participanți nu sunt toți în același proiect.
+error-invalid-payload = Această versiune a aplicației a trimis date pe care serverul nu le acceptă. Actualizeaz-o și încearcă din nou.
+error-invalid-public-key = Cheia ta de criptare nu este validă. Actualizează aplicația și încearcă din nou.
+error-payment-methods-stale = Datele tale de plată au fost modificate pe alt dispozitiv. Reîncarcă și încearcă din nou.
 
 ### Auth
 
@@ -320,7 +325,6 @@ participants-none = Nimeni
 participants-everyone = Toată lumea ({ $count })
 participants-some = { $count } din { $total }
 participants-select-all = Selectează tot
-participants-deselect-all = Deselectează tot
 participants-by-shares = Pe cote
 split-amounts = Sume
 participants-remaining = Rămân { $amount }
@@ -537,7 +541,6 @@ project-currency-locked = Moneda este stabilită la crearea proiectului.
 
 update-required-title = Actualizare necesară
 update-required-body = Această versiune de Counted este prea veche pentru a comunica cu serverul. Actualizeaz-o pentru a continua să folosești aplicația.
-update-required-body-testflight = Această versiune de Counted este prea veche pentru a comunica cu serverul. Deschide TestFlight și instalează ultima versiune pentru a continua să folosești aplicația.
 update-required-button = Actualizează
 
 notifications-label = Notificări

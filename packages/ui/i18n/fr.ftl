@@ -69,6 +69,11 @@ error-friend-request-not-found = Cette demande d’ami n’existe plus.
 error-invitation-not-found = Cette invitation n’existe plus.
 error-too-many-friend-requests = Trop de demandes d’amis pour le moment. Réessayez demain.
 error-too-many-invitations = Trop d’invitations en attente.
+error-invalid-kdf-salt = Les paramètres de chiffrement ne sont pas valides. Mettez l'application à jour et réessayez.
+error-mixed-project-batch = Ces participants ne font pas tous partie du même projet.
+error-invalid-payload = Cette version de l'application a envoyé des données que le serveur refuse. Mettez-la à jour et réessayez.
+error-invalid-public-key = Votre clé de chiffrement n'est pas valide. Mettez l'application à jour et réessayez.
+error-payment-methods-stale = Vos informations de paiement ont été modifiées sur un autre appareil. Rechargez et réessayez.
 
 ### Auth
 
@@ -323,7 +328,6 @@ participants-none = Personne
 participants-everyone = Tout le monde ({ $count })
 participants-some = { $count } sur { $total }
 participants-select-all = Tout sélectionner
-participants-deselect-all = Tout désélectionner
 participants-by-shares = Par parts
 split-amounts = Montants
 participants-remaining = Reste { $amount }
@@ -697,7 +701,6 @@ project-currency-locked = La devise est fixée à la création du projet.
 
 update-required-title = Mise à jour requise
 update-required-body = Cette version de Counted est trop ancienne pour communiquer avec le serveur. Mettez-la à jour pour continuer à utiliser l'application.
-update-required-body-testflight = Cette version de Counted est trop ancienne pour communiquer avec le serveur. Ouvrez TestFlight et installez la dernière version pour continuer.
 update-required-button = Mettre à jour
 
 # Cloche de notifications sur la page des projets - pour l’instant les demandes d’ami reçues.

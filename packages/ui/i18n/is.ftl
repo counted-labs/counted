@@ -67,6 +67,11 @@ error-friend-request-not-found = Þessi vinabeiðni er ekki lengur til.
 error-invitation-not-found = Þetta boð er ekki lengur til.
 error-too-many-friend-requests = Of margar vinabeiðnir í bili. Reyndu aftur á morgun.
 error-too-many-invitations = Of mörg boð í bið.
+error-invalid-kdf-salt = Dulkóðunarstillingarnar eru ógildar. Uppfærðu forritið og reyndu aftur.
+error-mixed-project-batch = Þessir þátttakendur eru ekki allir í sama verkefni.
+error-invalid-payload = Þessi útgáfa forritsins sendi gögn sem netþjónninn tekur ekki við. Uppfærðu hana og reyndu aftur.
+error-invalid-public-key = Dulkóðunarlykillinn þinn er ógildur. Uppfærðu forritið og reyndu aftur.
+error-payment-methods-stale = Greiðsluupplýsingunum þínum var breytt í öðru tæki. Endurhlaðu og reyndu aftur.
 
 ### Auth
 
@@ -319,7 +324,6 @@ participants-none = Enginn
 participants-everyone = Allir ({ $count })
 participants-some = { $count } af { $total }
 participants-select-all = Velja alla
-participants-deselect-all = Afvelja alla
 participants-by-shares = Eftir hlutum
 split-amounts = Upphæðir
 participants-remaining = { $amount } eftir
@@ -534,7 +538,6 @@ project-currency-locked = Gjaldmiðillinn er festur þegar verkefnið er stofna�
 
 update-required-title = Uppfærslu krafist
 update-required-body = Þessi útgáfa af Counted er of gömul til að tala við þjóninn. Uppfærðu hana til að halda áfram að nota forritið.
-update-required-body-testflight = Þessi útgáfa af Counted er of gömul til að tala við þjóninn. Opnaðu TestFlight og settu upp nýjustu útgáfuna til að halda áfram að nota forritið.
 update-required-button = Uppfæra
 
 notifications-label = Tilkynningar

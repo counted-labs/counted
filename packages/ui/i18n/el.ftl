@@ -67,6 +67,11 @@ error-friend-request-not-found = Αυτό το αίτημα φιλίας δεν 
 error-invitation-not-found = Αυτή η πρόσκληση δεν υπάρχει πια.
 error-too-many-friend-requests = Πάρα πολλά αιτήματα φιλίας προς το παρόν. Δοκίμασε αύριο.
 error-too-many-invitations = Πάρα πολλές προσκλήσεις σε εκκρεμότητα.
+error-invalid-kdf-salt = Οι ρυθμίσεις κρυπτογράφησης δεν είναι έγκυρες. Ενημέρωσε την εφαρμογή και δοκίμασε ξανά.
+error-mixed-project-batch = Αυτά τα άτομα δεν ανήκουν όλα στο ίδιο έργο.
+error-invalid-payload = Αυτή η έκδοση της εφαρμογής έστειλε δεδομένα που ο διακομιστής δεν δέχεται. Ενημέρωσέ την και δοκίμασε ξανά.
+error-invalid-public-key = Το κλειδί κρυπτογράφησής σου δεν είναι έγκυρο. Ενημέρωσε την εφαρμογή και δοκίμασε ξανά.
+error-payment-methods-stale = Τα στοιχεία πληρωμής σου άλλαξαν σε άλλη συσκευή. Κάνε ανανέωση και δοκίμασε ξανά.
 
 ### Auth
 
@@ -319,7 +324,6 @@ participants-none = Κανείς
 participants-everyone = Όλοι ({ $count })
 participants-some = { $count } από { $total }
 participants-select-all = Επιλογή όλων
-participants-deselect-all = Αποεπιλογή όλων
 participants-by-shares = Ανά μερίδια
 split-amounts = Ποσά
 participants-remaining = Απομένουν { $amount }
@@ -534,7 +538,6 @@ project-currency-locked = Το νόμισμα ορίζεται κατά τη δ�
 
 update-required-title = Απαιτείται ενημέρωση
 update-required-body = Αυτή η έκδοση του Counted είναι πολύ παλιά για να επικοινωνήσει με τον διακομιστή. Ενημέρωσέ την για να συνεχίσεις να χρησιμοποιείς την εφαρμογή.
-update-required-body-testflight = Αυτή η έκδοση του Counted είναι πολύ παλιά για να επικοινωνήσει με τον διακομιστή. Άνοιξε το TestFlight και εγκατάστησε την τελευταία έκδοση για να συνεχίσεις να χρησιμοποιείς την εφαρμογή.
 update-required-button = Ενημέρωση
 
 notifications-label = Ειδοποιήσεις

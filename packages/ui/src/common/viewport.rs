@@ -10,6 +10,9 @@
 /// sub-pixel rounding, a frame captured mid-rotation. Treating any of those as a keyboard would add
 /// dead space under an open sheet for no reason. Real iOS keyboards are ~250-350pt; 80 is clear of
 /// the noise and far below the smallest of them.
+///
+/// It judges the keyboard itself (`layout_h - visual_h`), never what remains once the scroll is
+/// subtracted: that remainder shrinks legitimately as the page pans, and must not read as noise.
 pub const KEYBOARD_MIN_PX: f64 = 80.0;
 
 /// How much of the layout viewport the on-screen keyboard is covering, in CSS px.
@@ -25,18 +28,25 @@ pub fn keyboard_inset(layout_h: f64, visual_h: f64, offset_top: f64) -> f64 {
     if !layout_h.is_finite() || !visual_h.is_finite() || !offset_top.is_finite() {
         return 0.0;
     }
-    let obscured = layout_h - visual_h - offset_top;
-    if obscured < KEYBOARD_MIN_PX {
-        0.0
-    } else {
-        obscured
+    let keyboard = layout_h - visual_h;
+    if keyboard < KEYBOARD_MIN_PX {
+        return 0.0;
     }
+    (keyboard - offset_top).max(0.0)
 }
 
-/// The `--kb` write, mirroring `css_inset_vars` in the mobile entry point.
+/// The `--kb` and `--vvo` writes, mirroring `css_inset_vars` in the mobile entry point.
 ///
-/// One decimal, like the safe-area vars: the value feeds a `max()` on a sheet's padding, and more
-/// precision than that is noise in a layout measured in rem.
+/// One decimal, like the safe-area vars: the values feed a `max()` on a sheet's padding and a
+/// `calc()` on its max-height, and more precision than that is noise in a layout measured in rem.
+///
+/// `--vvo` is the visual viewport's scroll within the layout viewport — the same `offset_top`
+/// `keyboard_inset` subtracts. A sheet is `position: fixed`, so it is pinned to the *layout*
+/// viewport while the visible band is the visual one; on a platform that does not resize its layout
+/// viewport for the keyboard (Android is `adjustNothing`), scrolling to reveal a focused field moves
+/// the band down and leaves the sheet's top edge that far above it. `keyboard_inset` already keeps
+/// the *bottom* edge honest; `--vvo` is what a sheet's max-height subtracts to keep the top edge
+/// honest too.
 ///
 /// With a keyboard up it also re-scrolls the focused field. The WebView scrolled it into view when
 /// it was focused, against the sheet body as it was then; the padding this writes shrinks that
@@ -44,9 +54,15 @@ pub fn keyboard_inset(layout_h: f64, visual_h: f64, offset_top: f64) -> f64 {
 /// up under the footer. Same script, so the new padding is laid out before the scroll is computed;
 /// `nearest` touches only the ancestors that actually clip the field and is a no-op when nothing
 /// does, which is what makes it safe on every page rather than just the sheets.
-pub fn css_keyboard_var(px: f64) -> String {
-    let set = format!("document.documentElement.style.setProperty('--kb','{px:.1}px');");
-    if px > 0.0 {
+pub fn css_viewport_vars(kb: f64, offset_top: f64) -> String {
+    // Same degradation as `keyboard_inset`: nonsense from a viewport mid-teardown becomes "no
+    // offset" rather than a `calc()` that drops the whole declaration.
+    let vvo = if offset_top.is_finite() && offset_top > 0.0 { offset_top } else { 0.0 };
+    let set = format!(
+        "document.documentElement.style.setProperty('--kb','{kb:.1}px');\
+         document.documentElement.style.setProperty('--vvo','{vvo:.1}px');"
+    );
+    if kb > 0.0 {
         set + "document.activeElement?.scrollIntoView({block:'nearest'});"
     } else {
         set
@@ -75,6 +91,19 @@ mod tests {
     #[test]
     fn a_scrolled_page_does_not_double_count_the_offset() {
         assert_eq!(keyboard_inset(844.0, 508.0, 100.0), 236.0);
+    }
+
+    /// The threshold judges the keyboard, not what the scroll leaves of it. Refocusing fields pans
+    /// the visual viewport further each time; once the remainder fell under the threshold it read
+    /// as "no keyboard", the padding dropped to `--sab`, and the operator bar sank under the keys.
+    #[test]
+    fn a_scrolled_page_keeps_the_strip_the_keyboard_still_covers() {
+        assert_eq!(keyboard_inset(844.0, 508.0, 300.0), 36.0);
+    }
+
+    #[test]
+    fn a_page_scrolled_past_the_keyboard_owes_nothing() {
+        assert_eq!(keyboard_inset(844.0, 508.0, 400.0), 0.0);
     }
 
     /// A URL bar collapsing, or a rotation caught mid-frame. Padding a sheet for this would be
@@ -115,8 +144,30 @@ mod tests {
 
     #[test]
     fn the_css_write_carries_one_decimal_and_a_unit() {
-        assert!(css_keyboard_var(336.0).contains("'--kb','336.0px'"));
-        assert!(css_keyboard_var(0.0).contains("'--kb','0.0px'"));
+        assert!(css_viewport_vars(336.0, 0.0).contains("'--kb','336.0px'"));
+        assert!(css_viewport_vars(0.0, 0.0).contains("'--kb','0.0px'"));
+        assert!(css_viewport_vars(336.0, 124.0).contains("'--vvo','124.0px'"));
+        assert!(css_viewport_vars(0.0, 0.0).contains("'--vvo','0.0px'"));
+    }
+
+    /// The offset is written on every report, keyboard or not: a page that scrolled for a focused
+    /// field and then dismissed the keyboard can still be offset for a frame.
+    #[test]
+    fn both_variables_are_written_every_time() {
+        for (kb, offset) in [(0.0, 0.0), (336.0, 0.0), (0.0, 40.0), (236.0, 100.0)] {
+            let js = css_viewport_vars(kb, offset);
+            assert!(js.contains("'--kb'"), "kb missing from {js}");
+            assert!(js.contains("'--vvo'"), "vvo missing from {js}");
+        }
+    }
+
+    /// A negative or non-finite offset would otherwise render as `--vvo: NaNpx`, and a `calc()`
+    /// reading it drops the whole max-height declaration.
+    #[test]
+    fn an_incoherent_offset_is_not_an_offset() {
+        assert!(css_viewport_vars(336.0, -12.0).contains("'--vvo','0.0px'"));
+        assert!(css_viewport_vars(336.0, f64::NAN).contains("'--vvo','0.0px'"));
+        assert!(css_viewport_vars(336.0, f64::INFINITY).contains("'--vvo','0.0px'"));
     }
 
     /// The sheet body shrinks by the padding this writes, so the field focused a moment ago can
@@ -124,10 +175,12 @@ mod tests {
     /// while a keyboard is up — a closing keyboard has nothing to reveal.
     #[test]
     fn an_open_keyboard_rescrolls_the_focused_field_after_the_write() {
-        let js = css_keyboard_var(336.0);
-        let set = js.find("setProperty('--kb'").unwrap();
+        let js = css_viewport_vars(336.0, 0.0);
+        let kb = js.find("setProperty('--kb'").unwrap();
+        let vvo = js.find("setProperty('--vvo'").unwrap();
         let scroll = js.find("document.activeElement?.scrollIntoView({block:'nearest'})").unwrap();
-        assert!(set < scroll, "the padding must be laid out before the scroll is computed");
-        assert!(!css_keyboard_var(0.0).contains("scrollIntoView"));
+        assert!(kb < scroll, "the padding must be laid out before the scroll is computed");
+        assert!(vvo < scroll, "the max-height must be laid out before the scroll is computed");
+        assert!(!css_viewport_vars(0.0, 0.0).contains("scrollIntoView"));
     }
 }

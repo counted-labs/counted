@@ -67,6 +67,11 @@ error-friend-request-not-found = Kaveripyyntöä ei enää ole.
 error-invitation-not-found = Kutsua ei enää ole.
 error-too-many-friend-requests = Liian monta kaveripyyntöä toistaiseksi. Yritä huomenna.
 error-too-many-invitations = Liian monta avointa kutsua.
+error-invalid-kdf-salt = Salausasetukset eivät kelpaa. Päivitä sovellus ja yritä uudelleen.
+error-mixed-project-batch = Nämä osallistujat eivät ole kaikki samassa projektissa.
+error-invalid-payload = Tämä sovellusversio lähetti tietoja, joita palvelin ei hyväksy. Päivitä se ja yritä uudelleen.
+error-invalid-public-key = Salausavaimesi ei kelpaa. Päivitä sovellus ja yritä uudelleen.
+error-payment-methods-stale = Maksutietojasi muutettiin toisella laitteella. Lataa uudelleen ja yritä uudelleen.
 
 ### Auth
 
@@ -319,7 +324,6 @@ participants-none = Ei kukaan
 participants-everyone = Kaikki ({ $count })
 participants-some = { $count } / { $total }
 participants-select-all = Valitse kaikki
-participants-deselect-all = Poista valinnat
 participants-by-shares = Osuuksittain
 split-amounts = Summat
 participants-remaining = { $amount } jäljellä
@@ -534,7 +538,6 @@ project-currency-locked = Valuutta lukitaan projektia luotaessa.
 
 update-required-title = Päivitys vaaditaan
 update-required-body = Tämä Counted-versio on liian vanha keskustellakseen palvelimen kanssa. Päivitä se jatkaaksesi sovelluksen käyttöä.
-update-required-body-testflight = Tämä Counted-versio on liian vanha keskustellakseen palvelimen kanssa. Avaa TestFlight ja asenna uusin versio jatkaaksesi sovelluksen käyttöä.
 update-required-button = Päivitä
 
 notifications-label = Ilmoitukset

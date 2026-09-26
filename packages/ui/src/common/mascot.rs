@@ -11,9 +11,10 @@
 
 use dioxus::prelude::*;
 
-/// Onboarding hero and other full-width slots.
-pub const MASCOT_HERO: u32 = 160;
-/// Empty and success states inside a page. Default.
+/// Onboarding, empty and success states inside a page. Default.
+///
+/// An open lid renders at `size * 350 / 300`, so 120 is already 140 CSS px tall — a larger hero
+/// size pushed the welcome page's last row under the Android navigation bar.
 pub const MASCOT_EMPTY: u32 = 120;
 /// Compact slots — a single empty chart, a card.
 pub const MASCOT_INLINE: u32 = 72;

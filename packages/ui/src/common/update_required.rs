@@ -13,11 +13,6 @@ pub fn UpdateRequiredScreen(store_url: &'static str) -> Element {
     if !required().0 {
         return rsx! {};
     }
-    let body = if cfg!(target_os = "ios") {
-        tid!("update-required-body-testflight")
-    } else {
-        tid!("update-required-body")
-    };
     rsx! {
         div {
             id: "update-required",
@@ -25,7 +20,7 @@ pub fn UpdateRequiredScreen(store_url: &'static str) -> Element {
             aria_modal: "true",
             class: "fixed inset-0 z-[999] bg-base-200 flex flex-col items-center justify-center gap-4 p-6 text-center",
             h1 { class: "text-2xl font-extrabold font-display", {tid!("update-required-title")} }
-            p { class: "max-w-sm text-base-content/80", "{body}" }
+            p { class: "max-w-sm text-base-content/80", {tid!("update-required-body")} }
             a { id: "update-required-button", class: "btn btn-primary", href: store_url, {tid!("update-required-button")} }
         }
     }

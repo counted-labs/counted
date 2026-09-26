@@ -12,7 +12,6 @@ use super::participants_fieldset::ParticipantsFieldset;
 use crate::categories::{category_label, infer_chart_category, parent_emoji, CHART_CATEGORIES as CATEGORIES};
 use crate::common::{format_month_str, haptic, Haptic};
 
-/// The three type options, in the order the segmented control lays them out.
 /// The three type options, as (wire value, translation key).
 const TYPES: [(&str, &str); 3] = [
     ("Expense", "expense-type-expense"),
@@ -192,10 +191,14 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
     // automatic minimum size of zero (CSS flexbox §4.5). Without it these shrink away inside the
     // bounded scroll body instead of making it scroll, clipping their own rows.
     let collapse_class = |expanded: bool| {
+        // `w-auto`: daisyUI's `.collapse` is `width: 100%`, which a margin does not reduce — with
+        // `mx-5` the box became a 100%-wide element with 2.5rem of margin around it and pushed
+        // everything inside it off the right edge of the sheet. The utility is layered above
+        // daisyUI's component rule, and the box then stretches to the scroller minus its margins.
         if expanded {
-            "collapse collapse-arrow bg-base-200/60 rounded-box shrink-0 mx-5 mt-3 collapse-open"
+            "collapse collapse-arrow bg-base-200/60 rounded-box shrink-0 w-auto mx-5 mt-3 collapse-open"
         } else {
-            "collapse collapse-arrow bg-base-200/60 rounded-box shrink-0 mx-5 mt-3 collapse-close"
+            "collapse collapse-arrow bg-base-200/60 rounded-box shrink-0 w-auto mx-5 mt-3 collapse-close"
         }
     };
 
@@ -217,13 +220,25 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                     h3 { id: "expense-form-title", class: "sr-only", "{props.title}" }
                     // The type is a mode switch — it renames both participant sections and decides
                     // whether the category field exists at all — so it leads, above everything it
-                    // governs. Ghost until checked: the loudest control on the sheet should not be
-                    // the one that is changed least.
+                    // governs. Styled as the app's other tab bars rather than as buttons: the
+                    // loudest control on the sheet should not be the one that is changed least.
                     if props.show_type_selector {
-                        div { class: "join flex-1",
+                        div { role: "tablist", class: "tabs tabs-box shadow-soft flex-1 flex-nowrap",
                             for (value , label) in TYPES {
+                                // `min-w-0`: overrides daisyUI's `min-width: fit-content` on radio
+                                // tabs, so the three share the row beside the ✕.
+                                //
+                                // `text-sm!`: these are radios, so `main.css`'s unlayered iOS-zoom
+                                // guard `input { font-size: 16px !important }` outranks `btn-sm`.
+                                // Tailwind's `!important` lives in `@layer utilities` and layer
+                                // order reverses for important declarations, so the layered one
+                                // wins. Radios never focus-auto-zoom anyway.
                                 input {
-                                    class: "join-item btn btn-sm btn-ghost flex-1",
+                                    class: if type_value(&expense_type()) == value {
+                                        "tab tab-active flex-1 min-w-0 whitespace-nowrap text-sm! font-semibold"
+                                    } else {
+                                        "tab flex-1 min-w-0 whitespace-nowrap text-sm! text-base-content/70"
+                                    },
                                     r#type: "radio",
                                     name: "expense-type",
                                     aria_label: tid!(label),
@@ -313,9 +328,14 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                             // Fixed width for the same reason the currency select above carries no
                             // names: a browser sizes a closed `<select>` to its widest option, and
                             // "Restaurants et bars" would push the name field off-screen.
+                            // `pe-6` keeps the gutter daisyUI's caret is painted into — a flat
+                            // `px-1` put the arrow on top of the last characters and stopped the
+                            // `.select`'s own ellipsis from ever triggering. No `text-sm!` here,
+                            // unlike the radios above: `main.css`'s 16px floor names `select` on
+                            // purpose, and a select *does* focus-auto-zoom on iOS.
                             select {
                                 id: "expense-category",
-                                class: "select select-ghost w-28 shrink-0 px-1",
+                                class: "select select-ghost w-28 shrink-0 ps-1 pe-6",
                                 aria_label: tid!("expense-category"),
                                 value: category().unwrap_or_default(),
                                 oninput: move |e| {
@@ -372,7 +392,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                         }
                         input {
                             id: "expense-date",
-                            class: "input input-sm grow min-w-0 rounded-full tabular-nums",
+                            class: "input input-sm w-auto min-w-0 rounded-full tabular-nums",
                             r#type: "date",
                             value: "{date_str}",
                             oninput: move |e| date_str.set(e.value()),
@@ -600,7 +620,7 @@ mod tests {
 
     /// The rate input, in the foreign-currency template only: inside an `if foreign` block, so
     /// after every static listener and before the amount component's.
-    const RATE: usize = 10;
+    const RATE: usize = 12;
 
     fn harness() -> (VirtualDom, Spy, Vec<ElementId>) {
         harness_with(HarnessProps {
@@ -615,7 +635,7 @@ mod tests {
         let foreign = props.expense_currency != "EUR";
         let mut dom = VirtualDom::new_with_props(Harness, props);
         let ids = listener_ids(&dom.rebuild_to_vec(), "input");
-        let expected = if foreign { 13 } else { 12 };
+        let expected = if foreign { 15 } else { 14 };
         assert_eq!(ids.len(), expected, "form template changed — re-index RATE above");
         (dom, spy, ids)
     }

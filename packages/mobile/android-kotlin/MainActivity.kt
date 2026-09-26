@@ -8,9 +8,11 @@
 // would only raise the app without navigating. Three lines fix warm-start deep links.
 //
 // requestPush is what the Rust side calls through JNI (`request_push` in packages/mobile/src/push.rs)
-// after sign-in: the POST_NOTIFICATIONS prompt on 13+, and the FCM token, which lands in the file
-// CountedMessagingService.onNewToken also writes. `dx serve` builds have neither this file nor the
-// Firebase dependency, so the JNI call fails there and push is simply off.
+// after sign-in: the POST_NOTIFICATIONS prompt on 13+, then a UnifiedPush registration under our
+// VAPID key; the subscription lands in the file CountedPushService.onNewEndpoint writes. The
+// distributor is whatever the phone has (ntfy, Sunup, …), else the embedded FCM one in builds that
+// include it, else none — and push is off, silently. `dx serve` builds have neither this file nor
+// the connector, so the JNI call fails there and push is simply off.
 //
 // The typealias and package name mirror dx 0.7.9's MainActivity.kt.hbs; keep them in step when
 // upgrading the Dioxus CLI.
@@ -20,8 +22,7 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import com.google.firebase.FirebaseApp
-import com.google.firebase.messaging.FirebaseMessaging
+import org.unifiedpush.android.connector.UnifiedPush
 
 typealias BuildConfig = fr.counted.app.BuildConfig
 
@@ -31,17 +32,18 @@ class MainActivity : WryActivity() {
         setIntent(intent)
     }
 
-    fun requestPush() {
-        if (FirebaseApp.getApps(this).isEmpty()) {
-            return
-        }
-        if (Build.VERSION.SDK_INT >= 33 &&
-            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 0)
-        }
-        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
-            PushToken.write(this, token)
+    fun requestPush(vapid: String) {
+        runOnUiThread {
+            if (Build.VERSION.SDK_INT >= 33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 0)
+            }
+            UnifiedPush.tryUseCurrentOrDefaultDistributor(this) { success ->
+                if (success) {
+                    UnifiedPush.register(this, vapid = vapid)
+                }
+            }
         }
     }
 }

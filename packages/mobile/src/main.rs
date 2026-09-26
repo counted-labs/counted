@@ -11,12 +11,11 @@ use ui::common::push_deep_link;
 #[cfg(any(target_os = "android", target_os = "ios"))]
 mod push;
 
-/// Where `UpdateRequiredScreen` sends the user. iOS ships through TestFlight for now, and
-/// `webbrowser` only opens http(s) — `itms-beta://` would silently do nothing — so the link is
-/// TestFlight's own store page, whose "Open" lands in TestFlight. Swap for the App Store URL at
-/// release (docs/ios.md).
+/// Where `UpdateRequiredScreen` sends the user. `webbrowser` — what an anchor click in the WebView
+/// goes through — only opens http(s), so the link is the store's web page, which hands off to the
+/// store app.
 #[cfg(target_os = "ios")]
-const STORE_URL: &str = "https://apps.apple.com/app/testflight/id899247664";
+const STORE_URL: &str = "https://apps.apple.com/app/id6772807915";
 #[cfg(not(target_os = "ios"))]
 const STORE_URL: &str = "https://play.google.com/store/apps/details?id=fr.counted.app";
 
@@ -970,12 +969,19 @@ fn app() -> Element {
         );
     });
 
-    // The on-screen keyboard, as a --kb CSS variable the bottom sheets pad themselves by.
+    // The on-screen keyboard, as a --kb CSS variable the bottom sheets pad themselves by, and the
+    // visual viewport's scroll as --vvo, which their max-height subtracts.
     //
     // Needed because daisyUI's .modal is `position: fixed` and neither platform resizes the layout
     // viewport for the keyboard — WKWebView scrolls the *page* to reveal the focused input, the
     // Android theme is `adjustNothing` — and a fixed element does not move with page scroll, so a
     // sheet's field can sit behind the keyboard. Only visualViewport can see it.
+    //
+    // Both edges need a variable, not just the bottom one. --kb is measured net of the scroll, so
+    // it lands the footer on the keyboard however far the page moved; but the box is bottom-pinned
+    // inside a layout viewport that did not shrink, so its *top* stays where a keyboard-less screen
+    // would put it — one scroll's worth above the visible band, which is the header disappearing off
+    // the top of the screen.
     //
     // Same split as the safe-area bridge below: JS observes, Rust decides. `keyboard_inset` lives in
     // the ui crate and is unit-tested there; nothing here does arithmetic.
@@ -1017,7 +1023,7 @@ fn app() -> Element {
         spawn(async move {
             while let Ok(m) = eval.recv::<[f64; 3]>().await {
                 let px = ui::common::keyboard_inset(m[0], m[1], m[2]);
-                document::eval(&ui::common::css_keyboard_var(px));
+                document::eval(&ui::common::css_viewport_vars(px, m[2]));
             }
         });
     });
@@ -1097,10 +1103,19 @@ fn app() -> Element {
 /// reaches for, no private selector is ever sent. It is the Cordova/Capacitor
 /// `hideFormAccessoryBar` pattern.
 ///
-/// **`class_addMethod`, never `method_setImplementation`.** `-inputAccessoryView` is declared on
-/// `UIResponder`, so replacing the resolved IMP would clear the accessory view of every responder
-/// in the process. Adding the method to `WKContentView` overrides it for that class alone, and the
-/// call does nothing should WebKit ever declare one itself.
+/// **`class_replaceMethod`, never `method_setImplementation`.** `-inputAccessoryView` is declared on
+/// `UIResponder`, so `method_setImplementation` on the *resolved* method would clear the accessory
+/// view of every responder in the process. `class_replaceMethod` reads only the class's own method
+/// list, never the superclass's: it adds the override when `WKContentView` has no implementation of
+/// its own, and swaps the IMP when it has one, and in neither case can it reach `UIResponder`.
+///
+/// **It was `class_addMethod`, and that silently did nothing.** `class_addMethod` fails, returning
+/// NO, when the class already implements the selector — and WebKit's `WKContentView` does implement
+/// `-inputAccessoryView` (`WKContentViewInteraction.mm`), which is the whole reason the pill is
+/// drawn. So the override was never installed and the bar kept painting over the operator keys. The
+/// old comment read that failure as harmless insurance against WebKit "ever" declaring one; it had
+/// already declared it. The log line below is the tell: it reports whether an existing
+/// implementation was replaced.
 ///
 /// Called from the back-gesture effect rather than at launch, and for the same reason: the class
 /// is not registered with the runtime until WebKit has built a webview. A missing class is a
@@ -1122,8 +1137,8 @@ fn hide_form_accessory_bar() {
         tracing::info!("WKContentView not registered; form accessory bar left in place");
         return;
     };
-    let added = unsafe {
-        ffi::class_addMethod(
+    let previous = unsafe {
+        ffi::class_replaceMethod(
             (cls as *const AnyClass).cast_mut(),
             sel!(inputAccessoryView),
             std::mem::transmute::<
@@ -1133,7 +1148,10 @@ fn hide_form_accessory_bar() {
             c"@@:".as_ptr(),
         )
     };
-    tracing::info!("form accessory bar suppressed: {}", added.as_bool());
+    tracing::info!(
+        "form accessory bar suppressed (replaced an existing implementation: {})",
+        previous.is_some()
+    );
 }
 
 #[cfg(test)]

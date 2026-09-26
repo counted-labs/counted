@@ -47,7 +47,7 @@ mod avatar_group;
 pub use avatar_group::AvatarGroup;
 
 mod mascot;
-pub use mascot::{Mascot, MascotPose, MASCOT_EMPTY, MASCOT_HERO, MASCOT_INLINE};
+pub use mascot::{Mascot, MascotPose, MASCOT_EMPTY, MASCOT_INLINE};
 
 mod back_button_arrow;
 pub use back_button_arrow::BackButtonArrow;
@@ -113,7 +113,7 @@ mod push_sync;
 pub use push_sync::{unregister_push, use_push_registration};
 
 mod viewport;
-pub use viewport::{css_keyboard_var, keyboard_inset, KEYBOARD_MIN_PX};
+pub use viewport::{css_viewport_vars, keyboard_inset, KEYBOARD_MIN_PX};
 
 mod navigation_sync;
 pub use navigation_sync::NavigationSync;

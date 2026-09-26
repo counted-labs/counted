@@ -67,6 +67,11 @@ error-friend-request-not-found = Seda sõbrakutset enam pole.
 error-invitation-not-found = Seda kutset enam pole.
 error-too-many-friend-requests = Praegu liiga palju sõbrakutseid. Proovi homme.
 error-too-many-invitations = Liiga palju ootel kutseid.
+error-invalid-kdf-salt = Krüpteerimisseaded ei ole kehtivad. Uuenda rakendust ja proovi uuesti.
+error-mixed-project-batch = Need osalejad ei ole kõik samas projektis.
+error-invalid-payload = See rakenduse versioon saatis andmeid, mida server ei aktsepteeri. Uuenda seda ja proovi uuesti.
+error-invalid-public-key = Sinu krüpteerimisvõti ei ole kehtiv. Uuenda rakendust ja proovi uuesti.
+error-payment-methods-stale = Sinu makseandmeid muudeti teises seadmes. Laadi uuesti ja proovi uuesti.
 
 ### Auth
 
@@ -319,7 +324,6 @@ participants-none = Mitte keegi
 participants-everyone = Kõik ({ $count })
 participants-some = { $count } / { $total }
 participants-select-all = Vali kõik
-participants-deselect-all = Tühista valik
 participants-by-shares = Osade kaupa
 split-amounts = Summad
 participants-remaining = { $amount } jäänud
@@ -534,7 +538,6 @@ project-currency-locked = Valuuta määratakse projekti loomisel.
 
 update-required-title = Vajalik on uuendus
 update-required-body = See Countedi versioon on serveriga suhtlemiseks liiga vana. Rakenduse kasutamise jätkamiseks uuenda seda.
-update-required-body-testflight = See Countedi versioon on serveriga suhtlemiseks liiga vana. Rakenduse kasutamise jätkamiseks ava TestFlight ja paigalda uusim versioon.
 update-required-button = Uuenda
 
 notifications-label = Teavitused

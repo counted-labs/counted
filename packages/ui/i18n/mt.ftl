@@ -69,6 +69,11 @@ error-friend-request-not-found = Din it-talba ta' ħbiberija m'għadhiex teżist
 error-invitation-not-found = Din l-istedina m'għadhiex teżisti.
 error-too-many-friend-requests = Wisq talbiet ta' ħbiberija għalissa. Erġa' pprova għada.
 error-too-many-invitations = Wisq stediniet pendenti.
+error-invalid-kdf-salt = Is-settings tal-encryption mhumiex validi. Aġġorna l-app u erġa' pprova.
+error-mixed-project-batch = Dawn il-parteċipanti mhumiex kollha fl-istess proġett.
+error-invalid-payload = Din il-verżjoni tal-app bagħtet data li s-server ma jaċċettax. Aġġornaha u erġa' pprova.
+error-invalid-public-key = Iċ-ċavetta tal-encryption tiegħek mhijiex valida. Aġġorna l-app u erġa' pprova.
+error-payment-methods-stale = Id-dettalji tal-ħlas tiegħek inbidlu fuq apparat ieħor. Erġa' llowdja u pprova mill-ġdid.
 
 ### Auth
 
@@ -321,7 +326,6 @@ participants-none = Ħadd
 participants-everyone = Kulħadd ({ $count })
 participants-some = { $count } minn { $total }
 participants-select-all = Agħżel kollha
-participants-deselect-all = Neħħi l-għażla
 participants-by-shares = Skont l-ishma
 split-amounts = Ammonti
 participants-remaining = { $amount } fadal
@@ -540,7 +544,6 @@ project-currency-locked = Il-munita tiġi ffissata meta jinħoloq il-proġett.
 
 update-required-title = Aġġornament meħtieġ
 update-required-body = Din il-verżjoni ta' Counted hija qadima wisq biex titkellem mas-server. Aġġornaha biex tkompli tuża l-app.
-update-required-body-testflight = Din il-verżjoni ta' Counted hija qadima wisq biex titkellem mas-server. Iftaħ TestFlight u installa l-aħħar verżjoni biex tkompli tuża l-app.
 update-required-button = Aġġorna
 
 notifications-label = Notifiki

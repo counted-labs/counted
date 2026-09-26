@@ -287,7 +287,6 @@ participants-none = Nessuno
 participants-everyone = Tutti ({ $count })
 participants-some = { $count } su { $total }
 participants-select-all = Seleziona tutti
-participants-deselect-all = Deseleziona tutti
 participants-remaining = Mancano { $amount }
 participants-over-by = Eccede di { $amount }
 participants-who-paid = Chi ha pagato?
@@ -474,7 +473,6 @@ scan-choose-photo = Scegli una foto
 
 update-required-title = Aggiornamento necessario
 update-required-body = Questa versione di Counted è troppo vecchia per comunicare con il server. Aggiornala per continuare a usare l'app.
-update-required-body-testflight = Questa versione di Counted è troppo vecchia per comunicare con il server. Apri TestFlight e installa l'ultima versione per continuare.
 update-required-button = Aggiorna
 
 ### Common (aggiunte)
@@ -495,6 +493,11 @@ error-friend-request-not-found = Questa richiesta di amicizia non esiste più.
 error-invitation-not-found = Questo invito non esiste più.
 error-too-many-friend-requests = Troppe richieste di amicizia per ora. Riprova domani.
 error-too-many-invitations = Troppi inviti in sospeso.
+error-invalid-kdf-salt = Le impostazioni di crittografia non sono valide. Aggiorna l'app e riprova.
+error-mixed-project-batch = Questi partecipanti non fanno tutti parte dello stesso progetto.
+error-invalid-payload = Questa versione dell'app ha inviato dati che il server non accetta. Aggiornala e riprova.
+error-invalid-public-key = La tua chiave di crittografia non è valida. Aggiorna l'app e riprova.
+error-payment-methods-stale = I tuoi dati di pagamento sono stati modificati su un altro dispositivo. Ricarica e riprova.
 
 ### Payment methods (condivisione)
 

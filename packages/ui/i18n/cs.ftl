@@ -69,6 +69,11 @@ error-friend-request-not-found = Tato žádost o přátelství už neexistuje.
 error-invitation-not-found = Tato pozvánka už neexistuje.
 error-too-many-friend-requests = Příliš mnoho žádostí o přátelství. Zkus to zítra.
 error-too-many-invitations = Příliš mnoho čekajících pozvánek.
+error-invalid-kdf-salt = Nastavení šifrování není platné. Aktualizuj aplikaci a zkus to znovu.
+error-mixed-project-batch = Tito účastníci nejsou všichni ve stejném projektu.
+error-invalid-payload = Tato verze aplikace odeslala data, která server nepřijímá. Aktualizuj ji a zkus to znovu.
+error-invalid-public-key = Tvůj šifrovací klíč není platný. Aktualizuj aplikaci a zkus to znovu.
+error-payment-methods-stale = Tvoje platební údaje byly změněny na jiném zařízení. Načti znovu a zkus to.
 
 ### Auth
 
@@ -321,7 +326,6 @@ participants-none = Nikdo
 participants-everyone = Všichni ({ $count })
 participants-some = { $count } z { $total }
 participants-select-all = Vybrat vše
-participants-deselect-all = Zrušit výběr
 participants-by-shares = Podle podílů
 split-amounts = Částky
 participants-remaining = Zbývá { $amount }
@@ -540,7 +544,6 @@ project-currency-locked = Měna se nastavuje při vytvoření projektu.
 
 update-required-title = Vyžadována aktualizace
 update-required-body = Tato verze Counted je příliš stará na komunikaci se serverem. Aktualizuj ji, abys mohl aplikaci dál používat.
-update-required-body-testflight = Tato verze Counted je příliš stará na komunikaci se serverem. Otevři TestFlight a nainstaluj nejnovější sestavení, abys mohl aplikaci dál používat.
 update-required-button = Aktualizovat
 
 notifications-label = Oznámení

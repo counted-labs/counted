@@ -69,6 +69,8 @@ pub const PAYMENT_METHODS_STALE: &str = "Payment methods were changed elsewhere"
 pub const RESEND_COOLDOWN: &str = "Veuillez attendre 60 secondes avant de renvoyer l'email.";
 pub const TOO_MANY_FRIEND_REQUESTS: &str = "Too many friend requests";
 pub const TOO_MANY_INVITATIONS: &str = "Too many pending invitations";
+/// Never shown: push registration is silent, and the app simply tries again at its next boot.
+pub const TOO_MANY_PUSH_CHALLENGES: &str = "Too many push verifications";
 
 // -------- 500 --------
 /// Everything a caller must not see: sqlx errors, upstream bodies, task joins. The detail goes to

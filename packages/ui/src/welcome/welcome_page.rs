@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use crate::tid;
 
-use crate::common::{update_ls, LocalStorageState, Mascot, MascotPose, MASCOT_HERO};
+use crate::common::{update_ls, LocalStorageState, Mascot, MascotPose};
 use crate::route::Route;
 
 #[component]
@@ -14,11 +14,11 @@ pub fn WelcomePage() -> Element {
 
     rsx! {
         div { class: "min-h-dvh safe-page flex flex-col items-center justify-center p-6 bg-base-100",
-            div { class: "flex flex-col items-center gap-8 max-w-sm w-full",
+            div { class: "flex flex-col items-center gap-5 max-w-sm w-full",
 
                 // Header
-                div { class: "flex flex-col items-center gap-3 text-center",
-                    Mascot { pose: MascotPose::Secure, size: MASCOT_HERO }
+                div { class: "flex flex-col items-center gap-2 text-center",
+                    Mascot { pose: MascotPose::Secure }
                     h1 { class: "text-xl font-bold", {tid!("welcome-title")} }
                     p { class: "text-sm text-base-content/70", {tid!("welcome-subtitle")} }
                 }
@@ -108,7 +108,7 @@ pub fn WelcomePage() -> Element {
                         // `welcome-start` is French in the shipping locale and changes freely.
                         id: "welcome-start",
                         r#type: "button",
-                        class: "btn btn-primary btn-block mt-2",
+                        class: "btn btn-primary btn-block",
                         onclick: on_start,
                         {tid!("welcome-start")}
                     }

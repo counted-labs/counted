@@ -69,6 +69,11 @@ error-friend-request-not-found = Šios draugystės užklausos nebėra.
 error-invitation-not-found = Šio kvietimo nebėra.
 error-too-many-friend-requests = Kol kas per daug draugystės užklausų. Bandyk rytoj.
 error-too-many-invitations = Per daug laukiančių kvietimų.
+error-invalid-kdf-salt = Šifravimo nustatymai netinkami. Atnaujink programėlę ir bandyk dar kartą.
+error-mixed-project-batch = Šie dalyviai ne visi priklauso tam pačiam projektui.
+error-invalid-payload = Ši programėlės versija išsiuntė duomenis, kurių serveris nepriima. Atnaujink ją ir bandyk dar kartą.
+error-invalid-public-key = Tavo šifravimo raktas netinkamas. Atnaujink programėlę ir bandyk dar kartą.
+error-payment-methods-stale = Tavo mokėjimo duomenys pakeisti kitame įrenginyje. Įkelk iš naujo ir bandyk dar kartą.
 
 ### Auth
 
@@ -321,7 +326,6 @@ participants-none = Niekas
 participants-everyone = Visi ({ $count })
 participants-some = { $count } iš { $total }
 participants-select-all = Pažymėti visus
-participants-deselect-all = Atžymėti visus
 participants-by-shares = Pagal dalis
 split-amounts = Sumos
 participants-remaining = Liko { $amount }
@@ -540,7 +544,6 @@ project-currency-locked = Valiuta nustatoma kuriant projektą.
 
 update-required-title = Reikalingas atnaujinimas
 update-required-body = Ši Counted versija per sena, kad galėtų susisiekti su serveriu. Atnaujink ją, kad galėtum toliau naudotis programėle.
-update-required-body-testflight = Ši Counted versija per sena, kad galėtų susisiekti su serveriu. Atidaryk TestFlight ir įdiek naujausią versiją, kad galėtum toliau naudotis programėle.
 update-required-button = Atnaujinti
 
 notifications-label = Pranešimai

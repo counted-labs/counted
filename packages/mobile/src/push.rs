@@ -1,16 +1,18 @@
 //! The two platform halves of `ui::common::push`: ask the OS for permission and a device token,
 //! and get that token into `COUNTED_DATA_DIR/push_token`. See docs/plans/push-notifications.md.
 
-/// Calls `MainActivity.requestPush()` (packages/mobile/android-kotlin/MainActivity.kt), which
-/// prompts for POST_NOTIFICATIONS and writes the FCM token to the file itself. A `dx serve` build
-/// has no such method: the call raises NoSuchMethodError, which is cleared here so it cannot
-/// surface as a crash on the next JNI call.
+/// Calls `MainActivity.requestPush(vapid)` (packages/mobile/android-kotlin/MainActivity.kt), which
+/// prompts for POST_NOTIFICATIONS and registers with the UnifiedPush distributor under our VAPID
+/// key; `CountedPushService` writes the resulting subscription to the file. A `dx serve` build has
+/// no such method: the call raises NoSuchMethodError, which is cleared here so it cannot surface as
+/// a crash on the next JNI call.
 #[cfg(target_os = "android")]
 pub fn request_push() {
     fn inner(env: &mut jni::JNIEnv) -> jni::errors::Result<()> {
         let ctx = ndk_context::android_context();
         let activity = unsafe { jni::objects::JObject::from_raw(ctx.context().cast()) };
-        env.call_method(&activity, "requestPush", "()V", &[])?;
+        let vapid = env.new_string(shared::VAPID_PUBLIC_KEY)?;
+        env.call_method(&activity, "requestPush", "(Ljava/lang/String;)V", &[(&vapid).into()])?;
         Ok(())
     }
 

@@ -67,6 +67,11 @@ error-friend-request-not-found = Ова барање за пријателств
 error-invitation-not-found = Оваа покана повеќе не постои.
 error-too-many-friend-requests = Засега премногу барања за пријателство. Обиди се утре.
 error-too-many-invitations = Премногу покани на чекање.
+error-invalid-kdf-salt = Поставките за криптирање не се валидни. Ажурирај ја апликацијата и обиди се повторно.
+error-mixed-project-batch = Овие учесници не се сите во ист проект.
+error-invalid-payload = Оваа верзија на апликацијата испрати податоци што серверот не ги прифаќа. Ажурирај ја и обиди се повторно.
+error-invalid-public-key = Твојот клуч за криптирање не е валиден. Ажурирај ја апликацијата и обиди се повторно.
+error-payment-methods-stale = Твоите податоци за плаќање се сменети на друг уред. Освежи и обиди се повторно.
 
 ### Auth
 
@@ -319,7 +324,6 @@ participants-none = Никој
 participants-everyone = Сите ({ $count })
 participants-some = { $count } од { $total }
 participants-select-all = Избери сè
-participants-deselect-all = Поништи избор
 participants-by-shares = По удели
 split-amounts = Износи
 participants-remaining = Преостанува { $amount }
@@ -534,7 +538,6 @@ project-currency-locked = Валутата се определува при со
 
 update-required-title = Потребно е ажурирање
 update-required-body = Оваа верзија на Counted е престара за да комуницира со серверот. Ажурирај ја за да продолжиш да ја користиш апликацијата.
-update-required-body-testflight = Оваа верзија на Counted е престара за да комуницира со серверот. Отвори TestFlight и инсталирај ја најновата верзија за да продолжиш да ја користиш апликацијата.
 update-required-button = Ажурирај
 
 notifications-label = Известувања

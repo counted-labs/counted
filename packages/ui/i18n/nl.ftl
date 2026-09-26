@@ -287,7 +287,6 @@ participants-none = Niemand
 participants-everyone = Iedereen ({ $count })
 participants-some = { $count } van { $total }
 participants-select-all = Alles selecteren
-participants-deselect-all = Selectie opheffen
 participants-remaining = { $amount } te weinig
 participants-over-by = { $amount } te veel
 participants-who-paid = Wie heeft betaald?
@@ -474,7 +473,6 @@ scan-choose-photo = Foto kiezen
 
 update-required-title = Update vereist
 update-required-body = Deze versie van Counted is te oud om met de server te communiceren. Werk hem bij om de app te blijven gebruiken.
-update-required-body-testflight = Deze versie van Counted is te oud om met de server te communiceren. Open TestFlight en installeer de nieuwste versie om verder te gaan.
 update-required-button = Bijwerken
 
 ### Common (aanvullingen)
@@ -495,6 +493,11 @@ error-friend-request-not-found = Dit vriendschapsverzoek bestaat niet meer.
 error-invitation-not-found = Deze uitnodiging bestaat niet meer.
 error-too-many-friend-requests = Te veel vriendschapsverzoeken voor nu. Probeer het morgen opnieuw.
 error-too-many-invitations = Te veel openstaande uitnodigingen.
+error-invalid-kdf-salt = De versleutelingsinstellingen zijn niet geldig. Werk de app bij en probeer het opnieuw.
+error-mixed-project-batch = Deze deelnemers zitten niet allemaal in hetzelfde project.
+error-invalid-payload = Deze versie van de app stuurde gegevens die de server niet accepteert. Werk hem bij en probeer het opnieuw.
+error-invalid-public-key = Je versleutelingssleutel is niet geldig. Werk de app bij en probeer het opnieuw.
+error-payment-methods-stale = Je betaalgegevens zijn op een ander apparaat gewijzigd. Laad opnieuw en probeer het opnieuw.
 
 ### Payment methods (delen)
 

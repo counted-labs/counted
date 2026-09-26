@@ -69,6 +69,11 @@ error-friend-request-not-found = Ta prošnja za prijateljstvo ne obstaja več.
 error-invitation-not-found = To povabilo ne obstaja več.
 error-too-many-friend-requests = Zaenkrat preveč prošenj za prijateljstvo. Poskusi jutri.
 error-too-many-invitations = Preveč čakajočih povabil.
+error-invalid-kdf-salt = Nastavitve šifriranja niso veljavne. Posodobi aplikacijo in poskusi znova.
+error-mixed-project-batch = Ti udeleženci niso vsi v istem projektu.
+error-invalid-payload = Ta različica aplikacije je poslala podatke, ki jih strežnik ne sprejme. Posodobi jo in poskusi znova.
+error-invalid-public-key = Tvoj ključ za šifriranje ni veljaven. Posodobi aplikacijo in poskusi znova.
+error-payment-methods-stale = Tvoji plačilni podatki so bili spremenjeni v drugi napravi. Osveži in poskusi znova.
 
 ### Auth
 
@@ -321,7 +326,6 @@ participants-none = Nihče
 participants-everyone = Vsi ({ $count })
 participants-some = { $count } od { $total }
 participants-select-all = Izberi vse
-participants-deselect-all = Prekliči izbor
 participants-by-shares = Po deležih
 split-amounts = Zneski
 participants-remaining = Ostane { $amount }
@@ -540,7 +544,6 @@ project-currency-locked = Valuta se določi ob ustvarjanju projekta.
 
 update-required-title = Potrebna je posodobitev
 update-required-body = Ta različica Counteda je prestara za komunikacijo s strežnikom. Posodobi jo, da nadaljuješ z uporabo aplikacije.
-update-required-body-testflight = Ta različica Counteda je prestara za komunikacijo s strežnikom. Odpri TestFlight in namesti najnovejšo gradnjo, da nadaljuješ z uporabo aplikacije.
 update-required-button = Posodobi
 
 notifications-label = Obvestila

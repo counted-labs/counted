@@ -67,6 +67,11 @@ error-friend-request-not-found = Ez a barátkérelem már nem létezik.
 error-invitation-not-found = Ez a meghívó már nem létezik.
 error-too-many-friend-requests = Egyelőre túl sok barátkérelem. Próbáld holnap.
 error-too-many-invitations = Túl sok függőben lévő meghívó.
+error-invalid-kdf-salt = A titkosítási beállítások érvénytelenek. Frissítsd az alkalmazást, és próbáld újra.
+error-mixed-project-batch = Ezek a résztvevők nem mind ugyanahhoz a projekthez tartoznak.
+error-invalid-payload = Az alkalmazás ezen verziója olyan adatokat küldött, amelyeket a kiszolgáló nem fogad el. Frissítsd, és próbáld újra.
+error-invalid-public-key = A titkosítási kulcsod érvénytelen. Frissítsd az alkalmazást, és próbáld újra.
+error-payment-methods-stale = A fizetési adataidat egy másik eszközön módosították. Töltsd újra, és próbáld újra.
 
 ### Auth
 
@@ -319,7 +324,6 @@ participants-none = Senki
 participants-everyone = Mindenki ({ $count })
 participants-some = { $count } / { $total }
 participants-select-all = Összes kijelölése
-participants-deselect-all = Kijelölés törlése
 participants-by-shares = Részarány szerint
 split-amounts = Összegek
 participants-remaining = Még { $amount }
@@ -534,7 +538,6 @@ project-currency-locked = A pénznem a projekt létrehozásakor rögzül.
 
 update-required-title = Frissítés szükséges
 update-required-body = A Counted ezen verziója túl régi a szerverrel való kommunikációhoz. Frissítsd az alkalmazás további használatához.
-update-required-body-testflight = A Counted ezen verziója túl régi a szerverrel való kommunikációhoz. Nyisd meg a TestFlightot, és telepítsd a legújabb buildet az alkalmazás további használatához.
 update-required-button = Frissítés
 
 notifications-label = Értesítések
