@@ -18,6 +18,14 @@ strip = true
 panic = "unwind"
 incremental = false
 
+# Without this profile dx builds Android under an ad-hoc `android-release` and takes `strip` from
+# `release` above, running `--strip-all` on libmain.so before Gradle sees it — so the AAB shipped no
+# native symbols. AGP strips the .so it packages instead (patch_release_strip in the Makefile) and
+# extracts the symbol table into BUNDLE-METADATA. See docs/android.md, "Native debug symbols".
+[profile.android-release]
+inherits = "release"
+strip = false
+
 # `opt-level = "z"` above is chosen for the wasm bundle, where every byte is downloaded. It is the
 # wrong trade for OCR: this is dense numeric code with hand-written SIMD, and size-optimising it
 # costs several times the inference latency — on the phone's UI thread budget, not the network's.
@@ -98,7 +106,7 @@ opt-level = 3
 opt-level = 3
 
 [workspace.dependencies]
-dioxus = { version = "0.7.9" }
+dioxus = { version = "0.7.10" }
 
 # workspace
 ui = { path = "packages/ui" }

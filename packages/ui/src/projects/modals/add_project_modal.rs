@@ -14,7 +14,7 @@ use crate::crypto::{
     claim_token, claim_verifier, decrypt_json, encrypt_json, generate_key, key_to_fragment,
     wrap_project_key,
 };
-use crate::icons::{TrashIcon, UserIcon, ICON_INLINE};
+use crate::icons::{CloseIcon, TrashIcon, UserIcon, ICON_HEADER, ICON_INLINE};
 use crate::route::Route;
 
 #[derive(Props, Clone, PartialEq)]
@@ -173,10 +173,10 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                     h3 { class: "font-bold text-lg font-display", {tid!("add-project-title")} }
                     button {
                         r#type: "button",
-                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11 text-lg",
+                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11",
                         aria_label: tid!("close"),
                         onclick: move |_| on_close.call(()),
-                        "✕"
+                        CloseIcon { size: ICON_HEADER }
                     }
                 }
 

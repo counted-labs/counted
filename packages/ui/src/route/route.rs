@@ -4,7 +4,7 @@ use crate::common::AppLayout;
 use crate::expenses::ExpensesPage;
 use crate::friends::FriendsPage;
 use crate::help::HelpPage;
-use crate::legal::{LegalNoticePage, TermsPage};
+use crate::legal::{LegalNoticePage, LicensesPage, TermsPage};
 use crate::not_found::NotFoundPage;
 use crate::payments::PaymentPage;
 use crate::privacy::PrivacyPage;
@@ -50,6 +50,8 @@ pub enum Route {
         TermsPage {},
         #[route("/legal")]
         LegalNoticePage {},
+        #[route("/licenses")]
+        LicensesPage {},
         #[route("/help")]
         HelpPage {},
         // A security control, not a nicety. Without a catch-all, Route::from_str fails, the router
@@ -83,6 +85,7 @@ pub fn project_id_of(route: &Route) -> Option<Uuid> {
         | Route::PrivacyPage {}
         | Route::TermsPage {}
         | Route::LegalNoticePage {}
+        | Route::LicensesPage {}
         | Route::NotFoundPage { .. } => None,
     }
 }
@@ -196,6 +199,11 @@ mod tests {
     }
 
     #[test]
+    fn route_licenses_page_roundtrip() {
+        roundtrip(Route::LicensesPage {});
+    }
+
+    #[test]
     fn route_help_roundtrip() {
         roundtrip(Route::HelpPage {});
     }
@@ -232,6 +240,7 @@ mod tests {
             Route::PrivacyPage {},
             Route::TermsPage {},
             Route::LegalNoticePage {},
+            Route::LicensesPage {},
             Route::VerifyEmailPage { token: "abc".to_string() },
             Route::NotFoundPage { segments: vec!["zzz".to_string()] },
         ] {
@@ -248,6 +257,7 @@ mod tests {
         assert_eq!(Route::from_str("/help").unwrap(), Route::HelpPage {});
         assert_eq!(Route::from_str("/terms").unwrap(), Route::TermsPage {});
         assert_eq!(Route::from_str("/legal").unwrap(), Route::LegalNoticePage {});
+        assert_eq!(Route::from_str("/licenses").unwrap(), Route::LicensesPage {});
         assert_eq!(Route::from_str("/").unwrap(), Route::ProjectsPage {});
     }
 }

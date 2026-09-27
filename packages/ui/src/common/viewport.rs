@@ -17,6 +17,9 @@ pub const KEYBOARD_MIN_PX: f64 = 80.0;
 
 /// How much of the layout viewport the on-screen keyboard is covering, in CSS px.
 ///
+/// `layout_h` is the height of the box `position: fixed` lays out in, measured off a probe — never
+/// `innerHeight`, which iOS 26 reports net of the scroll (see the listener in the mobile entry point).
+///
 /// `offset_top` is the visual viewport's own scroll within the layout viewport: when WKWebView
 /// scrolls the page to reveal a focused input, the visible band moves down, and the part hidden at
 /// the *bottom* shrinks by exactly that much. Leaving it out over-reports the keyboard on any page
@@ -99,6 +102,15 @@ mod tests {
     #[test]
     fn a_scrolled_page_keeps_the_strip_the_keyboard_still_covers() {
         assert_eq!(keyboard_inset(844.0, 508.0, 300.0), 36.0);
+    }
+
+    /// Measured on an iPhone 17 (iOS 26, 874px screen): fixed box 873.7, visual viewport 566,
+    /// scrolled 24.7. The keyboard's top edge sat at 566 on screen and the sheet's bottom at 849, so
+    /// the sheet owed 283. Fed `innerHeight` (849) instead, this returned 258.3 and the bar sank
+    /// 24.7px behind the keys.
+    #[test]
+    fn the_measured_iphone_case_lands_the_sheet_on_the_keyboard() {
+        assert!((keyboard_inset(873.7, 566.0, 24.7) - 283.0).abs() < 0.01);
     }
 
     #[test]

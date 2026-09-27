@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use std::rc::Rc;
 
-use super::super::helpers::expense_form_helpers::{amount_field_text, is_expression};
+use super::super::helpers::expense_form_helpers::{amount_field_text, is_expression, keeps_draft_on_blur};
 
 /// The draft of the amount field that currently has focus — what `AmountOperatorBar` writes into.
 /// `None` when no amount field is focused, which is also what hides the bar.
@@ -23,6 +23,9 @@ const FOCUS_RETRY_MS: u32 = 50;
 /// 83.33 while the field still shows what was typed; blur only swaps the text for the number. A
 /// plain draft is left alone on blur — a French `12,50` must not come back as `12.5`.
 ///
+/// An empty field is 0: the caller is handed "0" while the field stays empty until blur. Focus
+/// selects the whole text, so the first keystroke replaces the 0 instead of making "05".
+///
 /// On a coarse pointer an expression is covered by an overlay showing the running result, so the
 /// field reads `83.33` while `250/3` sits in the operator bar's bubble. The input's own value is
 /// still the expression — caret, backspace and paste are the browser's, untouched.
@@ -39,9 +42,6 @@ pub struct AmountInputProps {
     /// that is a real `input` attribute, and `extends = input` below would swallow it.
     #[props(default)]
     pub focus_on_mount: bool,
-    /// Show an untouched 0.00 as the placeholder rather than as the character "0".
-    #[props(default)]
-    pub blank_zero: bool,
     #[props(extends = GlobalAttributes, extends = input)]
     pub attributes: Vec<Attribute>,
 }
@@ -54,7 +54,7 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
     // The participants tests mount the fieldset with no form above it, so there may be no bar.
     let bar = try_use_context::<FocusedAmount>();
 
-    let shown = amount_field_text(draft().as_deref(), props.value, props.blank_zero);
+    let shown = amount_field_text(draft().as_deref(), props.value);
     let calc = draft().as_deref().is_some_and(is_expression);
 
     // The bar appears below the scroll body once a field takes focus, shrinking it from the bottom
@@ -82,8 +82,7 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
                 r#type: "text",
                 inputmode: "decimal",
                 value: shown.clone(),
-                placeholder: "0",
-                class: "w-full",
+                class: "w-full outline-none",
                 // Chromium's UA sheet sets `text-align: start` on an input, so a `text-right` on
                 // the wrapper would not otherwise reach it.
                 text_align: "inherit",
@@ -117,14 +116,15 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
                     if let Some(mut bar) = bar {
                         bar.set(Some(draft));
                     }
+                    spawn(crate::common::select_focused_input());
                 },
                 oninput: move |e| {
                     let raw = e.value();
                     draft.set(Some(raw.clone()));
-                    props.oninput.call(raw);
+                    props.oninput.call(if raw.trim().is_empty() { "0".to_string() } else { raw });
                 },
                 onblur: move |_| {
-                    if draft().as_deref().is_some_and(is_expression) {
+                    if draft().as_deref().is_some_and(|d| !keeps_draft_on_blur(d)) {
                         draft.set(None);
                     }
                     focused.set(false);

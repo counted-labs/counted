@@ -16,7 +16,7 @@ use std::collections::HashSet;
 use crate::crypto::{
     claim_label, claim_token, decrypt_json, decrypt_user, encrypt_json, DecryptedUser,
 };
-use crate::icons::{LockIcon, TrashIcon, UserIcon, ICON_INLINE};
+use crate::icons::{CloseIcon, LockIcon, TrashIcon, UserIcon, ICON_HEADER, ICON_INLINE};
 
 #[derive(PartialEq, Props, Clone)]
 pub struct EditProjectModalProps {
@@ -337,10 +337,10 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                     h3 { class: "font-bold text-lg font-display", {tid!("edit-project-title")} }
                     button {
                         r#type: "button",
-                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11 text-lg",
+                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11",
                         aria_label: tid!("close"),
                         onclick: move |_| on_close_x.call(()),
-                        "✕"
+                        CloseIcon { size: ICON_HEADER }
                     }
                 }
                 div { class: "flex-1 overflow-y-auto px-6 py-4",

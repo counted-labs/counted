@@ -137,17 +137,17 @@ pub fn with_operator(shown: &str, op: char) -> Option<String> {
 /// or "12,0", so binding the number directly erases the separator under a mobile keyboard. A
 /// draft that does not parse (empty, mid-typing) is kept too — the number it fails to be is what
 /// the field last held, and clobbering it would refuse a clear-and-retype.
-///
-/// `blank_zero` renders an untouched 0.00 as nothing, leaving the field's `placeholder` to show
-/// it. The total opens that way: a literal "0" is a character the caret sits next to, so the
-/// first keystroke made "05" or "50". The participant rows do not — a blank there reads as
-/// "unset" where `redistribute` means "zero".
-pub fn amount_field_text(draft: Option<&str>, value: f64, blank_zero: bool) -> String {
+pub fn amount_field_text(draft: Option<&str>, value: f64) -> String {
     match draft {
-        None if blank_zero && value == 0.0 => String::new(),
         Some(d) if parse_amount(d).is_none_or(|v| v == value) => d.to_string(),
         _ => value.to_string(),
     }
+}
+
+/// Blur swaps the text for the number unless it is a plain one: an expression settles to its
+/// result, and a draft that does not parse ("", "-") shows the value it left behind.
+pub fn keeps_draft_on_blur(draft: &str) -> bool {
+    !is_expression(draft) && parse_amount(draft).is_some()
 }
 
 /// The rate the form is actually converting at: what the user typed, else the InforEuro one.
@@ -567,39 +567,44 @@ mod tests {
 
     #[test]
     fn amount_field_text_keeps_an_expression_that_evaluates_to_the_value() {
-        assert_eq!(amount_field_text(Some("250/3"), 83.33, false), "250/3");
-        assert_eq!(amount_field_text(Some("250/"), 83.33, false), "250/");
-        assert_eq!(amount_field_text(None, 83.33, false), "83.33");
+        assert_eq!(amount_field_text(Some("250/3"), 83.33), "250/3");
+        assert_eq!(amount_field_text(Some("250/"), 83.33), "250/");
+        assert_eq!(amount_field_text(None, 83.33), "83.33");
     }
 
     #[test]
     fn amount_field_text_keeps_a_draft_that_still_means_the_value() {
-        assert_eq!(amount_field_text(Some("12."), 12.0, false), "12.");
-        assert_eq!(amount_field_text(Some("12,"), 12.0, false), "12,");
-        assert_eq!(amount_field_text(Some("12,0"), 12.0, false), "12,0");
-        assert_eq!(amount_field_text(Some("12,50"), 12.5, false), "12,50");
+        assert_eq!(amount_field_text(Some("12."), 12.0), "12.");
+        assert_eq!(amount_field_text(Some("12,"), 12.0), "12,");
+        assert_eq!(amount_field_text(Some("12,0"), 12.0), "12,0");
+        assert_eq!(amount_field_text(Some("12,50"), 12.5), "12,50");
     }
 
     #[test]
     fn amount_field_text_keeps_a_draft_that_does_not_parse() {
-        assert_eq!(amount_field_text(Some(""), 12.0, false), "");
-        assert_eq!(amount_field_text(Some("-"), 12.0, false), "-");
+        assert_eq!(amount_field_text(Some(""), 12.0), "");
+        assert_eq!(amount_field_text(Some("-"), 12.0), "-");
     }
 
     #[test]
     fn amount_field_text_shows_a_value_changed_from_outside() {
-        assert_eq!(amount_field_text(None, 12.5, false), "12.5");
-        assert_eq!(amount_field_text(Some("7."), 15.0, false), "15");
+        assert_eq!(amount_field_text(None, 12.5), "12.5");
+        assert_eq!(amount_field_text(Some("7."), 15.0), "15");
     }
 
     #[test]
-    fn amount_field_text_blanks_an_untouched_zero_only_when_asked() {
-        assert_eq!(amount_field_text(None, 0.0, true), "");
-        assert_eq!(amount_field_text(None, 0.0, false), "0");
-        // The draft wins once there is one — including the "" that focus materialises.
-        assert_eq!(amount_field_text(Some(""), 0.0, true), "");
-        assert_eq!(amount_field_text(Some("5"), 5.0, true), "5");
-        assert_eq!(amount_field_text(None, 12.5, true), "12.5");
+    fn amount_field_text_shows_an_untouched_zero() {
+        assert_eq!(amount_field_text(None, 0.0), "0");
+        assert_eq!(amount_field_text(Some(""), 0.0), "");
+    }
+
+    #[test]
+    fn keeps_draft_on_blur_only_for_a_plain_number() {
+        assert!(keeps_draft_on_blur("12,50"));
+        assert!(keeps_draft_on_blur("12."));
+        assert!(!keeps_draft_on_blur(""));
+        assert!(!keeps_draft_on_blur("-"));
+        assert!(!keeps_draft_on_blur("250/3"));
     }
 
     #[test]
@@ -664,18 +669,6 @@ mod tests {
         assert_eq!(states[0], (0.0, false));
         assert_eq!(states[1], (0.0, false), "\"0.\" parses to 0.0 — same as \"0\"");
         assert_eq!(states[2], (0.5, true));
-    }
-
-    #[test]
-    fn clearing_a_field_leaves_the_previous_amount_alone() {
-        // None bails the handler out: no distribution on a stale total, and Dioxus sees an
-        // unchanged value attribute.
-        let mut e = make_entries(&[true, true], &[5.0, 5.0], &[1.0, 1.0]);
-        if let Some(t) = parse_amount("") {
-            redistribute(t, &mut e, false);
-        }
-        assert!((e[0].amount - 5.0).abs() < 0.001);
-        assert!((e[1].amount - 5.0).abs() < 0.001);
     }
 
     fn named(names: &[&str], checked: &[bool]) -> Vec<UserEntry> {

@@ -25,9 +25,10 @@ ignore = [
   "RUSTSEC-2023-0071",
 ]
 
-# Gated in CI since 2026-09-11 (the `audit` job). The workspace crates are proprietary and
-# `publish = false`, which `private.ignore` exempts from the licence check — no licence field to
-# invent for code that is not distributed as a crate.
+# Gated in CI since 2026-09-11 (the `audit` job). The workspace crates are `publish = false`, which
+# `private.ignore` exempts from the licence check: they are not distributed as crates. The client
+# crates are published as source under AGPL-3.0-only (mirror/README.md); `api` also holds the
+# proprietary server, so no single `license` field would be true for it.
 [bans]
 multiple-versions = "allow"
 wildcards = "deny"

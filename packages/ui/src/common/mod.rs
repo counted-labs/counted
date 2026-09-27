@@ -64,6 +64,9 @@ pub use next_paint::next_paint;
 mod sleep;
 pub use sleep::sleep;
 
+mod select_focused;
+pub use select_focused::select_focused_input;
+
 mod toast;
 pub use toast::Toast;
 

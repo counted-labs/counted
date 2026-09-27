@@ -221,6 +221,19 @@ pub async fn sleep_ms(ms: u32) {
     gloo_timers::future::TimeoutFuture::new(ms).await;
 }
 
+/// Selects the focused input's text once the tap that focused it has placed its caret.
+pub async fn select_focused_input() {
+    sleep_ms(0).await;
+    let Some(input) = document()
+        .and_then(|d| d.active_element())
+        .and_then(|el| el.dyn_into::<web_sys::HtmlInputElement>().ok())
+    else {
+        return;
+    };
+    let len = input.value().encode_utf16().count() as u32;
+    let _ = input.set_selection_range(0, len);
+}
+
 /// Resolves once the browser has painted. `requestAnimationFrame` fires *before* paint, so the
 /// macrotask hop after it is what lands once the frame is on screen. A hidden tab never fires rAF —
 /// skip the wait there rather than hang until it is foregrounded.

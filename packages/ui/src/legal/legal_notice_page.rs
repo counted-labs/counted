@@ -55,6 +55,25 @@ pub fn LegalNoticePage() -> Element {
 
                     h2 { class: "text-lg font-semibold", {tid!("legal-ip-title")} }
                     p { {tid!("legal-ip-body")} }
+                    p {
+                        {tid!("legal-ip-source")}
+                        " "
+                        a {
+                            class: "link",
+                            href: "https://github.com/counted-labs/counted",
+                            target: "_blank",
+                            rel: "noopener noreferrer",
+                            "github.com/counted-labs/counted"
+                        }
+                        "."
+                    }
+                    p { {tid!("legal-ip-brand")} }
+                    p {
+                        {tid!("legal-ip-third-party")}
+                        " "
+                        Link { to: Route::LicensesPage {}, class: "link", {tid!("legal-licenses-title")} }
+                        "."
+                    }
 
                     h2 { class: "text-lg font-semibold", {tid!("legal-personal-data-title")} }
                     p {

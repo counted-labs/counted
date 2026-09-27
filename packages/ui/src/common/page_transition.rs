@@ -42,7 +42,7 @@ pub fn route_depth(route: &Route) -> u8 {
         | Route::PrivacyPage {}
         | Route::TermsPage {}
         | Route::LegalNoticePage {} => 1,
-        Route::PaymentPage { .. } | Route::ProjectHistoryPage { .. } => 2,
+        Route::PaymentPage { .. } | Route::ProjectHistoryPage { .. } | Route::LicensesPage {} => 2,
     }
 }
 
@@ -278,6 +278,14 @@ mod tests {
         assert_eq!(
             nav_direction(&Route::PrivacyPage {}, &Route::SettingsPage {}),
             NavDirection::Back
+        );
+    }
+
+    #[test]
+    fn licenses_are_a_step_past_the_legal_notice() {
+        assert_eq!(
+            nav_direction(&Route::LegalNoticePage {}, &Route::LicensesPage {}),
+            NavDirection::Forward
         );
     }
 

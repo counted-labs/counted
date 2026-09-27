@@ -11,6 +11,7 @@ use super::amount_operator_bar::AmountOperatorBar;
 use super::participants_fieldset::ParticipantsFieldset;
 use crate::categories::{category_label, infer_chart_category, parent_emoji, CHART_CATEGORIES as CATEGORIES};
 use crate::common::{format_month_str, haptic, Haptic};
+use crate::icons::{CloseIcon, ICON_HEADER};
 
 /// The three type options, as (wire value, translation key).
 const TYPES: [(&str, &str); 3] = [
@@ -256,10 +257,10 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                     button {
                         id: "expense-form-close",
                         r#type: "button",
-                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11 text-lg",
+                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11",
                         aria_label: tid!("close"),
                         onclick: move |_| on_close_x.call(()),
-                        "✕"
+                        CloseIcon { size: ICON_HEADER }
                     }
                 }
 
@@ -283,14 +284,13 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                     // the common case needs — the name, still being decided, follows it. No `input`
                     // box: the rule below is the field's whole edge, so the currency `select` stops
                     // reading as a second field sharing a frame.
-                    label { class: "flex items-baseline gap-2 px-5 pb-3 border-b border-base-200",
+                    label { class: "flex items-baseline gap-2 px-5 pt-1 pb-3 border-b border-base-200 focus-within:border-primary transition-colors",
                             span { class: "sr-only", {tid!("field-amount")} }
                             AmountInput {
                                 id: "expense-amount",
-                                class: "grow text-4xl font-semibold font-display tabular-nums",
+                                class: "grow text-3xl font-bold tracking-tight font-display tabular-nums caret-primary",
                                 aria_required: "true",
                                 enterkeyhint: "next",
-                                blank_zero: true,
                                 focus_on_mount: true,
                                 value: source_amount(),
                                 oninput: move |raw: String| {
@@ -325,17 +325,17 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
 
                     div { class: "flex items-center gap-2 px-5 py-1 border-b border-base-200",
                         if expense_type() == ExpenseType::Expense {
-                            // Fixed width for the same reason the currency select above carries no
-                            // names: a browser sizes a closed `<select>` to its widest option, and
-                            // "Restaurants et bars" would push the name field off-screen.
-                            // `pe-6` keeps the gutter daisyUI's caret is painted into — a flat
-                            // `px-1` put the arrow on top of the last characters and stopped the
-                            // `.select`'s own ellipsis from ever triggering. No `text-sm!` here,
-                            // unlike the radios above: `main.css`'s 16px floor names `select` on
-                            // purpose, and a select *does* focus-auto-zoom on iOS.
+                            // The chip shows the emoji alone; the transparent native select on top
+                            // takes the tap and opens the full labelled list. A closed `<select>`
+                            // is sized to its widest option, so shown directly it truncated.
+                            label { class: "relative shrink-0 flex items-center gap-1 h-9 px-2.5 rounded-full bg-base-200 text-lg has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-primary",
+                            span { aria_hidden: "true",
+                                {parent_emoji(category().as_deref().unwrap_or(infer_chart_category(&expense_name())))}
+                            }
+                            span { aria_hidden: "true", class: "text-xs opacity-60", "▾" }
                             select {
                                 id: "expense-category",
-                                class: "select select-ghost w-28 shrink-0 ps-1 pe-6",
+                                class: "absolute inset-0 w-full opacity-0 cursor-pointer",
                                 aria_label: tid!("expense-category"),
                                 value: category().unwrap_or_default(),
                                 oninput: move |e| {
@@ -357,6 +357,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                                         "{parent_emoji(cat)} {category_label(cat)}"
                                     }
                                 }
+                            }
                             }
                         }
                         label { class: "sr-only", r#for: "expense-name", {tid!("field-name")} }
@@ -706,17 +707,40 @@ mod tests {
     }
 
     #[test]
-    fn clearing_the_total_leaves_the_split_alone() {
+    fn the_total_opens_showing_zero() {
+        let mut dom = VirtualDom::new_with_props(
+            Harness,
+            HarnessProps {
+                spy: Rc::new(RefCell::new((Vec::new(), Vec::new()))),
+                expense_currency: "EUR".to_string(),
+                auto_rate: None,
+            },
+        );
+        let m = dom.rebuild_to_vec();
+        let field = total(&listener_ids(&m, "input"));
+
+        assert_eq!(value_writes(&m, field), vec!["0".to_string()]);
+    }
+
+    /// An empty field is 0: the split follows at once, and the "0" only lands on blur so the
+    /// keystroke in progress is not clobbered.
+    #[test]
+    fn clearing_the_total_splits_zero_and_blur_shows_it() {
         let (mut dom, spy, ids) = harness();
+        let field = total(&ids);
 
-        dom.runtime().handle_event("input", form_input("30"), total(&ids));
+        dom.runtime().handle_event("input", form_input("30"), field);
         dom.render_immediate_to_vec();
-        dom.runtime().handle_event("input", form_input(""), total(&ids));
-        dom.render_immediate_to_vec();
+        dom.runtime().handle_event("input", form_input(""), field);
+        let m = dom.render_immediate_to_vec();
 
-        // Bailing out on an unparseable value stops Dioxus patching `value` back over the
-        // keystroke in progress.
-        assert_eq!(spy.borrow().0, vec![(true, 15.0), (true, 15.0)]);
+        assert_eq!(spy.borrow().0, vec![(true, 0.0), (true, 0.0)]);
+        assert_eq!(spy.borrow().1, vec![(true, 0.0), (true, 0.0)]);
+        assert!(!value_writes(&m, field).contains(&"0".to_string()));
+
+        dom.runtime().handle_event("blur", focus(), field);
+        let m = dom.render_immediate_to_vec();
+        assert_eq!(value_writes(&m, field), vec!["0".to_string()]);
     }
 
     #[test]

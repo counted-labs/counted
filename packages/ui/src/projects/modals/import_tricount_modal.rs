@@ -18,6 +18,7 @@ use crate::common::{error_message, update_ls, upsert_project, upsert_project_key
 use crate::crypto::{
     claim_token, claim_verifier, encrypt_json, generate_key, key_to_fragment, wrap_project_key,
 };
+use crate::icons::{CloseIcon, ICON_HEADER};
 use crate::route::Route;
 
 #[derive(Props, Clone, PartialEq)]
@@ -326,10 +327,10 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                     h3 { class: "font-bold text-lg font-display", {tid!("projects-import-tricount")} }
                     button {
                         r#type: "button",
-                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11 text-lg",
+                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11",
                         aria_label: tid!("close"),
                         onclick: move |_| on_close.call(()),
-                        "✕"
+                        CloseIcon { size: ICON_HEADER }
                     }
                 }
                 form { class: "flex flex-col flex-1 overflow-hidden", onsubmit: on_submit,

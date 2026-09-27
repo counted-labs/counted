@@ -531,7 +531,7 @@ help-contact = Une autre question ? Écrivez-nous à
 
 ### Legal
 
-legal-updated = Dernière mise à jour : 30 août 2026
+legal-updated = Dernière mise à jour : 27 septembre 2026
 
 legal-publisher-title = 1. Éditeur du site
 legal-publisher-body = Counted (« le Service ») est édité à titre non professionnel par une personne physique, Jonathan Bosi.
@@ -544,6 +544,11 @@ legal-host-phone = Téléphone : +49 (0)9831 505-0
 legal-host-email-note = Les emails transactionnels sont acheminés par Scaleway SAS (France). Les serveurs et la base de données sont situés dans l'Union européenne.
 legal-ip-title = 4. Propriété intellectuelle
 legal-ip-body = La structure du site, ses textes et ses éléments graphiques sont la propriété de l'éditeur, sauf mention contraire. Les données que vous saisissez restent les vôtres : elles sont chiffrées sur votre appareil et l'éditeur ne peut ni les lire, ni les exploiter.
+legal-ip-source = Le code source des applications web et mobiles est un logiciel libre, publié sous la licence GNU Affero General Public License, version 3 uniquement, à l'adresse
+legal-ip-brand = Le nom « Counted », son logo et le domaine counted.fr ne sont pas couverts par cette licence.
+legal-ip-third-party = Les applications intègrent des logiciels tiers, chacun sous sa propre licence :
+legal-licenses-title = Licences des logiciels tiers
+legal-licenses-unavailable = La liste des licences n'a pas pu être chargée. Elle figure aussi dans le code source, dans packages/ui/licenses/third-party.txt.
 legal-personal-data-title = 5. Données personnelles
 legal-personal-data-body = Le traitement des données personnelles est décrit dans la
 legal-terms-title = 6. Conditions d'utilisation

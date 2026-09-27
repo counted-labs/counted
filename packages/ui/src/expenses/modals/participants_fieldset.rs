@@ -346,12 +346,25 @@ mod tests {
 
         dom.runtime().handle_event("input", form_input("8"), ids[FIELD_0]);
         dom.render_immediate_to_vec();
-        // Bailing out on an empty value is what stops Dioxus from patching `value` back over
-        // the keystroke in progress.
-        dom.runtime().handle_event("input", form_input(""), ids[FIELD_0]);
+        // Bailing out is what stops Dioxus from patching `value` back over the keystroke in
+        // progress.
+        dom.runtime().handle_event("input", form_input("-"), ids[FIELD_0]);
         dom.render_immediate_to_vec();
 
         assert_eq!(spy.borrow()[0], (true, 8.0, 0.0));
+    }
+
+    #[test]
+    fn an_empty_amount_is_zero_without_clobbering_the_field() {
+        let (mut dom, spy, ids) = harness(false);
+
+        dom.runtime().handle_event("input", form_input("8"), ids[FIELD_0]);
+        dom.render_immediate_to_vec();
+        dom.runtime().handle_event("input", form_input(""), ids[FIELD_0]);
+        let m = dom.render_immediate_to_vec();
+
+        assert_eq!(spy.borrow()[0], (false, 0.0, 0.0));
+        assert!(!value_writes(&m, ids[FIELD_0]).contains(&"0".to_string()));
     }
 
     #[test]

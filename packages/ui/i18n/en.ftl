@@ -549,7 +549,7 @@ help-contact = Another question? Write to us at
 # to English per message until a translation has actually been reviewed. Do not machine-translate
 # this section.
 
-legal-updated = Last updated: 30 August 2026
+legal-updated = Last updated: 27 September 2026
 
 legal-publisher-title = 1. Publisher
 legal-publisher-body = Counted (“the Service”) is published in a non-professional capacity by an individual, Jonathan Bosi.
@@ -562,6 +562,11 @@ legal-host-phone = Phone: +49 (0)9831 505-0
 legal-host-email-note = Transactional email is delivered by Scaleway SAS (France). The servers and the database are located in the European Union.
 legal-ip-title = 4. Intellectual property
 legal-ip-body = The structure of the site, its text and its graphics belong to the publisher unless stated otherwise. The data you enter stays yours: it is encrypted on your device, and the publisher can neither read nor use it.
+legal-ip-source = The source code of the web and mobile apps is free software, published under the GNU Affero General Public License, version 3 only, at
+legal-ip-brand = The name “Counted”, its logo and the counted.fr domain are not covered by that licence.
+legal-ip-third-party = The apps include third-party software, each under its own licence:
+legal-licenses-title = Third-party licences
+legal-licenses-unavailable = The licence list could not be loaded. It is also in the source code, in packages/ui/licenses/third-party.txt.
 legal-personal-data-title = 5. Personal data
 legal-personal-data-body = The processing of personal data is described in the
 legal-terms-title = 6. Terms of use

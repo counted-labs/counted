@@ -44,5 +44,21 @@ version, `Cargo.lock`) are in `Dockerfile.client` and `rust-toolchain.toml`.
 
 ## Licence
 
-[AGPL-3.0](LICENSE). Counted is a trademark of its authors; a fork must not present itself as
-Counted or use counted.fr.
+Copyright (C) 2022-2026 Jonathan Bosi.
+
+This program is free software: you can redistribute it and/or modify it under the terms of the
+GNU Affero General Public License, **version 3 only** (`AGPL-3.0-only`), as published by the Free
+Software Foundation. It is distributed without any warranty; see [LICENSE](LICENSE).
+Third-party files keep their own licences: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+**Name and logo.** Under section 7(e) of the licence, no rights are granted in the name "Counted",
+its logo or the counted.fr domain. The files below carry the logo and store artwork; they are **not
+licensed under the AGPL** — all rights reserved — and are present only so that the published build
+can be reproduced. A fork must replace them and must not present itself as Counted.
+
+- `packages/mobile/assets/counted*.{png,svg,ico}`, `packages/mobile/assets/play-feature-*.png`
+- `packages/mobile/android-res/mipmap-*/ic_launcher*.png`
+- `packages/web/assets/counted.png`, `packages/desktop/assets/favicon.ico`
+
+**Contributions.** This repository is a one-way mirror, updated once per release. Pull requests
+are not merged. Report bugs and security issues to [contact@counted.fr](mailto:contact@counted.fr).

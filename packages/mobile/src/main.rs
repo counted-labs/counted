@@ -991,6 +991,13 @@ fn app() -> Element {
     // docs on expense_row.rs) — so the listener sends at most one value per frame, and none at all
     // while the number is unchanged.
     //
+    // The layout height is measured off a `position: fixed; top: 0; bottom: 0` probe, not
+    // `innerHeight`: that probe is exactly the box every sheet is laid out in. iOS 26's WKWebView
+    // reports `innerHeight` with the page scroll already taken out (measured on an iPhone 17:
+    // innerHeight + offsetTop = the 874px screen), so feeding it here subtracted the scroll twice
+    // and sank the sheet — and the operator bar under it — by `offsetTop` behind the keyboard.
+    // Where `innerHeight` means what the spec says (Android), the probe measures the same number.
+    //
     // No cfg split: the arithmetic is the same on both, and a build whose window *is* resized for
     // the keyboard shrinks both heights together, so `keyboard_inset` yields 0 and this is a no-op.
     #[cfg(any(target_os = "android", target_os = "ios"))]
@@ -1000,10 +1007,13 @@ fn app() -> Element {
             (function() {
                 const vv = window.visualViewport;
                 if (!vv) return;
+                const frame = document.createElement('div');
+                frame.style.cssText = 'position:fixed;top:0;bottom:0;left:0;width:0;visibility:hidden;pointer-events:none';
+                document.body.appendChild(frame);
                 let queued = false, last = null;
                 const report = () => {
                     queued = false;
-                    const msg = [window.innerHeight, vv.height, vv.offsetTop];
+                    const msg = [frame.getBoundingClientRect().height, vv.height, vv.offsetTop];
                     const key = msg.join(',');
                     if (key === last) return;
                     last = key;

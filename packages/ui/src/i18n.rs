@@ -788,6 +788,7 @@ mod tests {
             "Counted",
             "contact@counted.fr",
             "www.hetzner.com",
+            "github.com/counted-labs/counted",
             "Hetzner Online GmbH",
             "Hetzner Online GmbH ",
             "Scaleway TEM ",
