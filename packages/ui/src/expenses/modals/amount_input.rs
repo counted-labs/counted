@@ -42,6 +42,9 @@ pub struct AmountInputProps {
     /// that is a real `input` attribute, and `extends = input` below would swallow it.
     #[props(default)]
     pub focus_on_mount: bool,
+    /// Sizes the input to its text in `ch`: `field-sizing: content` is ignored by older iOS WebKit.
+    #[props(default)]
+    pub fit: bool,
     #[props(extends = GlobalAttributes, extends = input)]
     pub attributes: Vec<Attribute>,
 }
@@ -56,6 +59,9 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
 
     let shown = amount_field_text(draft().as_deref(), props.value);
     let calc = draft().as_deref().is_some_and(is_expression);
+    let result = props.value.to_string();
+    let fit_chars = if calc { shown.chars().count().max(result.chars().count()) } else { shown.chars().count().max(1) };
+    let fit_width = format!("width: calc({fit_chars}ch + 0.25ch); max-width: 100%");
 
     // The bar appears below the scroll body once a field takes focus, shrinking it from the bottom
     // after the WebView's own scroll-into-view already ran — without this a row tapped near the
@@ -86,6 +92,7 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
                 // Chromium's UA sheet sets `text-align: start` on an input, so a `text-right` on
                 // the wrapper would not otherwise reach it.
                 text_align: "inherit",
+                style: if props.fit { "{fit_width}" },
                 class: if calc { "pointer-coarse:text-transparent pointer-coarse:caret-transparent" },
                 onmounted: move |e| {
                     let node = e.data();
@@ -144,7 +151,7 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
                 span {
                     class: "absolute inset-0 p-[inherit] hidden pointer-coarse:flex items-center pointer-events-none",
                     aria_hidden: "true",
-                    span { class: "block w-full", "{props.value}" }
+                    span { class: "block w-full", "{result}" }
                 }
             }
         }

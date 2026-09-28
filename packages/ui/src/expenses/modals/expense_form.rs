@@ -284,11 +284,12 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                     // the common case needs — the name, still being decided, follows it. No `input`
                     // box: the rule below is the field's whole edge, so the currency `select` stops
                     // reading as a second field sharing a frame.
-                    label { class: "flex items-baseline gap-2 px-5 pt-1 pb-3 border-b border-base-200 focus-within:border-primary transition-colors",
+                    label { class: "flex items-baseline gap-2 px-5 pt-3 pb-4 border-b border-base-200 focus-within:border-primary transition-colors",
                             span { class: "sr-only", {tid!("field-amount")} }
                             AmountInput {
                                 id: "expense-amount",
-                                class: "grow text-3xl font-bold tracking-tight font-display tabular-nums caret-primary",
+                                class: "min-w-0 text-4xl leading-tight font-bold tracking-tight font-display tabular-nums caret-primary",
+                                fit: true,
                                 aria_required: "true",
                                 enterkeyhint: "next",
                                 focus_on_mount: true,
