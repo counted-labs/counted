@@ -1,0 +1,39 @@
+Counted, c'est le partage de dépenses entre amis : 100 % européen, respectueux de votre vie privée, engagé pour l'environnement. Vacances, coloc, week-end, cadeau commun : notez vos dépenses, Counted vous dit qui doit combien à qui, en un minimum de virements.
+
+🔗 Pas besoin de compte
+Créez un projet, envoyez le lien. C'est tout. Vos amis rejoignent et participent sans s'inscrire. Un compte ? Jamais obligatoire. Il sert à retrouver vos projets sur un autre appareil, inviter vos amis depuis l'app et partager vos coordonnées de paiement.
+
+🔒 Chiffré sur votre téléphone
+Noms, montants, projets, historique : tout est chiffré sur votre téléphone. Vous seul avez la clé. Personne ne peut lire vos comptes, pas même nous. Votre mot de passe, lui, ne quitte jamais votre téléphone.
+
+📷 Scan de tickets, sur votre téléphone
+Prenez le ticket en photo : montant, date et catégorie se remplissent automatiquement. Tout se passe sur votre téléphone. La photo n'est pas conservée.
+
+🇪🇺 100 % européen
+Serveurs en Allemagne, emails envoyés depuis la France. Vos projets ne quittent jamais l'Union européenne.
+
+💸 Gratuit, vraiment
+Pas de pub ni de traqueur, pas d'abonnement, pas de version payante, pas de plafond de dépenses ni de participants. Nous ne collectons rien, nous ne vendons pas vos données. Ce n'est pas notre modèle.
+
+✨ Tout pour les comptes entre amis
+• Dépenses, virements et gains, avec plusieurs payeurs et plusieurs bénéficiaires
+• Répartition à parts égales, par parts ou au montant exact, vérifiée au centime
+• Minimiser les virements pour équilibrer les comptes
+• Plus de 150 devises, converties au taux mensuel de la Commission européenne
+• Statistiques par catégorie, par personne et mois par mois
+• Historique de ce qui a été ajouté, modifié ou supprimé
+• Hors connexion : consultez et ajoutez des dépenses sans réseau
+• Export CSV et JSON en un clic
+• Coordonnées de paiement (IBAN, PayPal, Wero, Lydia, Revolut…) chiffrées comme le reste
+• Importez vos projets depuis Tricount d'un simple copier-coller
+• Web, Android et iOS : le même projet partout, avec le même lien
+• 32 langues, dont les 24 langues officielles de l'Union européenne
+
+🔔 Notifications sans Google
+Counted envoie ses notifications par UnifiedPush, sans service Google. Pour les recevoir, installez un distributeur comme ntfy ou Sunup. Sans distributeur, l'app fonctionne normalement, simplement sans notifications.
+
+🌱 Une mission
+Counted est conçu pour être efficace et simple : pas de pub ni de traqueur. Les calculs sont effectués sur votre appareil. Nous nous engageons à reverser une part de nos revenus à des associations environnementales.
+
+Comment ça marche exactement ? counted.fr/privacy
+Vérifiez vous-même le code que vous exécutez : counted.fr/verify

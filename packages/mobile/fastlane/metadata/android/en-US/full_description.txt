@@ -1,0 +1,39 @@
+Counted is the expense-splitting app for friends: 100% European, private by design, with an environmental mission. Holiday, flat share, weekend, group gift: log your expenses and Counted tells you who owes how much to whom, in the fewest transfers.
+
+🔗 No account needed
+Create a project, send the link. That is it. Your friends join and take part without signing up. An account? Never required. It is for finding your projects on another device, inviting friends from the app and sharing your payment details.
+
+🔒 Encrypted on your phone
+Names, amounts, projects, history: everything is encrypted on your phone. Only you hold the key. Nobody can read your books, not even us. Your password, too, never leaves your phone.
+
+📷 Receipt scanning, on your phone
+Take a photo of the receipt: amount, date and category fill in on their own. Everything happens on your phone. The photo is not kept.
+
+🇪🇺 100% European
+Servers in Germany, emails sent from France. Your projects never leave the European Union.
+
+💸 Free, really
+No ads, no trackers, no subscription, no paid version, no cap on expenses or participants. We collect nothing, we do not sell your data. That is not our model.
+
+✨ Everything for shared expenses
+• Expenses, transfers and gains, with several payers and several beneficiaries
+• Split equally, by shares or by exact amount, checked to the cent
+• The fewest transfers to settle the group
+• Over 150 currencies, converted at the European Commission's monthly rate
+• Statistics by category, by person and month by month
+• History of who added, edited or deleted what
+• Offline: browse and enter with no network
+• CSV and JSON export in one tap
+• Payment details (IBAN, PayPal, Wero, Lydia, Revolut…) encrypted like everything else
+• Tricount import: paste the share link, everything comes across
+• Web, Android and iOS: the same project everywhere, with the same link
+• 32 languages, including all 24 official EU languages
+
+🔔 Notifications without Google
+Counted delivers notifications through UnifiedPush, with no Google service. To get them, install a distributor such as ntfy or Sunup. Without one, the app works as usual, just without notifications.
+
+🌱 A mission
+Counted is built to be efficient and simple: no ads, no trackers. The maths runs on your device. We commit to giving a share of our revenue to environmental causes.
+
+How does it actually work? counted.fr/en/privacy
+Verify the code you run yourself: counted.fr/en/verify

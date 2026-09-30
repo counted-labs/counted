@@ -1,5 +1,5 @@
 // Replaces the MainActivity.kt that `dx bundle` generates. Copied over the generated file by the
-// Makefile / CI, in the same step that copies android-res/ — see docs/android.md.
+// patch_deep_links in packages/mobile/android.mk, in the same step that copies android-res/ — see docs/android.md.
 //
 // Why: dx's template is `class MainActivity : WryActivity()` with no body, and WryActivity never
 // calls setIntent(). With launchMode=singleTask (patched into the manifest by the same step), a

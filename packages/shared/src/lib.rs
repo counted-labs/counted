@@ -10,7 +10,7 @@ use sqlx::FromRow;
 use std::collections::HashMap;
 use std::fmt;
 
-use chrono::NaiveDateTime;
+use chrono::{NaiveDate, NaiveDateTime};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -347,6 +347,13 @@ pub struct ProjectSync {
     pub users: Option<Vec<User>>,
     pub expenses: Option<Vec<Expense>>,
     pub payments: Option<Vec<Payment>>,
+    /// Always sent, like `users`: a rule's cursor and the expenses it produced come from the same
+    /// snapshot.
+    #[serde(default)]
+    pub recurring: Option<Vec<RecurringExpense>>,
+    /// The server's UTC date: the one clock every member's materialization is measured against.
+    #[serde(default)]
+    pub server_date: Option<NaiveDate>,
 }
 
 /// Sent by a client with nothing cached — no real version can be negative, so it never matches.
@@ -1060,6 +1067,69 @@ pub struct DeleteExpenseRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub history: Option<HistoryContext>,
 }
+
+/// A recurring expense rule. `payload` holds the rule, the expense template, the cursor and the
+/// seed of the occurrences' `client_op_id`s, all under the project key — the server knows neither
+/// when it is due nor what it is for. See docs/plans/recurring-expenses.md.
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RecurringExpense {
+    pub id: Uuid,
+    pub project_id: Uuid,
+    #[serde(default)]
+    pub author_id: Option<i32>,
+    pub payload: EncryptedPair,
+    pub version: i64,
+    pub created_at: NaiveDateTime,
+}
+
+/// `participant_ids` are the template's payers and debtors. A participant listed here cannot be
+/// removed from the project while the rule exists, and every occurrence is checked against them.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatableRecurringExpense {
+    pub project_id: Uuid,
+    pub author_id: i32,
+    pub participant_ids: Vec<i32>,
+    pub payload: EncryptedPair,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct EditableRecurringExpense {
+    pub id: Uuid,
+    pub project_id: Uuid,
+    pub participant_ids: Vec<i32>,
+    pub payload: EncryptedPair,
+    pub expected_version: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteRecurringExpenseRequest {
+    pub id: Uuid,
+    pub project_id: Uuid,
+}
+
+/// Claims the occurrences due up to `due_through` and writes them, in one transaction: the rule's
+/// cursor (inside `payload`) advances if and only if every occurrence is written. `due_through` is
+/// the only date the server sees, and only to refuse one past tomorrow.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct MaterializeRecurringRequest {
+    pub id: Uuid,
+    pub project_id: Uuid,
+    pub expected_version: i64,
+    pub payload: EncryptedPair,
+    pub due_through: NaiveDate,
+    pub occurrences: Vec<CreatableExpense>,
+}
+
+/// Bounds one materialization's transaction. A longer catch-up is several calls, each advancing
+/// the cursor by at most this many occurrences.
+pub const MAX_OCCURRENCES_PER_CALL: usize = 50;
+
+pub const MAX_RECURRING_PER_PROJECT: i64 = 50;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -269,6 +269,8 @@ mod tests {
                 users: Some(vec![make_user(&key, 1, "Alice")]),
                 expenses,
                 payments,
+                recurring: None,
+                server_date: None,
             },
         )))
     }

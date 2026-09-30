@@ -1,4 +1,4 @@
-// Copied into the generated project next to MainActivity.kt by patch_push in the Makefile, which
+// Copied into the generated project next to MainActivity.kt by patch_push in packages/mobile/android.mk, which
 // also registers the <service> in the manifest and adds the UnifiedPush connector to
 // build.gradle.kts.
 //

@@ -32,6 +32,12 @@ pub const SELF_FRIEND_REQUEST: &str = "You cannot add yourself as a friend";
 /// The invitee is not an accepted friend of the caller, or has no keypair to box a key to.
 pub const NOT_A_FRIEND: &str = "Invitations can only be sent to friends";
 pub const FRIEND_HAS_NO_KEY: &str = "This friend has not updated the app yet";
+/// A materialization with no occurrence, more than `MAX_OCCURRENCES_PER_CALL`, one without a
+/// `client_op_id`, or one filed under another project.
+pub const INVALID_OCCURRENCES: &str = "Invalid recurring occurrences";
+/// `due_through` is later than tomorrow on the server's clock: the client's clock is wrong.
+pub const OCCURRENCE_IN_FUTURE: &str = "Recurring occurrence is in the future";
+pub const PARTICIPANT_NOT_IN_RECURRING: &str = "Participant is not part of this recurring expense";
 
 // -------- 401 --------
 pub const INVALID_CREDENTIALS: &str = "Invalid email or password";
@@ -52,6 +58,7 @@ pub const USER_NOT_FOUND: &str = "User not found";
 pub const FRIEND_REQUEST_NOT_FOUND: &str = "Friend request not found";
 pub const INVITATION_NOT_FOUND: &str = "Invitation not found";
 pub const TRICOUNT_NOT_FOUND: &str = "Tricount introuvable ou erreur API";
+pub const RECURRING_NOT_FOUND: &str = "Recurring expense not found";
 
 // -------- 409 --------
 pub const TOO_MANY_MEMBERS: &str = "Too many members for this project";
@@ -64,6 +71,12 @@ pub const IDENTITY_TAKEN: &str = "Identity already claimed by another account";
 /// `PUT /auth/payment-methods` with an `expected_iv` that no longer matches the stored blob:
 /// another device saved in between, and the caller must reload before writing.
 pub const PAYMENT_METHODS_STALE: &str = "Payment methods were changed elsewhere";
+/// The caller's `expected_version` is behind: another member edited or materialized the rule
+/// first. The caller resyncs; for a materialization, the winner's expenses come with it.
+pub const RECURRING_STALE: &str = "Recurring expense was changed elsewhere";
+pub const TOO_MANY_RECURRING: &str = "Too many recurring expenses for this project";
+pub const USER_IN_RECURRING: &str =
+    "User is part of a recurring expense in this project and cannot be removed";
 
 // -------- 429 --------
 pub const RESEND_COOLDOWN: &str = "Veuillez attendre 60 secondes avant de renvoyer l'email.";

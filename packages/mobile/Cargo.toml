@@ -4,6 +4,11 @@ version = "3.2.2"
 edition = "2021"
 publish = false
 
+# F-Droid's versionCode: major*1000000 + minor*1000 + patch of `version` above, bumped with it.
+# Checked by `android-fdroid-apk` in android.mk. The Play build asks the Play API instead.
+[package.metadata.android]
+version_code = 3002002
+
 [dependencies]
 dioxus = { workspace = true, features = ["router", "fullstack"] }
 ui = { workspace = true }

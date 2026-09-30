@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-	FileProvider paths. Referenced by the <provider> the Makefile's patch_file_provider adds.
+	FileProvider paths. Referenced by the <provider> patch_file_provider in packages/mobile/android.mk adds.
 
 	captures: the receipt-scan camera capture. The root of `external-files-path` is
 	Context.getExternalFilesDir(null); wry's RustWebChromeClient.createImageFile writes into its

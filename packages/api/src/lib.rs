@@ -12,6 +12,7 @@ pub mod history;
 pub mod payments;
 pub mod projects;
 pub mod push;
+pub mod recurring;
 pub mod tricount;
 pub mod users;
 
