@@ -55,6 +55,7 @@ error-unauthenticated = Idħol biex tagħmel dan.
 error-email-not-verified = L-indirizz tal-email tiegħek għadu mhux ivverifikat.
 error-project-not-found = Dan il-proġett m'għadux jeżisti.
 error-expense-not-found = Din l-ispiża m'għadhiex teżisti.
+error-storage-full = Il-ħażna hija mimlija: iċ-ċavetta ta' dan il-proġett ma setgħetx tiġi salvata fuq dan it-tagħmir. Żomm il-link tal-qsim.
 error-user-not-found = Dan il-parteċipant m'għadux jeżisti.
 error-tricount-not-found = Tricount ma nstabx, jew l-API tiegħu ta żball.
 error-too-many-members = Dan il-proġett laħaq il-limitu ta' membri.
@@ -252,13 +253,8 @@ add-project-name-placeholder = Il-vjaġġ tiegħi, Flatmates 2024…
 add-project-participants = Parteċipanti
 add-project-participant-name = Isem il-parteċipant
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Neħħi l-parteċipant
-add-project-me-badge = Jien
-add-project-thats-me = Dak jien!
 add-project-offline = Ma tistax toħloq proġett offline. Erġa' ikkonnettja u erġa' pprova.
 add-project-name-required = Il-proġett jeħtieġ isem.
-add-project-need-two-participants = Żid tal-anqas 2 parteċipanti.
-add-project-pick-yourself = Għidilna liema parteċipant int.
 
 join-link-label = Link tal-qsim
 join-link-hint = Il-link iġġorr iċ-ċavetta tad-dekriptaġġ - ikkopjaha kollha.
@@ -268,6 +264,7 @@ join-wrong-project = Dik il-link hija għal proġett ieħor.
 import-tricount-link-label = Link jew ċavetta ta' Tricount
 import-tricount-key-required = Daħħal link jew ċavetta ta' Tricount.
 import-tricount-encryption-failed = Il-kriptaġġ falla.
+import-tricount-unimportable = Xejn ma ġie importat: dan it-Tricount għandu membri b'kont Tricount jew ammonti li ma jaqblux (entrati affettwati: { $count }).
 
 ### Expenses
 
@@ -365,11 +362,8 @@ edit-project-title = Editja l-proġett
 edit-project-new-badge = ġdid
 edit-project-deferred-new-members = iż-żieda ta' membri ġodda
 edit-project-deferred-removals = it-tneħħija ta' membri
-edit-project-deferred-me = l-għażla “Dak jien”
 edit-project-offline-deferred = Offline: { $items } se jiġi applikat meta terġa' tikkonnettja.
 
-export-saved = Fajl maħżun:
-    { $path }
 export-failed = L-esportazzjoni falliet: { $reason }
 
 history-expense-added = Spiża miżjuda: { $name }
@@ -516,13 +510,24 @@ debtors-title-beneficiaries = Benefiċjarji
 
 welcome-title = Il-kontijiet tiegħek mhumiex affari ta' ħadd ieħor.
 welcome-subtitle = Aqsam l-ispejjeż mal-ħbieb.
-welcome-e2ee-title = Kollox kriptat
-welcome-e2ee-body = Ismijiet, ammonti, proġetti: kollox jiġi kriptat fuq l-apparat tiegħek. Int biss għandek iċ-ċavetta. Ħadd ma jista' jaqra l-kontijiet tiegħek. Lanqas aħna.
-welcome-e2ee-note = Ma jinqarax, anke minna (l-ebda aċċess mis-server)
+welcome-note = B'xejn. L-ebda kont meħtieġ. L-ebda reklam.
+welcome-link-title = Link wieħed, u kulħadd jieħu sehem.
+welcome-link-body = Ħadd m'għandu għalfejn joħloq kont.
+welcome-link-account = Kont? Qatt obbligatorju. Iservi biex issib il-proġetti tiegħek fuq apparat ieħor, tistieden ħbieb mill-app u taqsam id-dettalji tal-ħlas tiegħek.
+welcome-demo-project = Weekend f'Lyon
+welcome-private-title = Ħadd ma jista' jaqra l-kontijiet tiegħek. Lanqas aħna.
+welcome-private-body = Ismijiet, ammonti, proġetti: kollox jiġi kriptat fuq l-apparat tiegħek. Int biss għandek iċ-ċavetta.
+welcome-private-names = Ismijiet
+welcome-private-amounts = Ammonti
+welcome-private-projects = Proġetti
+welcome-scan-title = Ħu ritratt tal-irċevuta.
+welcome-scan-body = L-ammont, id-data u l-kategorija jimtlew waħedhom. Kollox isir fuq it-telefon tiegħek. Ir-ritratt ma jinżammx.
 welcome-eu-title = 100% Ewropew
-welcome-eu-body = Servers fil-Ġermanja, emails mibgħuta minn Franza. Id-data tiegħek qatt ma toħroġ mill-Unjoni Ewropea.
-welcome-noads-title = L-ebda reklam. L-ebda tracker.
-welcome-noads-body = Ma niġbru xejn u ma nbigħux id-data tiegħek. Dak mhux il-mudell tagħna.
+welcome-no-ads = L-ebda reklam
+welcome-no-trackers = L-ebda tracker
+welcome-step = Pass { $current } minn { $total }
+welcome-next = Li jmiss
+welcome-skip = Aqbeż
 welcome-start = Ibda
 welcome-how-it-works = Kif jaħdem, eżattament?
 
@@ -628,3 +633,49 @@ invitation-unreadable = Din l-istedina ma tistax tinfetaħ fuq dan l-apparat
 invitation-from = Minn { $email }
 invitation-accept = Ingħaqad
 invitation-decline = Irrifjuta
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Ismek f'dan il-proġett
+participants-you-badge = Int
+participants-you-from-account = Meħud mill-isem tal-kont tiegħek. Ibdlu hawn għal dan il-proġett biss.
+participants-you-required = Meħtieġ. Hekk se jarawk il-oħrajn.
+participants-others = Parteċipanti oħra
+participants-empty = Għad hawn ħadd. Agħżel ħabib hawn taħt jew ikteb kwalunkwe isem.
+participants-empty-signed-out = Għad hawn ħadd. Ikteb isem biex iżżid lil xi ħadd.
+participants-duplicate = “{ $name }” diġà fil-lista.
+participants-input-label = Żid ħabib jew ikteb isem
+participants-input-placeholder = Ħabib jew kwalunkwe isem
+participants-suggest-friend = Ħabib · jingħaqad bħala “{ $name }”, jirċievi stedina
+participants-suggest-not-ready = Ħabib · għadu mhux lest
+participants-suggest-guest = Żid “{ $text }” mingħajr kont
+participants-suggest-guest-sub = L-ebda kont, isem biss
+participants-friends = Il-ħbieb tiegħek
+participants-all-friends = Il-ħbieb kollha
+participants-login-hint = Idħol biex iżżid nies dritt mil-lista tal-ħbieb tiegħek.
+participants-invite-badge = Stieden
+participants-guest-badge = Mingħajr kont
+participants-guest-sub = L-ebda kont, isem biss
+participants-rename = Ibdel l-isem ta' { $name }
+participants-remove = Neħħi lil { $name }
+participants-rename-label = Isem ġdid
+participants-rename-save = Issejvja l-isem
+participants-rename-hint = L-isem li jara kulħadd f'dan il-proġett. L-istedina xorta tmur għand { $email }.
+participants-invited-badge = Mistieden
+participants-invited-sub = { $email } · għadha mhix aċċettata
+participants-invited-pending = L-istedina għadha mhix aċċettata
+participants-unlinked = Mhux marbut ma' kont
+add-project-create-invite = Oħloq u stieden { $count }
+edit-project-save-invite = Issejvja u stieden { $count }
+edit-project-you-are = F'dan it-tagħmir int { $name }
+edit-project-no-identity = Għadek ma għażiltx min int
+edit-project-switch = Ibdel
+edit-project-choose = Agħżel
+invite-failed = Dawn l-istediniet ma setgħux jintbagħtu: { $emails }
+invite-again = Erġa' stieden
+friend-picker-title = Żid ħbieb
+user-selection-invited-hint = { $email } stiednek f'“{ $project }”.
+user-selection-suggested = Issuġġerit
+user-selection-suggested-sub = { $email } żiedek b'dan l-isem
+user-selection-confirm-as = Jien { $name }
+user-selection-missing = Ismek mhux hawn? Itlob lil parteċipant biex iżżidek fis-settings tal-proġett.

@@ -25,7 +25,11 @@ use crate::common::{
     format_date, initials, key_of, month_abbrev, pending, project_key, read_from_ls, user_color_class,
     AppHeader, DropdownButton, DropdownItem, PullToRefresh,
 };
-use crate::crypto::{decrypt_expense, decrypt_json, decrypt_payment, decrypt_user, DecryptedExpense, DecryptedPayment, DecryptedUser};
+use crate::crypto::decrypt_json;
+use crate::decrypted::{
+    decrypt_expense, decrypt_payment, decrypt_user, DecryptedExpense, DecryptedPayment,
+    DecryptedUser,
+};
 use crate::expenses::helpers::export::csv_field;
 use crate::route::Route;
 use crate::tid;

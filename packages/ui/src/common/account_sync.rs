@@ -9,7 +9,7 @@
 //! The push half is what [`shared::UpsertAccountProject`] batching was always for; see
 //! `docs/project-membership.md` §4, which named this gap and the unused endpoint together.
 //!
-//! Keys ride along. A project key is wrapped under the account key (`crypto::wrap_project_key`) so
+//! Keys ride along. A project key is wrapped under the account key (`crypto::wrap_key`) so
 //! the server can store it without reading it, and unwrapped on any other device the account signs
 //! in to — the only thing that stops a second device from showing a list of projects it cannot
 //! decrypt. See `docs/e2ee.md`, "Key escrow".
@@ -26,8 +26,10 @@ use shared::{Account, AccountProject, UpsertAccountProject};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use super::local_storage::{key_of, mark_synced, LocalStorageState};
-use crate::crypto::{claim_label, claim_token, unwrap_project_key, wrap_project_key};
+use super::local_storage::{
+    key_of, mark_synced, upsert_project, upsert_project_key, LocalStorageState,
+};
+use crate::crypto::{claim_label, claim_token, key_to_fragment, unwrap_key, wrap_key};
 
 /// Projects this device holds that `account_id` was synced with and has since left elsewhere: the
 /// server no longer lists them for this account. The caller forgets them locally **before**
@@ -56,8 +58,8 @@ pub fn left_elsewhere(
 /// runs on every projects-page load with an account, and a batch of unchanged rows is a write the
 /// database does not need.
 ///
-/// `account_key` is `None` for a session restored from the cookie: the password is gone, so the
-/// account key cannot be re-derived and no key can be wrapped. Memberships still go up.
+/// `account_key` is `None` when this device holds a session but not the key (local store cleared,
+/// or a session from before the key was persisted): no key can be wrapped. Memberships still go up.
 ///
 /// `account` is what the claim label is built from — it needs the account key too, to read
 /// `display_name` before re-encrypting it under the project key. Absent either, the claim goes up
@@ -76,16 +78,16 @@ pub fn to_push(
         .iter()
         .filter_map(|local| {
             let remote = known.get(&local.project_id);
+            let project_key = key_of(local);
 
             // Only wrap what the server lacks. Re-wrapping an already-escrowed key on every load
             // would burn a fresh nonce and a write for nothing, and `COALESCE` would ignore it.
             let key = match (account_key, remote.map(|r| r.key.is_some())) {
                 (Some(_), Some(true)) => None,
-                (Some(ak), _) => key_of(local).and_then(|pk| wrap_project_key(ak, &pk)),
+                (Some(ak), _) => project_key.and_then(|pk| wrap_key(ak, &pk)),
                 (None, _) => None,
             };
 
-            let project_key = key_of(local);
             // An identity without the key behind it cannot be proven and would only be refused;
             // it stays local until the key arrives. Reachable only from pre-escrow localStorage.
             let user_id = local.user_id.filter(|_| project_key.is_some());
@@ -152,9 +154,6 @@ pub fn apply_pull(
     account_key: Option<&[u8; 32]>,
     account_id: Uuid,
 ) {
-    use super::local_storage::{upsert_project, upsert_project_key};
-    use crate::crypto::key_to_fragment;
-
     for remote in server {
         upsert_project(state, remote.project_id, remote.user_id);
         mark_synced(state, &[remote.project_id], account_id);
@@ -169,7 +168,7 @@ pub fn apply_pull(
 
         let Some(ak) = account_key else { continue };
         let Some(wrapped) = remote.key.as_ref() else { continue };
-        if let Some(pk) = unwrap_project_key(ak, wrapped) {
+        if let Some(pk) = unwrap_key(ak, wrapped) {
             upsert_project_key(state, remote.project_id, key_to_fragment(&pk));
         }
     }
@@ -346,7 +345,7 @@ mod tests {
     #[test]
     fn a_wrong_account_key_leaves_the_project_locked() {
         let id = Uuid::new_v4();
-        let wrapped = wrap_project_key(&generate_key(), &generate_key()).unwrap();
+        let wrapped = wrap_key(&generate_key(), &generate_key()).unwrap();
         let mut s = state(vec![]);
 
         apply_pull(
@@ -370,7 +369,7 @@ mod tests {
 
         apply_pull(
             &mut s,
-            &[remote(id, None, Some(wrap_project_key(&account_key, &other).unwrap()))],
+            &[remote(id, None, Some(wrap_key(&account_key, &other).unwrap()))],
             Some(&account_key),
             Uuid::new_v4(),
         );

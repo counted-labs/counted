@@ -12,7 +12,7 @@ use shared::{
 use std::collections::{HashMap, HashSet};
 
 use crate::categories::{find_category, get_expense_category, parent_emoji};
-use crate::crypto::{
+use crate::decrypted::{
     decrypt_expense, decrypt_payment, decrypt_user, project_currency, DecryptedExpense,
     DecryptedPayment,
 };
@@ -183,8 +183,14 @@ pub fn build(key: Option<[u8; 32]>, live: Option<&LiveData>) -> ProjectData {
 
     let decrypted: Vec<DecryptedExpense> =
         expenses.iter().filter_map(|e| decrypt_expense(&k, e).ok()).collect();
-    let payments: Vec<DecryptedPayment> =
-        payments.iter().filter_map(|p| decrypt_payment(&k, p).ok()).collect();
+    // Only the payments of expenses the page lists: the rest used to move balances by rows nobody
+    // could see.
+    let listed: HashSet<i32> = decrypted.iter().map(|d| d.id).collect();
+    let payments: Vec<DecryptedPayment> = payments
+        .iter()
+        .filter(|p| listed.contains(&p.expense_id))
+        .filter_map(|p| decrypt_payment(&k, p).ok())
+        .collect();
     let user_names: HashMap<i32, String> =
         users.iter().filter_map(|u| decrypt_user(&k, u).ok().map(|d| (d.id, d.name))).collect();
 
@@ -335,6 +341,27 @@ mod tests {
         assert!(data.user_names.is_empty());
         assert_eq!(data.global_total, 0.0);
         assert!(data.summary.summary.is_empty());
+    }
+
+    /// Balances follow the rows the page shows. An expense that will not open is not listed, so
+    /// its payments moving the balances was money nobody could see or correct.
+    #[test]
+    fn an_unreadable_expense_moves_no_balance() {
+        let k = test_key();
+        let other = [0x11u8; 32];
+        let l = live(
+            vec![make_user(&k, 7, "Alice"), make_user(&k, 8, "Bob")],
+            vec![expense(&k, 1, "Pizza", "2025-01-01"), expense(&other, 2, "Hidden", "2025-01-02")],
+            vec![
+                make_payment(&k, 1, 1, 7, false, 10.0),
+                make_payment(&k, 2, 1, 8, true, 10.0),
+                make_payment(&k, 3, 2, 7, false, 50.0),
+                make_payment(&k, 4, 2, 8, true, 50.0),
+            ],
+        );
+        let data = built(&l);
+        assert_eq!(data.summary.summary.get(&7), Some(&10.0));
+        assert_eq!(data.summary.summary.get(&8), Some(&-10.0));
     }
 
     /// One unreadable expense must not take the other rows, the totals or the balances with it.
@@ -540,14 +567,14 @@ mod tests {
         let k = test_key();
         let users = vec![make_user(&k, 7, "Alice"), make_user(&k, 8, "Bob")];
         let one = vec![make_payment(&k, 1, 1, 7, false, 10.0), make_payment(&k, 2, 1, 8, true, 10.0)];
-        let data = build(Some(k), Some(&live(users.clone(), vec![], one)));
+        let data = build(Some(k), Some(&live(users.clone(), vec![expense(&k, 1, "Pizza", "2025-01-01")], one)));
         assert_eq!(data.payor_label(1), "Alice");
 
         let two = vec![
             make_payment(&k, 1, 1, 7, false, 5.0),
             make_payment(&k, 2, 1, 8, false, 5.0),
         ];
-        let data = build(Some(k), Some(&live(users, vec![], two)));
+        let data = build(Some(k), Some(&live(users, vec![expense(&k, 1, "Pizza", "2025-01-01")], two)));
         assert_eq!(data.payor_label(1), "2 personnes");
         assert_eq!(data.payor_label(99), "inconnu", "an expense nobody paid");
     }
@@ -605,7 +632,8 @@ mod tests {
         let mut bad = make_payment(&k, 2, 1, 99, true, 50.0);
         bad.payload.ct = "not_valid_base64!!!".to_string();
         let payments = vec![make_payment(&k, 1, 1, 1, false, 20.0), bad];
-        let data = build(Some(k), Some(&live(vec![], vec![], payments)));
+        let expenses = vec![expense(&k, 1, "Pizza", "2025-01-01")];
+        let data = build(Some(k), Some(&live(vec![], expenses, payments)));
         assert_eq!(data.payments.len(), 1, "the corrupt row must be dropped");
         assert!(data.summary.summary.contains_key(&1));
         assert!(!data.summary.summary.contains_key(&99));

@@ -14,8 +14,38 @@ const FONT_INTER_500: Asset = asset!("/assets/fonts/inter-500.woff2");
 const FONT_INTER_600: Asset = asset!("/assets/fonts/inter-600.woff2");
 const FONT_JAKARTA_600: Asset = asset!("/assets/fonts/jakarta-600.woff2");
 const FONT_JAKARTA_700: Asset = asset!("/assets/fonts/jakarta-700.woff2");
+const FONT_INTER_LATIN_EXT: Asset = asset!("/assets/fonts/inter-latin-ext.woff2");
+const FONT_INTER_GREEK: Asset = asset!("/assets/fonts/inter-greek.woff2");
+const FONT_INTER_CYRILLIC: Asset = asset!("/assets/fonts/inter-cyrillic.woff2");
+const FONT_JAKARTA_LATIN_EXT: Asset = asset!("/assets/fonts/jakarta-latin-ext.woff2");
+
+const LATIN_EXT: &str = "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF";
+const GREEK: &str = "U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF";
+const CYRILLIC: &str = "U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116";
 
 fn font_face_css() -> String {
+    let mut css = latin_font_face_css();
+    // The Latin files above carry no unicode-range, so these must come after them: faces with
+    // the same descriptors are tried last-declared first (CSS Fonts 4 §4.5), which sends only
+    // these ranges here and leaves every other character on the unchanged Latin files. Each
+    // subset is one variable file, declared once per weight the app uses.
+    let subsets = [
+        ("Inter", &[400, 500, 600][..], FONT_INTER_LATIN_EXT, LATIN_EXT),
+        ("Inter", &[400, 500, 600][..], FONT_INTER_GREEK, GREEK),
+        ("Inter", &[400, 500, 600][..], FONT_INTER_CYRILLIC, CYRILLIC),
+        ("Plus Jakarta Sans", &[600, 700][..], FONT_JAKARTA_LATIN_EXT, LATIN_EXT),
+    ];
+    for (family, weights, file, range) in subsets {
+        for weight in weights {
+            css.push_str(&format!(
+                "\n@font-face{{font-family:\"{family}\";font-style:normal;font-weight:{weight};font-display:swap;src:url(\"{file}\") format(\"woff2\");unicode-range:{range}}}"
+            ));
+        }
+    }
+    css
+}
+
+fn latin_font_face_css() -> String {
     const TEMPLATE: &str = r#"@font-face{font-family:"Inter";font-style:normal;font-weight:400;font-display:swap;src:url("$I4") format("woff2")}
 @font-face{font-family:"Inter";font-style:normal;font-weight:500;font-display:swap;src:url("$I5") format("woff2")}
 @font-face{font-family:"Inter";font-style:normal;font-weight:600;font-display:swap;src:url("$I6") format("woff2")}

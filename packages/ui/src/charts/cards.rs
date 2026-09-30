@@ -11,7 +11,7 @@ use super::primitives::{
 use super::svg::donut_path;
 use crate::categories::category_label;
 use crate::common::{month_abbrev, Avatar};
-use crate::crypto::DecryptedExpense;
+use crate::decrypted::DecryptedExpense;
 use crate::route::Route;
 use crate::tid;
 

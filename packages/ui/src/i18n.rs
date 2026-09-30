@@ -794,6 +794,7 @@ mod tests {
             "Scaleway TEM ",
             "Bunq / Tricount ",
             "Grafana Labs ",
+            "Apple ",
             "Jonathan Bosi.",
             "CNIL",
             "HttpOnly",
@@ -801,6 +802,7 @@ mod tests {
             "Secure",
             "counted_lang",
             "zero-knowledge",
+            "counted.fr/…",
         ];
 
         /// Copy that never went through `tid!` renders in whatever language it was typed in,

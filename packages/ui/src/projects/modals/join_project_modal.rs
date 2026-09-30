@@ -4,11 +4,8 @@ use dioxus::prelude::*;
 use crate::tid;
 use shared::{Account as AccountData, UpsertAccountProject};
 
-use crate::common::{
-    parse_share_link, update_ls, upsert_project, upsert_project_key, LocalStorageState,
-    NativeClipboardReader,
-};
-use crate::crypto::{claim_token, key_to_fragment, wrap_project_key};
+use crate::common::{adopt_project_key, parse_share_link, LocalStorageState, NativeClipboardReader};
+use crate::crypto::{claim_token, wrap_key};
 use crate::icons::{CloseIcon, ICON_HEADER};
 use crate::route::Route;
 
@@ -16,8 +13,9 @@ use crate::route::Route;
 /// and the only path available when the link arrives somewhere the OS cannot hand to the app
 /// (a desktop browser, a chat app that strips the handoff, an iOS build without universal links).
 ///
-/// There is no server call: the encryption key lives only in the link's fragment, so joining is
-/// entirely a local-storage write plus a navigation. The account link is best-effort on top.
+/// The encryption key lives only in the link's fragment, so joining is a local-storage write plus a
+/// navigation — with one fetch of the project when a different key is already held, to prove the
+/// new one before it replaces it. The account link is best-effort on top.
 #[derive(Props, Clone, PartialEq)]
 pub struct JoinProjectModalProps {
     pub on_close: EventHandler<()>,
@@ -71,18 +69,17 @@ pub fn JoinProjectModal(props: JoinProjectModalProps) -> Element {
             return;
         }
 
-        // The key must be in local storage *before* navigating: on mobile there is no URL
-        // fragment to read it back from (MemoryHistory), so ExpensesPage resolves it from here.
-        update_ls(ls_ctx, |state| {
-            upsert_project(state, project_id, None);
-            upsert_project_key(state, project_id, key_to_fragment(&key));
-        });
-
         let is_auth = auth_ctx().is_some();
-        let escrowed = account_key_ctx().and_then(|ak| wrap_project_key(&ak, &key));
+        let escrowed = account_key_ctx().and_then(|ak| wrap_key(&ak, &key));
         let token = claim_token(&key).to_vec();
+        let on_close = props.on_close;
         spawn(async move {
-            if is_auth {
+            // The key must be in local storage *before* navigating: on mobile there is no URL
+            // fragment to read it back from (MemoryHistory), so ExpensesPage resolves it from here.
+            let adopted = adopt_project_key(ls_ctx, project_id, key).await;
+            on_close.call(());
+            nav.push(Route::ExpensesPage { project_id });
+            if is_auth && adopted {
                 // user_id is None — the user identifies themselves via UserSelectionModal, which is
                 // also what attaches the claim label. Nothing to claim here yet.
                 let _ = upsert_account_project(Json(UpsertAccountProject {
@@ -95,9 +92,6 @@ pub fn JoinProjectModal(props: JoinProjectModalProps) -> Element {
                 .await;
             }
         });
-
-        props.on_close.call(());
-        nav.push(Route::ExpensesPage { project_id });
     };
 
     let on_close = props.on_close;

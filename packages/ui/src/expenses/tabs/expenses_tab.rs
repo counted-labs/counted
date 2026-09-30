@@ -9,7 +9,7 @@ use crate::common::{
     format_date, haptic, ConfirmModal, Flash, Haptic, Mascot, MascotPose, ProjectKey,
     QueuedOp, ScanSource, SpeedDialAction, Toast,
 };
-use crate::crypto::{payments_are_inconsistent, DecryptedExpense, DecryptedPayment};
+use crate::decrypted::{payments_are_inconsistent, DecryptedExpense, DecryptedPayment};
 use crate::expenses::helpers::delete_expense_action::{
     can_delete_expense, can_edit_expense, delete_expense_request, run_delete_expense,
 };
@@ -333,6 +333,18 @@ mod tests {
         )
     }
 
+    // A save that resolves after a switch to another project must not land in that project's list.
+    #[test]
+    fn a_mutation_belongs_to_its_own_project_only() {
+        let mut expense = exp(3, "Bière");
+        let mine = uuid::Uuid::new_v4();
+        expense.project_id = mine;
+        let m = ExpenseMutation::Added(ExpenseWithPayments { expense, payments: vec![] });
+        assert!(m.belongs_to(mine));
+        assert!(!m.belongs_to(uuid::Uuid::new_v4()));
+        assert!(ExpenseMutation::Deleted(3).belongs_to(uuid::Uuid::new_v4()));
+    }
+
     #[test]
     fn an_add_appends_the_expense_and_its_payments() {
         let (mut e, mut p) = two_expenses();
@@ -584,6 +596,19 @@ pub enum ExpenseMutation {
     /// Queued while offline: no server row to patch with, so the parent refetches when it can.
     /// The op replays on reconnect and the version bump covers it.
     Queued,
+}
+
+impl ExpenseMutation {
+    /// Whether this may patch `project_id`'s rows. Only a returned row names its project; a bare id
+    /// matches nothing elsewhere, expense ids being unique across projects.
+    pub(crate) fn belongs_to(&self, project_id: uuid::Uuid) -> bool {
+        match self {
+            ExpenseMutation::Added(c) | ExpenseMutation::Edited(c) => {
+                c.expense.project_id == project_id
+            }
+            ExpenseMutation::Deleted(_) | ExpenseMutation::Queued => true,
+        }
+    }
 }
 
 /// False when the caller must refetch instead. A queued delete still applies: the row is gone for

@@ -1,13 +1,12 @@
-// Only the native path evals (the mobile alert); the web path is all web-sys.
+// Only the native branch reports a failure; the web path hands the blob to the browser.
 #[cfg(not(target_arch = "wasm32"))]
 use dioxus::prelude::*;
-// Only the native branch reports where the file landed; the web path hands the blob to the browser.
 #[cfg(not(target_arch = "wasm32"))]
 use crate::tid;
 use shared::{Expense, Payment, ProjectDto, User};
 use std::collections::HashMap;
 
-use crate::crypto::{decrypt_expense, decrypt_payment, decrypt_project, decrypt_user};
+use crate::decrypted::{decrypt_expense, decrypt_payment, decrypt_project, decrypt_user};
 
 pub fn download_json(
     key: &[u8; 32],
@@ -202,22 +201,16 @@ pub(crate) fn trigger_download(content: &str, filename: &str, mime_type: &str) {
     crate::common::web_dom::download(content, filename, mime_type);
 }
 
-// Mobile: write to filesystem, alert user with path
+// Mobile: the share sheet, on the file itself. It used to be written into the app's private
+// data directory and announced with `alert()` — a path no other app can open on Android, and no
+// dialog at all on iOS, whose webview implements no alert panel.
 #[cfg(not(target_arch = "wasm32"))]
-fn write_export_file(content: &str, filename: &str) -> Result<std::path::PathBuf, std::io::Error> {
-    let path = crate::common::persist::data_dir().join(filename);
-    std::fs::write(&path, content)?;
-    Ok(path)
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub(crate) fn trigger_download(content: &str, filename: &str, _mime_type: &str) {
-    let msg = match write_export_file(content, filename) {
-        Ok(path) => tid!("export-saved", path: path.to_string_lossy().to_string()),
-        Err(e) => tid!("export-failed", reason: e.to_string()),
-    };
-    let js_msg = serde_json::to_string(&msg).unwrap_or_default();
-    document::eval(&format!("alert({js_msg})"));
+pub(crate) fn trigger_download(content: &str, filename: &str, mime_type: &str) {
+    if let Err(reason) = crate::common::share_file(filename, content.as_bytes(), mime_type) {
+        if let Some(mut flash) = try_consume_context::<Signal<Option<crate::common::Flash>>>() {
+            flash.set(Some(crate::common::Flash::err(tid!("export-failed", reason: reason))));
+        }
+    }
 }
 
 #[cfg(test)]
@@ -426,67 +419,5 @@ mod tests {
         let v: serde_json::Value = serde_json::from_str(&json).unwrap();
         assert_eq!(v["users"].as_array().unwrap().len(), 2);
         assert_eq!(v["expenses"][0]["name"], "Dinner");
-    }
-
-    // --- write_export_file (native only) ---
-
-    #[cfg(not(target_arch = "wasm32"))]
-    mod native {
-        use super::*;
-
-        // with_data_dir serialises env-var mutations through the process-wide env_lock;
-        // local_storage's and offline_queue's tests read the same two vars, so a lock private
-        // to this module would not actually keep them apart.
-        use crate::common::env_lock;
-        use crate::common::test_fixtures::with_data_dir;
-
-        #[test]
-        fn write_export_file_uses_counted_data_dir() {
-            let (path, contents, dir) = with_data_dir("export_a", |dir| {
-                let path = write_export_file("hello", "test.json").unwrap();
-                let contents = std::fs::read_to_string(&path).unwrap();
-                (path, contents, dir.to_path_buf())
-            });
-
-            assert_eq!(path, dir.join("test.json"));
-            assert_eq!(contents, "hello");
-        }
-
-        #[test]
-        fn write_export_file_falls_back_to_home() {
-            let _g = env_lock();
-            let tmp = std::env::temp_dir().join("counted_export_test_b");
-            std::fs::create_dir_all(&tmp).unwrap();
-            std::env::remove_var("COUNTED_DATA_DIR");
-            std::env::set_var("HOME", tmp.to_str().unwrap());
-
-            let result = write_export_file("world", "test.csv");
-
-            std::env::remove_var("HOME");
-            let path = result.unwrap();
-            assert_eq!(path, tmp.join("test.csv"));
-            assert_eq!(std::fs::read_to_string(&path).unwrap(), "world");
-            std::fs::remove_dir_all(&tmp).ok();
-        }
-
-        #[test]
-        fn write_export_file_returns_correct_path() {
-            let (path, dir) = with_data_dir("export_c", |dir| {
-                (write_export_file("data", "out.json").unwrap(), dir.to_path_buf())
-            });
-            assert_eq!(path, dir.join("out.json"));
-        }
-
-        #[test]
-        fn write_export_file_err_on_nonexistent_dir() {
-            let _g = env_lock();
-            std::env::set_var("COUNTED_DATA_DIR", "/nonexistent_counted_dir_xyz/");
-            std::env::remove_var("HOME");
-
-            let result = write_export_file("data", "out.json");
-
-            std::env::remove_var("COUNTED_DATA_DIR");
-            assert!(result.is_err());
-        }
     }
 }

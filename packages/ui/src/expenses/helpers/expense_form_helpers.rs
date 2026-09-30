@@ -66,7 +66,7 @@ pub fn seed_entries(
 pub fn init_entries_from_payments(
     users: &[User],
     display_names: &[String],
-    payments: &[crate::crypto::DecryptedPayment],
+    payments: &[crate::decrypted::DecryptedPayment],
     is_debt: bool,
 ) -> Vec<UserEntry> {
     users
@@ -872,7 +872,7 @@ mod tests {
 
     #[test]
     fn init_entries_from_payments_splits_by_side() {
-        use crate::crypto::DecryptedPayment;
+        use crate::decrypted::DecryptedPayment;
         let payment = |user_id, is_debt, amount| DecryptedPayment {
             id: 0,
             expense_id: 0,

@@ -55,6 +55,7 @@ error-unauthenticated = Prisijunk, kad galėtum tai padaryti.
 error-email-not-verified = Tavo el. pašto adresas dar nepatvirtintas.
 error-project-not-found = Šio projekto nebėra.
 error-expense-not-found = Šios išlaidos nebėra.
+error-storage-full = Saugykla pilna: šio projekto rakto nepavyko išsaugoti šiame įrenginyje. Išsaugok bendrinimo nuorodą.
 error-user-not-found = Šio dalyvio nebėra.
 error-tricount-not-found = Tricount nerastas arba jo API grąžino klaidą.
 error-too-many-members = Šis projektas pasiekė narių limitą.
@@ -252,13 +253,8 @@ add-project-name-placeholder = Mano kelionė, Bendrabutis 2024…
 add-project-participants = Dalyviai
 add-project-participant-name = Dalyvio vardas
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Pašalinti dalyvį
-add-project-me-badge = Aš
-add-project-thats-me = Tai aš!
 add-project-offline = Neprisijungus projekto sukurti negalima. Prisijunk iš naujo ir bandyk dar kartą.
 add-project-name-required = Projektui reikia pavadinimo.
-add-project-need-two-participants = Pridėk bent 2 dalyvius.
-add-project-pick-yourself = Nurodyk, kuris dalyvis esi tu.
 
 join-link-label = Bendrinimo nuoroda
 join-link-hint = Nuorodoje yra iššifravimo raktas - nukopijuok ją visą.
@@ -268,6 +264,7 @@ join-wrong-project = Ši nuoroda skirta kitam projektui.
 import-tricount-link-label = Tricount nuoroda arba raktas
 import-tricount-key-required = Įvesk Tricount nuorodą arba raktą.
 import-tricount-encryption-failed = Šifravimas nepavyko.
+import-tricount-unimportable = Nieko neimportuota: šiame Tricount yra narių su Tricount paskyra arba sumų, kurios nesutampa (paveikti įrašai: { $count }).
 
 ### Expenses
 
@@ -365,11 +362,8 @@ edit-project-title = Redaguoti projektą
 edit-project-new-badge = naujas
 edit-project-deferred-new-members = naujų narių pridėjimas
 edit-project-deferred-removals = narių šalinimas
-edit-project-deferred-me = pasirinkimas „Tai aš“
 edit-project-offline-deferred = Neprisijungta: { $items } bus pritaikyta prisijungus.
 
-export-saved = Failas išsaugotas:
-    { $path }
 export-failed = Eksportas nepavyko: { $reason }
 
 history-expense-added = Išlaida pridėta: { $name }
@@ -516,13 +510,24 @@ debtors-title-beneficiaries = Naudos gavėjai
 
 welcome-title = Tavo apskaita - ne kitų reikalas.
 welcome-subtitle = Dalinkis išlaidomis su draugais.
-welcome-e2ee-title = Viskas užšifruota
-welcome-e2ee-body = Vardai, sumos, projektai: viskas užšifruojama tavo įrenginyje. Raktą turi tik tu. Niekas negali skaityti tavo sąskaitų. Net ir mes.
-welcome-e2ee-note = Neįskaitoma net mums (serveris neturi prieigos)
+welcome-note = Nemokama. Paskyros nereikia. Jokių reklamų.
+welcome-link-title = Viena nuoroda, ir visi dalyvauja.
+welcome-link-body = Niekam nereikia kurti paskyros.
+welcome-link-account = Paskyra? Niekada neprivaloma. Ji skirta rasti savo projektus kitame įrenginyje, kviesti draugus iš programėlės ir dalintis savo mokėjimo duomenimis.
+welcome-demo-project = Savaitgalis Lione
+welcome-private-title = Niekas negali skaityti tavo sąskaitų. Net ir mes.
+welcome-private-body = Vardai, sumos, projektai: viskas užšifruojama tavo įrenginyje. Raktą turi tik tu.
+welcome-private-names = Vardai
+welcome-private-amounts = Sumos
+welcome-private-projects = Projektai
+welcome-scan-title = Nufotografuok kvitą.
+welcome-scan-body = Suma, data ir kategorija užpildomos pačios. Viskas vyksta tavo telefone. Nuotrauka nesaugoma.
 welcome-eu-title = 100 % europietiška
-welcome-eu-body = Serveriai Vokietijoje, laiškai siunčiami iš Prancūzijos. Tavo duomenys niekada nepalieka Europos Sąjungos.
-welcome-noads-title = Jokių reklamų. Jokių sekimo įrankių.
-welcome-noads-body = Nieko nerenkame ir neparduodame tavo duomenų. Tai ne mūsų modelis.
+welcome-no-ads = Jokių reklamų
+welcome-no-trackers = Jokių sekimo įrankių
+welcome-step = { $current } žingsnis iš { $total }
+welcome-next = Toliau
+welcome-skip = Praleisti
 welcome-start = Pradėti
 welcome-how-it-works = Kaip tiksliai tai veikia?
 
@@ -628,3 +633,49 @@ invitation-unreadable = Šio kvietimo negalima atidaryti šiame įrenginyje
 invitation-from = Nuo { $email }
 invitation-accept = Prisijungti
 invitation-decline = Atmesti
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Tavo vardas šiame projekte
+participants-you-badge = Tu
+participants-you-from-account = Paimta iš tavo paskyros vardo. Pakeisk jį čia tik šiam projektui.
+participants-you-required = Privaloma. Taip tave matys kiti.
+participants-others = Kiti dalyviai
+participants-empty = Dar nieko. Pasirink draugą žemiau arba įrašyk bet kokį vardą.
+participants-empty-signed-out = Dar nieko. Įrašyk vardą, kad ką nors pridėtum.
+participants-duplicate = „{ $name }“ jau yra sąraše.
+participants-input-label = Pridėti draugą arba įrašyti vardą
+participants-input-placeholder = Draugas arba bet koks vardas
+participants-suggest-friend = Draugas · prisijungs kaip „{ $name }“, gaus kvietimą
+participants-suggest-not-ready = Draugas · dar nepasiruošęs
+participants-suggest-guest = Pridėti „{ $text }“ be paskyros
+participants-suggest-guest-sub = Be paskyros, tik vardas
+participants-friends = Tavo draugai
+participants-all-friends = Visi draugai
+participants-login-hint = Prisijunk, kad galėtum pridėti žmones tiesiai iš draugų sąrašo.
+participants-invite-badge = Pakviesti
+participants-guest-badge = Be paskyros
+participants-guest-sub = Be paskyros, tik vardas
+participants-rename = Pervadinti: { $name }
+participants-remove = Pašalinti: { $name }
+participants-rename-label = Naujas vardas
+participants-rename-save = Išsaugoti vardą
+participants-rename-hint = Vardas, kurį šiame projekte mato visi. Kvietimas vis tiek bus siunčiamas { $email }.
+participants-invited-badge = Pakviestas
+participants-invited-sub = { $email } · dar nepriimtas
+participants-invited-pending = Kvietimas dar nepriimtas
+participants-unlinked = Nesusieta su paskyra
+add-project-create-invite = Sukurti ir pakviesti: { $count }
+edit-project-save-invite = Išsaugoti ir pakviesti: { $count }
+edit-project-you-are = Šiame įrenginyje tu esi { $name }
+edit-project-no-identity = Dar nepasirinkai, kas esi
+edit-project-switch = Keisti
+edit-project-choose = Pasirinkti
+invite-failed = Šių kvietimų nepavyko išsiųsti: { $emails }
+invite-again = Pakviesti dar kartą
+friend-picker-title = Pridėti draugų
+user-selection-invited-hint = { $email } pakvietė tave į „{ $project }“.
+user-selection-suggested = Siūloma
+user-selection-suggested-sub = { $email } pridėjo tave šiuo vardu
+user-selection-confirm-as = Aš esu { $name }
+user-selection-missing = Tavo vardo čia nėra? Paprašyk dalyvio pridėti tave projekto nustatymuose.

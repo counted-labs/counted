@@ -1,6 +1,6 @@
 use crate::{round_currency, ReimbursementSuggestion, UserBalance, UserBalanceComputation};
 use std::cmp::Ordering;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::ops::Sub;
 
 pub fn get_reimbursement_suggestions(
@@ -34,8 +34,8 @@ pub fn get_reimbursement_suggestions(
 }
 
 fn resolve_remaining_balances(
-    unsolved_positive_balances_by_user: &mut HashMap<i32, UserBalanceComputation>,
-    unsolved_negative_balances_by_user: &mut HashMap<i32, UserBalanceComputation>,
+    unsolved_positive_balances_by_user: &mut BTreeMap<i32, UserBalanceComputation>,
+    unsolved_negative_balances_by_user: &mut BTreeMap<i32, UserBalanceComputation>,
 ) -> Vec<ReimbursementSuggestion> {
     let mut result: Vec<ReimbursementSuggestion> = Vec::new();
 
@@ -128,9 +128,9 @@ fn resolve_remaining_balances(
 
 fn solve_max_balance(
     max_balance: (i32, UserBalanceComputation),
-    min_balances: HashMap<i32, UserBalanceComputation>,
-) -> (HashMap<i32, UserBalanceComputation>, (i32, UserBalanceComputation)) {
-    let mut fully_compensated_balances = HashMap::new();
+    min_balances: BTreeMap<i32, UserBalanceComputation>,
+) -> (BTreeMap<i32, UserBalanceComputation>, (i32, UserBalanceComputation)) {
+    let mut fully_compensated_balances = BTreeMap::new();
     let mut remainder: (i32, UserBalanceComputation) =
         (0, UserBalanceComputation { remaining_amount: 0.0, amount: 0.0 });
 
@@ -180,8 +180,8 @@ fn solve_max_balance(
 }
 
 fn get_max_balance(
-    sorted_unsolved_positive_balances_by_user: HashMap<i32, UserBalanceComputation>,
-    sorted_unsolved_negative_balances_by_user: HashMap<i32, UserBalanceComputation>,
+    sorted_unsolved_positive_balances_by_user: BTreeMap<i32, UserBalanceComputation>,
+    sorted_unsolved_negative_balances_by_user: BTreeMap<i32, UserBalanceComputation>,
 ) -> MaxBalance {
     let positive_max: Option<(i32, UserBalanceComputation)> =
         sorted_unsolved_positive_balances_by_user
@@ -205,7 +205,7 @@ fn get_max_balance(
         return MaxBalance {
             is_debt: false,
             max_balance: (0, UserBalanceComputation { remaining_amount: 0.0, amount: 0.0 }),
-            opposite_balances: HashMap::new(),
+            opposite_balances: BTreeMap::new(),
         };
     }
 
@@ -228,8 +228,8 @@ fn get_max_balance(
 }
 
 fn resolve_equally_opposed_balances(
-    unsolved_positive_balances_by_user: &mut HashMap<i32, UserBalanceComputation>,
-    unsolved_negative_balances_by_user: &mut HashMap<i32, UserBalanceComputation>,
+    unsolved_positive_balances_by_user: &mut BTreeMap<i32, UserBalanceComputation>,
+    unsolved_negative_balances_by_user: &mut BTreeMap<i32, UserBalanceComputation>,
 ) -> Vec<ReimbursementSuggestion> {
     let mut resolved_users: Vec<(i32, i32)> = Vec::new();
     // Mirrors the debtor ids in `resolved_users`. The membership test below sits two loops deep,
@@ -289,9 +289,9 @@ fn resolve_equally_opposed_balances(
 
 fn get_unresolved_balances_by_user(
     balances: &mut [UserBalance],
-) -> (HashMap<i32, UserBalanceComputation>, HashMap<i32, UserBalanceComputation>) {
-    let mut unsolved_positive: HashMap<i32, UserBalanceComputation> = Default::default();
-    let mut unsolved_negative: HashMap<i32, UserBalanceComputation> = Default::default();
+) -> (BTreeMap<i32, UserBalanceComputation>, BTreeMap<i32, UserBalanceComputation>) {
+    let mut unsolved_positive: BTreeMap<i32, UserBalanceComputation> = Default::default();
+    let mut unsolved_negative: BTreeMap<i32, UserBalanceComputation> = Default::default();
 
     for user_balance in balances.iter() {
         if user_balance.amount.is_sign_positive() {
@@ -318,7 +318,7 @@ fn get_unresolved_balances_by_user(
 struct MaxBalance {
     is_debt: bool,
     max_balance: (i32, UserBalanceComputation),
-    opposite_balances: HashMap<i32, UserBalanceComputation>,
+    opposite_balances: BTreeMap<i32, UserBalanceComputation>,
 }
 
 #[cfg(test)]
@@ -340,6 +340,25 @@ mod tests {
         assert_eq!(suggestions[0].amount, 50.0);
         assert_eq!(suggestions[0].user_id_payer, 1);
         assert_eq!(suggestions[0].user_id_debtor, 2);
+    }
+
+    // Every device must suggest the same transfers. Fresh HashMaps get a fresh RandomState, so
+    // an order-dependent pick shows up across repeated runs.
+    #[test]
+    fn test_exact_match_pairing_is_deterministic() {
+        let run = || {
+            get_reimbursement_suggestions(vec![
+                UserBalance { amount: 20.0, user_id: 1 },
+                UserBalance { amount: -20.0, user_id: 2 },
+                UserBalance { amount: -20.0, user_id: 3 },
+                UserBalance { amount: -20.0, user_id: 4 },
+                UserBalance { amount: 40.0, user_id: 5 },
+            ])
+        };
+        let first = run();
+        for _ in 0..200 {
+            assert_eq!(run(), first);
+        }
     }
 
     #[test]

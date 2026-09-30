@@ -15,7 +15,8 @@ use crate::common::{
     error_key, error_message, is_offline_error, is_project_gone_error, LocalStorageProject,
     LocalStorageState,
 };
-use crate::crypto::{key_from_fragment, project_name, user_name};
+use crate::crypto::key_from_fragment;
+use crate::decrypted::{project_name, user_name};
 
 /// A fetch result paired with the project id it was fetched for.
 ///
@@ -72,7 +73,7 @@ pub enum Outcome {
         project: Option<ProjectDto>,
         expenses: Vec<Expense>,
         payments: Vec<Payment>,
-        /// `None` when the rows came from the cache rather than the server — nothing to re-cache.
+        /// The version the rows are complete at, or `None` when they are not known to be.
         version: Option<i64>,
     },
     /// "Unchanged", but the rows it meant are gone. Withdraw the version claim and ask again.
@@ -100,7 +101,9 @@ pub fn decide(
 
     let Some(s) = ok_for(sync, project_id) else {
         // Connectivity failures only — a genuine server error must surface, not be papered over
-        // with stale rows. Offline renders what was cached, and caches nothing new.
+        // with stale rows. Offline renders what was cached, under the version it was cached at: the
+        // cache effect writes these rows straight back, and a `None` there withdrew the claim, so
+        // the next online open re-downloaded the whole project.
         if !went_offline(sync) {
             return Outcome::Wait;
         }
@@ -110,7 +113,7 @@ pub fn decide(
                 project: cached_project(),
                 expenses,
                 payments,
-                version: None,
+                version: cached.and_then(|c| c.cached_data_version),
             },
             _ => Outcome::Wait,
         };
@@ -343,11 +346,13 @@ mod tests {
     }
 
     #[test]
-    fn offline_with_a_cache_loads_it_and_claims_no_version() {
-        let cache = full_cache();
+    fn offline_with_a_cache_loads_it_and_keeps_its_version() {
+        let cache = LocalStorageProject { cached_data_version: Some(42), ..full_cache() };
         let out = decide(Some(&Err(offline())), Some(&cache), pid());
         let Outcome::Load { users, expenses, version, .. } = out else { panic!("expected Load") };
-        assert_eq!(version, None);
+        // Written back as it was read: `None` here withdrew the claim, and the next online open
+        // re-downloaded the whole project.
+        assert_eq!(version, Some(42));
         assert_eq!(users[0].id, 9);
         assert_eq!(expenses[0].id, 7);
     }

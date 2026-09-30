@@ -55,6 +55,7 @@ error-unauthenticated = Zaloguj się, aby to zrobić.
 error-email-not-verified = Twój adres e-mail nie został jeszcze zweryfikowany.
 error-project-not-found = Ten projekt już nie istnieje.
 error-expense-not-found = Ten wydatek już nie istnieje.
+error-storage-full = Pamięć jest pełna: nie udało się zapisać klucza tego projektu na tym urządzeniu. Zachowaj link do udostępniania.
 error-user-not-found = Ten uczestnik już nie istnieje.
 error-tricount-not-found = Nie znaleziono Tricounta lub jego API zwróciło błąd.
 error-too-many-members = Ten projekt osiągnął limit członków.
@@ -252,13 +253,8 @@ add-project-name-placeholder = Moja podróż, Mieszkanie 2024…
 add-project-participants = Uczestnicy
 add-project-participant-name = Imię uczestnika
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Usuń uczestnika
-add-project-me-badge = Ja
-add-project-thats-me = To ja!
 add-project-offline = Nie można utworzyć projektu offline. Połącz się ponownie i spróbuj jeszcze raz.
 add-project-name-required = Projekt potrzebuje nazwy.
-add-project-need-two-participants = Dodaj co najmniej 2 uczestników.
-add-project-pick-yourself = Wskaż, którym uczestnikiem jesteś.
 
 join-link-label = Link udostępniania
 join-link-hint = Link zawiera klucz deszyfrujący - skopiuj go w całości.
@@ -268,6 +264,7 @@ join-wrong-project = Ten link dotyczy innego projektu.
 import-tricount-link-label = Link lub klucz Tricount
 import-tricount-key-required = Wpisz link lub klucz Tricount.
 import-tricount-encryption-failed = Szyfrowanie nie powiodło się.
+import-tricount-unimportable = Nic nie zostało zaimportowane: ten Tricount ma członków z kontem Tricount lub kwoty, które się nie zgadzają (dotyczy wpisów: { $count }).
 
 ### Expenses
 
@@ -365,11 +362,8 @@ edit-project-title = Edytuj projekt
 edit-project-new-badge = nowy
 edit-project-deferred-new-members = dodanie nowych członków
 edit-project-deferred-removals = usunięcie członków
-edit-project-deferred-me = wybór „To ja”
 edit-project-offline-deferred = Offline: { $items } zostanie zastosowane po ponownym połączeniu.
 
-export-saved = Plik zapisany:
-    { $path }
 export-failed = Eksport nie powiódł się: { $reason }
 
 history-expense-added = Dodano wydatek: { $name }
@@ -516,13 +510,24 @@ debtors-title-beneficiaries = Beneficjenci
 
 welcome-title = Twoje rachunki to nie czyjaś sprawa.
 welcome-subtitle = Dziel wydatki ze znajomymi.
-welcome-e2ee-title = Wszystko zaszyfrowane
-welcome-e2ee-body = Imiona, kwoty, projekty: wszystko jest szyfrowane na Twoim urządzeniu. Tylko Ty masz klucz. Nikt nie może odczytać Twoich rozliczeń. Nawet my.
-welcome-e2ee-note = Nieczytelne nawet dla nas (zero dostępu po stronie serwera)
+welcome-note = Za darmo. Bez zakładania konta. Bez reklam.
+welcome-link-title = Jeden link i wszyscy są w grze.
+welcome-link-body = Nikt nie musi zakładać konta.
+welcome-link-account = Konto? Nigdy nie jest obowiązkowe. Służy do odnajdywania projektów na innym urządzeniu, zapraszania znajomych z aplikacji i udostępniania Twoich danych do płatności.
+welcome-demo-project = Weekend w Lyonie
+welcome-private-title = Nikt nie może odczytać Twoich rozliczeń. Nawet my.
+welcome-private-body = Imiona, kwoty, projekty: wszystko jest szyfrowane na Twoim urządzeniu. Tylko Ty masz klucz.
+welcome-private-names = Imiona
+welcome-private-amounts = Kwoty
+welcome-private-projects = Projekty
+welcome-scan-title = Zrób zdjęcie paragonu.
+welcome-scan-body = Kwota, data i kategoria uzupełniają się same. Wszystko dzieje się na Twoim telefonie. Zdjęcie nie jest przechowywane.
 welcome-eu-title = 100% europejskie
-welcome-eu-body = Serwery w Niemczech, e-maile wysyłane z Francji. Twoje dane nigdy nie opuszczają Unii Europejskiej.
-welcome-noads-title = Bez reklam. Bez śledzenia.
-welcome-noads-body = Niczego nie zbieramy i nie sprzedajemy Twoich danych. To nie nasz model.
+welcome-no-ads = Bez reklam
+welcome-no-trackers = Bez śledzenia
+welcome-step = Krok { $current } z { $total }
+welcome-next = Dalej
+welcome-skip = Pomiń
 welcome-start = Zaczynamy
 welcome-how-it-works = Jak to właściwie działa?
 
@@ -628,3 +633,49 @@ invitation-unreadable = Tego zaproszenia nie można otworzyć na tym urządzeniu
 invitation-from = Od { $email }
 invitation-accept = Dołącz
 invitation-decline = Odrzuć
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Twoje imię w tym projekcie
+participants-you-badge = Ty
+participants-you-from-account = Pobrane z nazwy Twojego konta. Zmień je tutaj tylko dla tego projektu.
+participants-you-required = Wymagane. Tak zobaczą Cię pozostali.
+participants-others = Pozostali uczestnicy
+participants-empty = Jeszcze nikogo. Wybierz znajomego poniżej lub wpisz dowolne imię.
+participants-empty-signed-out = Jeszcze nikogo. Wpisz imię, aby kogoś dodać.
+participants-duplicate = „{ $name }” jest już na liście.
+participants-input-label = Dodaj znajomego lub wpisz imię
+participants-input-placeholder = Znajomy lub dowolne imię
+participants-suggest-friend = Znajomy · dołączy jako „{ $name }”, dostanie zaproszenie
+participants-suggest-not-ready = Znajomy · jeszcze niegotowy
+participants-suggest-guest = Dodaj „{ $text }” bez konta
+participants-suggest-guest-sub = Bez konta, tylko imię
+participants-friends = Twoi znajomi
+participants-all-friends = Wszyscy znajomi
+participants-login-hint = Zaloguj się, aby dodawać osoby prosto z listy znajomych.
+participants-invite-badge = Zaproś
+participants-guest-badge = Bez konta
+participants-guest-sub = Bez konta, tylko imię
+participants-rename = Zmień nazwę: { $name }
+participants-remove = Usuń: { $name }
+participants-rename-label = Nowe imię
+participants-rename-save = Zapisz imię
+participants-rename-hint = Imię, które wszyscy widzą w tym projekcie. Zaproszenie nadal trafi na { $email }.
+participants-invited-badge = Zaproszony
+participants-invited-sub = { $email } · jeszcze nie przyjęte
+participants-invited-pending = Zaproszenie jeszcze nie przyjęte
+participants-unlinked = Niepowiązany z kontem
+add-project-create-invite = Utwórz i zaproś: { $count }
+edit-project-save-invite = Zapisz i zaproś: { $count }
+edit-project-you-are = Na tym urządzeniu jesteś { $name }
+edit-project-no-identity = Nie wybrano jeszcze, kim jesteś
+edit-project-switch = Zmień
+edit-project-choose = Wybierz
+invite-failed = Nie udało się wysłać tych zaproszeń: { $emails }
+invite-again = Zaproś ponownie
+friend-picker-title = Dodaj znajomych
+user-selection-invited-hint = { $email } zaprasza Cię do „{ $project }”.
+user-selection-suggested = Sugerowane
+user-selection-suggested-sub = { $email } dodał(a) Cię pod tym imieniem
+user-selection-confirm-as = To ja: { $name }
+user-selection-missing = Nie ma tu Twojego imienia? Poproś uczestnika, by dodał Cię w ustawieniach projektu.

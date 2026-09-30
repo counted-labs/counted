@@ -3,7 +3,7 @@
 /// lands after it. Web uses web-sys instead — eval is CSP-blocked there (see `common::web_dom`).
 #[cfg(not(target_arch = "wasm32"))]
 fn next_paint_js() -> &'static str {
-    "await new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));"
+    "await (document.hidden ? Promise.resolve() : new Promise(r => requestAnimationFrame(() => setTimeout(r, 0))));"
 }
 
 /// Resolves once the browser has painted. Call it before blocking the thread, so whatever was just
@@ -34,5 +34,12 @@ mod tests {
         let js = next_paint_js();
         assert!(js.contains("requestAnimationFrame"), "{js}");
         assert!(js.contains("setTimeout"), "{js}");
+    }
+
+    // A backgrounded webview never fires rAF, so the caller would hang until foregrounded.
+    #[test]
+    fn next_paint_js_skips_the_wait_when_hidden() {
+        let js = next_paint_js();
+        assert!(js.contains("document.hidden"), "{js}");
     }
 }

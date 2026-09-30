@@ -54,6 +54,7 @@ error-unauthenticated = Conectează-te pentru a face asta.
 error-email-not-verified = Adresa ta de e-mail nu este încă verificată.
 error-project-not-found = Acest proiect nu mai există.
 error-expense-not-found = Această cheltuială nu mai există.
+error-storage-full = Spațiul de stocare este plin: cheia acestui proiect nu a putut fi salvată pe acest dispozitiv. Păstrează linkul de partajare.
 error-user-not-found = Acest participant nu mai există.
 error-tricount-not-found = Tricount negăsit sau API-ul său a returnat o eroare.
 error-too-many-members = Acest proiect a atins limita de membri.
@@ -251,13 +252,8 @@ add-project-name-placeholder = Călătoria mea, Colegii de apartament 2024…
 add-project-participants = Participanți
 add-project-participant-name = Numele participantului
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Elimină participantul
-add-project-me-badge = Eu
-add-project-thats-me = Eu sunt!
 add-project-offline = Nu poți crea un proiect offline. Reconectează-te și încearcă din nou.
 add-project-name-required = Proiectul are nevoie de un nume.
-add-project-need-two-participants = Adaugă cel puțin 2 participanți.
-add-project-pick-yourself = Spune-ne care participant ești.
 
 join-link-label = Link de partajare
 join-link-hint = Linkul conține cheia de decriptare - copiază-l în întregime.
@@ -267,6 +263,7 @@ join-wrong-project = Acest link este pentru alt proiect.
 import-tricount-link-label = Link sau cheie Tricount
 import-tricount-key-required = Introdu un link sau o cheie Tricount.
 import-tricount-encryption-failed = Criptarea a eșuat.
+import-tricount-unimportable = Nu s-a importat nimic: acest Tricount are membri cu cont Tricount sau sume care nu se potrivesc (înregistrări afectate: { $count }).
 
 ### Expenses
 
@@ -364,11 +361,8 @@ edit-project-title = Editează proiectul
 edit-project-new-badge = nou
 edit-project-deferred-new-members = adăugarea de membri noi
 edit-project-deferred-removals = eliminarea de membri
-edit-project-deferred-me = selecția „Eu sunt”
 edit-project-offline-deferred = Offline: { $items } se va aplica la reconectare.
 
-export-saved = Fișier salvat:
-    { $path }
 export-failed = Exportul a eșuat: { $reason }
 
 history-expense-added = Cheltuială adăugată: { $name }
@@ -513,13 +507,24 @@ debtors-title-beneficiaries = Beneficiari
 
 welcome-title = Socotelile tale nu privesc pe nimeni altcineva.
 welcome-subtitle = Împarte cheltuielile cu prietenii.
-welcome-e2ee-title = Totul criptat
-welcome-e2ee-body = Nume, sume, proiecte: totul este criptat pe dispozitivul tău. Doar tu deții cheia. Nimeni nu îți poate citi socotelile. Nici măcar noi.
-welcome-e2ee-note = Ilizibil, chiar și pentru noi (zero acces la server)
+welcome-note = Gratuit. Fără cont. Fără reclame.
+welcome-link-title = Un link și toată lumea participă.
+welcome-link-body = Nimeni nu trebuie să își creeze cont.
+welcome-link-account = Un cont? Niciodată obligatoriu. Îți folosește ca să-ți regăsești proiectele pe alt dispozitiv, să-ți inviți prietenii din aplicație și să-ți partajezi detaliile de plată.
+welcome-demo-project = Weekend la Lyon
+welcome-private-title = Nimeni nu îți poate citi socotelile. Nici măcar noi.
+welcome-private-body = Nume, sume, proiecte: totul este criptat pe dispozitivul tău. Doar tu deții cheia.
+welcome-private-names = Nume
+welcome-private-amounts = Sume
+welcome-private-projects = Proiecte
+welcome-scan-title = Fotografiază bonul.
+welcome-scan-body = Suma, data și categoria se completează singure. Totul se petrece pe telefonul tău. Fotografia nu este păstrată.
 welcome-eu-title = 100% european
-welcome-eu-body = Servere în Germania, e-mailuri trimise din Franța. Datele tale nu părăsesc niciodată Uniunea Europeană.
-welcome-noads-title = Fără reclame. Fără trackere.
-welcome-noads-body = Nu colectăm nimic și nu îți vindem datele. Nu acesta e modelul nostru.
+welcome-no-ads = Fără reclame
+welcome-no-trackers = Fără trackere
+welcome-step = Pasul { $current } din { $total }
+welcome-next = Înainte
+welcome-skip = Omite
 welcome-start = Începe
 welcome-how-it-works = Cum funcționează, mai exact?
 
@@ -624,3 +629,49 @@ invitation-unreadable = Această invitație nu poate fi deschisă pe acest dispo
 invitation-from = De la { $email }
 invitation-accept = Alătură-te
 invitation-decline = Refuză
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Numele tău în acest proiect
+participants-you-badge = Tu
+participants-you-from-account = Preluat din numele contului tău. Schimbă-l aici doar pentru acest proiect.
+participants-you-required = Obligatoriu. Așa te vor vedea ceilalți.
+participants-others = Alți participanți
+participants-empty = Încă nimeni. Alege un prieten mai jos sau scrie orice nume.
+participants-empty-signed-out = Încă nimeni. Scrie un nume ca să adaugi pe cineva.
+participants-duplicate = „{ $name }” este deja în listă.
+participants-input-label = Adaugă un prieten sau scrie un nume
+participants-input-placeholder = Prieten sau orice nume
+participants-suggest-friend = Prieten · intră ca „{ $name }”, primește o invitație
+participants-suggest-not-ready = Prieten · încă nu e pregătit
+participants-suggest-guest = Adaugă „{ $text }” fără cont
+participants-suggest-guest-sub = Fără cont, doar un nume
+participants-friends = Prietenii tăi
+participants-all-friends = Toți prietenii
+participants-login-hint = Conectează-te ca să adaugi oameni direct din lista ta de prieteni.
+participants-invite-badge = De invitat
+participants-guest-badge = Fără cont
+participants-guest-sub = Fără cont, doar un nume
+participants-rename = Redenumește: { $name }
+participants-remove = Elimină: { $name }
+participants-rename-label = Nume nou
+participants-rename-save = Salvează numele
+participants-rename-hint = Numele pe care îl văd toți în acest proiect. Invitația merge în continuare la { $email }.
+participants-invited-badge = Invitat
+participants-invited-sub = { $email } · încă neacceptată
+participants-invited-pending = Invitație încă neacceptată
+participants-unlinked = Nelegat de un cont
+add-project-create-invite = Creează și invită: { $count }
+edit-project-save-invite = Salvează și invită: { $count }
+edit-project-you-are = Pe acest dispozitiv ești { $name }
+edit-project-no-identity = Încă nu ai ales cine ești
+edit-project-switch = Schimbă
+edit-project-choose = Alege
+invite-failed = Aceste invitații nu au putut fi trimise: { $emails }
+invite-again = Invită din nou
+friend-picker-title = Adaugă prieteni
+user-selection-invited-hint = { $email } te-a invitat în „{ $project }”.
+user-selection-suggested = Sugerat
+user-selection-suggested-sub = { $email } te-a adăugat cu acest nume
+user-selection-confirm-as = Eu sunt { $name }
+user-selection-missing = Numele tău nu e aici? Roagă un participant să te adauge din setările proiectului.

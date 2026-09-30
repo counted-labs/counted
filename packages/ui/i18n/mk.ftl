@@ -53,6 +53,7 @@ error-unauthenticated = Најави се за да го направиш тоа
 error-email-not-verified = Твојата е-пошта сè уште не е потврдена.
 error-project-not-found = Овој проект повеќе не постои.
 error-expense-not-found = Овој трошок повеќе не постои.
+error-storage-full = Складот е полн: клучот на овој проект не можеше да се зачува на овој уред. Зачувај ја врската за споделување.
 error-user-not-found = Овој учесник повеќе не постои.
 error-tricount-not-found = Tricount не е пронајден или неговото API врати грешка.
 error-too-many-members = Овој проект го достигна лимитот на членови.
@@ -250,13 +251,8 @@ add-project-name-placeholder = Моето патување, Цимери 2024…
 add-project-participants = Учесници
 add-project-participant-name = Име на учесникот
 add-project-participant-placeholder = Кларк Кент
-add-project-remove-participant = Отстрани учесник
-add-project-me-badge = Јас
-add-project-thats-me = Тоа сум јас!
 add-project-offline = Не можеш да создадеш проект офлајн. Поврзи се повторно и обиди се пак.
 add-project-name-required = Проектот треба име.
-add-project-need-two-participants = Додај најмалку 2 учесници.
-add-project-pick-yourself = Кажи ни кој учесник си ти.
 
 join-link-label = Линк за споделување
 join-link-hint = Линкот го содржи клучот за дешифрирање - копирај го целиот.
@@ -266,6 +262,7 @@ join-wrong-project = Тој линк е за друг проект.
 import-tricount-link-label = Tricount линк или клуч
 import-tricount-key-required = Внеси Tricount линк или клуч.
 import-tricount-encryption-failed = Шифрирањето не успеа.
+import-tricount-unimportable = Ништо не е увезено: овој Tricount има членови со Tricount сметка или износи што не се совпаѓаат (засегнати записи: { $count }).
 
 ### Expenses
 
@@ -363,11 +360,8 @@ edit-project-title = Уреди проект
 edit-project-new-badge = ново
 edit-project-deferred-new-members = додавањето нови членови
 edit-project-deferred-removals = отстранувањето членови
-edit-project-deferred-me = изборот „Тоа сум јас“
 edit-project-offline-deferred = Офлајн: { $items } ќе се примени при повторно поврзување.
 
-export-saved = Датотеката е зачувана:
-    { $path }
 export-failed = Извозот не успеа: { $reason }
 
 history-expense-added = Додаден трошок: { $name }
@@ -510,13 +504,24 @@ debtors-title-beneficiaries = Корисници
 
 welcome-title = Твоите сметки не се ничија работа.
 welcome-subtitle = Дели трошоци со пријатели.
-welcome-e2ee-title = Сè е шифрирано
-welcome-e2ee-body = Имиња, износи, проекти: сè се шифрира на твојот уред. Само ти го имаш клучот. Никој не може да ги чита твоите сметки. Ни ние.
-welcome-e2ee-note = Нечитливо дури и за нас (нулти пристап на серверот)
+welcome-note = Бесплатно. Без сметка. Без реклами.
+welcome-link-title = Една врска и сите учествуваат.
+welcome-link-body = Никој не мора да создава сметка.
+welcome-link-account = Сметка? Никогаш задолжителна. Служи за да ги најдеш своите проекти на друг уред, да поканиш пријатели од апликацијата и да ги споделиш своите податоци за плаќање.
+welcome-demo-project = Викенд во Лион
+welcome-private-title = Никој не може да ги чита твоите сметки. Ни ние.
+welcome-private-body = Имиња, износи, проекти: сè се шифрира на твојот уред. Само ти го имаш клучот.
+welcome-private-names = Имиња
+welcome-private-amounts = Износи
+welcome-private-projects = Проекти
+welcome-scan-title = Фотографирај ја сметката.
+welcome-scan-body = Износот, датумот и категоријата се пополнуваат сами. Сè се случува на твојот телефон. Фотографијата не се чува.
 welcome-eu-title = 100 % европски
-welcome-eu-body = Сервери во Германија, е-пошта испратена од Франција. Твоите податоци никогаш не ја напуштаат Европската унија.
-welcome-noads-title = Без реклами. Без следачи.
-welcome-noads-body = Ништо не собираме и не ги продаваме твоите податоци. Тоа не е нашиот модел.
+welcome-no-ads = Без реклами
+welcome-no-trackers = Без следачи
+welcome-step = Чекор { $current } од { $total }
+welcome-next = Следно
+welcome-skip = Прескокни
 welcome-start = Започни
 welcome-how-it-works = Како точно работи?
 
@@ -620,3 +625,49 @@ invitation-unreadable = Оваа покана не може да се отвор
 invitation-from = Од { $email }
 invitation-accept = Приклучи се
 invitation-decline = Одбиј
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Твоето име во овој проект
+participants-you-badge = Ти
+participants-you-from-account = Преземено од името на твојата сметка. Смени го тука само за овој проект.
+participants-you-required = Задолжително. Вака ќе те гледаат другите.
+participants-others = Други учесници
+participants-empty = Сè уште никој. Избери пријател подолу или внеси кое било име.
+participants-empty-signed-out = Сè уште никој. Внеси име за да додадеш некого.
+participants-duplicate = „{ $name }“ веќе е на листата.
+participants-input-label = Додај пријател или внеси име
+participants-input-placeholder = Пријател или кое било име
+participants-suggest-friend = Пријател · се приклучува како „{ $name }“, добива покана
+participants-suggest-not-ready = Пријател · сè уште не е подготвен
+participants-suggest-guest = Додај „{ $text }“ без сметка
+participants-suggest-guest-sub = Без сметка, само име
+participants-friends = Твоите пријатели
+participants-all-friends = Сите пријатели
+participants-login-hint = Најави се за да додаваш луѓе директно од листата пријатели.
+participants-invite-badge = Покани
+participants-guest-badge = Без сметка
+participants-guest-sub = Без сметка, само име
+participants-rename = Преименувај: { $name }
+participants-remove = Отстрани: { $name }
+participants-rename-label = Ново име
+participants-rename-save = Зачувај го името
+participants-rename-hint = Името што сите го гледаат во овој проект. Поканата сепак оди до { $email }.
+participants-invited-badge = Поканет
+participants-invited-sub = { $email } · сè уште не е прифатено
+participants-invited-pending = Поканата сè уште не е прифатена
+participants-unlinked = Не е поврзано со сметка
+add-project-create-invite = Создај и покани: { $count }
+edit-project-save-invite = Зачувај и покани: { $count }
+edit-project-you-are = На овој уред ти си { $name }
+edit-project-no-identity = Сè уште не си избрал(а) кој си
+edit-project-switch = Смени
+edit-project-choose = Избери
+invite-failed = Овие покани не можеа да се испратат: { $emails }
+invite-again = Покани повторно
+friend-picker-title = Додај пријатели
+user-selection-invited-hint = { $email } те покани во „{ $project }“.
+user-selection-suggested = Предложено
+user-selection-suggested-sub = { $email } те додаде под ова име
+user-selection-confirm-as = Јас сум { $name }
+user-selection-missing = Твоето име го нема? Замоли учесник да те додаде во поставките на проектот.

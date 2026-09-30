@@ -425,3 +425,85 @@ pub fn BellIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         }
     }
 }
+
+#[component]
+pub fn CheckIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2.5",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "m5 12 5 5 9-10" }
+        }
+    }
+}
+
+#[component]
+pub fn SendIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M21 3 10 14" }
+            path { d: "M21 3 14 21l-4-7-7-4 18-7z" }
+        }
+    }
+}
+
+#[component]
+pub fn UsersIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            circle { cx: "9", cy: "8", r: "3.5" }
+            path { d: "M2.5 20c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5" }
+            path { d: "M16 4.6a3.5 3.5 0 0 1 0 6.8" }
+            path { d: "M18.5 14.8c1.8.7 3 2.4 3 5.2" }
+        }
+    }
+}
+
+#[component]
+pub fn UserPlusIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            circle { cx: "10", cy: "8", r: "4" }
+            path { d: "M3 21c0-4 3-6 7-6 1.5 0 2.8.3 3.9.8" }
+            path { d: "M19 14v6M16 17h6" }
+        }
+    }
+}

@@ -18,7 +18,8 @@ use super::super::helpers::expense_modal_helpers::{
     validate_expense_form, Conversion, ValidatedExpense,
 };
 use super::super::hooks::use_fx_rates::use_fx_rates;
-use crate::crypto::{decrypt_json, decrypt_payment, encrypt_json, user_names};
+use crate::crypto::{decrypt_json, encrypt_json};
+use crate::decrypted::{decrypt_payment, user_names};
 
 #[derive(Props, Clone, PartialEq)]
 pub struct EditExpenseModalProps {
@@ -182,7 +183,9 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
         }
 
         let name_val = form.name.clone();
-        let author_id = stored_user_id.or(expense_author_id);
+        // The author is whoever entered the expense and never changes; the editor only signs the
+        // history row.
+        let actor_id = stored_user_id.or(expense_author_id);
 
         let payload = match build_editable_expense(
             &key,
@@ -191,7 +194,8 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
             &expense_type(),
             category(),
             project_id,
-            author_id,
+            expense_author_id,
+            actor_id,
             tid!("history-expense-edited", name: name_val.clone()),
             conversion.as_ref(),
         ) {
@@ -261,7 +265,7 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
 
 // ---- pure helpers ----
 
-// Nine arguments, and they stay nine: there is one production caller and one test, so a
+// Ten arguments, and they stay ten: there is one production caller and one test, so a
 // parameter struct would exist solely to satisfy the lint. Keeping them flat is what makes the
 // helper callable from a test with no runtime, which is the whole reason it is split out.
 #[allow(clippy::too_many_arguments)]
@@ -273,6 +277,7 @@ fn build_editable_expense(
     category: Option<String>,
     project_id: Uuid,
     author_id: Option<i32>,
+    actor_id: Option<i32>,
     // Already translated by the caller: this stays pure so it is testable without a runtime.
     history_summary: String,
     conversion: Option<&Conversion>,
@@ -280,7 +285,7 @@ fn build_editable_expense(
     // No actor, no history row. This device knows of no participant it is acting as — the original
     // author was removed and nothing is stored locally — and the server validates the actor against
     // the project, so any id invented here would be rejected anyway.
-    let history = match author_id {
+    let history = match actor_id {
         Some(actor_user_id) => Some(HistoryContext {
             actor_user_id,
             payload: encrypt_json(
@@ -313,7 +318,8 @@ fn build_editable_expense(
 mod tests {
     use super::*;
     use crate::common::test_fixtures::{make_payment, test_key};
-    use crate::crypto::{decrypt_json, decrypt_payment, DecryptedPayment};
+    use crate::crypto::decrypt_json;
+    use crate::decrypted::{decrypt_payment, DecryptedPayment};
     use shared::{ExpensePayload, PaymentPayload};
 
     // Payload-level assertions live in expense_modal_helpers; these cover what building an
@@ -349,10 +355,30 @@ mod tests {
             None,
             Uuid::nil(),
             Some(1),
+            Some(1),
             format!("edited: {name}"),
             None,
         )
         .unwrap()
+    }
+
+    #[test]
+    fn editing_keeps_the_author_and_signs_history_as_the_editor() {
+        let ee = build_editable_expense(
+            &test_key(),
+            1,
+            &validated("x", 10.0, &[(1, 10.0)], &[(2, 10.0)]),
+            &ExpenseType::Expense,
+            None,
+            Uuid::nil(),
+            Some(1),
+            Some(2),
+            "edited".to_string(),
+            None,
+        )
+        .unwrap();
+        assert_eq!(ee.author_id, Some(1));
+        assert_eq!(ee.history.unwrap().actor_user_id, 2);
     }
 
     #[test]

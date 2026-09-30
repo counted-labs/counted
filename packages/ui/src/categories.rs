@@ -1,6 +1,6 @@
 use crate::tid;
 
-use crate::crypto::DecryptedExpense;
+use crate::decrypted::DecryptedExpense;
 
 pub struct Category {
     pub name: &'static str,

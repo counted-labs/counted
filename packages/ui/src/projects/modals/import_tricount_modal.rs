@@ -12,11 +12,11 @@ use shared::{
     CreatableUser, CreatableUserBatch, EncryptedUserAmount, ExpensePayload, ExpenseType,
     PaymentPayload, ProjectPayload, UpsertAccountProject, UserPayload,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::common::{error_message, update_ls, upsert_project, upsert_project_key, LocalStorageState, NativeClipboardReader};
 use crate::crypto::{
-    claim_token, claim_verifier, encrypt_json, generate_key, key_to_fragment, wrap_project_key,
+    claim_token, claim_verifier, encrypt_json, generate_key, key_to_fragment, wrap_key,
 };
 use crate::icons::{CloseIcon, ICON_HEADER};
 use crate::route::Route;
@@ -87,6 +87,21 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                     }
                 };
 
+            let members: Vec<_> =
+                registry.memberships.iter().filter_map(|m| m.non_user.as_ref()).collect();
+            let known: HashSet<&str> = members.iter().map(|m| m.uuid.as_str()).collect();
+            let planned = match plan_entries(
+                registry.all_registry_entry.iter().filter_map(|w| w.entry.as_ref()),
+                &known,
+            ) {
+                Ok(p) => p,
+                Err(count) => {
+                    error_msg.set(Some(tid!("import-tricount-unimportable", count: count as i64)));
+                    loading.set(false);
+                    return;
+                }
+            };
+
             let enc_key = generate_key();
             let key_fragment = key_to_fragment(&enc_key);
 
@@ -116,9 +131,13 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                     return;
                 }
             };
-
-            let members: Vec<_> =
-                registry.memberships.iter().filter_map(|m| m.non_user.as_ref()).collect();
+            // Stored the moment the project exists, not after the last request: a failure in the
+            // participants or expenses step used to leave a project nobody could ever decrypt. A
+            // partial import now stays in the list, openable and leavable.
+            update_ls(ls_ctx, |state| {
+                upsert_project(state, project.id, None);
+                upsert_project_key(state, project.id, key_fragment);
+            });
 
             let creatables: Vec<CreatableUser> = match members
                 .iter()
@@ -128,7 +147,6 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                             name: m.alias.display_name.clone(),
                         })?,
                         project_id: project.id,
-                        invited_email: None,
                     })
                 })
                 .collect::<Result<Vec<_>, String>>()
@@ -160,91 +178,28 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
             }
 
             let mut expenses_batch: Vec<CreatableExpense> = Vec::new();
-            for entry_wrapper in &registry.all_registry_entry {
-                let entry = match entry_wrapper.entry.as_ref() {
-                    Some(e) => e,
-                    None => continue,
+            for entry in &planned {
+                // Every uuid was checked against `known` by `plan_entries`, and `uuid_to_id` holds
+                // one participant per member: a miss here means `add_user` returned fewer rows.
+                let (Some(&payer_id), Some(debtor_ids)) = (
+                    uuid_to_id.get(entry.payer),
+                    entry.debtors.iter().map(|(u, a)| uuid_to_id.get(*u).map(|id| (*id, *a))).collect::<Option<Vec<_>>>(),
+                ) else {
+                    error_msg.set(Some(tid!("import-tricount-unimportable", count: 1i64)));
+                    loading.set(false);
+                    return;
                 };
 
-                let name = match entry["description"].as_str() {
-                    Some(s) if !s.is_empty() => s,
-                    _ => continue,
-                };
-
-                // `s.get(..10)`, not `&s[..10]`: this is a field of a third-party API response, and
-                // byte-slicing panics when index 10 is not a UTF-8 char boundary. `len() >= 10`
-                // does not rule that out — it counts bytes.
-                let date_str =
-                    entry["created"].as_str().and_then(|s| s.get(..10)).unwrap_or("2000-01-01");
-
-                let total_amount = match entry["amount"]["value"]
-                    .as_str()
-                    .and_then(|s| s.parse::<f64>().ok())
-                {
-                    Some(a) => round_currency(a.abs()),
-                    None => continue,
-                };
-
-                let owner_uuid = match entry["membership_owned"]["RegistryMembershipNonUser"]
-                    ["uuid"]
-                    .as_str()
-                {
-                    Some(u) => u,
-                    None => continue,
-                };
-
-                let payer_id = match uuid_to_id.get(owner_uuid) {
-                    Some(&id) => id,
-                    None => continue,
-                };
-
-                let is_transfer = entry["type_transaction"].as_str() == Some("BALANCE");
                 let expense_type =
-                    if is_transfer { ExpenseType::Transfer } else { ExpenseType::Expense };
-
-                // Each Tricount allocation → one debtor row; skip zero-amount entries
-                let allocations: Vec<(i32, f64)> = entry["allocations"]
-                    .as_array()
-                    .map(|arr| {
-                        arr.iter()
-                            .filter_map(|alloc| {
-                                let uuid = alloc["membership"]["RegistryMembershipNonUser"]
-                                    ["uuid"]
-                                    .as_str()?;
-                                let user_id = *uuid_to_id.get(uuid)?;
-                                let amount = alloc["amount"]["value"]
-                                    .as_str()?
-                                    .parse::<f64>()
-                                    .ok()?
-                                    .abs();
-                                if amount == 0.0 {
-                                    return None;
-                                }
-                                Some((user_id, round_currency(amount)))
-                            })
-                            .collect()
-                    })
-                    .unwrap_or_default();
-
-                if allocations.is_empty() {
-                    continue;
-                }
-
-                // Tricount's allocations can round off against its own total, and imports bypass
-                // the form — nothing else would catch it before the expense lands permanently
-                // flagged as inconsistent.
-                let mut allocations = allocations;
-                if !balance_allocations(total_amount, &mut allocations) {
-                    continue;
-                }
+                    if entry.transfer { ExpenseType::Transfer } else { ExpenseType::Expense };
 
                 // No conversion: the imported project adopts the Tricount registry's own currency,
                 // so every amount is already in the project currency.
                 let expense_payload = match encrypt_json(&enc_key, &ExpensePayload {
-                    name: name.to_string(),
-                    amount: total_amount,
+                    name: entry.name.to_string(),
+                    amount: entry.total,
                     expense_type: expense_type.as_str().to_string(),
-                    date: date_str.to_string(),
+                    date: entry.date.to_string(),
                     description: None,
                     category: None,
                     source_currency: None,
@@ -255,16 +210,14 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                     Err(_) => continue,
                 };
 
-                let payers = match std::iter::once(
-                    encrypt_json(&enc_key, &PaymentPayload { amount: total_amount, is_debt: false })
-                        .map(|payload| EncryptedUserAmount { user_id: payer_id, payload })
-                )
-                .collect::<Result<Vec<_>, String>>() {
+                let payers = match encrypt_json(&enc_key, &PaymentPayload { amount: entry.total, is_debt: false })
+                    .map(|payload| vec![EncryptedUserAmount { user_id: payer_id, payload }])
+                {
                     Ok(v) => v,
                     Err(_) => continue,
                 };
 
-                let debtors: Vec<EncryptedUserAmount> = match allocations
+                let debtors: Vec<EncryptedUserAmount> = match debtor_ids
                     .iter()
                     .map(|(uid, amt)| {
                         encrypt_json(&enc_key, &PaymentPayload { amount: *amt, is_debt: true })
@@ -295,16 +248,11 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                 }
             }
 
-            update_ls(ls_ctx, |state| {
-                upsert_project(state, project.id, None);
-                upsert_project_key(state, project.id, key_fragment);
-            });
-
             // user_id is None — the user identifies themselves later via UserSelectionModal, which
             // is also what attaches the claim label. Nothing to claim here yet.
             if is_auth {
                 let _ = upsert_account_project(Json(UpsertAccountProject {
-                    key: account_key.and_then(|ak| wrap_project_key(&ak, &enc_key)),
+                    key: account_key.and_then(|ak| wrap_key(&ak, &enc_key)),
                     project_id: project.id,
                     user_id: None,
                     claim_label: None,
@@ -413,17 +361,93 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
     }
 }
 
-/// Pushes the cent difference onto the last allocation so debtors match the total exactly. False
-/// when that would drive it negative: a gap that large is bad data, not rounding, and the caller
-/// skips the entry rather than importing a nonsensical row.
-fn balance_allocations(total: f64, allocations: &mut [(i32, f64)]) -> bool {
+/// One Tricount entry, resolved to member uuids and validated, before any participant exists.
+#[derive(Debug, PartialEq)]
+struct PlannedEntry<'a> {
+    name: &'a str,
+    date: &'a str,
+    total: f64,
+    transfer: bool,
+    payer: &'a str,
+    debtors: Vec<(&'a str, f64)>,
+}
+
+/// The entries to import, or how many cannot be imported faithfully. Checked before the project
+/// is created, so a refusal leaves nothing behind.
+///
+/// Only plain members (`RegistryMembershipNonUser`) become participants. An entry paid by, or
+/// owed by, anyone else used to be imported without them — its debts landed on the last remaining
+/// debtor, a wrong balance from day one with no warning. Entries without a description or an
+/// amount are not expenses and are skipped, as before.
+fn plan_entries<'a>(
+    entries: impl Iterator<Item = &'a serde_json::Value>,
+    members: &HashSet<&str>,
+) -> Result<Vec<PlannedEntry<'a>>, usize> {
+    let member = |membership: &'a serde_json::Value| {
+        membership["RegistryMembershipNonUser"]["uuid"].as_str().filter(|u| members.contains(u))
+    };
+    let mut planned = Vec::new();
+    let mut unimportable = 0;
+    for entry in entries {
+        let Some(name) = entry["description"].as_str().filter(|s| !s.is_empty()) else { continue };
+        let Some(total) = entry["amount"]["value"].as_str().and_then(|s| s.parse::<f64>().ok())
+        else {
+            continue;
+        };
+        let total = round_currency(total.abs());
+        // `s.get(..10)`, not `&s[..10]`: this is a field of a third-party API response, and
+        // byte-slicing panics when index 10 is not a UTF-8 char boundary. `len() >= 10` does not
+        // rule that out — it counts bytes.
+        let date = entry["created"].as_str().and_then(|s| s.get(..10)).unwrap_or("2000-01-01");
+
+        let Some(payer) = member(&entry["membership_owned"]) else {
+            unimportable += 1;
+            continue;
+        };
+        let mut debtors = Vec::new();
+        let mut mapped = true;
+        for alloc in entry["allocations"].as_array().into_iter().flatten() {
+            let amount = alloc["amount"]["value"].as_str().and_then(|s| s.parse::<f64>().ok());
+            let amount = round_currency(amount.unwrap_or(0.0).abs());
+            if amount == 0.0 {
+                continue;
+            }
+            match member(&alloc["membership"]) {
+                Some(uuid) => debtors.push((uuid, amount)),
+                None => mapped = false,
+            }
+        }
+        // Tricount's allocations can round off against its own total, and imports bypass the form
+        // — nothing else would catch it before the expense lands permanently flagged inconsistent.
+        if !mapped || !balance_allocations(total, &mut debtors) {
+            unimportable += 1;
+            continue;
+        }
+        let transfer = entry["type_transaction"].as_str() == Some("BALANCE");
+        planned.push(PlannedEntry { name, date, total, transfer, payer, debtors });
+    }
+    if unimportable > 0 {
+        Err(unimportable)
+    } else {
+        Ok(planned)
+    }
+}
+
+/// Makes the debtors sum to the total exactly. A lone debtor owes the whole total whatever its
+/// allocation says. Several absorb at most a cent each of rounding, pushed onto the last one; a
+/// larger gap is bad data, and absorbing it silently moved someone's debt onto someone else.
+fn balance_allocations<T>(total: f64, allocations: &mut [(T, f64)]) -> bool {
     let sum: f64 = allocations.iter().map(|(_, a)| a).sum();
     if sums_to_total(total, [sum]) {
         return true;
     }
+    let count = allocations.len();
     let Some(last) = allocations.last_mut() else {
         return false;
     };
+    if count > 1 && (total - sum).abs() > 0.01 * count as f64 + 1e-9 {
+        return false;
+    }
     let fixed = round_currency(last.1 + total - sum);
     if fixed < 0.0 {
         return false;
@@ -434,8 +458,80 @@ fn balance_allocations(total: f64, allocations: &mut [(i32, f64)]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::balance_allocations;
+    use super::{balance_allocations, plan_entries, PlannedEntry};
+    use serde_json::{json, Value};
     use shared::sums_to_total;
+    use std::collections::HashSet;
+
+    fn non_user(uuid: &str) -> Value {
+        json!({ "RegistryMembershipNonUser": { "uuid": uuid } })
+    }
+
+    fn entry(payer: Value, allocations: &[(Value, &str)]) -> Value {
+        json!({
+            "description": "Dinner",
+            "created": "2026-09-01 20:00:00",
+            "amount": { "value": "-30.00" },
+            "membership_owned": payer,
+            "allocations": allocations
+                .iter()
+                .map(|(m, a)| json!({ "membership": m, "amount": { "value": a } }))
+                .collect::<Vec<_>>(),
+        })
+    }
+
+    fn members() -> HashSet<&'static str> {
+        ["a", "b"].into_iter().collect()
+    }
+
+    #[test]
+    fn a_plain_split_is_planned() {
+        let entries = [entry(non_user("a"), &[(non_user("a"), "-15.00"), (non_user("b"), "-15.00")])];
+        let planned = plan_entries(entries.iter(), &members()).unwrap();
+        assert_eq!(
+            planned,
+            vec![PlannedEntry {
+                name: "Dinner",
+                date: "2026-09-01",
+                total: 30.0,
+                transfer: false,
+                payer: "a",
+                debtors: vec![("a", 15.0), ("b", 15.0)],
+            }]
+        );
+    }
+
+    // The M11 case: a member with a Tricount account is another variant, and has no participant.
+    #[test]
+    fn a_debtor_who_is_not_a_plain_member_refuses_the_import() {
+        let account_member = json!({ "RegistryMembershipUser": { "uuid": "c" } });
+        let entries = [entry(non_user("a"), &[(non_user("a"), "-15.00"), (account_member, "-15.00")])];
+        assert_eq!(plan_entries(entries.iter(), &members()), Err(1));
+    }
+
+    #[test]
+    fn an_unknown_payer_refuses_the_import() {
+        let entries = [entry(non_user("z"), &[(non_user("a"), "-30.00")])];
+        assert_eq!(plan_entries(entries.iter(), &members()), Err(1));
+    }
+
+    #[test]
+    fn allocations_far_from_the_total_refuse_the_import() {
+        let entries = [entry(non_user("a"), &[(non_user("a"), "-10.00"), (non_user("b"), "-10.00")])];
+        assert_eq!(plan_entries(entries.iter(), &members()), Err(1));
+    }
+
+    #[test]
+    fn entries_that_are_not_expenses_are_skipped_not_counted() {
+        let entries = [json!({ "amount": { "value": "-5.00" } }), json!({ "description": "x" })];
+        assert_eq!(plan_entries(entries.iter(), &members()), Ok(vec![]));
+    }
+
+    #[test]
+    fn a_gap_beyond_a_cent_per_debtor_is_refused() {
+        let mut allocations = vec![(1, 50.0), (2, 49.97)];
+        assert!(!balance_allocations(100.0, &mut allocations));
+    }
 
     #[test]
     fn absorbs_a_rounding_cent_on_the_last_allocation() {
@@ -468,7 +564,7 @@ mod tests {
 
     #[test]
     fn an_empty_slice_is_refused_without_panicking() {
-        assert!(!balance_allocations(10.0, &mut []));
+        assert!(!balance_allocations::<i32>(10.0, &mut []));
     }
 
     #[test]

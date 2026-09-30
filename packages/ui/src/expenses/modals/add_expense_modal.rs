@@ -17,7 +17,8 @@ use super::super::helpers::expense_modal_helpers::{
     validate_expense_form, Conversion, ValidatedExpense,
 };
 use super::super::hooks::use_fx_rates::use_fx_rates;
-use crate::crypto::{encrypt_json, user_names};
+use crate::crypto::encrypt_json;
+use crate::decrypted::user_names;
 
 #[derive(Props, Clone, PartialEq)]
 pub struct AddExpenseModalProps {

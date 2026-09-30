@@ -53,6 +53,7 @@ error-unauthenticated = Logga in för att göra det.
 error-email-not-verified = Din e-postadress är inte verifierad ännu.
 error-project-not-found = Det här projektet finns inte längre.
 error-expense-not-found = Den här utgiften finns inte längre.
+error-storage-full = Lagringsutrymmet är fullt: nyckeln till det här projektet kunde inte sparas på den här enheten. Spara delningslänken.
 error-user-not-found = Den här deltagaren finns inte längre.
 error-tricount-not-found = Tricount hittades inte, eller så gav dess API ett fel.
 error-too-many-members = Projektet har nått sin gräns för medlemmar.
@@ -250,13 +251,8 @@ add-project-name-placeholder = Min resa, Kollektivet 2024…
 add-project-participants = Deltagare
 add-project-participant-name = Deltagarens namn
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Ta bort deltagare
-add-project-me-badge = Jag
-add-project-thats-me = Det är jag!
 add-project-offline = Du kan inte skapa ett projekt offline. Anslut igen och försök på nytt.
 add-project-name-required = Projektet behöver ett namn.
-add-project-need-two-participants = Lägg till minst 2 deltagare.
-add-project-pick-yourself = Berätta vilken deltagare du är.
 
 join-link-label = Delningslänk
 join-link-hint = Länken innehåller dekrypteringsnyckeln - kopiera hela.
@@ -266,6 +262,7 @@ join-wrong-project = Den länken gäller ett annat projekt.
 import-tricount-link-label = Tricount-länk eller -nyckel
 import-tricount-key-required = Ange en Tricount-länk eller -nyckel.
 import-tricount-encryption-failed = Krypteringen misslyckades.
+import-tricount-unimportable = Inget importerades: den här Tricounten har medlemmar med Tricount-konto eller belopp som inte går ihop (berörda poster: { $count }).
 
 ### Expenses
 
@@ -363,11 +360,8 @@ edit-project-title = Redigera projektet
 edit-project-new-badge = ny
 edit-project-deferred-new-members = tillägg av nya medlemmar
 edit-project-deferred-removals = borttagning av medlemmar
-edit-project-deferred-me = valet ”Det är jag”
 edit-project-offline-deferred = Offline: { $items } tillämpas när du ansluter igen.
 
-export-saved = Fil sparad:
-    { $path }
 export-failed = Exporten misslyckades: { $reason }
 
 history-expense-added = Utgift tillagd: { $name }
@@ -510,13 +504,24 @@ debtors-title-beneficiaries = Förmånstagare
 
 welcome-title = Din bokföring angår ingen annan.
 welcome-subtitle = Dela utgifter med vänner.
-welcome-e2ee-title = Allt krypterat
-welcome-e2ee-body = Namn, belopp, projekt: allt krypteras på din enhet. Bara du har nyckeln. Ingen kan läsa dina räkenskaper. Inte ens vi.
-welcome-e2ee-note = Oläsbart, även för oss (noll serveråtkomst)
+welcome-note = Gratis. Inget konto behövs. Inga annonser.
+welcome-link-title = En länk, och alla är med.
+welcome-link-body = Ingen behöver skapa ett konto.
+welcome-link-account = Ett konto? Aldrig ett krav. Det används för att hitta dina projekt på en annan enhet, bjuda in vänner från appen och dela dina betalningsuppgifter.
+welcome-demo-project = Helg i Lyon
+welcome-private-title = Ingen kan läsa dina räkenskaper. Inte ens vi.
+welcome-private-body = Namn, belopp, projekt: allt krypteras på din enhet. Bara du har nyckeln.
+welcome-private-names = Namn
+welcome-private-amounts = Belopp
+welcome-private-projects = Projekt
+welcome-scan-title = Fota kvittot.
+welcome-scan-body = Belopp, datum och kategori fylls i av sig själva. Allt sker i din telefon. Fotot sparas inte.
 welcome-eu-title = 100 % europeiskt
-welcome-eu-body = Servrar i Tyskland, mejl som skickas från Frankrike. Din data lämnar aldrig Europeiska unionen.
-welcome-noads-title = Inga annonser. Inga spårare.
-welcome-noads-body = Vi samlar inget och säljer inte dina uppgifter. Det är inte vår modell.
+welcome-no-ads = Inga annonser
+welcome-no-trackers = Inga spårare
+welcome-step = Steg { $current } av { $total }
+welcome-next = Nästa
+welcome-skip = Hoppa över
 welcome-start = Kom igång
 welcome-how-it-works = Hur fungerar det, egentligen?
 
@@ -620,3 +625,49 @@ invitation-unreadable = Den här inbjudan kan inte öppnas på den här enheten
 invitation-from = Från { $email }
 invitation-accept = Gå med
 invitation-decline = Avböj
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Ditt namn i det här projektet
+participants-you-badge = Du
+participants-you-from-account = Hämtat från ditt kontonamn. Ändra det här bara för det här projektet.
+participants-you-required = Obligatoriskt. Så här ser de andra dig.
+participants-others = Andra deltagare
+participants-empty = Ingen än. Välj en vän nedan eller skriv ett namn.
+participants-empty-signed-out = Ingen än. Skriv ett namn för att lägga till någon.
+participants-duplicate = ”{ $name }” finns redan i listan.
+participants-input-label = Lägg till en vän eller skriv ett namn
+participants-input-placeholder = Vän eller valfritt namn
+participants-suggest-friend = Vän · går med som ”{ $name }”, får en inbjudan
+participants-suggest-not-ready = Vän · inte redo än
+participants-suggest-guest = Lägg till ”{ $text }” utan konto
+participants-suggest-guest-sub = Inget konto, bara ett namn
+participants-friends = Dina vänner
+participants-all-friends = Alla vänner
+participants-login-hint = Logga in för att lägga till personer direkt från din vänlista.
+participants-invite-badge = Bjud in
+participants-guest-badge = Utan konto
+participants-guest-sub = Inget konto, bara ett namn
+participants-rename = Byt namn på { $name }
+participants-remove = Ta bort { $name }
+participants-rename-label = Nytt namn
+participants-rename-save = Spara namnet
+participants-rename-hint = Namnet som alla ser i det här projektet. Inbjudan går fortfarande till { $email }.
+participants-invited-badge = Inbjuden
+participants-invited-sub = { $email } · inte accepterad än
+participants-invited-pending = Inbjudan inte accepterad än
+participants-unlinked = Inte kopplad till något konto
+add-project-create-invite = Skapa och bjud in { $count }
+edit-project-save-invite = Spara och bjud in { $count }
+edit-project-you-are = På den här enheten är du { $name }
+edit-project-no-identity = Du har inte valt vem du är än
+edit-project-switch = Byt
+edit-project-choose = Välj
+invite-failed = De här inbjudningarna kunde inte skickas: { $emails }
+invite-again = Bjud in igen
+friend-picker-title = Lägg till vänner
+user-selection-invited-hint = { $email } har bjudit in dig till ”{ $project }”.
+user-selection-suggested = Föreslagen
+user-selection-suggested-sub = { $email } lade till dig med det här namnet
+user-selection-confirm-as = Jag är { $name }
+user-selection-missing = Finns inte ditt namn? Be en deltagare lägga till dig i projektets inställningar.

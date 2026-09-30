@@ -53,6 +53,7 @@ error-email-not-verified = Je e-mailadres is nog niet geverifieerd.
 error-claim-proof-invalid = Dit apparaat heeft de projectsleutel niet en kan dus geen deelnemer claimen. Open de deellink opnieuw.
 error-project-not-found = Dit project bestaat niet meer.
 error-expense-not-found = Deze uitgave bestaat niet meer.
+error-storage-full = De opslag is vol: de sleutel van dit project kon niet op dit apparaat worden opgeslagen. Bewaar de deellink.
 error-user-not-found = Deze deelnemer bestaat niet meer.
 error-tricount-not-found = Tricount niet gevonden, of de API gaf een fout.
 error-too-many-members = Dit project heeft de limiet aan deelnemers bereikt.
@@ -227,13 +228,8 @@ add-project-name-placeholder = Mijn reis, Huis 2024…
 add-project-participants = Deelnemers
 add-project-participant-name = Naam van de deelnemer
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Deelnemer verwijderen
-add-project-me-badge = Ik
-add-project-thats-me = Dat ben ik!
 add-project-offline = Offline kun je geen project aanmaken. Maak opnieuw verbinding en probeer het nog eens.
 add-project-name-required = Het project heeft een naam nodig.
-add-project-need-two-participants = Voeg minstens 2 deelnemers toe.
-add-project-pick-yourself = Geef aan welke deelnemer jij bent.
 
 join-link-label = Deellink
 join-link-hint = De link bevat de ontsleutelsleutel - kopieer hem volledig.
@@ -243,6 +239,7 @@ join-wrong-project = Deze link hoort bij een ander project.
 import-tricount-link-label = Tricount-link of -sleutel
 import-tricount-key-required = Voer een Tricount-link of -sleutel in.
 import-tricount-encryption-failed = Versleuteling mislukt.
+import-tricount-unimportable = Er is niets geïmporteerd: deze Tricount heeft leden met een Tricount-account of bedragen die niet kloppen (betrokken posten: { $count }).
 
 ### Expenses
 
@@ -310,11 +307,8 @@ user-selection-required = Selecteer een deelnemer.
 
 edit-project-deferred-new-members = het toevoegen van nieuwe deelnemers
 edit-project-deferred-removals = het verwijderen van deelnemers
-edit-project-deferred-me = de keuze ‘Dat ben ik’
 edit-project-offline-deferred = Offline: { $items } wordt toegepast zodra je weer verbinding hebt.
 
-export-saved = Bestand opgeslagen:
-    { $path }
 export-failed = Exporteren mislukt: { $reason }
 
 history-expense-added = Uitgave toegevoegd: { $name }
@@ -403,13 +397,24 @@ debtors-title-beneficiaries = Begunstigden
 
 welcome-title = Jouw afrekening gaat niemand anders aan.
 welcome-subtitle = Deel uitgaven met vrienden.
-welcome-e2ee-title = Alles versleuteld
-welcome-e2ee-body = Namen, bedragen, projecten: alles wordt op je apparaat versleuteld. Alleen jij hebt de sleutel. Niemand kan je rekeningen lezen. Zelfs wij niet.
-welcome-e2ee-note = Onleesbaar, ook voor ons (geen servertoegang)
+welcome-note = Gratis. Geen account nodig. Geen advertenties.
+welcome-link-title = Eén link, en iedereen doet mee.
+welcome-link-body = Niemand hoeft een account aan te maken.
+welcome-link-account = Een account? Nooit verplicht. Het dient om je projecten op een ander apparaat terug te vinden, vrienden vanuit de app uit te nodigen en je betaalgegevens te delen.
+welcome-demo-project = Weekendje Lyon
+welcome-private-title = Niemand kan je rekeningen lezen. Zelfs wij niet.
+welcome-private-body = Namen, bedragen, projecten: alles wordt op je apparaat versleuteld. Alleen jij hebt de sleutel.
+welcome-private-names = Namen
+welcome-private-amounts = Bedragen
+welcome-private-projects = Projecten
+welcome-scan-title = Maak een foto van de bon.
+welcome-scan-body = Bedrag, datum en categorie vullen zich vanzelf in. Alles gebeurt op je telefoon. De foto wordt niet bewaard.
 welcome-eu-title = 100 % Europees
-welcome-eu-body = Servers in Duitsland, e-mail verstuurd vanuit Frankrijk. Je gegevens verlaten de Europese Unie nooit.
-welcome-noads-title = Geen advertenties. Geen trackers.
-welcome-noads-body = We verzamelen niets en verkopen je gegevens niet. Dat is ons model niet.
+welcome-no-ads = Geen advertenties
+welcome-no-trackers = Geen trackers
+welcome-step = Stap { $current } van { $total }
+welcome-next = Volgende
+welcome-skip = Overslaan
 welcome-start = Aan de slag
 welcome-how-it-works = Hoe werkt het precies?
 
@@ -648,3 +653,49 @@ invitation-unreadable = Deze uitnodiging kan niet op dit apparaat worden geopend
 invitation-from = Van { $email }
 invitation-accept = Deelnemen
 invitation-decline = Weigeren
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Je naam in dit project
+participants-you-badge = Jij
+participants-you-from-account = Overgenomen van je accountnaam. Pas hem hier aan voor alleen dit project.
+participants-you-required = Verplicht. Zo zien de anderen je.
+participants-others = Andere deelnemers
+participants-empty = Nog niemand. Kies hieronder een vriend of typ een naam.
+participants-empty-signed-out = Nog niemand. Typ een naam om iemand toe te voegen.
+participants-duplicate = “{ $name }” staat al in de lijst.
+participants-input-label = Een vriend toevoegen of een naam typen
+participants-input-placeholder = Vriend of een naam
+participants-suggest-friend = Vriend · doet mee als “{ $name }”, krijgt een uitnodiging
+participants-suggest-not-ready = Vriend · nog niet klaar
+participants-suggest-guest = “{ $text }” zonder account toevoegen
+participants-suggest-guest-sub = Geen account, alleen een naam
+participants-friends = Je vrienden
+participants-all-friends = Alle vrienden
+participants-login-hint = Log in om mensen direct uit je vriendenlijst toe te voegen.
+participants-invite-badge = Uitnodigen
+participants-guest-badge = Zonder account
+participants-guest-sub = Geen account, alleen een naam
+participants-rename = { $name } hernoemen
+participants-remove = { $name } verwijderen
+participants-rename-label = Nieuwe naam
+participants-rename-save = Naam opslaan
+participants-rename-hint = De naam die iedereen in dit project ziet. De uitnodiging gaat nog steeds naar { $email }.
+participants-invited-badge = Uitgenodigd
+participants-invited-sub = { $email } · nog niet geaccepteerd
+participants-invited-pending = Uitnodiging nog niet geaccepteerd
+participants-unlinked = Niet gekoppeld aan een account
+add-project-create-invite = Aanmaken en { $count } uitnodigen
+edit-project-save-invite = Opslaan en { $count } uitnodigen
+edit-project-you-are = Op dit apparaat ben je { $name }
+edit-project-no-identity = Je hebt nog niet gekozen wie je bent
+edit-project-switch = Wisselen
+edit-project-choose = Kiezen
+invite-failed = Deze uitnodigingen konden niet worden verstuurd: { $emails }
+invite-again = Opnieuw uitnodigen
+friend-picker-title = Vrienden toevoegen
+user-selection-invited-hint = { $email } heeft je uitgenodigd voor “{ $project }”.
+user-selection-suggested = Voorgesteld
+user-selection-suggested-sub = { $email } heeft je onder deze naam toegevoegd
+user-selection-confirm-as = Ik ben { $name }
+user-selection-missing = Staat je naam er niet bij? Vraag een deelnemer om je toe te voegen in de projectinstellingen.

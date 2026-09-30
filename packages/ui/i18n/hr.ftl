@@ -54,6 +54,7 @@ error-unauthenticated = Prijavi se za tu radnju.
 error-email-not-verified = Tvoja e-mail adresa još nije potvrđena.
 error-project-not-found = Ovaj projekt više ne postoji.
 error-expense-not-found = Ovaj trošak više ne postoji.
+error-storage-full = Pohrana je puna: ključ ovog projekta nije bilo moguće spremiti na ovaj uređaj. Sačuvaj poveznicu za dijeljenje.
 error-user-not-found = Ovaj sudionik više ne postoji.
 error-tricount-not-found = Tricount nije pronađen ili je njegov API vratio grešku.
 error-too-many-members = Ovaj projekt je dosegao ograničenje broja članova.
@@ -251,13 +252,8 @@ add-project-name-placeholder = Moje putovanje, Cimeri 2024…
 add-project-participants = Sudionici
 add-project-participant-name = Ime sudionika
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Ukloni sudionika
-add-project-me-badge = Ja
-add-project-thats-me = To sam ja!
 add-project-offline = Ne možeš stvoriti projekt izvan mreže. Ponovno se spoji i pokušaj ponovno.
 add-project-name-required = Projekt treba naziv.
-add-project-need-two-participants = Dodaj barem 2 sudionika.
-add-project-pick-yourself = Reci nam koji si sudionik.
 
 join-link-label = Poveznica za dijeljenje
 join-link-hint = Poveznica sadrži ključ za dešifriranje - kopiraj je cijelu.
@@ -267,6 +263,7 @@ join-wrong-project = Ta poveznica je za drugi projekt.
 import-tricount-link-label = Tricount poveznica ili ključ
 import-tricount-key-required = Unesi Tricount poveznicu ili ključ.
 import-tricount-encryption-failed = Šifriranje nije uspjelo.
+import-tricount-unimportable = Ništa nije uvezeno: ovaj Tricount ima članove s Tricount računom ili iznose koji se ne slažu (zahvaćeni unosi: { $count }).
 
 ### Expenses
 
@@ -364,11 +361,8 @@ edit-project-title = Uredi projekt
 edit-project-new-badge = novo
 edit-project-deferred-new-members = dodavanje novih članova
 edit-project-deferred-removals = uklanjanje članova
-edit-project-deferred-me = odabir „To sam ja”
 edit-project-offline-deferred = Izvan mreže: { $items } primijenit će se pri ponovnom spajanju.
 
-export-saved = Datoteka spremljena:
-    { $path }
 export-failed = Izvoz nije uspio: { $reason }
 
 history-expense-added = Trošak dodan: { $name }
@@ -513,13 +507,24 @@ debtors-title-beneficiaries = Korisnici
 
 welcome-title = Tvoji računi nisu ničija briga.
 welcome-subtitle = Dijeli troškove s prijateljima.
-welcome-e2ee-title = Sve šifrirano
-welcome-e2ee-body = Imena, iznosi, projekti: sve se šifrira na tvom uređaju. Samo ti imaš ključ. Nitko ne može čitati tvoje račune. Čak ni mi.
-welcome-e2ee-note = Nečitljivo čak i nama (nulti pristup poslužitelja)
+welcome-note = Besplatno. Bez računa. Bez oglasa.
+welcome-link-title = Jedna poveznica i svi sudjeluju.
+welcome-link-body = Nitko ne mora stvarati račun.
+welcome-link-account = Račun? Nikad obavezan. Služi da pronađeš svoje projekte na drugom uređaju, pozoveš prijatelje iz aplikacije i podijeliš svoje podatke za plaćanje.
+welcome-demo-project = Vikend u Lyonu
+welcome-private-title = Nitko ne može čitati tvoje račune. Čak ni mi.
+welcome-private-body = Imena, iznosi, projekti: sve se šifrira na tvom uređaju. Samo ti imaš ključ.
+welcome-private-names = Imena
+welcome-private-amounts = Iznosi
+welcome-private-projects = Projekti
+welcome-scan-title = Fotografiraj račun.
+welcome-scan-body = Iznos, datum i kategorija ispune se sami. Sve se odvija na tvom telefonu. Fotografija se ne čuva.
 welcome-eu-title = 100 % europski
-welcome-eu-body = Poslužitelji u Njemačkoj, e-mail se šalje iz Francuske. Tvoji podaci nikad ne napuštaju Europsku uniju.
-welcome-noads-title = Bez oglasa. Bez praćenja.
-welcome-noads-body = Ništa ne prikupljamo i ne prodajemo tvoje podatke. To nije naš model.
+welcome-no-ads = Bez oglasa
+welcome-no-trackers = Bez praćenja
+welcome-step = Korak { $current } od { $total }
+welcome-next = Dalje
+welcome-skip = Preskoči
 welcome-start = Započni
 welcome-how-it-works = Kako to točno radi?
 
@@ -624,3 +629,49 @@ invitation-unreadable = Ova pozivnica ne može se otvoriti na ovom uređaju
 invitation-from = Od { $email }
 invitation-accept = Pridruži se
 invitation-decline = Odbij
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Tvoje ime u ovom projektu
+participants-you-badge = Ti
+participants-you-from-account = Preuzeto iz imena tvog računa. Ovdje ga promijeni samo za ovaj projekt.
+participants-you-required = Obavezno. Ovako će te vidjeti ostali.
+participants-others = Ostali sudionici
+participants-empty = Još nikoga. Odaberi prijatelja ispod ili upiši bilo koje ime.
+participants-empty-signed-out = Još nikoga. Upiši ime da nekoga dodaš.
+participants-duplicate = „{ $name }” je već na popisu.
+participants-input-label = Dodaj prijatelja ili upiši ime
+participants-input-placeholder = Prijatelj ili bilo koje ime
+participants-suggest-friend = Prijatelj · pridružuje se kao „{ $name }”, dobiva pozivnicu
+participants-suggest-not-ready = Prijatelj · još nije spreman
+participants-suggest-guest = Dodaj „{ $text }” bez računa
+participants-suggest-guest-sub = Bez računa, samo ime
+participants-friends = Tvoji prijatelji
+participants-all-friends = Svi prijatelji
+participants-login-hint = Prijavi se da dodaješ ljude izravno s popisa prijatelja.
+participants-invite-badge = Pozovi
+participants-guest-badge = Bez računa
+participants-guest-sub = Bez računa, samo ime
+participants-rename = Preimenuj: { $name }
+participants-remove = Ukloni: { $name }
+participants-rename-label = Novo ime
+participants-rename-save = Spremi ime
+participants-rename-hint = Ime koje svi vide u ovom projektu. Pozivnica i dalje ide na { $email }.
+participants-invited-badge = Pozvan
+participants-invited-sub = { $email } · još nije prihvaćeno
+participants-invited-pending = Pozivnica još nije prihvaćena
+participants-unlinked = Nije povezano s računom
+add-project-create-invite = Stvori i pozovi: { $count }
+edit-project-save-invite = Spremi i pozovi: { $count }
+edit-project-you-are = Na ovom uređaju ti si { $name }
+edit-project-no-identity = Još nisi odabrao/la tko si
+edit-project-switch = Promijeni
+edit-project-choose = Odaberi
+invite-failed = Ove pozivnice nije bilo moguće poslati: { $emails }
+invite-again = Pozovi ponovno
+friend-picker-title = Dodaj prijatelje
+user-selection-invited-hint = { $email } te pozvao/la u „{ $project }”.
+user-selection-suggested = Predloženo
+user-selection-suggested-sub = { $email } te dodao/la pod ovim imenom
+user-selection-confirm-as = Ja sam { $name }
+user-selection-missing = Tvog imena nema? Zamoli sudionika da te doda u postavkama projekta.

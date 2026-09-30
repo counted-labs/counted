@@ -13,10 +13,9 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::common::{
-    ensure_membership, read_from_ls, set_project_cache, update_ls_if_changed, upsert_project_key,
+    adopt_project_key, ensure_membership, read_from_ls, set_project_cache, update_ls_if_changed,
     ClaimOutcome, Flash, LocalStorageState, ProjectKey,
 };
-use crate::crypto::key_to_fragment;
 use crate::expenses::helpers::expenses_page_helpers::{
     cached_data_version, decide, key_for_project, For, Outcome,
 };
@@ -108,19 +107,6 @@ pub fn use_project_store() -> ProjectStore {
         }
         let Some(k) = resolved else { return };
 
-        // Guarded: this effect also re-runs when `me()` resolves, and rewriting the store means
-        // serialising every cached row of every project for nothing.
-        let frag = key_to_fragment(&k);
-        update_ls_if_changed(ls_ctx, |state| {
-            let stored = state
-                .projects
-                .iter()
-                .find(|p| p.project_id == id)
-                .and_then(|p| p.encryption_key.as_deref());
-            if stored != Some(frag.as_str()) {
-                upsert_project_key(state, id, frag.clone());
-            }
-        });
         // Holding the key is what makes this device a member, and every way in — create, join
         // modal, deep link, share link, Tricount import — passes through here. Reading `auth_ctx`
         // subscribes on purpose: when `me()` resolves later, an anonymous membership is upgraded.
@@ -128,6 +114,9 @@ pub fn use_project_store() -> ProjectStore {
         let account_key = account_key_ctx();
         let mut flash = flash_ctx;
         spawn(async move {
+            // Persisted before the membership write, which escrows whatever the store holds. A
+            // fragment key that differs from the held one is kept only if it decrypts the project.
+            adopt_project_key(ls_ctx, id, k).await;
             // `IdentityTaken` has already dropped the local `user_id`, so `stored_user_id()` goes
             // `None` and `ExpensesPage` reopens `UserSelectionModal` on its own. All that is left is
             // to say why, otherwise the picker reappears with no explanation.
@@ -146,7 +135,7 @@ pub fn use_project_store() -> ProjectStore {
         });
         #[cfg(target_arch = "wasm32")]
         if url_fragment().is_none() {
-            crate::common::web_dom::replace_state_hash(&frag);
+            crate::common::web_dom::replace_state_hash(&crate::crypto::key_to_fragment(&k));
         }
     }));
 
@@ -251,6 +240,9 @@ pub fn use_project_store() -> ProjectStore {
     let on_expenses_changed = use_callback(move |m: ExpenseMutation| {
         let mut guard = live.write();
         let applied = match guard.as_mut() {
+            // Resolved after a switch: the other project picks the row up from the version bump
+            // on its next open, and this one has nothing to refetch.
+            Some(l) if !m.belongs_to(l.project_id) => return,
             Some(l) => {
                 let applied = apply_mutation(&mut l.expenses, &mut l.payments, &m);
                 if applied {

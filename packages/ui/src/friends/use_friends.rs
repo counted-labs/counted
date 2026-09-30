@@ -30,13 +30,13 @@ pub fn use_friends() -> Friends {
 
     let lists = use_resource(move || {
         let _ = version();
-        let signed_in = auth_ctx().is_some();
+        let account = auth_ctx();
         let key = account_key();
         async move {
-            if !signed_in {
+            let Some(account) = account else {
                 return Ok(FriendsLists::default());
-            }
-            friends_service::load(key).await
+            };
+            friends_service::load(key, account.public_key).await
         }
     });
 

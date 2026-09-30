@@ -1,22 +1,24 @@
-use api::account_projects::account_projects_controller::upsert_account_project;
+use api::friends::invitations_controller::get_sent_invitations;
 use api::projects::projects_controller::update_project_by_id;
 use api::users::users_controller::{add_user, delete_user};
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use crate::tid;
-use shared::{Account, CreatableUser, CreatableUserBatch, EditableProject, HistoryContext, HistoryPayload, ProjectDto, ProjectPayload, UpsertAccountProject, User, UserPayload};
+use shared::{Account, CreatableUser, CreatableUserBatch, EditableProject, HistoryContext, HistoryPayload, ProjectDto, ProjectPayload, User, UserPayload};
 use std::collections::VecDeque;
 use uuid::Uuid;
 
 use crate::common::{
-    error_message, identity_locked, is_claim_proof_error, is_identity_taken_error, update_ls,
-    upsert_project, write_queue, Flash, LocalStorageState, OpKind, ProjectKey, QueuedOp,
+    error_message, identity_locked, is_user_gone_error, write_queue, Flash, InviteRetry,
+    LocalStorageState, OpKind, ProjectKey, QueuedOp,
 };
 use std::collections::HashSet;
-use crate::crypto::{
-    claim_label, claim_token, decrypt_json, decrypt_user, encrypt_json, DecryptedUser,
-};
-use crate::icons::{CloseIcon, LockIcon, TrashIcon, UserIcon, ICON_HEADER, ICON_INLINE};
+use crate::crypto::{decrypt_json, encrypt_json};
+use crate::decrypted::{decrypt_user, DecryptedUser};
+use crate::friends::friends_service::{invite_each, my_private_key, Invitee};
+use crate::icons::{CloseIcon, LockIcon, ICON_HEADER, ICON_INLINE};
+use crate::participants::participants_service::{invite_count, same_name, DraftParticipant};
+use crate::participants::{use_friend_list, Avatar, ParticipantsEditor};
 
 #[derive(PartialEq, Props, Clone)]
 pub struct EditProjectModalProps {
@@ -24,6 +26,10 @@ pub struct EditProjectModalProps {
     pub users: Vec<User>,
     pub on_close: EventHandler<()>,
     pub on_saved: EventHandler<()>,
+    /// "Switch" on the You card: closes this and opens "Which participant are you?". The project
+    /// list has no picker to open, so it passes none and the card shows no button.
+    #[props(default)]
+    pub on_switch: Option<EventHandler<()>>,
 }
 
 #[component]
@@ -36,6 +42,8 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     let is_online = use_context::<Signal<bool>>();
     let mut pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
     let mut flash = use_context::<Signal<Option<Flash>>>();
+    let mut invite_retry = use_context::<Signal<Option<InviteRetry>>>();
+    let friend_list = use_friend_list();
 
     let key_snap = key_ctx();
 
@@ -63,14 +71,22 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     let mut description = use_signal(|| initial_description.clone());
     // Existing users stored as decrypted so display and comparison work directly
     let mut existing_users: Signal<Vec<DecryptedUser>> = use_signal(|| initial_users.clone());
-    let mut new_user_input = use_signal(String::new);
-    let mut new_users: Signal<Vec<String>> = use_signal(Vec::new);
-    // None means "use localStorage"; Some(name) means user explicitly picked
-    let mut selected_me: Signal<Option<String>> = use_signal(|| None);
+    let mut drafts: Signal<Vec<DraftParticipant>> = use_signal(Vec::new);
     let mut loading = use_signal(|| false);
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
 
     let original_user_ids: Vec<i32> = props.users.iter().map(|u| u.id).collect();
+
+    // The caller's own pending invitations naming a participant: those rows read "Invited".
+    let sent = use_resource(move || {
+        let signed_in = auth_ctx.read().is_some();
+        async move {
+            if !signed_in {
+                return Vec::new();
+            }
+            get_sent_invitations(project_id).await.unwrap_or_default()
+        }
+    });
 
     // "Add as friend" on a locked row. Only a signed-in device with its account key can send one:
     // the request carries a label encrypted under that key.
@@ -89,6 +105,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     let on_close_cancel = props.on_close;
     let on_close_backdrop = props.on_close;
     let on_saved = props.on_saved;
+    let on_switch = props.on_switch;
 
     let on_submit = move |_| {
         let key = match key_snap {
@@ -109,8 +126,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             if desc_val.trim().is_empty() { None } else { Some(desc_val.trim().to_string()) };
 
         let current_existing = existing_users();
-        let current_new = new_users();
-        let selected = selected_me();
+        let current_new = drafts();
         let orig_ids = original_user_ids.clone();
         let currency = initial_currency.clone();
 
@@ -173,25 +189,12 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                 }),
             });
             write_queue(&pending_ops.read());
-            // Update "me" from existing users only (new users have no server ID yet).
-            let me_is_new = selected.as_ref().map(|name| {
-                current_existing.iter().all(|u| u.name != name.as_str())
-                    && current_new.iter().any(|n| n == name)
-            }).unwrap_or(false);
-            if let Some(ref me_name) = selected {
-                if !me_is_new {
-                    if let Some(uid) = current_existing.iter().find(|u| u.name == me_name.as_str()).map(|u| u.id) {
-                        update_ls(ls_ctx, |state| upsert_project(state, project_id, Some(uid)));
-                    }
-                }
-            }
             // Warn about anything that can't be applied offline.
             let existing_ids: HashSet<i32> = current_existing.iter().map(|u| u.id).collect();
             let has_deletions = orig_ids.iter().any(|id| !existing_ids.contains(id));
             let mut deferred: Vec<String> = Vec::new();
             if !current_new.is_empty() { deferred.push(tid!("edit-project-deferred-new-members")); }
             if has_deletions { deferred.push(tid!("edit-project-deferred-removals")); }
-            if me_is_new { deferred.push(tid!("edit-project-deferred-me")); }
             if !deferred.is_empty() {
                 flash.set(Some(Flash::ok(
                     tid!("edit-project-offline-deferred", items: deferred.join(", ")),
@@ -201,6 +204,8 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             return;
         }
 
+        let account = auth_ctx();
+        let account_key = account_key_ctx();
         loading.set(true);
         error_msg.set(None);
 
@@ -221,15 +226,24 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             let mut created_users: Vec<User> = Vec::new();
             if !current_new.is_empty() {
                 let mut creatables: Vec<CreatableUser> = Vec::new();
-                for n in &current_new {
-                    let payload = match encrypt_json(&key, &UserPayload { name: n.clone() }) {
+                for d in &current_new {
+                    let payload = match encrypt_json(&key, &UserPayload { name: d.name.clone() }) {
                         Ok(v) => v,
                         Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
                     };
-                    creatables.push(CreatableUser { payload, project_id, invited_email: None });
+                    creatables.push(CreatableUser { payload, project_id });
                 }
                 match add_user(Json(CreatableUserBatch::Multiple(creatables))).await {
-                    Ok(users) => created_users = users,
+                    // Moved into the existing list at once: a removal below can still fail (409
+                    // for a participant with payments, the ordinary case), and a re-submit used to
+                    // insert every new participant a second time.
+                    Ok(users) => {
+                        existing_users
+                            .write()
+                            .extend(users.iter().filter_map(|u| decrypt_user(&key, u).ok()));
+                        drafts.write().clear();
+                        created_users = users;
+                    }
                     Err(e) => {
                         error_msg.set(Some(error_message(&e)));
                         loading.set(false);
@@ -238,77 +252,46 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                 }
             }
 
+            // Sent before the removals, which can fail and keep the modal open: the new
+            // participants already exist, so their invitations must not wait on a re-submit.
+            let invitees: Vec<Invitee> = current_new
+                .iter()
+                .filter_map(|d| {
+                    let friend = d.friend.clone()?;
+                    let user_id = created_users
+                        .iter()
+                        .find(|u| {
+                            decrypt_json::<UserPayload>(&key, &u.payload)
+                                .map(|p| same_name(&p.name, &d.name))
+                                .unwrap_or(false)
+                        })
+                        .map(|u| u.id);
+                    Some(Invitee { friend, user_id })
+                })
+                .collect();
+            if !invitees.is_empty() {
+                let my_private = account
+                    .as_ref()
+                    .zip(account_key)
+                    .and_then(|(a, ak)| my_private_key(a, &ak));
+                let failed = invite_each(project_id, &invitees, my_private, &key).await;
+                if !failed.is_empty() {
+                    invite_retry.set(Some(InviteRetry { project_id, invitees: failed }));
+                }
+            }
+
             let kept_ids: std::collections::HashSet<i32> =
                 current_existing.iter().map(|u| u.id).collect();
             for uid in &orig_ids {
                 if !kept_ids.contains(uid) {
-                    if let Err(e) = delete_user(project_id, *uid).await {
+                    // Already gone is done: a re-submit after a failed removal re-sends the ones
+                    // that succeeded, since `orig_ids` comes from the props.
+                    if let Err(e) = delete_user(project_id, *uid).await.or_else(|e| {
+                        if is_user_gone_error(&e) { Ok(()) } else { Err(e) }
+                    }) {
                         error_msg.set(Some(error_message(&e)));
                         loading.set(false);
                         return;
-                    }
-                }
-            }
-
-            if let Some(me_name) = selected {
-                let user_id = current_existing
-                    .iter()
-                    .find(|u| u.name == me_name)
-                    .map(|u| u.id)
-                    .or_else(|| {
-                        created_users
-                            .iter()
-                            .find(|u| {
-                                decrypt_json::<UserPayload>(&key, &u.payload)
-                                    .map(|p| p.name == me_name)
-                                    .unwrap_or(false)
-                            })
-                            .map(|u| u.id)
-                    });
-                if let Some(uid) = user_id {
-                    // Changing identity has to reach the server: the row is updated in place, so
-                    // the participant left behind is released in the same statement.
-                    //
-                    // Nothing here aborts the save. By this point the project, the new participants
-                    // and the removals are already committed server-side, so returning early would
-                    // report a failure for work that succeeded and leave the modal open — inviting a
-                    // re-submit that adds every new participant a second time. The identity is the
-                    // last and least of what this form does; it reports itself through the flash and
-                    // lets the rest land.
-                    if let Some(account) = auth_ctx() {
-                        let label = account_key_ctx()
-                            .and_then(|ak| claim_label(&account, &ak, &key));
-                        match upsert_account_project(Json(UpsertAccountProject {
-                            project_id,
-                            user_id: Some(uid),
-                            key: None,
-                            claim_label: label,
-                            claim_token: Some(claim_token(&key).to_vec()),
-                        }))
-                        .await
-                        {
-                            Ok(()) => {
-                                update_ls(ls_ctx, |s| upsert_project(s, project_id, Some(uid)));
-                            }
-                            // Refused: another account holds that participant. The local identity is
-                            // deliberately left alone — the previous one is still the true one.
-                            Err(e) if is_identity_taken_error(&e) => {
-                                flash.set(Some(Flash::err(tid!("error-identity-taken"))));
-                            }
-                            // Refused for want of the key: recording it locally would only have
-                            // `ensure_membership` refused again on every open.
-                            Err(e) if is_claim_proof_error(&e) => {
-                                flash.set(Some(Flash::err(tid!("error-claim-proof-invalid"))));
-                            }
-                            // Never reached the server, so nothing was refused. Record it locally;
-                            // `ensure_membership` pushes it on the next open and clears it there if
-                            // the server turns it down.
-                            _ => {
-                                update_ls(ls_ctx, |s| upsert_project(s, project_id, Some(uid)));
-                            }
-                        }
-                    } else {
-                        update_ls(ls_ctx, |state| upsert_project(state, project_id, Some(uid)));
                     }
                 }
             }
@@ -320,15 +303,24 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     let stored_user_id = move || {
         ls_ctx().projects.iter().find(|p| p.project_id == project_id).and_then(|p| p.user_id)
     };
-
-    let is_me = move |name: &str| -> bool {
-        if let Some(ref sel) = selected_me() {
-            sel == name
-        } else {
-            let stored_uid = stored_user_id();
-            existing_users().iter().any(|u| u.name == name && Some(u.id) == stored_uid)
-        }
+    let my_id = stored_user_id();
+    let me = existing_users().into_iter().find(|u| Some(u.id) == my_id);
+    let others: Vec<DecryptedUser> =
+        existing_users().into_iter().filter(|u| Some(u.id) != my_id).collect();
+    let saved_names: Vec<String> = existing_users().iter().map(|u| u.name.clone()).collect();
+    let sent_list = sent.read().clone().unwrap_or_default();
+    let invited_email = |user_id: i32| -> Option<Option<String>> {
+        let s = sent_list.iter().find(|s| s.user_id == user_id)?;
+        Some(
+            friend_list
+                .friends
+                .iter()
+                .find(|f| f.account_id == s.to_account_id)
+                .map(|f| f.email.clone()),
+        )
     };
+    let invites = invite_count(&drafts.read());
+    let other_count = others.len() + drafts.read().len();
 
     rsx! {
         div { class: "modal modal-open modal-bottom sm:modal-middle", role: "dialog",
@@ -344,150 +336,137 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                     }
                 }
                 div { class: "flex-1 overflow-y-auto px-6 py-4",
-                div { class: "flex flex-col gap-3",
-                    fieldset { class: "fieldset",
-                        label { class: "fieldset-legend", r#for: "edit-project-name", {tid!("field-name")} }
-                        input {
-                            id: "edit-project-name",
-                            class: "input w-full",
-                            r#type: "text",
-                            enterkeyhint: "next",
-                            value: "{name}",
-                            oninput: move |e| name.set(e.value()),
+                div { class: "flex flex-col gap-5",
+                    div { class: "flex flex-col gap-3",
+                        div {
+                            label { class: "text-xs font-semibold text-base-content/70 block mb-1.5", r#for: "edit-project-name", {tid!("add-project-name-label")} }
+                            input {
+                                id: "edit-project-name",
+                                class: "input w-full",
+                                r#type: "text",
+                                enterkeyhint: "next",
+                                value: "{name}",
+                                oninput: move |e| name.set(e.value()),
+                            }
                         }
-
-                        label { class: "fieldset-legend", r#for: "edit-project-description", {tid!("field-description")} }
-                        input {
-                            id: "edit-project-description",
-                            class: "input w-full",
-                            r#type: "text",
-                            enterkeyhint: "next",
-                            value: "{description}",
-                            oninput: move |e| description.set(e.value()),
+                        div { class: "grid grid-cols-[minmax(0,1fr)_7rem] gap-2",
+                            div {
+                                label { class: "text-xs font-semibold text-base-content/70 block mb-1.5", r#for: "edit-project-description", {tid!("field-description")} }
+                                input {
+                                    id: "edit-project-description",
+                                    class: "input w-full",
+                                    r#type: "text",
+                                    enterkeyhint: "next",
+                                    value: "{description}",
+                                    oninput: move |e| description.set(e.value()),
+                                }
+                            }
+                            // Read-only, and it has to stay that way: every expense stores its
+                            // amount already converted into this currency, so changing it here would
+                            // relabel a whole ledger without re-pricing a single row.
+                            div {
+                                span { class: "text-xs font-semibold text-base-content/70 block mb-1.5", {tid!("project-currency")} }
+                                div {
+                                    id: "edit-project-currency",
+                                    class: "input w-full bg-base-200 text-base-content/70",
+                                    title: tid!("project-currency-locked"),
+                                    LockIcon { size: ICON_INLINE }
+                                    "{displayed_currency}"
+                                }
+                            }
                         }
-
-                        // Read-only, and it has to stay that way: every expense stores its amount
-                        // already converted into this currency, so changing it here would relabel a
-                        // whole ledger without re-pricing a single row.
-                        label { class: "fieldset-legend", r#for: "edit-project-currency", {tid!("project-currency")} }
-                        input {
-                            id: "edit-project-currency",
-                            class: "input w-full",
-                            r#type: "text",
-                            disabled: true,
-                            value: "{displayed_currency}",
-                        }
-                        p { class: "label text-xs", {tid!("project-currency-locked")} }
                     }
 
-                    fieldset { class: "fieldset bg-base-200 border-base-300 rounded-box border p-4",
-                        legend { class: "fieldset-legend", {tid!("add-project-participants")} }
-
-                        div { class: "flex gap-2 mb-3",
-                            label { class: "input flex-1",
-                                UserIcon {}
-                                input {
-                                    r#type: "text",
-                                    aria_label: tid!("add-project-participant-name"),
-                                    placeholder: tid!("add-project-participant-placeholder"),
-                                    enterkeyhint: "done",
-                                    autocapitalize: "words",
-                                    autocomplete: "off",
-                                    value: "{new_user_input}",
-                                    oninput: move |e| new_user_input.set(e.value()),
-                                    // Enter adds the participant instead of submitting. Nothing
-                                    // blurs, so the keyboard stays up and the view does not reflow.
-                                    onkeydown: move |e| {
-                                        if e.key() == Key::Enter {
-                                            e.prevent_default();
-                                            let input = new_user_input().trim().to_string();
-                                            if !input.is_empty() {
-                                                new_users.write().push(input);
-                                                new_user_input.set(String::new());
-                                            }
+                    div { class: "flex flex-col gap-2",
+                        h4 { class: "text-xs font-bold uppercase tracking-wide text-base-content/70", {tid!("participants-you-badge")} }
+                        div { class: "flex items-center gap-2.5 min-h-13 border border-base-200 rounded-box pl-3 pr-1.5 py-1",
+                            match me.clone() {
+                                Some(u) => rsx! {
+                                    span { class: "w-9 h-9 rounded-full bg-neutral text-neutral-content flex items-center justify-center text-sm font-semibold flex-shrink-0", aria_hidden: "true",
+                                        {crate::participants::participants_service::initial(&u.name)}
+                                    }
+                                    span { class: "flex flex-col min-w-0 flex-1 gap-0.5",
+                                        span { class: "flex items-center gap-1.5 min-w-0",
+                                            span { class: "font-semibold truncate", "{u.name}" }
+                                            span { class: "badge badge-neutral badge-sm", {tid!("participants-you-badge")} }
                                         }
-                                    },
-                                }
-                            }
-                            button {
-                                r#type: "button",
-                                class: "btn btn-neutral",
-                                onclick: move |_| {
-                                    let input = new_user_input().trim().to_string();
-                                    if !input.is_empty() {
-                                        new_users.write().push(input);
-                                        new_user_input.set(String::new());
+                                        span { class: "text-sm text-base-content/70 leading-snug", {tid!("edit-project-you-are", name: u.name.clone())} }
+                                    }
+                                    if let Some(on_switch) = on_switch {
+                                        button {
+                                            id: "edit-project-switch",
+                                            r#type: "button",
+                                            class: "btn btn-ghost text-primary",
+                                            onclick: move |_| on_switch.call(()),
+                                            {tid!("edit-project-switch")}
+                                        }
                                     }
                                 },
-                                {tid!("add")}
+                                None => rsx! {
+                                    span { class: "text-sm text-base-content/70 flex-1", {tid!("edit-project-no-identity")} }
+                                    if let Some(on_switch) = on_switch {
+                                        button {
+                                            id: "edit-project-switch",
+                                            r#type: "button",
+                                            class: "btn btn-ghost text-primary",
+                                            onclick: move |_| on_switch.call(()),
+                                            {tid!("edit-project-choose")}
+                                        }
+                                    }
+                                },
                             }
                         }
+                    }
 
-                        ul { class: "flex flex-col gap-1 max-h-48 overflow-y-auto",
-                            for user in existing_users().into_iter() {
-                                {
-                                    let user_id = user.id;
-                                    let user_name = user.name.clone();
-                                    let me = is_me(&user_name);
-                                    let locked = identity_locked(&user, stored_user_id());
-                                    let friend_name = user.name.clone();
-                                    rsx! {
-                                        ParticipantRow {
-                                            name: user.name.clone(),
-                                            is_new: false,
-                                            is_me: me,
-                                            is_locked: locked,
-                                            claim_name: user.claim_name.clone(),
-                                            on_remove: move |_| {
-                                                existing_users.write().retain(|u| u.id != user_id);
-                                                if selected_me() == Some(user_name.clone()) {
-                                                    selected_me.set(None);
-                                                }
-                                            },
-                                            on_claim: move |_| selected_me.set(Some(user.name.clone())),
-                                            on_add_friend: (can_add_friend && locked).then(|| {
-                                                EventHandler::new(move |_| add_friend((user_id, friend_name.clone())))
-                                            }),
+                    div { class: "flex flex-col gap-2",
+                        div { class: "flex items-center justify-between",
+                            h4 { class: "text-xs font-bold uppercase tracking-wide text-base-content/70", {tid!("participants-others")} }
+                            span { class: "badge badge-ghost badge-sm", "{other_count}" }
+                        }
+                        if !others.is_empty() {
+                            ul { class: "flex flex-col",
+                                for user in others.into_iter() {
+                                    {
+                                        let user_id = user.id;
+                                        let locked = identity_locked(&user, my_id);
+                                        let invited = if locked { None } else { invited_email(user_id) };
+                                        let friend_name = user.name.clone();
+                                        rsx! {
+                                            SavedRow {
+                                                key: "{user_id}",
+                                                id: format!("edit-project-participant-{user_id}"),
+                                                name: user.name.clone(),
+                                                locked,
+                                                claim_name: user.claim_name.clone(),
+                                                invited,
+                                                on_remove: move |_| {
+                                                    existing_users.write().retain(|u| u.id != user_id);
+                                                },
+                                                on_add_friend: (can_add_friend && locked).then(|| {
+                                                    EventHandler::new(move |_| add_friend((user_id, friend_name.clone())))
+                                                }),
+                                            }
                                         }
                                     }
                                 }
                             }
-                            for i in 0..new_users().len() {
-                                {
-                                    let new_name = new_users().get(i).cloned().unwrap_or_default();
-                                    let me = selected_me() == Some(new_name.clone());
-                                    rsx! {
-                                        ParticipantRow {
-                                            name: new_name.clone(),
-                                            is_new: true,
-                                            is_me: me,
-                                            // Not saved yet, so nobody can be holding it.
-                                            is_locked: false,
-                                            claim_name: None,
-                                            on_remove: move |_| {
-                                                if selected_me()
-                                                    == Some(
-                                                        new_users().get(i).cloned().unwrap_or_default(),
-                                                    )
-                                                {
-                                                    selected_me.set(None);
-                                                }
-                                                new_users.write().remove(i);
-                                            },
-                                            on_claim: move |_| selected_me.set(Some(new_name.clone())),
-                                            on_add_friend: None,
-                                        }
-                                    }
-                                }
-                            }
+                        }
+                        ParticipantsEditor {
+                            drafts,
+                            taken: saved_names,
+                            friends: friend_list.friends.clone(),
+                            signed_in: friend_list.signed_in,
+                            id_prefix: "edit-project",
+                            show_empty: false,
+                            mark_new: true,
                         }
                     }
 
                     if let Some(msg) = error_msg() {
                         div { role: "alert", class: "alert alert-error text-sm", "{msg}" }
                     }
+                } // end flex flex-col gap-5
                 } // end scrollable body
-                } // end flex flex-col gap-3
                 div { class: "flex justify-end gap-2 px-6 py-4 border-t border-base-200 flex-shrink-0",
                         button {
                             r#type: "button",
@@ -496,6 +475,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                             {tid!("cancel")}
                         }
                         button {
+                            id: "edit-project-save",
                             r#type: "button",
                             class: "btn btn-primary",
                             disabled: loading(),
@@ -503,7 +483,11 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                             if loading() {
                                 span { class: "loading loading-spinner loading-sm", role: "status", aria_label: tid!("loading") }
                             }
-                            {tid!("save")}
+                            if invites > 0 {
+                                {tid!("edit-project-save-invite", count: invites)}
+                            } else {
+                                {tid!("save")}
+                            }
                         }
                     }
                 }
@@ -516,71 +500,72 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
 }
 
 #[derive(PartialEq, Props, Clone)]
-struct ParticipantRowProps {
+struct SavedRowProps {
+    id: String,
     name: String,
-    /// Not yet saved to the server: shown in italics with a "nouveau" badge.
-    is_new: bool,
-    is_me: bool,
-    /// Another account holds this participant as its identity: "C'est moi !" is replaced by a
-    /// padlock naming the holder. Never true for the row this device already is.
-    is_locked: bool,
+    /// Another account holds this participant as its identity: a padlock naming the holder.
+    locked: bool,
     /// The holder's account display name, when the claim carried one.
     claim_name: Option<String>,
+    /// `Some` while an invitation this account sent for this participant is pending; the inner
+    /// value is the friend's email when they are still in the friends list.
+    invited: Option<Option<String>>,
     on_remove: EventHandler<()>,
-    on_claim: EventHandler<()>,
     /// Sends the holder a friend request. Offered only on a locked row, to a signed-in device.
     on_add_friend: Option<EventHandler<()>>,
 }
 
 #[component]
-fn ParticipantRow(props: ParticipantRowProps) -> Element {
+fn SavedRow(props: SavedRowProps) -> Element {
     let claimed_by = match props.claim_name.clone() {
         Some(name) => tid!("identity-claimed-by", name: name),
         None => tid!("identity-claimed"),
     };
+    let name = props.name.clone();
 
     rsx! {
-        li { class: "flex items-center gap-2 py-1",
-            button {
-                r#type: "button",
-                class: "btn btn-square btn-sm btn-soft",
-                aria_label: tid!("add-project-remove-participant"),
-                onclick: move |_| props.on_remove.call(()),
-                TrashIcon { size: ICON_INLINE }
-            }
-            span {
-                class: if props.is_new { "flex-1 text-sm italic" } else { "flex-1 text-sm" },
-                "{props.name}"
-            }
-            if props.is_new {
-                span { class: "badge badge-soft badge-info badge-xs", {tid!("edit-project-new-badge")} }
-            }
-            if props.is_me {
-                div { class: "badge badge-soft badge-accent", {tid!("add-project-me-badge")} }
-            } else if props.is_locked {
-                // Inline rather than a hover tooltip — no hover on touch. `title` is the desktop
-                // affordance only.
-                div {
-                    class: "badge badge-soft badge-ghost gap-1",
-                    title: "{claimed_by}",
-                    LockIcon { size: ICON_INLINE }
-                    span { class: "text-xs", "{claimed_by}" }
-                }
-                if let Some(on_add_friend) = props.on_add_friend {
-                    button {
-                        r#type: "button",
-                        class: "btn btn-outline btn-xs",
-                        onclick: move |_| on_add_friend.call(()),
-                        {tid!("friends-add-from-project")}
+        li { id: "{props.id}", class: "flex items-center gap-2.5 min-h-13",
+            Avatar { name: props.name.clone(), guest: !props.locked && props.invited.is_none() }
+            span { class: "flex flex-col min-w-0 flex-1 gap-0.5",
+                span { class: "flex items-center gap-1.5 min-w-0",
+                    span { class: "font-semibold truncate", "{props.name}" }
+                    if props.invited.is_some() {
+                        span { class: "badge badge-soft badge-info badge-sm", {tid!("participants-invited-badge")} }
                     }
                 }
-            } else {
+                if props.locked {
+                    // Inline rather than a hover tooltip — no hover on touch. `title` is the desktop
+                    // affordance only.
+                    span { class: "text-sm text-base-content/70 flex items-center gap-1 min-w-0", title: "{claimed_by}",
+                        LockIcon { size: 13 }
+                        span { class: "truncate", "{claimed_by}" }
+                    }
+                } else if let Some(invited) = props.invited.clone() {
+                    span { class: "text-sm text-base-content/70 truncate",
+                        match invited {
+                            Some(email) => rsx! { {tid!("participants-invited-sub", email: email)} },
+                            None => rsx! { {tid!("participants-invited-pending")} },
+                        }
+                    }
+                } else {
+                    span { class: "text-sm text-base-content/70 truncate", {tid!("participants-unlinked")} }
+                }
+            }
+            if let Some(on_add_friend) = props.on_add_friend {
                 button {
                     r#type: "button",
                     class: "btn btn-outline btn-xs",
-                    onclick: move |_| props.on_claim.call(()),
-                    {tid!("add-project-thats-me")}
+                    onclick: move |_| on_add_friend.call(()),
+                    {tid!("friends-add-from-project")}
                 }
+            }
+            button {
+                id: "{props.id}-remove",
+                r#type: "button",
+                class: "btn btn-ghost btn-circle h-11 w-11 min-h-11",
+                aria_label: tid!("participants-remove", name: name),
+                onclick: move |_| props.on_remove.call(()),
+                CloseIcon { size: ICON_INLINE }
             }
         }
     }
@@ -589,7 +574,8 @@ fn ParticipantRow(props: ParticipantRowProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::crypto::{decrypt_json, decrypt_user, encrypt_json};
+    use crate::crypto::{decrypt_json, encrypt_json};
+    use crate::decrypted::decrypt_user;
     use chrono::NaiveDateTime;
     use uuid::Uuid;
     use shared::{ProjectPayload, User, UserPayload};
@@ -620,7 +606,6 @@ mod tests {
         Ok(CreatableUser {
             payload: encrypt_json(key, &UserPayload { name: name.to_string() })?,
             project_id,
-            invited_email: None,
         })
     }
 
@@ -675,7 +660,6 @@ mod tests {
         let cu = make_creatable_user(&key, "Claire", Uuid::nil()).unwrap();
         let up: UserPayload = decrypt_json(&key, &cu.payload).unwrap();
         assert_eq!(up.name, "Claire");
-        assert!(cu.invited_email.is_none());
     }
 
     #[test]

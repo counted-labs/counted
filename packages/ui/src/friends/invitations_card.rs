@@ -4,7 +4,7 @@ use shared::Account;
 use uuid::Uuid;
 
 use super::friends_service::{accept_invitation, decline_invitation, load_invitations, my_private_key, OpenedInvitation};
-use crate::common::{error_message, Flash, LocalStorageState};
+use crate::common::{error_message, AcceptedInvite, Flash, LocalStorageState};
 use crate::route::Route;
 
 #[derive(PartialEq, Props, Clone)]
@@ -22,6 +22,7 @@ pub fn InvitationsCard(props: InvitationsCardProps) -> Element {
     let account_key = use_context::<Signal<Option<[u8; 32]>>>();
     let ls_ctx = use_context::<Signal<LocalStorageState>>();
     let mut flash = use_context::<Signal<Option<Flash>>>();
+    let mut accepted_ctx = use_context::<Signal<Option<AcceptedInvite>>>();
     let mut busy = use_signal(|| false);
     let mut version = use_signal(|| 0u64);
 
@@ -44,6 +45,12 @@ pub fn InvitationsCard(props: InvitationsCardProps) -> Element {
             busy.set(true);
             match accept_invitation(ls_ctx, &inv.invitation, &key).await {
                 Ok(()) => {
+                    accepted_ctx.set(Some(AcceptedInvite {
+                        project_id: inv.invitation.project_id,
+                        from_email: inv.invitation.from_email.clone(),
+                        project_name: inv.project_name.clone(),
+                        user_id: inv.invitation.user_id,
+                    }));
                     on_accepted.call(inv.invitation.project_id);
                     nav.push(Route::ExpensesPage { project_id: inv.invitation.project_id });
                 }

@@ -53,6 +53,7 @@ error-unauthenticated = Identifikohu për ta bërë këtë.
 error-email-not-verified = Adresa jote e emailit nuk është verifikuar ende.
 error-project-not-found = Ky projekt nuk ekziston më.
 error-expense-not-found = Ky shpenzim nuk ekziston më.
+error-storage-full = Hapësira e ruajtjes është plot: çelësi i këtij projekti nuk u ruajt dot në këtë pajisje. Ruaj lidhjen e ndarjes.
 error-user-not-found = Ky pjesëmarrës nuk ekziston më.
 error-tricount-not-found = Tricount nuk u gjet, ose API-ja e tij ktheu një gabim.
 error-too-many-members = Ky projekt ka arritur kufirin e anëtarëve.
@@ -250,13 +251,8 @@ add-project-name-placeholder = Udhëtimi im, Shokët e shtëpisë 2024…
 add-project-participants = Pjesëmarrësit
 add-project-participant-name = Emri i pjesëmarrësit
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Hiq pjesëmarrësin
-add-project-me-badge = Unë
-add-project-thats-me = Ky jam unë!
 add-project-offline = Nuk mund të krijosh një projekt jashtë linje. Lidhu sërish dhe provo përsëri.
 add-project-name-required = Projekti ka nevojë për një emër.
-add-project-need-two-participants = Shto të paktën 2 pjesëmarrës.
-add-project-pick-yourself = Na trego cili pjesëmarrës je.
 
 join-link-label = Lidhja e ndarjes
 join-link-hint = Lidhja mbart çelësin e dekriptimit - kopjoje të gjithën.
@@ -266,6 +262,7 @@ join-wrong-project = Kjo lidhje është për një projekt tjetër.
 import-tricount-link-label = Lidhja ose çelësi Tricount
 import-tricount-key-required = Fut një lidhje ose çelës Tricount.
 import-tricount-encryption-failed = Enkriptimi dështoi.
+import-tricount-unimportable = Asgjë nuk u importua: ky Tricount ka anëtarë me llogari Tricount ose shuma që nuk përputhen (hyrje të prekura: { $count }).
 
 ### Expenses
 
@@ -363,11 +360,8 @@ edit-project-title = Ndrysho projektin
 edit-project-new-badge = i ri
 edit-project-deferred-new-members = shtimi i anëtarëve të rinj
 edit-project-deferred-removals = heqja e anëtarëve
-edit-project-deferred-me = zgjedhja „Ky jam unë”
 edit-project-offline-deferred = Jashtë linje: { $items } do të zbatohet kur të lidhesh sërish.
 
-export-saved = Skedari u ruajt:
-    { $path }
 export-failed = Eksportimi dështoi: { $reason }
 
 history-expense-added = Shpenzim i shtuar: { $name }
@@ -510,13 +504,24 @@ debtors-title-beneficiaries = Përfituesit
 
 welcome-title = Llogaritë e tua nuk janë punë e askujt tjetër.
 welcome-subtitle = Ndaj shpenzimet me miqtë.
-welcome-e2ee-title = Gjithçka e enkriptuar
-welcome-e2ee-body = Emra, shuma, projekte: gjithçka enkriptohet në pajisjen tënde. Vetëm ti e ke çelësin. Askush nuk mund t'i lexojë llogaritë e tua. As ne.
-welcome-e2ee-note = E palexueshme, edhe për ne (zero akses në server)
+welcome-note = Falas. Pa llogari. Pa reklama.
+welcome-link-title = Një lidhje, dhe të gjithë marrin pjesë.
+welcome-link-body = Askush nuk ka nevojë të krijojë llogari.
+welcome-link-account = Llogari? Kurrë e detyrueshme. Shërben për të gjetur projektet e tua në një pajisje tjetër, për të ftuar miqtë nga aplikacioni dhe për të ndarë të dhënat e tua të pagesës.
+welcome-demo-project = Fundjavë në Lion
+welcome-private-title = Askush nuk mund t'i lexojë llogaritë e tua. As ne.
+welcome-private-body = Emra, shuma, projekte: gjithçka enkriptohet në pajisjen tënde. Vetëm ti e ke çelësin.
+welcome-private-names = Emra
+welcome-private-amounts = Shuma
+welcome-private-projects = Projekte
+welcome-scan-title = Bëji një foto faturës.
+welcome-scan-body = Shuma, data dhe kategoria plotësohen vetë. Gjithçka ndodh në telefonin tënd. Fotoja nuk ruhet.
 welcome-eu-title = 100% evropiane
-welcome-eu-body = Serverë në Gjermani, emaile të dërguara nga Franca. Të dhënat e tua nuk dalin kurrë nga Bashkimi Evropian.
-welcome-noads-title = Pa reklama. Pa gjurmues.
-welcome-noads-body = Nuk mbledhim asgjë dhe nuk i shesim të dhënat e tua. Ky nuk është modeli ynë.
+welcome-no-ads = Pa reklama
+welcome-no-trackers = Pa gjurmues
+welcome-step = Hapi { $current } nga { $total }
+welcome-next = Tjetër
+welcome-skip = Kapërce
 welcome-start = Fillo
 welcome-how-it-works = Si funksionon saktësisht?
 
@@ -620,3 +625,49 @@ invitation-unreadable = Kjo ftesë nuk mund të hapet në këtë pajisje
 invitation-from = Nga { $email }
 invitation-accept = Bashkohu
 invitation-decline = Refuzo
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Emri yt në këtë projekt
+participants-you-badge = Ti
+participants-you-from-account = Marrë nga emri i llogarisë sate. Ndryshoje këtu vetëm për këtë projekt.
+participants-you-required = I detyrueshëm. Kështu do të të shohin të tjerët.
+participants-others = Pjesëmarrës të tjerë
+participants-empty = Askush ende. Zgjidh një mik më poshtë ose shkruaj çfarëdo emri.
+participants-empty-signed-out = Askush ende. Shkruaj një emër për të shtuar dikë.
+participants-duplicate = „{ $name }” është tashmë në listë.
+participants-input-label = Shto një mik ose shkruaj një emër
+participants-input-placeholder = Mik ose çfarëdo emri
+participants-suggest-friend = Mik · bashkohet si „{ $name }”, merr një ftesë
+participants-suggest-not-ready = Mik · ende jo gati
+participants-suggest-guest = Shto „{ $text }” pa llogari
+participants-suggest-guest-sub = Pa llogari, vetëm një emër
+participants-friends = Miqtë e tu
+participants-all-friends = Të gjithë miqtë
+participants-login-hint = Hyr për të shtuar njerëz drejtpërdrejt nga lista jote e miqve.
+participants-invite-badge = Fto
+participants-guest-badge = Pa llogari
+participants-guest-sub = Pa llogari, vetëm një emër
+participants-rename = Riemërto: { $name }
+participants-remove = Hiq: { $name }
+participants-rename-label = Emër i ri
+participants-rename-save = Ruaj emrin
+participants-rename-hint = Emri që shohin të gjithë në këtë projekt. Ftesa shkon përsëri te { $email }.
+participants-invited-badge = I ftuar
+participants-invited-sub = { $email } · ende e papranuar
+participants-invited-pending = Ftesa ende e papranuar
+participants-unlinked = I palidhur me llogari
+add-project-create-invite = Krijo dhe fto: { $count }
+edit-project-save-invite = Ruaj dhe fto: { $count }
+edit-project-you-are = Në këtë pajisje ti je { $name }
+edit-project-no-identity = Ende nuk ke zgjedhur kush je
+edit-project-switch = Ndrysho
+edit-project-choose = Zgjidh
+invite-failed = Këto ftesa nuk u dërguan dot: { $emails }
+invite-again = Fto sërish
+friend-picker-title = Shto miq
+user-selection-invited-hint = { $email } të ftoi në „{ $project }”.
+user-selection-suggested = I sugjeruar
+user-selection-suggested-sub = { $email } të shtoi me këtë emër
+user-selection-confirm-as = Unë jam { $name }
+user-selection-missing = Emri yt nuk është këtu? Kërkoji një pjesëmarrësi të të shtojë te cilësimet e projektit.

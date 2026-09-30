@@ -19,9 +19,14 @@
 package dev.dioxus.main
 
 import android.Manifest
+import android.content.ActivityNotFoundException
+import android.content.ClipData
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import androidx.core.content.FileProvider
+import java.io.File
 import org.unifiedpush.android.connector.UnifiedPush
 
 typealias BuildConfig = fr.counted.app.BuildConfig
@@ -30,6 +35,30 @@ class MainActivity : WryActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+    }
+
+    // `open_url` and `share_file` in packages/mobile/src/main.rs call these two through JNI. Here
+    // rather than in Rust because FileProvider is an androidx class, which JNI's FindClass cannot
+    // see from a native thread; a method on the activity runs with the app's class loader.
+
+    // mailto: only today. wry hands links to webbrowser::open, which refuses anything but http(s).
+    fun openUri(uri: String): Boolean =
+        try {
+            startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse(uri)))
+            true
+        } catch (e: ActivityNotFoundException) {
+            false
+        }
+
+    // The file must sit under a <cache-path> of res/xml/file_paths.xml, or getUriForFile throws.
+    fun shareFile(path: String, mime: String) {
+        val uri = FileProvider.getUriForFile(this, "fr.counted.app.fileprovider", File(path))
+        val send = Intent(Intent.ACTION_SEND)
+            .setType(mime)
+            .putExtra(Intent.EXTRA_STREAM, uri)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        send.clipData = ClipData.newRawUri(null, uri)
+        startActivity(Intent.createChooser(send, null))
     }
 
     fun requestPush(vapid: String) {

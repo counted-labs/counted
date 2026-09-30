@@ -8,7 +8,7 @@ use crate::common::{
     format_date_str, initials, pending, read_from_ls, user_color_class, AppHeader, Avatar,
     ConfirmModal, DropdownButton, DropdownItem, Flash, ProjectKey, PullToRefresh, QueuedOp,
 };
-use crate::crypto::DecryptedPayment;
+use crate::decrypted::DecryptedPayment;
 use crate::expenses::helpers::delete_expense_action::{
     can_delete_expense, can_edit_expense, delete_expense_request, run_delete_expense,
 };

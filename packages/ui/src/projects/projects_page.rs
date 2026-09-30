@@ -11,7 +11,7 @@ use crate::tid;
 use shared::{Account, BatchProject, EditableProject, ProjectDto, ProjectPayload, ProjectStatus};
 use uuid::Uuid;
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::VecDeque;
 
 use crate::common::{
     apply_pull, clear_user_id, copy_missing, error_message, haptic, is_offline_error, key_of,
@@ -30,27 +30,6 @@ use crate::projects::{AddProjectModal, ImportTricountModal, JoinProjectModal};
 use crate::friends::{InvitationsCard, NotificationsBell};
 use crate::route::Route;
 
-/// `status` is plaintext in the cache, so archived ids are known without the server; with no cache
-/// everything is fetched. While hidden, un-archiving elsewhere goes unnoticed until toggled on.
-fn ids_to_fetch(state: &LocalStorageState, want_archived: bool) -> Vec<Uuid> {
-    if want_archived {
-        return state.projects.iter().map(|p| p.project_id).collect();
-    }
-    let archived: HashSet<Uuid> = state
-        .cached_projects_list
-        .iter()
-        .flatten()
-        .filter(|p| p.status == ProjectStatus::Archived)
-        .map(|p| p.id)
-        .collect();
-    state
-        .projects
-        .iter()
-        .map(|p| p.project_id)
-        .filter(|id| !archived.contains(id))
-        .collect()
-}
-
 /// Whether anything has been archived. The filter is noise until something has been, so the page
 /// renders no control at all while this is false — which is most devices, most of the time.
 ///
@@ -58,26 +37,6 @@ fn ids_to_fetch(state: &LocalStorageState, want_archived: bool) -> Vec<Uuid> {
 /// hides a row.
 fn has_archived(state: &LocalStorageState) -> bool {
     state.cached_projects_list.iter().flatten().any(|p| p.status == ProjectStatus::Archived)
-}
-
-/// Archived rows were never requested, so replacing outright erases the only record that they are
-/// archived. Carried over while still a member; anything else missing was genuinely deleted.
-fn merge_cached_list(
-    previous: Option<&Vec<ProjectDto>>,
-    fetched: Vec<ProjectDto>,
-    member_ids: &[Uuid],
-    want_archived: bool,
-) -> Vec<ProjectDto> {
-    if want_archived {
-        return fetched;
-    }
-    let returned: HashSet<Uuid> = fetched.iter().map(|p| p.id).collect();
-    let carried = previous.into_iter().flatten().filter(|p| {
-        p.status == ProjectStatus::Archived
-            && !returned.contains(&p.id)
-            && member_ids.contains(&p.id)
-    });
-    fetched.iter().cloned().chain(carried.cloned()).collect()
 }
 
 #[component]
@@ -184,11 +143,9 @@ pub fn ProjectsPage() -> Element {
         let ls_ctx = ls_ctx;
         async move {
             let _v = resource_version();
-            // Read, so flipping the toggle re-runs this and pulls the archived rows in.
-            let want_archived = show_archived();
-            let state = ls_ctx();
-            let member_ids: Vec<Uuid> = state.projects.iter().map(|p| p.project_id).collect();
-            let ids = ids_to_fetch(&state, want_archived);
+            // Every membership, archived or not: the toggle only filters what renders. Skipping the
+            // archived ones meant a project un-archived on another device stayed archived here.
+            let ids: Vec<Uuid> = ls_ctx().projects.iter().map(|p| p.project_id).collect();
             if ids.is_empty() {
                 return Ok(vec![]);
             }
@@ -200,13 +157,7 @@ pub fn ProjectsPage() -> Element {
                 // back through `read_from_ls` (`has_archived` below) or the signal's own seed, and
                 // because every other writer now bases on disk too.
                 let mut state = read_from_ls();
-                let merged = merge_cached_list(
-                    state.cached_projects_list.as_ref(),
-                    list.clone(),
-                    &member_ids,
-                    want_archived,
-                );
-                set_cached_projects_list(&mut state, merged);
+                set_cached_projects_list(&mut state, list.clone());
                 write_to_ls(&state);
             }
             result
@@ -221,15 +172,23 @@ pub fn ProjectsPage() -> Element {
     // read_from_ls(), not `cached_list`: archiving while online goes through `update_project_by_id`
     // and the resource writes the merged cache with `write_to_ls` alone — `ls_ctx` is never set on
     // that path, so it stays stale for the rest of the session and the filter would not appear
-    // until a reload. The resource result is read below, so this re-runs on the render that
-    // completed the write.
-    let archived_exist = has_archived(&read_from_ls());
+    // until a reload. Reading `projects` re-runs this once the resource has written.
+    // False first, like `show_archived`: SSR reads an empty store, so reading it during render
+    // would add a tablist the server markup lacks and break hydration.
+    let mut archived_exist = use_signal(|| false);
+    use_effect(move || {
+        let _ = projects.read();
+        let exist = has_archived(&read_from_ls());
+        if exist != *archived_exist.peek() {
+            archived_exist.set(exist);
+        }
+    });
 
     let choose_archived = move |value: bool| {
-        // Not `update_ls`: the resource already re-runs off `show_archived`, and refreshing the
-        // signal here would restart it twice. Safe as a disk-only write because `show_archived` is
-        // read back with `read_from_ls`, never off the signal. Copied locally so the closure stays
-        // Fn + Copy and both tabs can hold it.
+        // Not `update_ls`: refreshing the signal would restart the resource, which reads `ls_ctx`,
+        // for a flag that only filters the rows already loaded. Safe as a disk-only write because
+        // `show_archived` is read back with `read_from_ls`, never off the signal. Copied locally so
+        // the closure stays Fn + Copy and both tabs can hold it.
         let mut show_archived = show_archived;
         show_archived.set(value);
         let mut state = read_from_ls();
@@ -261,7 +220,7 @@ pub fn ProjectsPage() -> Element {
 
             // `show_archived` is an *include* flag, so the second tab is "All", not "Archived" —
             // labelling it the latter would promise a list that never renders.
-            if archived_exist {
+            if archived_exist() {
                 div { role: "tablist", class: "tabs tabs-box shadow-soft",
                     button {
                         id: "filter-active",
@@ -748,36 +707,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn without_a_cache_everything_is_fetched() {
-        let s = state(&[1, 2, 3], None);
-        assert_eq!(ids_to_fetch(&s, false).len(), 3);
-    }
-
-    #[test]
-    fn archived_projects_are_left_out_of_the_batch() {
-        let s = state(
-            &[1, 2],
-            Some(vec![project(1, ProjectStatus::Ongoing), project(2, ProjectStatus::Archived)]),
-        );
-        assert_eq!(ids_to_fetch(&s, false), vec![id(1)]);
-    }
-
-    #[test]
-    fn showing_archived_fetches_them_again() {
-        let s = state(
-            &[1, 2],
-            Some(vec![project(1, ProjectStatus::Ongoing), project(2, ProjectStatus::Archived)]),
-        );
-        assert_eq!(ids_to_fetch(&s, true), vec![id(1), id(2)]);
-    }
-
-    #[test]
-    fn a_closed_project_is_not_archived_and_is_still_fetched() {
-        let s = state(&[1], Some(vec![project(1, ProjectStatus::Closed)]));
-        assert_eq!(ids_to_fetch(&s, false), vec![id(1)]);
-    }
-
     /// The filter is rendered only when this is true, so a false positive puts a dead control on
     /// the page of every user who has never archived anything.
     #[test]
@@ -801,47 +730,5 @@ mod tests {
             Some(vec![project(1, ProjectStatus::Ongoing), project(2, ProjectStatus::Archived)]),
         );
         assert!(has_archived(&s));
-    }
-
-    #[test]
-    fn archived_rows_survive_a_response_that_omits_them() {
-        let previous = vec![project(1, ProjectStatus::Ongoing), project(2, ProjectStatus::Archived)];
-        let merged = merge_cached_list(
-            Some(&previous),
-            vec![project(1, ProjectStatus::Ongoing)],
-            &[id(1), id(2)],
-            false,
-        );
-        let archived: Vec<Uuid> = merged
-            .iter()
-            .filter(|p| p.status == ProjectStatus::Archived)
-            .map(|p| p.id)
-            .collect();
-        assert_eq!(archived, vec![id(2)], "the archived row must be carried over");
-        assert_eq!(merged.len(), 2);
-    }
-
-    #[test]
-    fn an_archived_project_the_device_left_is_forgotten() {
-        let previous = vec![project(2, ProjectStatus::Archived)];
-        let merged = merge_cached_list(Some(&previous), vec![], &[], false);
-        assert!(merged.is_empty(), "leaving a project must still forget it");
-    }
-
-    #[test]
-    fn a_missing_non_archived_project_is_dropped() {
-        // Requested and not returned: deleted server-side.
-        let previous = vec![project(1, ProjectStatus::Ongoing)];
-        let merged = merge_cached_list(Some(&previous), vec![], &[id(1)], false);
-        assert!(merged.is_empty());
-    }
-
-    #[test]
-    fn showing_archived_replaces_the_cache_wholesale() {
-        let previous = vec![project(9, ProjectStatus::Archived)];
-        let merged =
-            merge_cached_list(Some(&previous), vec![project(1, ProjectStatus::Ongoing)], &[id(9)], true);
-        assert_eq!(merged.len(), 1);
-        assert_eq!(merged[0].id, id(1));
     }
 }

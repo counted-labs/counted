@@ -104,8 +104,39 @@ pub fn read_from_ls() -> LocalStorageState {
     read_json(LS_KEY)
 }
 
-pub fn write_to_ls(state: &LocalStorageState) {
-    write_json(LS_KEY, "local storage", state);
+/// True when everything but the caches reached storage.
+///
+/// There is no bound across projects, so enough of them at the per-project ceiling fill the web
+/// quota, and a failed write used to lose whatever it carried — a newly joined project's key
+/// lived in memory only and was gone on reload. The retry drops every cached row: keys, user ids
+/// and anonymous memberships are a few hundred bytes a project, and the caches refill on the next
+/// sync.
+pub fn write_to_ls(state: &LocalStorageState) -> bool {
+    if write_json(LS_KEY, "local storage", state) {
+        return true;
+    }
+    let mut lean = state.clone();
+    drop_caches(&mut lean);
+    write_json(LS_KEY, "local storage without caches", &lean)
+}
+
+fn drop_caches(state: &mut LocalStorageState) {
+    state.cached_projects_list = None;
+    for p in &mut state.projects {
+        p.cached_project = None;
+        p.cached_users = None;
+        p.cached_expenses = None;
+        p.cached_payments = None;
+        p.cached_data_version = None;
+    }
+}
+
+/// Only reachable when even the caches-free store did not fit, or storage is gone altogether.
+fn report_unsaved() {
+    use crate::common::Flash;
+    if let Some(mut flash) = dioxus::prelude::try_consume_context::<Signal<Option<Flash>>>() {
+        flash.set(Some(Flash::err(crate::tid!("error-storage-full"))));
+    }
 }
 
 /// Every store mutation goes through here.
@@ -118,7 +149,9 @@ pub fn write_to_ls(state: &LocalStorageState) {
 pub fn update_ls(mut ls_ctx: Signal<LocalStorageState>, f: impl FnOnce(&mut LocalStorageState)) {
     let mut state = read_from_ls();
     f(&mut state);
-    write_to_ls(&state);
+    if !write_to_ls(&state) {
+        report_unsaved();
+    }
     ls_ctx.set(state);
 }
 
@@ -134,7 +167,9 @@ pub fn update_ls_if_changed(
     let mut state = read_from_ls();
     f(&mut state);
     if state != *ls_ctx.peek() {
-        write_to_ls(&state);
+        if !write_to_ls(&state) {
+            report_unsaved();
+        }
         ls_ctx.set(state);
     }
 }
@@ -289,6 +324,39 @@ pub fn initials(name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // What survives a full store is exactly what cannot be fetched again.
+    #[test]
+    fn dropping_caches_keeps_keys_and_memberships() {
+        let id = Uuid::new_v4();
+        let mut state = LocalStorageState {
+            projects: vec![LocalStorageProject {
+                project_id: id,
+                user_id: Some(3),
+                anon_member_id: Some(Uuid::nil()),
+                encryption_key: Some("key".into()),
+                cached_expenses: Some(vec![]),
+                cached_payments: Some(vec![]),
+                cached_users: Some(vec![]),
+                cached_data_version: Some(7),
+                ..Default::default()
+            }],
+            cached_projects_list: Some(vec![]),
+            ..Default::default()
+        };
+        drop_caches(&mut state);
+        assert_eq!(
+            state.projects[0],
+            LocalStorageProject {
+                project_id: id,
+                user_id: Some(3),
+                anon_member_id: Some(Uuid::nil()),
+                encryption_key: Some("key".into()),
+                ..Default::default()
+            }
+        );
+        assert!(state.cached_projects_list.is_none());
+    }
 
     #[cfg(not(target_arch = "wasm32"))]
     mod native {

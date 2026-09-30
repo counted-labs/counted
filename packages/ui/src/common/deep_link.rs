@@ -66,10 +66,7 @@ fn take_deep_links() -> Vec<String> {
 #[cfg(any(target_os = "android", target_os = "ios"))]
 #[component]
 pub fn DeepLinkListener() -> Element {
-    use crate::common::{
-        parse_share_link, update_ls, upsert_project, upsert_project_key, LocalStorageState,
-    };
-    use crate::crypto::key_to_fragment;
+    use crate::common::{adopt_project_key, parse_share_link, LocalStorageState};
     use crate::route::Route;
     use std::sync::atomic::Ordering;
 
@@ -90,12 +87,12 @@ pub fn DeepLinkListener() -> Element {
                 continue;
             };
             // The key must be in local storage before navigating: mobile runs on MemoryHistory, so
-            // ExpensesPage has no URL fragment to recover it from.
-            update_ls(ls_ctx, |state| {
-                upsert_project(state, project_id, None);
-                upsert_project_key(state, project_id, key_to_fragment(&key));
+            // ExpensesPage has no URL fragment to recover it from. A link whose key does not open
+            // a project already held still navigates, on the held key.
+            spawn(async move {
+                adopt_project_key(ls_ctx, project_id, key).await;
+                nav.push(Route::ExpensesPage { project_id });
             });
-            nav.push(Route::ExpensesPage { project_id });
         }
     });
 

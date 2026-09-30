@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use crate::tid;
 
-use crate::common::AppHeader;
+use crate::common::{AppHeader, MailLink};
 use crate::route::Route;
 
 /// Support copy for a whole page of it.
@@ -164,7 +164,7 @@ pub fn HelpPage() -> Element {
             div { class: "text-sm text-center text-base-content/70 mt-4 mb-2",
                 {tid!("help-contact")}
                 " "
-                a { class: "link", href: "mailto:contact@counted.fr", "contact@counted.fr" }
+                MailLink { address: "contact@counted.fr" }
             }
         }
     }

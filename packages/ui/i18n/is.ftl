@@ -53,6 +53,7 @@ error-unauthenticated = Skráðu þig inn til að gera þetta.
 error-email-not-verified = Netfangið þitt hefur ekki enn verið staðfest.
 error-project-not-found = Þetta verkefni er ekki lengur til.
 error-expense-not-found = Þessi útgjöld eru ekki lengur til.
+error-storage-full = Geymslan er full: ekki tókst að vista lykil þessa verkefnis í þessu tæki. Geymdu deilitengilinn.
 error-user-not-found = Þessi þátttakandi er ekki lengur til.
 error-tricount-not-found = Tricount fannst ekki, eða API þess skilaði villu.
 error-too-many-members = Þetta verkefni hefur náð hámarksfjölda meðlima.
@@ -250,13 +251,8 @@ add-project-name-placeholder = Ferðin mín, Sambýlið 2024…
 add-project-participants = Þátttakendur
 add-project-participant-name = Nafn þátttakanda
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Fjarlægja þátttakanda
-add-project-me-badge = Ég
-add-project-thats-me = Þetta er ég!
 add-project-offline = Ekki er hægt að stofna verkefni án nettengingar. Tengstu aftur og reyndu á ný.
 add-project-name-required = Verkefnið þarf heiti.
-add-project-need-two-participants = Bættu við að minnsta kosti 2 þátttakendum.
-add-project-pick-yourself = Segðu okkur hvaða þátttakandi þú ert.
 
 join-link-label = Deilitengill
 join-link-hint = Tengillinn inniheldur afkóðunarlykilinn - afritaðu hann allan.
@@ -266,6 +262,7 @@ join-wrong-project = Þessi tengill er fyrir annað verkefni.
 import-tricount-link-label = Tricount-tengill eða -lykill
 import-tricount-key-required = Sláðu inn Tricount-tengil eða -lykil.
 import-tricount-encryption-failed = Dulkóðun mistókst.
+import-tricount-unimportable = Ekkert var flutt inn: þessi Tricount er með meðlimi með Tricount-aðgang eða upphæðir sem ganga ekki upp (færslur sem um ræðir: { $count }).
 
 ### Expenses
 
@@ -363,11 +360,8 @@ edit-project-title = Breyta verkefni
 edit-project-new-badge = nýtt
 edit-project-deferred-new-members = að bæta við nýjum meðlimum
 edit-project-deferred-removals = að fjarlægja meðlimi
-edit-project-deferred-me = valið „Þetta er ég“
 edit-project-offline-deferred = Án nettengingar: { $items } tekur gildi þegar þú tengist aftur.
 
-export-saved = Skrá vistuð:
-    { $path }
 export-failed = Útflutningur mistókst: { $reason }
 
 history-expense-added = Útgjöldum bætt við: { $name }
@@ -510,13 +504,24 @@ debtors-title-beneficiaries = Njótendur
 
 welcome-title = Bókhaldið þitt kemur engum öðrum við.
 welcome-subtitle = Skiptu útgjöldum með vinum.
-welcome-e2ee-title = Allt dulkóðað
-welcome-e2ee-body = Nöfn, upphæðir, verkefni: allt er dulkóðað á tækinu þínu. Þú ein(n) hefur lykilinn. Enginn getur lesið reikningana þína. Ekki einu sinni við.
-welcome-e2ee-note = Ólæsilegt, jafnvel fyrir okkur (enginn aðgangur þjóns)
+welcome-note = Ókeypis. Enginn aðgangur nauðsynlegur. Engar auglýsingar.
+welcome-link-title = Einn hlekkur og allir taka þátt.
+welcome-link-body = Enginn þarf að stofna aðgang.
+welcome-link-account = Aðgangur? Aldrei skylda. Hann nýtist til að finna verkefnin þín í öðru tæki, bjóða vinum úr appinu og deila greiðsluupplýsingunum þínum.
+welcome-demo-project = Helgi í Lyon
+welcome-private-title = Enginn getur lesið reikningana þína. Ekki einu sinni við.
+welcome-private-body = Nöfn, upphæðir, verkefni: allt er dulkóðað á tækinu þínu. Þú ein(n) hefur lykilinn.
+welcome-private-names = Nöfn
+welcome-private-amounts = Upphæðir
+welcome-private-projects = Verkefni
+welcome-scan-title = Taktu mynd af kvittuninni.
+welcome-scan-body = Upphæð, dagsetning og flokkur fyllast út sjálfkrafa. Allt gerist í símanum þínum. Myndin er ekki geymd.
 welcome-eu-title = 100% evrópskt
-welcome-eu-body = Þjónar í Þýskalandi, tölvupóstur sendur frá Frakklandi. Gögnin þín fara aldrei út fyrir Evrópusambandið.
-welcome-noads-title = Engar auglýsingar. Engir rekjarar.
-welcome-noads-body = Við söfnum engu og seljum ekki gögnin þín. Það er ekki okkar viðskiptamódel.
+welcome-no-ads = Engar auglýsingar
+welcome-no-trackers = Engir rekjarar
+welcome-step = Skref { $current } af { $total }
+welcome-next = Áfram
+welcome-skip = Sleppa
 welcome-start = Byrja
 welcome-how-it-works = Hvernig virkar þetta nákvæmlega?
 
@@ -620,3 +625,49 @@ invitation-unreadable = Ekki er hægt að opna þetta boð á þessu tæki
 invitation-from = Frá { $email }
 invitation-accept = Taka þátt
 invitation-decline = Hafna
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Nafnið þitt í þessu verkefni
+participants-you-badge = Þú
+participants-you-from-account = Sótt úr nafni aðgangsins þíns. Breyttu því hér eingöngu fyrir þetta verkefni.
+participants-you-required = Skylda. Svona sjá hinir þig.
+participants-others = Aðrir þátttakendur
+participants-empty = Enginn enn. Veldu vin hér fyrir neðan eða skrifaðu nafn.
+participants-empty-signed-out = Enginn enn. Skrifaðu nafn til að bæta einhverjum við.
+participants-duplicate = „{ $name }“ er þegar á listanum.
+participants-input-label = Bæta við vini eða skrifa nafn
+participants-input-placeholder = Vinur eða hvaða nafn sem er
+participants-suggest-friend = Vinur · tekur þátt sem „{ $name }“, fær boð
+participants-suggest-not-ready = Vinur · ekki tilbúinn enn
+participants-suggest-guest = Bæta „{ $text }“ við án aðgangs
+participants-suggest-guest-sub = Enginn aðgangur, bara nafn
+participants-friends = Vinir þínir
+participants-all-friends = Allir vinir
+participants-login-hint = Skráðu þig inn til að bæta fólki beint við af vinalistanum þínum.
+participants-invite-badge = Bjóða
+participants-guest-badge = Án aðgangs
+participants-guest-sub = Enginn aðgangur, bara nafn
+participants-rename = Endurnefna { $name }
+participants-remove = Fjarlægja { $name }
+participants-rename-label = Nýtt nafn
+participants-rename-save = Vista nafnið
+participants-rename-hint = Nafnið sem allir sjá í þessu verkefni. Boðið fer samt til { $email }.
+participants-invited-badge = Boðið
+participants-invited-sub = { $email } · ekki samþykkt enn
+participants-invited-pending = Boð ekki samþykkt enn
+participants-unlinked = Ekki tengt aðgangi
+add-project-create-invite = Stofna og bjóða { $count }
+edit-project-save-invite = Vista og bjóða { $count }
+edit-project-you-are = Í þessu tæki ert þú { $name }
+edit-project-no-identity = Þú hefur ekki enn valið hver þú ert
+edit-project-switch = Skipta
+edit-project-choose = Velja
+invite-failed = Ekki tókst að senda þessi boð: { $emails }
+invite-again = Bjóða aftur
+friend-picker-title = Bæta við vinum
+user-selection-invited-hint = { $email } bauð þér í „{ $project }“.
+user-selection-suggested = Tillaga
+user-selection-suggested-sub = { $email } bætti þér við undir þessu nafni
+user-selection-confirm-as = Ég er { $name }
+user-selection-missing = Er nafnið þitt ekki hér? Biddu þátttakanda að bæta þér við í stillingum verkefnisins.

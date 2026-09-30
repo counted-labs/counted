@@ -13,7 +13,7 @@ use shared::{
 use crate::common::flush_session;
 use crate::crypto::{
     derive_account_key_v1, derive_login_proof, generate_kdf_salt, generate_keypair,
-    wrap_private_key,
+    wrap_key,
 };
 
 /// Length bounds moved off the server when it stopped seeing the password. The HTML `minlength`
@@ -103,7 +103,7 @@ pub async fn sign_up(
 /// fails, in which case the account seeds one at its next login instead.
 pub fn new_keypair(account_key: &[u8; 32]) -> Option<Keypair> {
     let (public_key, private) = generate_keypair();
-    Some(Keypair { public_key, private_key: wrap_private_key(account_key, &private)? })
+    Some(Keypair { public_key, private_key: wrap_key(account_key, &private)? })
 }
 
 #[cfg(test)]

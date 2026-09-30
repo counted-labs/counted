@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use crate::tid;
 
-use crate::common::AppHeader;
+use crate::common::{AppHeader, MailLink};
 use crate::route::Route;
 
 /// Privacy policy, extracted to keys but translated only into `fr` and `en` — see
@@ -41,7 +41,7 @@ pub fn PrivacyPage() -> Element {
                         ". "
                         {tid!("privacy-controller-b")}
                         " "
-                        a { class: "link", href: "mailto:contact@counted.fr", "contact@counted.fr" }
+                        MailLink { address: "contact@counted.fr" }
                     }
 
                     h2 { class: "text-lg font-semibold", {tid!("privacy-collected-title")} }
@@ -54,6 +54,7 @@ pub fn PrivacyPage() -> Element {
                         li { strong { {tid!("privacy-collected-keys-term")} } " " {tid!("privacy-collected-keys-def")} }
                         li { strong { {tid!("privacy-collected-invite-term")} } " " {tid!("privacy-collected-invite-def")} }
                         li { strong { {tid!("privacy-collected-friends-term")} } " " {tid!("privacy-collected-friends-def")} }
+                        li { strong { {tid!("privacy-collected-push-term")} } " " {tid!("privacy-collected-push-def")} }
                         li { strong { {tid!("privacy-collected-logs-term")} } " " {tid!("privacy-collected-logs-def")} }
                     }
 
@@ -63,6 +64,7 @@ pub fn PrivacyPage() -> Element {
                         li { {tid!("privacy-purpose-2")} }
                         li { {tid!("privacy-purpose-3")} }
                         li { {tid!("privacy-purpose-4")} }
+                        li { {tid!("privacy-purpose-5")} }
                     }
 
                     h2 { class: "text-lg font-semibold", {tid!("privacy-legal-basis-title")} }
@@ -92,6 +94,8 @@ pub fn PrivacyPage() -> Element {
                         li { strong { "Scaleway TEM " } {tid!("privacy-processor-scaleway")} }
                         li { strong { "Bunq / Tricount " } {tid!("privacy-processor-tricount")} }
                         li { strong { "Grafana Labs " } {tid!("privacy-processor-grafana")} }
+                        li { strong { "Apple " } {tid!("privacy-processor-apple")} }
+                        li { strong { {tid!("privacy-processor-android-push-term")} } " " {tid!("privacy-processor-android-push-def")} }
                     }
                     p { {tid!("privacy-no-transfer-outside-eu")} }
 
@@ -176,7 +180,7 @@ pub fn PrivacyPage() -> Element {
                     p {
                         {tid!("privacy-rights-contact")}
                         " "
-                        a { class: "link", href: "mailto:contact@counted.fr", "contact@counted.fr" }
+                        MailLink { address: "contact@counted.fr" }
                     }
 
                     h2 { class: "text-lg font-semibold", {tid!("privacy-security-title")} }

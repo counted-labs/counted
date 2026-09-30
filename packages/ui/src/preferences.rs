@@ -69,8 +69,8 @@ mod tests {
         assert_eq!(account_language(&account(None), &KEY), None);
     }
 
-    /// The wrong key is the everyday case, not an attack: a session restored from the cookie has no
-    /// account key at all, and the display name already degrades the same way.
+    /// The wrong key is an ordinary case, not an attack: a device can hold a session without the
+    /// account key (local store cleared), and the display name already degrades the same way.
     #[test]
     fn an_undecryptable_blob_is_none_rather_than_a_panic() {
         let pair = encrypt_json(&KEY, &Preferences { language: Some("de".to_string()) }).unwrap();

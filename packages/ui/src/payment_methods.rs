@@ -70,8 +70,8 @@ pub const MAX_LABEL_LEN: usize = 60;
 pub const MAX_KIND_LEN: usize = 40;
 
 /// The account's stored methods, or empty when it never saved any, the blob does not decrypt, or
-/// the key is the wrong one — a session restored from the cookie has no account key at all, and
-/// the display name already degrades the same way.
+/// the key is the wrong one — a device can hold a session without the account key (local store
+/// cleared), and the display name already degrades the same way.
 pub fn account_payment_methods(account: &Account, key: &[u8; 32]) -> Vec<PaymentMethod> {
     let Some(pair) = account.payment_methods.as_ref() else {
         return Vec::new();
@@ -336,8 +336,8 @@ mod tests {
         assert_eq!(account_payment_methods(&account(None), &KEY), Vec::new());
     }
 
-    /// The wrong key is the everyday case, not an attack: a session restored from the cookie has no
-    /// account key at all.
+    /// The wrong key is an ordinary case, not an attack: a device can hold a session without the
+    /// account key (local store cleared).
     #[test]
     fn an_undecryptable_blob_is_empty_rather_than_a_panic() {
         let acc = stored(vec![method("iban", "FR76", None)]);
@@ -553,8 +553,7 @@ mod tests {
         assert_eq!(read.methods, vec![method("iban", "FR76", None)]);
     }
 
-    /// A copy on a row with no identity is served to nobody today and could be published under a
-    /// participant the account never picked tomorrow (`link_invited_account`). Not produced.
+    /// A copy on a row with no identity is served to nobody. Not produced.
     #[test]
     fn project_copies_skips_projects_without_an_identity() {
         let projects = [LocalStorageProject { user_id: None, ..project(Some(PROJECT_KEY)) }];

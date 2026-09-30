@@ -28,17 +28,21 @@ pub fn file_for(key: &str) -> std::path::PathBuf {
 pub fn read_json<T: DeserializeOwned + Default>(key: &str) -> T {
     #[cfg(target_arch = "wasm32")]
     {
-        let Some(raw) = web_sys::window()
-            .and_then(|w| w.local_storage().ok().flatten())
-            .and_then(|s| s.get_item(key).ok().flatten())
-        else {
+        let storage = web_sys::window().and_then(|w| w.local_storage().ok().flatten());
+        let Some(raw) = storage.as_ref().and_then(|s| s.get_item(key).ok().flatten()) else {
             return T::default();
         };
         return match serde_json::from_str(&raw) {
             Ok(v) => v,
             Err(e) => {
+                // Moved aside like native's rename, so the next write cannot destroy what may be the
+                // only copy of a project key. A full quota makes the copy fail; that is logged.
+                let quarantine = format!("{key}.corrupt");
+                let kept = storage.as_ref().is_some_and(|s| {
+                    s.set_item(&quarantine, &raw).is_ok() && s.remove_item(key).is_ok()
+                });
                 dioxus::logger::tracing::error!(
-                    "counted: {key} did not parse ({} chars), starting empty: {e}",
+                    "counted: {key} did not parse ({} chars), starting empty (kept a copy: {kept}): {e}",
                     raw.len()
                 );
                 T::default()
@@ -73,25 +77,26 @@ pub fn read_json<T: DeserializeOwned + Default>(key: &str) -> T {
 /// A failed write is reported on every target. On web that matters more than it looks: localStorage
 /// is a hard ~5 MB per origin and `set_item` throws `QuotaExceededError` when it is full, which this
 /// used to swallow — leaving a full store indistinguishable from a healthy one, and the offline
-/// cache silently frozen at whatever it last managed to save.
-pub fn write_json<T: Serialize>(key: &str, label: &str, value: &T) {
+/// cache silently frozen at whatever it last managed to save. True when the value reached storage.
+pub fn write_json<T: Serialize>(key: &str, label: &str, value: &T) -> bool {
     #[cfg(target_arch = "wasm32")]
     {
         let Ok(json) = serde_json::to_string(value) else {
             dioxus::logger::tracing::error!("counted: serialize {label} failed");
-            return;
+            return false;
         };
         let stored = web_sys::window()
             .and_then(|w| w.local_storage().ok().flatten())
             .map(|s| s.set_item(key, &json));
         match stored {
-            Some(Ok(())) => {}
+            Some(Ok(())) => return true,
             Some(Err(e)) => dioxus::logger::tracing::error!(
                 "counted: write {label} failed ({} chars): {e:?}",
                 json.len()
             ),
             None => dioxus::logger::tracing::error!("counted: no localStorage for {label}"),
         }
+        return false;
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -104,13 +109,27 @@ pub fn write_json<T: Serialize>(key: &str, label: &str, value: &T) {
                 // Write to a sibling tmp file and rename: an interrupted write leaves the
                 // previous contents intact instead of a truncated file.
                 let tmp = path.with_extension("json.tmp");
-                let res = std::fs::write(&tmp, &json).and_then(|_| std::fs::rename(&tmp, &path));
-                if let Err(e) = res {
-                    let _ = std::fs::remove_file(&tmp);
-                    dioxus::logger::tracing::error!("counted: write {} failed: {e}", path.display());
+                // `sync_all` before the rename: otherwise a power loss can persist the rename ahead
+                // of the data and leave a zero-length store.
+                let res = std::fs::File::create(&tmp)
+                    .and_then(|mut f| {
+                        std::io::Write::write_all(&mut f, json.as_bytes())?;
+                        f.sync_all()
+                    })
+                    .and_then(|_| std::fs::rename(&tmp, &path));
+                match res {
+                    Ok(()) => true,
+                    Err(e) => {
+                        let _ = std::fs::remove_file(&tmp);
+                        dioxus::logger::tracing::error!("counted: write {} failed: {e}", path.display());
+                        false
+                    }
                 }
             }
-            Err(e) => dioxus::logger::tracing::error!("counted: serialize {label} failed: {e}"),
+            Err(e) => {
+                dioxus::logger::tracing::error!("counted: serialize {label} failed: {e}");
+                false
+            }
         }
     }
 }

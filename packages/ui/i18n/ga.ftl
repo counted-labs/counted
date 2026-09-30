@@ -56,6 +56,7 @@ error-unauthenticated = Logáil isteach chun é sin a dhéanamh.
 error-email-not-verified = Níl do sheoladh ríomhphoist deimhnithe fós.
 error-project-not-found = Níl an tionscadal seo ann a thuilleadh.
 error-expense-not-found = Níl an costas seo ann a thuilleadh.
+error-storage-full = Tá an stóras lán: níorbh fhéidir eochair an tionscadail seo a shábháil ar an ngléas seo. Coinnigh an nasc comhroinnte.
 error-user-not-found = Níl an rannpháirtí seo ann a thuilleadh.
 error-tricount-not-found = Níor aimsíodh Tricount, nó chuir a API earráid ar ais.
 error-too-many-members = Tá teorainn na mball sroichte ag an tionscadal seo.
@@ -253,13 +254,8 @@ add-project-name-placeholder = Mo thuras, Comhthithe 2024…
 add-project-participants = Rannpháirtithe
 add-project-participant-name = Ainm an rannpháirtí
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Bain rannpháirtí
-add-project-me-badge = Mise
-add-project-thats-me = Mise atá ann!
 add-project-offline = Ní féidir leat tionscadal a chruthú as líne. Athnasc agus bain triail eile as.
 add-project-name-required = Tá ainm ag teastáil ón tionscadal.
-add-project-need-two-participants = Cuir 2 rannpháirtí ar a laghad leis.
-add-project-pick-yourself = Inis dúinn cén rannpháirtí thú.
 
 join-link-label = Nasc comhroinnte
 join-link-hint = Iompraíonn an nasc an eochair dhíchriptithe - cóipeáil é ar fad.
@@ -269,6 +265,7 @@ join-wrong-project = Is do thionscadal eile an nasc sin.
 import-tricount-link-label = Nasc nó eochair Tricount
 import-tricount-key-required = Cuir isteach nasc nó eochair Tricount.
 import-tricount-encryption-failed = Theip ar an gcriptiú.
+import-tricount-unimportable = Níor iompórtáladh aon rud: tá baill le cuntas Tricount sa Tricount seo, nó méideanna nach dtagann le chéile (iontrálacha i gceist: { $count }).
 
 ### Expenses
 
@@ -366,11 +363,8 @@ edit-project-title = Cuir an tionscadal in eagar
 edit-project-new-badge = nua
 edit-project-deferred-new-members = baill nua a chur leis
 edit-project-deferred-removals = baill a bhaint
-edit-project-deferred-me = an rogha “Mise atá ann”
 edit-project-offline-deferred = As líne: cuirfear { $items } i bhfeidhm nuair a athnascann tú.
 
-export-saved = Comhad sábháilte:
-    { $path }
 export-failed = Theip ar an easpórtáil: { $reason }
 
 history-expense-added = Costas curtha leis: { $name }
@@ -519,13 +513,24 @@ debtors-title-beneficiaries = Tairbhithe
 
 welcome-title = Ní gnó do dhuine ar bith eile do chuntais.
 welcome-subtitle = Roinn costais le cairde.
-welcome-e2ee-title = Gach rud criptithe
-welcome-e2ee-body = Ainmneacha, suimeanna, tionscadail: criptítear iad go léir ar do ghléas. Is agatsa amháin atá an eochair. Ní féidir le duine ar bith do chuntais a léamh. Fiú muidne.
-welcome-e2ee-note = Doléite, fiú againne (rochtain freastalaí ar bith)
+welcome-note = Saor in aisce. Níl cuntas ag teastáil. Gan fógraí.
+welcome-link-title = Nasc amháin, agus glacann gach duine páirt.
+welcome-link-body = Níl ar dhuine ar bith cuntas a chruthú.
+welcome-link-account = Cuntas? Ní bhíonn gá leis riamh. Is le do thionscadail a aimsiú ar ghléas eile, cairde a thabhairt isteach ón aip agus do shonraí íocaíochta a roinnt é.
+welcome-demo-project = Deireadh seachtaine in Lyon
+welcome-private-title = Ní féidir le duine ar bith do chuntais a léamh. Fiú muidne.
+welcome-private-body = Ainmneacha, suimeanna, tionscadail: criptítear iad go léir ar do ghléas. Is agatsa amháin atá an eochair.
+welcome-private-names = Ainmneacha
+welcome-private-amounts = Suimeanna
+welcome-private-projects = Tionscadail
+welcome-scan-title = Tóg grianghraf den admháil.
+welcome-scan-body = Líontar an tsuim, an dáta agus an chatagóir leo féin. Tarlaíonn gach rud ar do ghuthán. Ní choinnítear an grianghraf.
 welcome-eu-title = 100% Eorpach
-welcome-eu-body = Freastalaithe sa Ghearmáin, ríomhphost seolta ón bhFrainc. Ní fhágann do shonraí an tAontas Eorpach choíche.
-welcome-noads-title = Gan fógraí. Gan rianairí.
-welcome-noads-body = Ní bhailímid faic agus ní dhíolaimid do chuid sonraí. Ní hé sin ár múnla.
+welcome-no-ads = Gan fógraí
+welcome-no-trackers = Gan rianairí
+welcome-step = Céim { $current } as { $total }
+welcome-next = Ar aghaidh
+welcome-skip = Scipeáil
 welcome-start = Tosaigh
 welcome-how-it-works = Conas a oibríonn sé, go díreach?
 
@@ -632,3 +637,49 @@ invitation-unreadable = Ní féidir an cuireadh seo a oscailt ar an ngléas seo
 invitation-from = Ó { $email }
 invitation-accept = Glac páirt
 invitation-decline = Diúltaigh
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = D'ainm sa tionscadal seo
+participants-you-badge = Tusa
+participants-you-from-account = Tógtha ó ainm do chuntais. Athraigh anseo é don tionscadal seo amháin.
+participants-you-required = Riachtanach. Seo mar a fheicfidh na daoine eile thú.
+participants-others = Rannpháirtithe eile
+participants-empty = Duine ar bith fós. Roghnaigh cara thíos nó clóscríobh ainm ar bith.
+participants-empty-signed-out = Duine ar bith fós. Clóscríobh ainm chun duine a chur leis.
+participants-duplicate = Tá “{ $name }” ar an liosta cheana.
+participants-input-label = Cuir cara leis nó clóscríobh ainm
+participants-input-placeholder = Cara nó ainm ar bith
+participants-suggest-friend = Cara · glacfaidh páirt mar “{ $name }”, gheobhaidh cuireadh
+participants-suggest-not-ready = Cara · níl sé réidh fós
+participants-suggest-guest = Cuir “{ $text }” leis gan chuntas
+participants-suggest-guest-sub = Gan chuntas, ainm amháin
+participants-friends = Do chairde
+participants-all-friends = Gach cara
+participants-login-hint = Sínigh isteach chun daoine a chur leis díreach ó do liosta cairde.
+participants-invite-badge = Tabhair cuireadh
+participants-guest-badge = Gan chuntas
+participants-guest-sub = Gan chuntas, ainm amháin
+participants-rename = Athainmnigh { $name }
+participants-remove = Bain { $name }
+participants-rename-label = Ainm nua
+participants-rename-save = Sábháil an t-ainm
+participants-rename-hint = An t-ainm a fheiceann gach duine sa tionscadal seo. Téann an cuireadh fós chuig { $email }.
+participants-invited-badge = Cuireadh tugtha
+participants-invited-sub = { $email } · níor glacadh leis fós
+participants-invited-pending = Níor glacadh leis an gcuireadh fós
+participants-unlinked = Níl sé nasctha le cuntas
+add-project-create-invite = Cruthaigh agus tabhair cuireadh do { $count }
+edit-project-save-invite = Sábháil agus tabhair cuireadh do { $count }
+edit-project-you-are = Ar an ngléas seo is tusa { $name }
+edit-project-no-identity = Níor roghnaigh tú fós cé thú féin
+edit-project-switch = Athraigh
+edit-project-choose = Roghnaigh
+invite-failed = Níorbh fhéidir na cuirí seo a sheoladh: { $emails }
+invite-again = Tabhair cuireadh arís
+friend-picker-title = Cuir cairde leis
+user-selection-invited-hint = Thug { $email } cuireadh duit chuig “{ $project }”.
+user-selection-suggested = Molta
+user-selection-suggested-sub = Chuir { $email } leis thú faoin ainm seo
+user-selection-confirm-as = Is mise { $name }
+user-selection-missing = Níl d'ainm anseo? Iarr ar rannpháirtí thú a chur leis i socruithe an tionscadail.

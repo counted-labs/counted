@@ -3,7 +3,7 @@ use shared::User;
 
 use crate::common::avatar::SizeClass;
 use crate::common::{initials, user_color_class, Avatar};
-use crate::crypto::user_name_opt;
+use crate::decrypted::user_name_opt;
 
 #[derive(PartialEq, Props, Clone)]
 pub struct AvatarGroupProps {

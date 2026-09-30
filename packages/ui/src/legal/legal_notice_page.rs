@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use crate::tid;
 
-use crate::common::AppHeader;
+use crate::common::{AppHeader, MailLink};
 use crate::route::Route;
 
 /// French legal notice, extracted to keys but translated only into `fr` and `en`.
@@ -28,7 +28,7 @@ pub fn LegalNoticePage() -> Element {
                     p {
                         {tid!("legal-contact-label")}
                         " "
-                        a { class: "link", href: "mailto:contact@counted.fr", "contact@counted.fr" }
+                        MailLink { address: "contact@counted.fr" }
                     }
                     p { class: "text-xs text-base-content/70", {tid!("legal-publisher-address-note")} }
 
@@ -93,7 +93,7 @@ pub fn LegalNoticePage() -> Element {
                     p {
                         {tid!("legal-report-body-a")}
                         " "
-                        a { class: "link", href: "mailto:contact@counted.fr", "contact@counted.fr" }
+                        MailLink { address: "contact@counted.fr" }
                         ". "
                         {tid!("legal-report-body-b")}
                     }

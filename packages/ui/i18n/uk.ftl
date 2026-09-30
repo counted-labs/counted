@@ -55,6 +55,7 @@ error-unauthenticated = Увійди, щоб зробити це.
 error-email-not-verified = Твою електронну адресу ще не підтверджено.
 error-project-not-found = Цього проєкту більше не існує.
 error-expense-not-found = Цієї витрати більше не існує.
+error-storage-full = Сховище заповнене: ключ цього проєкту не вдалося зберегти на цьому пристрої. Збережи посилання для спільного доступу.
 error-user-not-found = Цього учасника більше не існує.
 error-tricount-not-found = Tricount не знайдено, або його API повернув помилку.
 error-too-many-members = Цей проєкт досяг ліміту учасників.
@@ -252,13 +253,8 @@ add-project-name-placeholder = Моя подорож, Квартира 2024…
 add-project-participants = Учасники
 add-project-participant-name = Ім’я учасника
 add-project-participant-placeholder = Кларк Кент
-add-project-remove-participant = Видалити учасника
-add-project-me-badge = Я
-add-project-thats-me = Це я!
 add-project-offline = Офлайн не можна створити проєкт. Під’єднайся і спробуй ще раз.
 add-project-name-required = Проєкту потрібна назва.
-add-project-need-two-participants = Додай щонайменше 2 учасників.
-add-project-pick-yourself = Вкажи, який учасник - ти.
 
 join-link-label = Посилання для спільного доступу
 join-link-hint = Посилання містить ключ розшифрування - скопіюй його повністю.
@@ -268,6 +264,7 @@ join-wrong-project = Це посилання від іншого проєкту.
 import-tricount-link-label = Посилання або ключ Tricount
 import-tricount-key-required = Введи посилання або ключ Tricount.
 import-tricount-encryption-failed = Шифрування не вдалося.
+import-tricount-unimportable = Нічого не імпортовано: цей Tricount має учасників з обліковим записом Tricount або суми, що не сходяться (зачеплені записи: { $count }).
 
 ### Expenses
 
@@ -365,11 +362,8 @@ edit-project-title = Змінити проєкт
 edit-project-new-badge = новий
 edit-project-deferred-new-members = додавання нових учасників
 edit-project-deferred-removals = видалення учасників
-edit-project-deferred-me = вибір «Це я»
 edit-project-offline-deferred = Офлайн: { $items } буде застосовано після під’єднання.
 
-export-saved = Файл збережено:
-    { $path }
 export-failed = Експорт не вдався: { $reason }
 
 history-expense-added = Витрату додано: { $name }
@@ -516,13 +510,24 @@ debtors-title-beneficiaries = Бенефіціари
 
 welcome-title = Твої рахунки - нікого не стосуються.
 welcome-subtitle = Діліть витрати з друзями.
-welcome-e2ee-title = Усе зашифровано
-welcome-e2ee-body = Імена, суми, проєкти: усе шифрується на твоєму пристрої. Ключ є лише в тебе. Ніхто не може прочитати твої рахунки. Навіть ми.
-welcome-e2ee-note = Нечитабельно навіть для нас (нульовий доступ сервера)
+welcome-note = Безкоштовно. Без облікового запису. Без реклами.
+welcome-link-title = Одне посилання — і всі долучаються.
+welcome-link-body = Нікому не потрібно створювати обліковий запис.
+welcome-link-account = Обліковий запис? Ніколи не обов'язковий. Він потрібен, щоб знаходити свої проєкти на іншому пристрої, запрошувати друзів із застосунку й ділитися своїми платіжними реквізитами.
+welcome-demo-project = Вихідні в Ліоні
+welcome-private-title = Ніхто не може прочитати твої рахунки. Навіть ми.
+welcome-private-body = Імена, суми, проєкти: усе шифрується на твоєму пристрої. Ключ є лише в тебе.
+welcome-private-names = Імена
+welcome-private-amounts = Суми
+welcome-private-projects = Проєкти
+welcome-scan-title = Сфотографуй чек.
+welcome-scan-body = Сума, дата й категорія заповнюються самі. Усе відбувається на твоєму телефоні. Фото не зберігається.
 welcome-eu-title = 100% європейський
-welcome-eu-body = Сервери в Німеччині, листи надсилаються з Франції. Твої дані ніколи не залишають Європейський Союз.
-welcome-noads-title = Без реклами. Без трекерів.
-welcome-noads-body = Ми нічого не збираємо й не продаємо твої дані. Це не наша модель.
+welcome-no-ads = Без реклами
+welcome-no-trackers = Без трекерів
+welcome-step = Крок { $current } з { $total }
+welcome-next = Далі
+welcome-skip = Пропустити
 welcome-start = Почати
 welcome-how-it-works = Як саме це працює?
 
@@ -628,3 +633,49 @@ invitation-unreadable = Це запрошення не можна відкрит
 invitation-from = Від { $email }
 invitation-accept = Приєднатися
 invitation-decline = Відхилити
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Твоє ім’я в цьому проєкті
+participants-you-badge = Ти
+participants-you-from-account = Взято з імені твого облікового запису. Зміни його тут лише для цього проєкту.
+participants-you-required = Обов’язково. Так тебе бачитимуть інші.
+participants-others = Інші учасники
+participants-empty = Поки нікого. Вибери друга нижче або введи будь-яке ім’я.
+participants-empty-signed-out = Поки нікого. Введи ім’я, щоб когось додати.
+participants-duplicate = «{ $name }» уже є в списку.
+participants-input-label = Додати друга або ввести ім’я
+participants-input-placeholder = Друг або будь-яке ім’я
+participants-suggest-friend = Друг · приєднається як «{ $name }», отримає запрошення
+participants-suggest-not-ready = Друг · ще не готовий
+participants-suggest-guest = Додати «{ $text }» без облікового запису
+participants-suggest-guest-sub = Без облікового запису, лише ім’я
+participants-friends = Твої друзі
+participants-all-friends = Усі друзі
+participants-login-hint = Увійди, щоб додавати людей просто зі списку друзів.
+participants-invite-badge = Запросити
+participants-guest-badge = Без облікового запису
+participants-guest-sub = Без облікового запису, лише ім’я
+participants-rename = Перейменувати: { $name }
+participants-remove = Прибрати: { $name }
+participants-rename-label = Нове ім’я
+participants-rename-save = Зберегти ім’я
+participants-rename-hint = Ім’я, яке всі бачать у цьому проєкті. Запрошення все одно піде на { $email }.
+participants-invited-badge = Запрошено
+participants-invited-sub = { $email } · ще не прийнято
+participants-invited-pending = Запрошення ще не прийнято
+participants-unlinked = Не пов’язано з обліковим записом
+add-project-create-invite = Створити й запросити: { $count }
+edit-project-save-invite = Зберегти й запросити: { $count }
+edit-project-you-are = На цьому пристрої ти { $name }
+edit-project-no-identity = Ти ще не вибрав(-ла), хто ти
+edit-project-switch = Змінити
+edit-project-choose = Вибрати
+invite-failed = Не вдалося надіслати ці запрошення: { $emails }
+invite-again = Запросити знову
+friend-picker-title = Додати друзів
+user-selection-invited-hint = { $email } запрошує тебе до «{ $project }».
+user-selection-suggested = Запропоновано
+user-selection-suggested-sub = { $email } додав(-ла) тебе під цим ім’ям
+user-selection-confirm-as = Я { $name }
+user-selection-missing = Твого імені немає? Попроси учасника додати тебе в налаштуваннях проєкту.

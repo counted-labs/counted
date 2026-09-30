@@ -34,19 +34,11 @@ pub async fn replay_queue(
             return true;
         };
 
-        let result: Result<(), String> = match queued.op.clone() {
-            OpKind::AddExpense(p) => {
-                add_expense(Json(p)).await.map(|_| ()).map_err(|e| error_message(&e))
-            }
-            OpKind::EditExpense(p) => {
-                edit_expense(Json(p)).await.map(|_| ()).map_err(|e| error_message(&e))
-            }
-            OpKind::DeleteExpense(p) => {
-                delete_expense(Json(p)).await.map(|_| ()).map_err(|e| error_message(&e))
-            }
-            OpKind::UpdateProject(p) => {
-                update_project_by_id(Json(p)).await.map(|_| ()).map_err(|e| error_message(&e))
-            }
+        let result: Result<(), ServerFnError> = match queued.op.clone() {
+            OpKind::AddExpense(p) => add_expense(Json(p)).await.map(|_| ()),
+            OpKind::EditExpense(p) => edit_expense(Json(p)).await.map(|_| ()),
+            OpKind::DeleteExpense(p) => delete_expense(Json(p)).await.map(|_| ()),
+            OpKind::UpdateProject(p) => update_project_by_id(Json(p)).await.map(|_| ()),
         };
 
         match result {
@@ -65,83 +57,59 @@ pub async fn replay_queue(
                 write_queue(&pending_ops.read());
             }
             Err(e) => {
-                conflict_msg.set(Some(SyncFailure::Error(e)));
+                conflict_msg.set(Some(SyncFailure::Error(error_message(&e))));
                 return false;
             }
         }
     }
 }
 
-fn is_conflict(err: &str) -> bool {
-    err.contains("404") || err.contains("not found") || err.contains("Not Found")
+/// Matched on the variant, never the text: `error_message` returns translated copy, which no
+/// substring check can recognise in every locale.
+fn is_conflict(err: &ServerFnError) -> bool {
+    matches!(
+        err,
+        ServerFnError::ServerError { message, code: 404, .. }
+            if message == shared::errors::EXPENSE_NOT_FOUND || message == shared::PROJECT_NOT_FOUND
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::is_conflict;
+    use dioxus::prelude::ServerFnError;
 
-    #[test]
-    fn test_conflict_on_404() {
-        assert!(is_conflict("server returned 404"));
+    fn server_error(message: &str, code: u16) -> ServerFnError {
+        ServerFnError::ServerError { message: message.into(), code, details: None }
     }
 
     #[test]
-    fn test_conflict_on_404_standalone() {
-        assert!(is_conflict("404"));
+    fn test_conflict_on_expense_not_found() {
+        assert!(is_conflict(&server_error(shared::errors::EXPENSE_NOT_FOUND, 404)));
     }
 
     #[test]
-    fn test_conflict_on_not_found_lowercase() {
-        assert!(is_conflict("not found"));
+    fn test_conflict_on_project_not_found() {
+        assert!(is_conflict(&server_error(shared::PROJECT_NOT_FOUND, 404)));
     }
 
     #[test]
-    fn test_conflict_on_not_found_in_sentence() {
-        assert!(is_conflict("expense not found in database"));
+    fn test_no_conflict_on_not_found_text_without_404() {
+        assert!(!is_conflict(&server_error(shared::errors::EXPENSE_NOT_FOUND, 500)));
     }
 
     #[test]
-    fn test_conflict_on_not_found_titlecase() {
-        assert!(is_conflict("Not Found"));
+    fn test_no_conflict_on_unrelated_404() {
+        assert!(!is_conflict(&server_error(shared::errors::USER_NOT_FOUND, 404)));
     }
 
     #[test]
-    fn test_conflict_on_http_404_not_found() {
-        assert!(is_conflict("HTTP 404 Not Found"));
+    fn test_no_conflict_on_other_server_error() {
+        assert!(!is_conflict(&ServerFnError::new("boom")));
     }
 
     #[test]
-    fn test_no_conflict_on_network_error() {
-        assert!(!is_conflict("error sending request"));
-    }
-
-    #[test]
-    fn test_no_conflict_on_connection_refused() {
-        assert!(!is_conflict("connection refused"));
-    }
-
-    #[test]
-    fn test_no_conflict_on_timeout() {
-        assert!(!is_conflict("request timed out"));
-    }
-
-    #[test]
-    fn test_no_conflict_on_auth_error() {
-        assert!(!is_conflict("401 Unauthorized"));
-    }
-
-    #[test]
-    fn test_no_conflict_on_server_error() {
-        assert!(!is_conflict("500 Internal Server Error"));
-    }
-
-    #[test]
-    fn test_no_conflict_on_empty_string() {
-        assert!(!is_conflict(""));
-    }
-
-    #[test]
-    fn test_no_conflict_on_unrelated_message() {
-        assert!(!is_conflict("serialization failed"));
+    fn test_no_conflict_on_stream_error() {
+        assert!(!is_conflict(&ServerFnError::StreamError("reset".into())));
     }
 }

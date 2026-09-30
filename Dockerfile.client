@@ -9,7 +9,24 @@
 # installed the same way. No `--fullstack`: packages/web does not name that feature directly, so
 # dx builds the client alone — the server pass would fail here, `packages/api/src/server/` being
 # absent from the mirror by design. docs/reproducible-builds.md has the whole argument.
-FROM rust:1.98-trixie@sha256:bf5a9aa29062a6cb03c49bd59a46eb55e3cc770caf598a221a7866e500be3082 AS builder
+FROM rust:1.98-trixie@sha256:bf5a9aa29062a6cb03c49bd59a46eb55e3cc770caf598a221a7866e500be3082 AS base
+
+# The tools `dx bundle` would otherwise download unchecked, each verified against its publisher's
+# digest; NO_DOWNLOADS makes dx take them from PATH or fail. Same block and reasoning as the
+# private Dockerfile.
+FROM base AS dxtools
+ADD --checksum=sha256:61d4a7dc85acfa0d2354ccc0b8361928c7e52a746d17f28ebaa795ed3dc1614a \
+	https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.127/wasm-bindgen-0.2.127-x86_64-unknown-linux-musl.tar.gz /tmp/wasm-bindgen.tar.gz
+ADD --checksum=sha256:c8ebe5d00c978601086bcad33b2c80fcfe33d6a8b87b754ba4ea86a9a16cc316 \
+	https://github.com/WebAssembly/binaryen/releases/download/version_127/binaryen-version_127-x86_64-linux.tar.gz /tmp/binaryen.tar.gz
+ADD --checksum=sha256:066e20cdb882994160e18524a552b97e03648eb9aa0c7cdf5680a6493be65ab2 \
+	https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.27.3.tgz /tmp/esbuild.tgz
+RUN mkdir -p /opt/dxtools/bin \
+	&& tar xzf /tmp/wasm-bindgen.tar.gz -C /opt/dxtools/bin --strip-components=1 wasm-bindgen-0.2.127-x86_64-unknown-linux-musl/wasm-bindgen \
+	&& tar xzf /tmp/binaryen.tar.gz -C /opt/dxtools/bin --strip-components=2 binaryen-version_127/bin/wasm-opt \
+	&& tar xzf /tmp/esbuild.tgz -C /opt/dxtools/bin --strip-components=2 package/bin/esbuild
+
+FROM base AS builder
 
 ARG DIOXUS_CLI_VERSION=0.7.10
 
@@ -21,6 +38,9 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 	--mount=type=cache,target=/usr/local/cargo/git \
 	cargo install dioxus-cli --locked --version "$DIOXUS_CLI_VERSION" --root /.cargo
 ENV PATH="/.cargo/bin:$PATH"
+
+COPY --from=dxtools /opt/dxtools/bin /opt/dxtools/bin
+ENV PATH="/opt/dxtools/bin:$PATH" NO_DOWNLOADS=1
 
 COPY . .
 

@@ -53,6 +53,7 @@ error-unauthenticated = Selle tegemiseks logi sisse.
 error-email-not-verified = Sinu e-posti aadress pole veel kinnitatud.
 error-project-not-found = Seda projekti enam pole.
 error-expense-not-found = Seda kulu enam pole.
+error-storage-full = Salvestusruum on täis: selle projekti võtit ei õnnestunud selles seadmes salvestada. Hoia jagamislink alles.
 error-user-not-found = Seda osalejat enam pole.
 error-tricount-not-found = Tricounti ei leitud või selle API tagastas vea.
 error-too-many-members = See projekt on jõudnud liikmete piirini.
@@ -250,13 +251,8 @@ add-project-name-placeholder = Minu reis, Korterikaaslased 2024…
 add-project-participants = Osalejad
 add-project-participant-name = Osaleja nimi
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Eemalda osaleja
-add-project-me-badge = Mina
-add-project-thats-me = See olen mina!
 add-project-offline = Võrguühenduseta ei saa projekti luua. Loo ühendus uuesti ja proovi uuesti.
 add-project-name-required = Projektil peab olema nimi.
-add-project-need-two-participants = Lisa vähemalt 2 osalejat.
-add-project-pick-yourself = Ütle, milline osaleja sina oled.
 
 join-link-label = Jagamislink
 join-link-hint = Link sisaldab dekrüpteerimisvõtit - kopeeri see tervikuna.
@@ -266,6 +262,7 @@ join-wrong-project = See link kuulub teisele projektile.
 import-tricount-link-label = Tricounti link või võti
 import-tricount-key-required = Sisesta Tricounti link või võti.
 import-tricount-encryption-failed = Krüpteerimine ebaõnnestus.
+import-tricount-unimportable = Midagi ei imporditud: selles Tricountis on Tricounti kontoga liikmeid või summasid, mis ei klapi (mõjutatud kirjeid: { $count }).
 
 ### Expenses
 
@@ -363,11 +360,8 @@ edit-project-title = Muuda projekti
 edit-project-new-badge = uus
 edit-project-deferred-new-members = uute liikmete lisamine
 edit-project-deferred-removals = liikmete eemaldamine
-edit-project-deferred-me = „See olen mina“ valik
 edit-project-offline-deferred = Võrguühenduseta: { $items } rakendatakse ühenduse taastumisel.
 
-export-saved = Fail salvestatud:
-    { $path }
 export-failed = Eksport ebaõnnestus: { $reason }
 
 history-expense-added = Kulu lisatud: { $name }
@@ -510,13 +504,24 @@ debtors-title-beneficiaries = Kasusaajad
 
 welcome-title = Sinu arvepidamine ei puutu kellessegi teise.
 welcome-subtitle = Jaga kulusid sõpradega.
-welcome-e2ee-title = Kõik krüpteeritud
-welcome-e2ee-body = Nimed, summad, projektid: kõik krüpteeritakse sinu seadmes. Võti on ainult sinul. Keegi ei saa sinu arveid lugeda. Isegi mitte meie.
-welcome-e2ee-note = Loetamatu isegi meile (serveril puudub juurdepääs)
+welcome-note = Tasuta. Kontot pole vaja. Reklaame pole.
+welcome-link-title = Üks link ja kõik saavad osaleda.
+welcome-link-body = Kellelgi pole vaja kontot luua.
+welcome-link-account = Konto? Pole kunagi kohustuslik. Sellega leiad oma projektid teisest seadmest, kutsud sõpru rakendusest ja jagad oma makseandmeid.
+welcome-demo-project = Nädalavahetus Lyonis
+welcome-private-title = Keegi ei saa sinu arveid lugeda. Isegi mitte meie.
+welcome-private-body = Nimed, summad, projektid: kõik krüpteeritakse sinu seadmes. Võti on ainult sinul.
+welcome-private-names = Nimed
+welcome-private-amounts = Summad
+welcome-private-projects = Projektid
+welcome-scan-title = Pildista tšekki.
+welcome-scan-body = Summa, kuupäev ja kategooria täituvad ise. Kõik toimub sinu telefonis. Fotot ei säilitata.
 welcome-eu-title = 100% Euroopa
-welcome-eu-body = Serverid Saksamaal, kirjad saadetakse Prantsusmaalt. Sinu andmed ei lahku kunagi Euroopa Liidust.
-welcome-noads-title = Ei reklaame. Ei jälgijaid.
-welcome-noads-body = Me ei kogu midagi ega müü sinu andmeid. See pole meie mudel.
+welcome-no-ads = Ei reklaame
+welcome-no-trackers = Ei jälgijaid
+welcome-step = Samm { $current }/{ $total }
+welcome-next = Edasi
+welcome-skip = Jäta vahele
 welcome-start = Alusta
 welcome-how-it-works = Kuidas see täpselt töötab?
 
@@ -620,3 +625,49 @@ invitation-unreadable = Seda kutset ei saa selles seadmes avada
 invitation-from = Saatja: { $email }
 invitation-accept = Liitu
 invitation-decline = Keeldu
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Sinu nimi selles projektis
+participants-you-badge = Sina
+participants-you-from-account = Võetud sinu konto nimest. Muuda seda siin ainult selle projekti jaoks.
+participants-you-required = Kohustuslik. Nii näevad sind teised.
+participants-others = Teised osalejad
+participants-empty = Veel mitte kedagi. Vali allpool sõber või kirjuta mis tahes nimi.
+participants-empty-signed-out = Veel mitte kedagi. Kirjuta nimi, et kedagi lisada.
+participants-duplicate = „{ $name }“ on juba loendis.
+participants-input-label = Lisa sõber või kirjuta nimi
+participants-input-placeholder = Sõber või mis tahes nimi
+participants-suggest-friend = Sõber · liitub nimega „{ $name }“, saab kutse
+participants-suggest-not-ready = Sõber · pole veel valmis
+participants-suggest-guest = Lisa „{ $text }“ ilma kontota
+participants-suggest-guest-sub = Kontot pole, ainult nimi
+participants-friends = Sinu sõbrad
+participants-all-friends = Kõik sõbrad
+participants-login-hint = Logi sisse, et lisada inimesi otse oma sõbraloendist.
+participants-invite-badge = Kutsu
+participants-guest-badge = Ilma kontota
+participants-guest-sub = Kontot pole, ainult nimi
+participants-rename = Nimeta ümber: { $name }
+participants-remove = Eemalda: { $name }
+participants-rename-label = Uus nimi
+participants-rename-save = Salvesta nimi
+participants-rename-hint = Nimi, mida kõik selles projektis näevad. Kutse läheb endiselt aadressile { $email }.
+participants-invited-badge = Kutsutud
+participants-invited-sub = { $email } · pole veel vastu võetud
+participants-invited-pending = Kutset pole veel vastu võetud
+participants-unlinked = Pole kontoga seotud
+add-project-create-invite = Loo ja kutsu: { $count }
+edit-project-save-invite = Salvesta ja kutsu: { $count }
+edit-project-you-are = Selles seadmes oled sa { $name }
+edit-project-no-identity = Sa pole veel valinud, kes sa oled
+edit-project-switch = Vaheta
+edit-project-choose = Vali
+invite-failed = Neid kutseid ei õnnestunud saata: { $emails }
+invite-again = Kutsu uuesti
+friend-picker-title = Lisa sõpru
+user-selection-invited-hint = { $email } kutsus sind projekti „{ $project }“.
+user-selection-suggested = Soovitatud
+user-selection-suggested-sub = { $email } lisas sind selle nimega
+user-selection-confirm-as = Mina olen { $name }
+user-selection-missing = Sinu nime pole siin? Palu osalejal sind projekti seadetes lisada.

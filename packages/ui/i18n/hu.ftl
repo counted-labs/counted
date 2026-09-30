@@ -53,6 +53,7 @@ error-unauthenticated = Ehhez jelentkezz be.
 error-email-not-verified = Az e-mail-címed még nincs megerősítve.
 error-project-not-found = Ez a projekt már nem létezik.
 error-expense-not-found = Ez a kiadás már nem létezik.
+error-storage-full = A tárhely megtelt: a projekt kulcsát nem sikerült menteni ezen az eszközön. Őrizd meg a megosztási linket.
 error-user-not-found = Ez a résztvevő már nem létezik.
 error-tricount-not-found = A Tricount nem található, vagy az API-ja hibát adott vissza.
 error-too-many-members = Ez a projekt elérte a tagok számának határát.
@@ -250,13 +251,8 @@ add-project-name-placeholder = Utazásom, Lakótársak 2024…
 add-project-participants = Résztvevők
 add-project-participant-name = Résztvevő neve
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Résztvevő eltávolítása
-add-project-me-badge = Én
-add-project-thats-me = Ez én vagyok!
 add-project-offline = Offline nem hozhatsz létre projektet. Csatlakozz újra, és próbáld meg ismét.
 add-project-name-required = A projektnek névre van szüksége.
-add-project-need-two-participants = Adj hozzá legalább 2 résztvevőt.
-add-project-pick-yourself = Mondd meg, melyik résztvevő vagy te.
 
 join-link-label = Megosztási link
 join-link-hint = A link tartalmazza a visszafejtő kulcsot - másold ki teljes egészében.
@@ -266,6 +262,7 @@ join-wrong-project = Ez a link egy másik projekthez tartozik.
 import-tricount-link-label = Tricount link vagy kulcs
 import-tricount-key-required = Adj meg egy Tricount linket vagy kulcsot.
 import-tricount-encryption-failed = A titkosítás nem sikerült.
+import-tricount-unimportable = Semmi sem lett importálva: ebben a Tricountban Tricount-fiókkal rendelkező tagok vagy nem egyező összegek vannak (érintett tételek: { $count }).
 
 ### Expenses
 
@@ -363,11 +360,8 @@ edit-project-title = Projekt szerkesztése
 edit-project-new-badge = új
 edit-project-deferred-new-members = új tagok hozzáadása
 edit-project-deferred-removals = tagok eltávolítása
-edit-project-deferred-me = az „Ez én vagyok” kijelölés
 edit-project-offline-deferred = Offline: { $items } újracsatlakozáskor lép érvénybe.
 
-export-saved = Fájl mentve:
-    { $path }
 export-failed = Az exportálás nem sikerült: { $reason }
 
 history-expense-added = Kiadás hozzáadva: { $name }
@@ -510,13 +504,24 @@ debtors-title-beneficiaries = Kedvezményezettek
 
 welcome-title = Az elszámolásod senki másra nem tartozik.
 welcome-subtitle = Oszd meg a kiadásokat a barátaiddal.
-welcome-e2ee-title = Minden titkosítva
-welcome-e2ee-body = Nevek, összegek, projektek: minden az eszközödön titkosítódik. Egyedül te birtoklod a kulcsot. Senki sem olvashatja el az elszámolásaidat. Még mi sem.
-welcome-e2ee-note = Olvashatatlan, még nekünk is (zéró szerveroldali hozzáférés)
+welcome-note = Ingyenes. Nem kell fiók. Nincs reklám.
+welcome-link-title = Egy link, és mindenki benne van.
+welcome-link-body = Senkinek sem kell fiókot létrehoznia.
+welcome-link-account = Fiók? Soha nem kötelező. Arra való, hogy másik eszközön is megtaláld a projektjeidet, meghívd a barátaidat az alkalmazásból, és megoszd a fizetési adataidat.
+welcome-demo-project = Hétvége Lyonban
+welcome-private-title = Senki sem olvashatja el az elszámolásaidat. Még mi sem.
+welcome-private-body = Nevek, összegek, projektek: minden az eszközödön titkosítódik. Egyedül te birtoklod a kulcsot.
+welcome-private-names = Nevek
+welcome-private-amounts = Összegek
+welcome-private-projects = Projektek
+welcome-scan-title = Fotózd le a nyugtát.
+welcome-scan-body = Az összeg, a dátum és a kategória magától kitöltődik. Minden a telefonodon történik. A fotót nem őrizzük meg.
 welcome-eu-title = 100% európai
-welcome-eu-body = Szerverek Németországban, e-mailek Franciaországból. Az adataid soha nem hagyják el az Európai Uniót.
-welcome-noads-title = Nincs reklám. Nincs nyomkövető.
-welcome-noads-body = Semmit nem gyűjtünk, és nem adjuk el az adataidat. Nem ez a modellünk.
+welcome-no-ads = Nincs reklám
+welcome-no-trackers = Nincs nyomkövető
+welcome-step = { $current }. lépés / { $total }
+welcome-next = Tovább
+welcome-skip = Kihagyás
 welcome-start = Kezdjük
 welcome-how-it-works = Pontosan hogyan működik?
 
@@ -620,3 +625,49 @@ invitation-unreadable = Ez a meghívó nem nyitható meg ezen az eszközön
 invitation-from = Feladó: { $email }
 invitation-accept = Csatlakozás
 invitation-decline = Elutasítás
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = A neved ebben a projektben
+participants-you-badge = Te
+participants-you-from-account = A fiókneved alapján kitöltve. Itt csak ehhez a projekthez módosíthatod.
+participants-you-required = Kötelező. Így látnak majd a többiek.
+participants-others = További résztvevők
+participants-empty = Még senki. Válassz lent egy barátot, vagy írj be egy nevet.
+participants-empty-signed-out = Még senki. Írj be egy nevet, hogy hozzáadj valakit.
+participants-duplicate = „{ $name }” már szerepel a listában.
+participants-input-label = Barát hozzáadása vagy név beírása
+participants-input-placeholder = Barát vagy bármilyen név
+participants-suggest-friend = Barát · „{ $name }” néven csatlakozik, meghívót kap
+participants-suggest-not-ready = Barát · még nem áll készen
+participants-suggest-guest = „{ $text }” hozzáadása fiók nélkül
+participants-suggest-guest-sub = Nincs fiókja, csak egy név
+participants-friends = A barátaid
+participants-all-friends = Minden barát
+participants-login-hint = Jelentkezz be, hogy közvetlenül a barátlistádból adhass hozzá embereket.
+participants-invite-badge = Meghívás
+participants-guest-badge = Fiók nélkül
+participants-guest-sub = Nincs fiókja, csak egy név
+participants-rename = Átnevezés: { $name }
+participants-remove = Eltávolítás: { $name }
+participants-rename-label = Új név
+participants-rename-save = Név mentése
+participants-rename-hint = A név, amelyet mindenki lát ebben a projektben. A meghívó továbbra is ide megy: { $email }.
+participants-invited-badge = Meghívva
+participants-invited-sub = { $email } · még nincs elfogadva
+participants-invited-pending = A meghívó még nincs elfogadva
+participants-unlinked = Nincs fiókhoz kapcsolva
+add-project-create-invite = Létrehozás és { $count } meghívása
+edit-project-save-invite = Mentés és { $count } meghívása
+edit-project-you-are = Ezen az eszközön te vagy: { $name }
+edit-project-no-identity = Még nem választottad ki, ki vagy
+edit-project-switch = Váltás
+edit-project-choose = Kiválasztás
+invite-failed = Ezeket a meghívókat nem sikerült elküldeni: { $emails }
+invite-again = Újra meghívás
+friend-picker-title = Barátok hozzáadása
+user-selection-invited-hint = { $email } meghívott ide: „{ $project }”.
+user-selection-suggested = Javasolt
+user-selection-suggested-sub = { $email } ezen a néven adott hozzá
+user-selection-confirm-as = Én vagyok: { $name }
+user-selection-missing = Nincs itt a neved? Kérj meg egy résztvevőt, hogy adjon hozzá a projekt beállításaiban.

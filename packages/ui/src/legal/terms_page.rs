@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use crate::tid;
 
-use crate::common::AppHeader;
+use crate::common::{AppHeader, MailLink};
 use crate::route::Route;
 
 /// Terms of use, extracted to keys but translated only into `fr` and `en` — see
@@ -90,7 +90,7 @@ pub fn TermsPage() -> Element {
                     p {
                         {tid!("terms-law-body-a")}
                         " "
-                        a { class: "link", href: "mailto:contact@counted.fr", "contact@counted.fr" }
+                        MailLink { address: "contact@counted.fr" }
                         ". "
                         {tid!("terms-law-body-b")}
                     }

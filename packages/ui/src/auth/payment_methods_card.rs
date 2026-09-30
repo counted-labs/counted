@@ -212,9 +212,9 @@ pub fn PaymentMethodsCard() -> Element {
                     {tid!("settings-payment-methods-share-warning")}
                 }
 
-                // A session restored from the cookie has no account key, so the blob cannot be read
-                // and must not be written either: saving from here would overwrite real details
-                // with an empty list.
+                // A session without the account key (local store cleared) cannot read the blob and
+                // must not write it either: saving from here would overwrite real details with an
+                // empty list.
                 if account_enc_key_ctx().is_none() {
                     p { class: "text-sm text-base-content/70",
                         {tid!("payment-methods-key-missing")}

@@ -6,7 +6,7 @@ use crate::{
     common::{
         copy_text, initials, user_color_class, Avatar, Flash, Mascot, MascotPose, ProjectKey,
     },
-    crypto::{decrypt_user, DecryptedUser},
+    decrypted::{decrypt_user, DecryptedUser},
     icons::RightArrowIcon,
     payment_methods::{method_display_name, method_kind_name},
 };

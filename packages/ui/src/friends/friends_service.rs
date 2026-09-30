@@ -15,11 +15,11 @@ use shared::{
 };
 use uuid::Uuid;
 
-use crate::common::{update_ls, upsert_project, upsert_project_key, LocalStorageState};
+use crate::common::{adopt_project_key, LocalStorageState};
 use crate::crypto::{
-    box_project_key, decrypt_pair, encrypt_pair, key_fingerprint, key_to_fragment, project_name,
-    unbox_project_key, unwrap_private_key,
+    box_project_key, decrypt, encrypt, key_fingerprint, unbox_project_key, unwrap_key,
 };
+use crate::decrypted::decrypt_project;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FriendRow {
@@ -40,6 +40,8 @@ pub struct OutgoingRow {
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct FriendsLists {
+    /// This account's own code: what its friends see next to its email, and what they read out.
+    pub my_fingerprint: Option<String>,
     pub friends: Vec<FriendRow>,
     pub incoming: Vec<IncomingFriendRequest>,
     pub outgoing: Vec<OutgoingRow>,
@@ -54,8 +56,13 @@ pub fn friend_row(f: &Friend) -> FriendRow {
     }
 }
 
-pub fn to_lists(view: &FriendsView, account_key: Option<&[u8; 32]>) -> FriendsLists {
+pub fn to_lists(
+    view: &FriendsView,
+    account_key: Option<&[u8; 32]>,
+    my_public_key: Option<&[u8]>,
+) -> FriendsLists {
     FriendsLists {
+        my_fingerprint: my_public_key.map(key_fingerprint),
         friends: view.friends.iter().map(friend_row).collect(),
         incoming: view.incoming.clone(),
         outgoing: view
@@ -64,21 +71,24 @@ pub fn to_lists(view: &FriendsView, account_key: Option<&[u8; 32]>) -> FriendsLi
             .map(|o| OutgoingRow {
                 id: o.id,
                 label: account_key
-                    .and_then(|k| decrypt_pair(k, &o.label).ok())
+                    .and_then(|k| decrypt(k, &o.label).ok())
                     .unwrap_or_default(),
             })
             .collect(),
     }
 }
 
-pub async fn load(account_key: Option<[u8; 32]>) -> Result<FriendsLists, ServerFnError> {
-    Ok(to_lists(&get_friends().await?, account_key.as_ref()))
+pub async fn load(
+    account_key: Option<[u8; 32]>,
+    my_public_key: Option<Vec<u8>>,
+) -> Result<FriendsLists, ServerFnError> {
+    Ok(to_lists(&get_friends().await?, account_key.as_ref(), my_public_key.as_deref()))
 }
 
 /// The response is the same whether or not the address has an account; so is what this returns.
 pub async fn add_by_email(email: &str, account_key: &[u8; 32]) -> Result<(), ServerFnError> {
     let email = email.trim().to_string();
-    let label = encrypt_pair(account_key, &email).map_err(ServerFnError::new)?;
+    let label = encrypt(account_key, &email).map_err(ServerFnError::new)?;
     request_by_email(Json(FriendRequestByEmail { email, label })).await
 }
 
@@ -88,7 +98,7 @@ pub async fn add_from_project(
     participant_name: &str,
     account_key: &[u8; 32],
 ) -> Result<(), ServerFnError> {
-    let label = encrypt_pair(account_key, participant_name).map_err(ServerFnError::new)?;
+    let label = encrypt(account_key, participant_name).map_err(ServerFnError::new)?;
     request_from_project(Json(FriendRequestFromProject { project_id, user_id, label })).await
 }
 
@@ -104,29 +114,55 @@ pub async fn remove(id: Uuid) -> Result<(), ServerFnError> {
     remove_friend(id).await
 }
 
-/// This account's private key, opened with the account key. `None` for a session restored from
-/// the cookie (no account key on this device) or an account with no keypair yet.
+/// This account's private key, opened with the account key. `None` for an account with no keypair
+/// yet, or when `account_key` does not open it.
 pub fn my_private_key(account: &Account, account_key: &[u8; 32]) -> Option<[u8; 32]> {
-    unwrap_private_key(account_key, account.private_key.as_ref()?)
+    unwrap_key(account_key, account.private_key.as_ref()?)
 }
 
-/// One invitation per friend, each carrying the key boxed to that friend. Friends without a public
-/// key are skipped — the server would refuse them anyway. Returns how many were sent.
-pub async fn invite_friends(
+/// A friend to invite, and the participant created for them when there is one.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Invitee {
+    pub friend: Friend,
+    pub user_id: Option<i32>,
+}
+
+/// One invitation per friend, each carrying the key boxed to that friend. Every one is attempted;
+/// returns those that were not sent — no private key on this device, no public key on theirs, or a
+/// refused request.
+pub async fn invite_each(
     project_id: Uuid,
-    friends: &[Friend],
-    my_private: &[u8; 32],
+    invitees: &[Invitee],
+    my_private: Option<[u8; 32]>,
     project_key: &[u8; 32],
-) -> Result<usize, ServerFnError> {
-    let mut sent = 0;
-    for friend in friends {
-        let Some(public) = friend.public_key.as_deref() else { continue };
-        let Some(key) = box_project_key(my_private, public, project_key) else { continue };
-        invite(project_id, Json(CreatableProjectInvitation { to_account_id: friend.account_id, key }))
-            .await?;
-        sent += 1;
+) -> Vec<Invitee> {
+    let mut failed = Vec::new();
+    for invitee in invitees {
+        let key = my_private.as_ref().zip(invitee.friend.public_key.as_deref()).and_then(
+            |(private, public)| box_project_key(private, public, project_key),
+        );
+        let sent = match key {
+            Some(key) => invite(
+                project_id,
+                Json(CreatableProjectInvitation {
+                    to_account_id: invitee.friend.account_id,
+                    key,
+                    user_id: invitee.user_id,
+                }),
+            )
+            .await
+            .is_ok(),
+            None => false,
+        };
+        if !sent {
+            failed.push(invitee.clone());
+        }
     }
-    Ok(sent)
+    failed
+}
+
+pub fn invitee_emails(invitees: &[Invitee]) -> String {
+    invitees.iter().map(|i| i.friend.email.as_str()).collect::<Vec<_>>().join(", ")
 }
 
 /// An invitation this device managed to open: the key is real, so the project name can be shown
@@ -146,31 +182,36 @@ pub fn open_invitation(inv: &ProjectInvitation, my_private: &[u8; 32]) -> Option
 pub async fn load_invitations(my_private: Option<[u8; 32]>) -> Result<Vec<OpenedInvitation>, ServerFnError> {
     let mut opened = Vec::new();
     for invitation in get_invitations().await? {
-        let project_key = my_private.and_then(|p| open_invitation(&invitation, &p));
-        let project_name = match project_key {
-            Some(k) => get_project(invitation.project_id).await.ok().map(|p| project_name(&k, &p)),
-            None => None,
+        let boxed = my_private.and_then(|p| open_invitation(&invitation, &p));
+        // A box that opens is not a key that decrypts: one holding a wrong key used to show Accept
+        // with a blank name. Unreachable projects keep the key — accepting still proves it before
+        // it can replace one already held.
+        let (project_key, project_name) = match boxed {
+            Some(k) => match get_project(invitation.project_id).await {
+                Ok(p) => match decrypt_project(&k, &p) {
+                    Ok(d) => (Some(k), Some(d.name)),
+                    Err(_) => (None, None),
+                },
+                Err(_) => (Some(k), None),
+            },
+            None => (None, None),
         };
         opened.push(OpenedInvitation { invitation, project_key, project_name });
     }
     Ok(opened)
 }
 
-/// Accepting is a local act: the key goes into the store exactly as a pasted share link's would,
-/// and `ExpensesPage` takes it from there (membership, escrow, the identity picker). The key is
-/// written before the row is deleted — a delete that fails leaves the invitation visible, and
-/// accepting it again is harmless.
+/// Accepting is a local act: the key goes into the store exactly as a pasted share link's would —
+/// through [`adopt_project_key`], so it cannot replace a held key it does not prove — and
+/// `ExpensesPage` takes it from there (membership, escrow, the identity picker). The key is written
+/// before the row is deleted — a delete that fails leaves the invitation visible, and accepting it
+/// again is harmless.
 pub async fn accept_invitation(
     ls_ctx: Signal<LocalStorageState>,
     invitation: &ProjectInvitation,
     project_key: &[u8; 32],
 ) -> Result<(), ServerFnError> {
-    let project_id = invitation.project_id;
-    let fragment = key_to_fragment(project_key);
-    update_ls(ls_ctx, |state| {
-        upsert_project(state, project_id, None);
-        upsert_project_key(state, project_id, fragment);
-    });
+    adopt_project_key(ls_ctx, invitation.project_id, *project_key).await;
     delete_invitation(invitation.id).await
 }
 
@@ -204,13 +245,32 @@ mod tests {
             incoming: vec![],
             outgoing: vec![OutgoingFriendRequest {
                 id: Uuid::new_v4(),
-                label: encrypt_pair(&account_key, "carol@x.io").unwrap(),
+                label: encrypt(&account_key, "carol@x.io").unwrap(),
                 created_at: NaiveDateTime::default(),
             }],
         };
-        assert_eq!(to_lists(&view, Some(&account_key)).outgoing[0].label, "carol@x.io");
-        assert_eq!(to_lists(&view, None).outgoing[0].label, "");
-        assert_eq!(to_lists(&view, Some(&generate_key())).outgoing[0].label, "");
+        assert_eq!(to_lists(&view, Some(&account_key), None).outgoing[0].label, "carol@x.io");
+        assert_eq!(to_lists(&view, None, None).outgoing[0].label, "");
+        assert_eq!(to_lists(&view, Some(&generate_key()), None).outgoing[0].label, "");
+    }
+
+    /// What makes the check possible at all: Alice's row for Bob and Bob's own code must be the
+    /// same string, or two friends reading their codes to each other can never match.
+    #[test]
+    fn my_code_is_what_my_friends_see_next_to_my_email() {
+        let (bob_pub, _) = generate_keypair();
+        let alices_view = FriendsView { friends: vec![friend(Some(bob_pub.clone()))], ..Default::default() };
+
+        let on_alices_page = to_lists(&alices_view, None, None).friends[0].fingerprint.clone();
+        let on_bobs_page = to_lists(&FriendsView::default(), None, Some(&bob_pub)).my_fingerprint;
+
+        assert!(on_bobs_page.is_some());
+        assert_eq!(on_alices_page, on_bobs_page);
+    }
+
+    #[test]
+    fn an_account_without_a_keypair_has_no_code_of_its_own() {
+        assert_eq!(to_lists(&FriendsView::default(), None, None).my_fingerprint, None);
     }
 
     #[test]
@@ -225,6 +285,7 @@ mod tests {
             from_public_key: alice_pub,
             key: box_project_key(&alice_priv, &bob_pub, &project_key).unwrap(),
             created_at: NaiveDateTime::default(),
+            user_id: None,
         };
         assert_eq!(open_invitation(&inv, &bob_priv), Some(project_key));
         assert_eq!(open_invitation(&inv, &generate_keypair().1), None);
@@ -250,7 +311,7 @@ mod tests {
             private_key: None,
         };
         assert_eq!(my_private_key(&account, &account_key), None);
-        account.private_key = crate::crypto::wrap_private_key(&account_key, &private);
+        account.private_key = crate::crypto::wrap_key(&account_key, &private);
         assert_eq!(my_private_key(&account, &account_key), Some(private));
         assert_eq!(my_private_key(&account, &generate_key()), None);
     }

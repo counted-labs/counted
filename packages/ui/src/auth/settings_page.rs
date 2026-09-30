@@ -31,8 +31,8 @@ fn clear_local_session(
     auth_ctx.set(None);
 }
 
-/// Falls back to the email when there is no key to decrypt with — a session restored from the
-/// cookie has none, and showing the address beats showing nothing.
+/// Falls back to the email when there is no key to decrypt with (local store cleared): showing the
+/// address beats showing nothing.
 fn display_name_of(account: &Account, key: Option<[u8; 32]>) -> String {
     key.and_then(|k| decrypt_json::<String>(&k, &account.display_name).ok())
         .unwrap_or_else(|| account.email.clone())

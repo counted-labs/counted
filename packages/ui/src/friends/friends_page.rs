@@ -118,6 +118,17 @@ pub fn FriendsPage() -> Element {
                         div { class: "card bg-base-100 shadow-soft",
                             div { class: "card-body gap-2",
                                 h2 { class: "card-title text-base", {tid!("friends-list-title")} }
+                                if let Some(code) = lists.my_fingerprint.as_ref() {
+                                    div { class: "flex flex-col min-w-0 pb-2 border-b border-base-200",
+                                        span { class: "font-medium truncate",
+                                            {auth_ctx().map(|a| a.email).unwrap_or_default()}
+                                        }
+                                        span { class: "text-xs text-base-content/70 flex flex-wrap items-center gap-1",
+                                            {tid!("friends-fingerprint")}
+                                            kbd { class: "kbd kbd-xs", "{code}" }
+                                        }
+                                    }
+                                }
                                 if lists.friends.is_empty() {
                                     p { class: "text-sm text-base-content/70", {tid!("friends-list-empty")} }
                                 } else {
@@ -131,9 +142,8 @@ pub fn FriendsPage() -> Element {
                                                             span { class: "font-medium truncate", "{f.email}" }
                                                             match &f.fingerprint {
                                                                 Some(fp) => rsx! {
-                                                                    span { class: "text-xs text-base-content/70",
+                                                                    span { class: "text-xs text-base-content/70 flex flex-wrap items-center gap-1",
                                                                         {tid!("friends-fingerprint")}
-                                                                        " "
                                                                         kbd { class: "kbd kbd-xs", "{fp}" }
                                                                     }
                                                                 },

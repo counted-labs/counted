@@ -3,7 +3,8 @@ use crate::tid;
 use shared::{Account, Friend};
 use uuid::Uuid;
 
-use super::friends_service::{invite_friends, my_private_key};
+use super::friend_checklist::FriendChecklist;
+use super::friends_service::{invite_each, invitee_emails, my_private_key, Invitee};
 use crate::common::{error_message, Flash};
 use crate::route::Route;
 
@@ -12,6 +13,10 @@ pub struct InviteFriendsModalProps {
     pub project_id: Uuid,
     pub project_key: [u8; 32],
     pub on_close: EventHandler<()>,
+    /// Friends ticked on open, with the participant each was created as: "Invite again" after a
+    /// create or edit whose invitations did not go out.
+    #[props(default)]
+    pub preselected: Vec<Invitee>,
 }
 
 /// Picks friends to hand this project's key to. Every friend with a public key is a checkbox; the
@@ -21,7 +26,9 @@ pub fn InviteFriendsModal(props: InviteFriendsModalProps) -> Element {
     let auth_ctx = use_context::<Signal<Option<Account>>>();
     let account_key = use_context::<Signal<Option<[u8; 32]>>>();
     let mut flash = use_context::<Signal<Option<Flash>>>();
-    let mut selected: Signal<Vec<Uuid>> = use_signal(Vec::new);
+    let preselected = props.preselected.clone();
+    let selected: Signal<Vec<Uuid>> =
+        use_signal(|| preselected.iter().map(|i| i.friend.account_id).collect());
     let mut busy = use_signal(|| false);
     let mut error: Signal<Option<String>> = use_signal(|| None);
 
@@ -34,26 +41,27 @@ pub fn InviteFriendsModal(props: InviteFriendsModalProps) -> Element {
     let project_key = props.project_key;
     let on_close = props.on_close;
 
-    let mut toggle = move |id: Uuid| {
-        let mut list = selected.write();
-        match list.iter().position(|x| *x == id) {
-            Some(i) => {
-                list.remove(i);
-            }
-            None => list.push(id),
-        }
-    };
-
     let on_invite = move |_| {
-        let Some(private) = my_private else {
+        if my_private.is_none() {
             error.set(Some(tid!("friends-no-account-key")));
             return;
-        };
-        let chosen: Vec<Friend> = friends
+        }
+        let chosen: Vec<Invitee> = friends
             .read()
             .as_ref()
             .and_then(|r| r.as_ref().ok())
-            .map(|all| all.iter().filter(|f| selected().contains(&f.account_id)).cloned().collect())
+            .map(|all| {
+                all.iter()
+                    .filter(|f| selected().contains(&f.account_id))
+                    .map(|f| Invitee {
+                        friend: f.clone(),
+                        user_id: preselected
+                            .iter()
+                            .find(|i| i.friend.account_id == f.account_id)
+                            .and_then(|i| i.user_id),
+                    })
+                    .collect()
+            })
             .unwrap_or_default();
         if chosen.is_empty() {
             return;
@@ -61,12 +69,12 @@ pub fn InviteFriendsModal(props: InviteFriendsModalProps) -> Element {
         spawn(async move {
             busy.set(true);
             error.set(None);
-            match invite_friends(project_id, &chosen, &private, &project_key).await {
-                Ok(n) => {
-                    flash.set(Some(Flash::ok(tid!("invite-sent", count: n))));
-                    on_close.call(());
-                }
-                Err(e) => error.set(Some(error_message(&e))),
+            let failed = invite_each(project_id, &chosen, my_private, &project_key).await;
+            if failed.is_empty() {
+                flash.set(Some(Flash::ok(tid!("invite-sent", count: chosen.len()))));
+                on_close.call(());
+            } else {
+                error.set(Some(tid!("invite-failed", emails: invitee_emails(&failed))));
             }
             busy.set(false);
         });
@@ -93,31 +101,7 @@ pub fn InviteFriendsModal(props: InviteFriendsModalProps) -> Element {
                             Link { class: "link link-primary text-sm", to: Route::FriendsPage {}, {tid!("friends-title")} }
                         },
                         Some(Ok(list)) => rsx! {
-                            ul { class: "list",
-                                for f in list.iter() {
-                                    {
-                                        let id = f.account_id;
-                                        let has_key = f.public_key.is_some();
-                                        rsx! {
-                                            li { class: "list-row items-center",
-                                                label { class: "flex items-center gap-3 cursor-pointer min-w-0",
-                                                    input {
-                                                        r#type: "checkbox",
-                                                        class: "checkbox checkbox-primary checkbox-sm",
-                                                        disabled: !has_key || busy(),
-                                                        checked: selected().contains(&id),
-                                                        onchange: move |_| toggle(id),
-                                                    }
-                                                    span { class: "truncate", "{f.email}" }
-                                                }
-                                                if !has_key {
-                                                    span { class: "badge badge-soft badge-warning badge-xs", {tid!("friends-no-key")} }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                            FriendChecklist { friends: list.clone(), selected, disabled: busy() }
                         },
                     }
                 }
@@ -138,6 +122,61 @@ pub fn InviteFriendsModal(props: InviteFriendsModalProps) -> Element {
                             span { class: "loading loading-spinner loading-sm", role: "status", aria_label: tid!("loading") }
                         }
                         {tid!("invite-friends-button")}
+                    }
+                }
+            }
+            div { class: "modal-backdrop", onclick: move |_| on_close.call(()) }
+        }
+    }
+}
+
+/// The "All friends" picker of the participant block: the same checklist, before the project
+/// exists, so it hands the choice back instead of inviting.
+#[derive(PartialEq, Props, Clone)]
+pub struct FriendPickerModalProps {
+    pub friends: Vec<Friend>,
+    pub on_pick: EventHandler<Vec<Friend>>,
+    pub on_close: EventHandler<()>,
+}
+
+#[component]
+pub fn FriendPickerModal(props: FriendPickerModalProps) -> Element {
+    let selected: Signal<Vec<Uuid>> = use_signal(Vec::new);
+    let on_close = props.on_close;
+    let on_pick = props.on_pick;
+    let friends = props.friends.clone();
+
+    rsx! {
+        dialog { open: true, class: "modal modal-open modal-bottom sm:modal-middle",
+            div { class: "modal-box p-0 flex flex-col",
+                div { class: "flex flex-col gap-0.5 px-6 pt-5 pb-4 border-b border-base-200 flex-shrink-0",
+                    h2 { class: "text-lg font-bold font-display", {tid!("friend-picker-title")} }
+                    p { class: "text-sm text-base-content/70", {tid!("invite-friends-hint")} }
+                }
+                div { class: "flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-3",
+                    if props.friends.is_empty() {
+                        p { class: "text-sm text-base-content/70", {tid!("invite-friends-empty")} }
+                    } else {
+                        FriendChecklist { friends: props.friends.clone(), selected, disabled: false }
+                    }
+                }
+                div { class: "flex justify-end gap-2 px-6 py-4 border-t border-base-200 flex-shrink-0",
+                    button {
+                        r#type: "button",
+                        class: "btn btn-ghost",
+                        onclick: move |_| on_close.call(()),
+                        {tid!("cancel")}
+                    }
+                    button {
+                        id: "friend-picker-confirm",
+                        r#type: "button",
+                        class: "btn btn-primary",
+                        disabled: selected().is_empty(),
+                        onclick: move |_| {
+                            let chosen = friends.iter().filter(|f| selected().contains(&f.account_id)).cloned().collect();
+                            on_pick.call(chosen);
+                        },
+                        {tid!("add")}
                     }
                 }
             }

@@ -53,6 +53,7 @@ error-unauthenticated = Kirjaudu sisään tehdäksesi tämän.
 error-email-not-verified = Sähköpostiosoitettasi ei ole vielä vahvistettu.
 error-project-not-found = Projektia ei enää ole.
 error-expense-not-found = Kulua ei enää ole.
+error-storage-full = Tallennustila on täynnä: tämän projektin avainta ei voitu tallentaa tälle laitteelle. Säilytä jakolinkki.
 error-user-not-found = Osallistujaa ei enää ole.
 error-tricount-not-found = Tricountia ei löytynyt, tai sen API palautti virheen.
 error-too-many-members = Projektin jäsenraja on täynnä.
@@ -250,13 +251,8 @@ add-project-name-placeholder = Matkani, Kimppakämppä 2024…
 add-project-participants = Osallistujat
 add-project-participant-name = Osallistujan nimi
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Poista osallistuja
-add-project-me-badge = Minä
-add-project-thats-me = Se olen minä!
 add-project-offline = Projektia ei voi luoda offline-tilassa. Yhdistä uudelleen ja yritä uudelleen.
 add-project-name-required = Projekti tarvitsee nimen.
-add-project-need-two-participants = Lisää vähintään 2 osallistujaa.
-add-project-pick-yourself = Kerro, kuka osallistujista olet.
 
 join-link-label = Jakolinkki
 join-link-hint = Linkki sisältää salauksen purkuavaimen - kopioi se kokonaan.
@@ -266,6 +262,7 @@ join-wrong-project = Linkki kuuluu toiseen projektiin.
 import-tricount-link-label = Tricount-linkki tai -avain
 import-tricount-key-required = Anna Tricount-linkki tai -avain.
 import-tricount-encryption-failed = Salaus epäonnistui.
+import-tricount-unimportable = Mitään ei tuotu: tässä Tricountissa on jäseniä, joilla on Tricount-tili, tai summia, jotka eivät täsmää (koskee merkintöjä: { $count }).
 
 ### Expenses
 
@@ -363,11 +360,8 @@ edit-project-title = Muokkaa projektia
 edit-project-new-badge = uusi
 edit-project-deferred-new-members = uusien jäsenten lisäys
 edit-project-deferred-removals = jäsenten poisto
-edit-project-deferred-me = ”Se olen minä” -valinta
 edit-project-offline-deferred = Offline: { $items } otetaan käyttöön, kun yhteys palaa.
 
-export-saved = Tiedosto tallennettu:
-    { $path }
 export-failed = Vienti epäonnistui: { $reason }
 
 history-expense-added = Kulu lisätty: { $name }
@@ -510,13 +504,24 @@ debtors-title-beneficiaries = Edunsaajat
 
 welcome-title = Kirjanpitosi ei kuulu kenellekään muulle.
 welcome-subtitle = Jaa kulut kavereiden kesken.
-welcome-e2ee-title = Kaikki salattu
-welcome-e2ee-body = Nimet, summat, projektit: kaikki salataan laitteellasi. Vain sinulla on avain. Kukaan ei voi lukea tilejäsi. Emme edes me.
-welcome-e2ee-note = Lukukelvotonta jopa meille (nollapääsy palvelimella)
+welcome-note = Ilmainen. Tiliä ei tarvita. Ei mainoksia.
+welcome-link-title = Yksi linkki, ja kaikki ovat mukana.
+welcome-link-body = Kenenkään ei tarvitse luoda tiliä.
+welcome-link-account = Tili? Ei koskaan pakollinen. Sillä löydät projektisi toiselta laitteelta, kutsut kavereita sovelluksesta ja jaat maksutietosi.
+welcome-demo-project = Viikonloppu Lyonissa
+welcome-private-title = Kukaan ei voi lukea tilejäsi. Emme edes me.
+welcome-private-body = Nimet, summat, projektit: kaikki salataan laitteellasi. Vain sinulla on avain.
+welcome-private-names = Nimet
+welcome-private-amounts = Summat
+welcome-private-projects = Projektit
+welcome-scan-title = Ota kuitista kuva.
+welcome-scan-body = Summa, päivämäärä ja luokka täyttyvät itsestään. Kaikki tapahtuu puhelimessasi. Kuvaa ei säilytetä.
 welcome-eu-title = 100 % eurooppalainen
-welcome-eu-body = Palvelimet Saksassa, sähköpostit lähetetään Ranskasta. Tietosi eivät koskaan poistu Euroopan unionista.
-welcome-noads-title = Ei mainoksia. Ei seurantaa.
-welcome-noads-body = Emme kerää mitään emmekä myy tietojasi. Se ei ole mallimme.
+welcome-no-ads = Ei mainoksia
+welcome-no-trackers = Ei seurantaa
+welcome-step = Vaihe { $current }/{ $total }
+welcome-next = Seuraava
+welcome-skip = Ohita
 welcome-start = Aloita
 welcome-how-it-works = Miten se tarkalleen toimii?
 
@@ -620,3 +625,49 @@ invitation-unreadable = Tätä kutsua ei voi avata tällä laitteella
 invitation-from = Lähettäjä { $email }
 invitation-accept = Liity
 invitation-decline = Hylkää
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Nimesi tässä projektissa
+participants-you-badge = Sinä
+participants-you-from-account = Otettu tilisi nimestä. Muuta sitä tässä vain tätä projektia varten.
+participants-you-required = Pakollinen. Näin muut näkevät sinut.
+participants-others = Muut osallistujat
+participants-empty = Ei vielä ketään. Valitse kaveri alta tai kirjoita mikä tahansa nimi.
+participants-empty-signed-out = Ei vielä ketään. Lisää joku kirjoittamalla nimi.
+participants-duplicate = ”{ $name }” on jo listalla.
+participants-input-label = Lisää kaveri tai kirjoita nimi
+participants-input-placeholder = Kaveri tai mikä tahansa nimi
+participants-suggest-friend = Kaveri · liittyy nimellä ”{ $name }”, saa kutsun
+participants-suggest-not-ready = Kaveri · ei vielä valmis
+participants-suggest-guest = Lisää ”{ $text }” ilman tiliä
+participants-suggest-guest-sub = Ei tiliä, pelkkä nimi
+participants-friends = Kaverisi
+participants-all-friends = Kaikki kaverit
+participants-login-hint = Kirjaudu sisään lisätäksesi ihmisiä suoraan kaverilistaltasi.
+participants-invite-badge = Kutsu
+participants-guest-badge = Ilman tiliä
+participants-guest-sub = Ei tiliä, pelkkä nimi
+participants-rename = Nimeä { $name } uudelleen
+participants-remove = Poista { $name }
+participants-rename-label = Uusi nimi
+participants-rename-save = Tallenna nimi
+participants-rename-hint = Nimi, jonka kaikki näkevät tässä projektissa. Kutsu menee edelleen osoitteeseen { $email }.
+participants-invited-badge = Kutsuttu
+participants-invited-sub = { $email } · ei vielä hyväksytty
+participants-invited-pending = Kutsua ei ole vielä hyväksytty
+participants-unlinked = Ei yhdistetty tiliin
+add-project-create-invite = Luo ja kutsu { $count }
+edit-project-save-invite = Tallenna ja kutsu { $count }
+edit-project-you-are = Tällä laitteella olet { $name }
+edit-project-no-identity = Et ole vielä valinnut, kuka olet
+edit-project-switch = Vaihda
+edit-project-choose = Valitse
+invite-failed = Näitä kutsuja ei voitu lähettää: { $emails }
+invite-again = Kutsu uudelleen
+friend-picker-title = Lisää kavereita
+user-selection-invited-hint = { $email } kutsui sinut projektiin ”{ $project }”.
+user-selection-suggested = Ehdotettu
+user-selection-suggested-sub = { $email } lisäsi sinut tällä nimellä
+user-selection-confirm-as = Olen { $name }
+user-selection-missing = Eikö nimeäsi ole tässä? Pyydä osallistujaa lisäämään sinut projektin asetuksissa.

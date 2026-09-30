@@ -60,6 +60,7 @@ error-unauthenticated = Sign in to do that.
 error-email-not-verified = Your email address isn’t verified yet.
 error-project-not-found = This project no longer exists.
 error-expense-not-found = This expense no longer exists.
+error-storage-full = Storage is full: this project's key could not be saved on this device. Keep its share link.
 error-user-not-found = This participant no longer exists.
 error-tricount-not-found = Tricount not found, or its API returned an error.
 error-too-many-members = This project has reached its limit of members.
@@ -261,13 +262,8 @@ add-project-name-placeholder = My trip, Flatshare 2024…
 add-project-participants = Participants
 add-project-participant-name = Participant name
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Remove participant
-add-project-me-badge = Me
-add-project-thats-me = That’s me!
 add-project-offline = You can’t create a project offline. Reconnect and try again.
 add-project-name-required = The project needs a name.
-add-project-need-two-participants = Add at least 2 participants.
-add-project-pick-yourself = Tell us which participant you are.
 
 join-link-label = Share link
 join-link-hint = The link carries the decryption key - copy all of it.
@@ -277,6 +273,7 @@ join-wrong-project = That link is for a different project.
 import-tricount-link-label = Tricount link or key
 import-tricount-key-required = Enter a Tricount link or key.
 import-tricount-encryption-failed = Encryption failed.
+import-tricount-unimportable = Nothing was imported: this Tricount has members with a Tricount account, or amounts that don't add up (entries affected: { $count }).
 
 ### Expenses
 
@@ -375,11 +372,8 @@ edit-project-title = Edit the project
 edit-project-new-badge = new
 edit-project-deferred-new-members = adding new members
 edit-project-deferred-removals = removing members
-edit-project-deferred-me = the “That’s me” selection
 edit-project-offline-deferred = Offline: { $items } will be applied when you reconnect.
 
-export-saved = File saved:
-    { $path }
 export-failed = Export failed: { $reason }
 
 # History entries are encrypted and stored, so they keep the language of whoever wrote them.
@@ -530,13 +524,24 @@ debtors-title-beneficiaries = Beneficiaries
 
 welcome-title = Your books are nobody else’s business.
 welcome-subtitle = Split expenses with friends.
-welcome-e2ee-title = Everything encrypted
-welcome-e2ee-body = Names, amounts, projects: everything is encrypted on your device. Only you hold the key. Nobody can read your books. Not even us.
-welcome-e2ee-note = Unreadable, even to us (zero server access)
+welcome-note = Free. No account required. No ads.
+welcome-link-title = One link, and everyone joins in.
+welcome-link-body = Nobody has to create an account.
+welcome-link-account = An account? Never required. It is for finding your projects on another device, inviting friends from the app and sharing your payment details.
+welcome-demo-project = Weekend in Lyon
+welcome-private-title = Nobody can read your books. Not even us.
+welcome-private-body = Names, amounts, projects: everything is encrypted on your device. Only you hold the key.
+welcome-private-names = Names
+welcome-private-amounts = Amounts
+welcome-private-projects = Projects
+welcome-scan-title = Take a photo of the receipt.
+welcome-scan-body = Amount, date and category fill in on their own. Everything happens on your phone. The photo is not kept.
 welcome-eu-title = 100% European
-welcome-eu-body = Servers in Germany, email sent from France. Your data never leaves the European Union.
-welcome-noads-title = No ads. No trackers.
-welcome-noads-body = We collect nothing, we do not sell your data. That is not our model.
+welcome-no-ads = No ads
+welcome-no-trackers = No trackers
+welcome-step = Step { $current } of { $total }
+welcome-next = Next
+welcome-skip = Skip
 welcome-start = Get started
 welcome-how-it-works = How does it work, exactly?
 
@@ -587,7 +592,7 @@ help-contact = Another question? Write to us at
 # to English per message until a translation has actually been reviewed. Do not machine-translate
 # this section.
 
-legal-updated = Last updated: 27 September 2026
+legal-updated = Last updated: 28 September 2026
 
 legal-publisher-title = 1. Publisher
 legal-publisher-body = Counted (“the Service”) is published in a non-professional capacity by an individual, Jonathan Bosi.
@@ -668,13 +673,15 @@ privacy-collected-salt-def = used to generate your encryption key on the client.
 privacy-collected-content-term = Encrypted project content
 privacy-collected-content-def = (names, expenses, participants, amounts). This data is encrypted on your device before being sent to the server, which stores nothing but an unintelligible version of it.
 privacy-collected-prefs-term = Your encrypted preferences
-privacy-collected-prefs-def = (interface language), so you find them again on your other devices. Encrypted on your device with the same key as the rest: the server cannot read which language you use.
+privacy-collected-prefs-def = (interface language), so you find them again on your other devices. Encrypted on your device with the same key as the rest: the server cannot read them.
 privacy-collected-keys-term = Your project keys, wrapped
 privacy-collected-keys-def = so that signing in on a new device gives you back projects you can actually read, instead of a list you cannot open. Each one is encrypted on your device with the key derived from your password; the server stores them and cannot unwrap them. The trade-off is real and we would rather state it: someone holding both our database and your password could reach your projects. That is why the password is never transmitted and never stored: what we receive at sign-in is a separate proof it cannot be recovered from, and we keep only a hash of that.
 privacy-collected-invite-term = Hash of an invited participant’s email
 privacy-collected-invite-def = (SHA-256), when you invite someone by email. It serves only to attach the invitation to their account should they create one, and disappears with the participant.
 privacy-collected-friends-term = Your friends
-privacy-collected-friends-def = when you use the friends list: which accounts you are friends with, a hash (SHA-256) of an address you sent a request to before it had an account, and which friend you invited into which project. The name you give a request and the project key an invitation carries are encrypted on your device - the key with your friend’s public key, which we store in the clear because it is public by nature - and the server cannot read either.
+privacy-collected-friends-def = when you use the friends list: which accounts you are friends with, a hash (SHA-256) of an address you sent a request to before it had an account, and which friend you invited into which project, and as which participant of it. The name you give a request and the project key an invitation carries are encrypted on your device - the key with your friend’s public key, which we store in the clear because it is public by nature - and the server cannot read either.
+privacy-collected-push-term = Notification token
+privacy-collected-push-def = if you allow notifications in the mobile app: the address your phone's push service gives it (on Android, with two public encryption keys), linked to your account, along with your phone's language so the notification is written in it. Deleted when you sign out, when the push service reports it is no longer valid, and with your account.
 privacy-collected-logs-term = Technical logs
 privacy-collected-logs-def = (IP address, user agent, timestamp) kept for security and abuse prevention.
 privacy-purposes-title = 3. Purposes
@@ -682,6 +689,7 @@ privacy-purpose-1 = Authenticate your sessions and protect your account.
 privacy-purpose-2 = Sync your projects between your devices.
 privacy-purpose-3 = Send you a verification email when you sign up.
 privacy-purpose-4 = Detect and prevent abuse (brute force, scraping).
+privacy-purpose-5 = If you allowed notifications, tell your phone about a friend request or its acceptance, a project invitation or a project being closed.
 privacy-legal-basis-title = 4. Legal basis
 privacy-legal-basis-body = Processing rests on performance of the contract between us (creating and providing the service) and on our legitimate interest in securing the platform.
 privacy-e2ee-title = 5. End-to-end encryption
@@ -696,7 +704,10 @@ privacy-processor-hetzner = (Germany, EU) - hosting of the servers and the datab
 privacy-processor-scaleway = (France, EU) - sending transactional email (email verification).
 privacy-processor-tricount = - contacted only if you trigger an import from Tricount yourself, in order to fetch the project you want to import.
 privacy-processor-grafana = (EU region) - technical monitoring of the server. Only infrastructure metrics (CPU, memory, disk, service state) and daily aggregate usage counts (numbers of accounts, projects, memberships and sign-ups, and how many sign-ups and logins were made in each interface language) are sent there: no content, no identifier, no visitor IP address.
-privacy-no-transfer-outside-eu = No personal data is transferred outside the European Union.
+privacy-processor-apple = (Apple Push Notification service) - only if you allow notifications on iPhone: receives your phone's token and a generic sentence such as “New friend request”, never a name, an amount or a project.
+privacy-processor-android-push-term = Your Android phone's push service
+privacy-processor-android-push-def = (Google Firebase Cloud Messaging on most phones, or the UnifiedPush distributor you installed) - only if you allow notifications on Android: receives a message encrypted for your phone alone and padded to a fixed size, so it cannot tell even what kind of notification it is.
+privacy-no-transfer-outside-eu = These two push services may process data outside the European Union. Apart from them, no personal data is transferred outside the European Union.
 privacy-retention-title = 7. Retention
 privacy-retention-a = Your data is kept for as long as your account is active. Deleting the account causes an
 privacy-retention-em = immediate and permanent
@@ -809,3 +820,49 @@ invitation-unreadable = This invitation can’t be opened on this device
 invitation-from = From { $email }
 invitation-accept = Join
 invitation-decline = Decline
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Your name in this project
+participants-you-badge = You
+participants-you-from-account = Filled from your account name. Change it here for this project only.
+participants-you-required = Required. This is how the others will see you.
+participants-others = Other participants
+participants-empty = Nobody yet. Pick a friend below or type any name.
+participants-empty-signed-out = Nobody yet. Type a name to add someone.
+participants-duplicate = “{ $name }” is already in the list.
+participants-input-label = Add a friend or type a name
+participants-input-placeholder = Friend or any name
+participants-suggest-friend = Friend · joins as “{ $name }”, gets an invitation
+participants-suggest-not-ready = Friend · not ready yet
+participants-suggest-guest = Add “{ $text }” as a guest
+participants-suggest-guest-sub = No account, just a name
+participants-friends = Your friends
+participants-all-friends = All friends
+participants-login-hint = Sign in to add people straight from your friends list.
+participants-invite-badge = Invite
+participants-guest-badge = Guest
+participants-guest-sub = No account, just a name
+participants-rename = Rename { $name }
+participants-remove = Remove { $name }
+participants-rename-label = New name
+participants-rename-save = Save the name
+participants-rename-hint = The name everyone sees in this project. The invitation still goes to { $email }.
+participants-invited-badge = Invited
+participants-invited-sub = { $email } · not accepted yet
+participants-invited-pending = Invitation not accepted yet
+participants-unlinked = Not linked to an account
+add-project-create-invite = Create and invite { $count }
+edit-project-save-invite = Save and invite { $count }
+edit-project-you-are = On this device you are { $name }
+edit-project-no-identity = You haven’t picked who you are yet
+edit-project-switch = Switch
+edit-project-choose = Choose
+invite-failed = These invitations couldn’t be sent: { $emails }
+invite-again = Invite again
+friend-picker-title = Add friends
+user-selection-invited-hint = { $email } invited you to “{ $project }”.
+user-selection-suggested = Suggested
+user-selection-suggested-sub = { $email } added you under this name
+user-selection-confirm-as = I’m { $name }
+user-selection-missing = Your name isn’t here? Ask a participant to add you in the project settings.

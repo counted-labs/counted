@@ -1,6 +1,6 @@
 [package]
 name = "mobile"
-version = "3.2.1"
+version = "3.2.2"
 edition = "2021"
 publish = false
 
@@ -73,6 +73,8 @@ objc2-ui-kit = { version = "0.3", features = [
 	"UIViewController",
 	"UIPopoverPresentationController",
 	"UIPresentationController",
+	# openURL:options:completionHandler:, the only openURL iOS 18 still honours, is gated on it.
+	"block2",
 ] }
 objc2-foundation = { version = "0.3", features = [
 	"NSArray",
@@ -83,6 +85,7 @@ objc2-foundation = { version = "0.3", features = [
 	"NSValue",
 	"NSPathUtilities",
 	"NSData",
+	"NSDictionary",
 ] }
 # Push: the permission prompt, the completion block it takes, and the hop back to the main queue
 # that registerForRemoteNotifications needs.

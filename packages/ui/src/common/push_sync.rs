@@ -6,6 +6,7 @@
 //! re-run on every sign-in and language change without bookkeeping beyond "what did we last send".
 
 use api::push::push_controller::{register_push_token, unregister_push_token, verify_push_token};
+use dioxus::core::Task;
 use dioxus::{fullstack::Json, prelude::*};
 use shared::{Account, RegisterPushToken, UnregisterPushToken, VerifyPushToken};
 
@@ -19,10 +20,16 @@ const TOKEN_POLL_ROUNDS: u32 = 30;
 pub fn use_push_registration() {
     let auth = use_context::<Signal<Option<Account>>>();
     let mut registered: Signal<Option<(String, String)>> = use_signal(|| None);
+    let mut polling: Signal<Option<Task>> = use_signal(|| None);
 
     use_effect(move || {
         let signed_in = auth.read().is_some();
         let lang = current_lang();
+        // One poll at a time: a language change used to leave the previous loop running, and the two
+        // re-registered the token under alternating languages until both ran out.
+        if let Some(previous) = polling.write().take() {
+            previous.cancel();
+        }
         let Some(push) = native_push() else {
             return;
         };
@@ -31,7 +38,7 @@ pub fn use_push_registration() {
             return;
         }
         (push.request)();
-        spawn(async move {
+        let task = spawn(async move {
             for _ in 0..TOKEN_POLL_ROUNDS {
                 // The server's verification push lands here, usually a second or two after the
                 // registration below; answering it is what makes the endpoint receive anything.
@@ -57,6 +64,7 @@ pub fn use_push_registration() {
                 sleep(TOKEN_POLL_MS).await;
             }
         });
+        polling.set(Some(task));
     });
 }
 

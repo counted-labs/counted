@@ -53,6 +53,7 @@ error-unauthenticated = Bunu yapmak için giriş yap.
 error-email-not-verified = E-posta adresin henüz doğrulanmadı.
 error-project-not-found = Bu proje artık yok.
 error-expense-not-found = Bu harcama artık yok.
+error-storage-full = Depolama alanı dolu: bu projenin anahtarı bu cihaza kaydedilemedi. Paylaşım bağlantısını sakla.
 error-user-not-found = Bu katılımcı artık yok.
 error-tricount-not-found = Tricount bulunamadı veya API'si hata döndürdü.
 error-too-many-members = Bu proje üye sınırına ulaştı.
@@ -250,13 +251,8 @@ add-project-name-placeholder = Seyahatim, Ev arkadaşları 2024…
 add-project-participants = Katılımcılar
 add-project-participant-name = Katılımcı adı
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Katılımcıyı kaldır
-add-project-me-badge = Ben
-add-project-thats-me = Bu benim!
 add-project-offline = Çevrimdışıyken proje oluşturamazsın. Yeniden bağlan ve tekrar dene.
 add-project-name-required = Projenin bir adı olmalı.
-add-project-need-two-participants = En az 2 katılımcı ekle.
-add-project-pick-yourself = Hangi katılımcı olduğunu söyle.
 
 join-link-label = Paylaşım bağlantısı
 join-link-hint = Bağlantı, şifre çözme anahtarını taşır - tamamını kopyala.
@@ -266,6 +262,7 @@ join-wrong-project = Bu bağlantı başka bir projeye ait.
 import-tricount-link-label = Tricount bağlantısı veya anahtarı
 import-tricount-key-required = Bir Tricount bağlantısı veya anahtarı gir.
 import-tricount-encryption-failed = Şifreleme başarısız oldu.
+import-tricount-unimportable = Hiçbir şey içe aktarılmadı: bu Tricount'ta Tricount hesabı olan üyeler ya da tutmayan tutarlar var (etkilenen kayıtlar: { $count }).
 
 ### Expenses
 
@@ -363,11 +360,8 @@ edit-project-title = Projeyi düzenle
 edit-project-new-badge = yeni
 edit-project-deferred-new-members = yeni üye ekleme
 edit-project-deferred-removals = üye kaldırma
-edit-project-deferred-me = “Bu benim” seçimi
 edit-project-offline-deferred = Çevrimdışı: { $items } yeniden bağlandığında uygulanacak.
 
-export-saved = Dosya kaydedildi:
-    { $path }
 export-failed = Dışa aktarma başarısız: { $reason }
 
 history-expense-added = Harcama eklendi: { $name }
@@ -510,13 +504,24 @@ debtors-title-beneficiaries = Yararlananlar
 
 welcome-title = Hesapların kimseyi ilgilendirmez.
 welcome-subtitle = Arkadaşlarınla harcamaları paylaş.
-welcome-e2ee-title = Her şey şifreli
-welcome-e2ee-body = Adlar, tutarlar, projeler: hepsi cihazında şifrelenir. Anahtar yalnızca sende. Hesaplarını kimse okuyamaz. Biz bile.
-welcome-e2ee-note = Bizim için bile okunamaz (sıfır sunucu erişimi)
+welcome-note = Ücretsiz. Hesap gerekmez. Reklam yok.
+welcome-link-title = Tek bir bağlantı, herkes katılır.
+welcome-link-body = Kimsenin hesap oluşturması gerekmez.
+welcome-link-account = Hesap mı? Asla zorunlu değil. Projelerini başka bir cihazda bulmana, arkadaşlarını uygulamadan davet etmene ve ödeme bilgilerini paylaşmana yarar.
+welcome-demo-project = Lyon'da hafta sonu
+welcome-private-title = Hesaplarını kimse okuyamaz. Biz bile.
+welcome-private-body = Adlar, tutarlar, projeler: hepsi cihazında şifrelenir. Anahtar yalnızca sende.
+welcome-private-names = Adlar
+welcome-private-amounts = Tutarlar
+welcome-private-projects = Projeler
+welcome-scan-title = Fişin fotoğrafını çek.
+welcome-scan-body = Tutar, tarih ve kategori kendiliğinden dolar. Her şey telefonunda gerçekleşir. Fotoğraf saklanmaz.
 welcome-eu-title = %100 Avrupa
-welcome-eu-body = Sunucular Almanya'da, e-postalar Fransa'dan gönderilir. Verilerin Avrupa Birliği'nden asla çıkmaz.
-welcome-noads-title = Reklam yok. İzleyici yok.
-welcome-noads-body = Hiçbir şey toplamıyor ve verilerini satmıyoruz. Bizim modelimiz bu değil.
+welcome-no-ads = Reklam yok
+welcome-no-trackers = İzleyici yok
+welcome-step = Adım { $current } / { $total }
+welcome-next = İleri
+welcome-skip = Atla
 welcome-start = Başla
 welcome-how-it-works = Tam olarak nasıl çalışıyor?
 
@@ -620,3 +625,49 @@ invitation-unreadable = Bu davet bu cihazda açılamıyor
 invitation-from = Gönderen: { $email }
 invitation-accept = Katıl
 invitation-decline = Reddet
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Bu projedeki adın
+participants-you-badge = Sen
+participants-you-from-account = Hesap adından alındı. Yalnızca bu proje için burada değiştir.
+participants-you-required = Zorunlu. Diğerleri seni böyle görecek.
+participants-others = Diğer katılımcılar
+participants-empty = Henüz kimse yok. Aşağıdan bir arkadaş seç ya da herhangi bir ad yaz.
+participants-empty-signed-out = Henüz kimse yok. Birini eklemek için bir ad yaz.
+participants-duplicate = “{ $name }” zaten listede.
+participants-input-label = Arkadaş ekle ya da ad yaz
+participants-input-placeholder = Arkadaş ya da herhangi bir ad
+participants-suggest-friend = Arkadaş · “{ $name }” olarak katılır, davet alır
+participants-suggest-not-ready = Arkadaş · henüz hazır değil
+participants-suggest-guest = “{ $text }” adını hesapsız ekle
+participants-suggest-guest-sub = Hesap yok, yalnızca bir ad
+participants-friends = Arkadaşların
+participants-all-friends = Tüm arkadaşlar
+participants-login-hint = Arkadaş listenden doğrudan kişi eklemek için giriş yap.
+participants-invite-badge = Davet et
+participants-guest-badge = Hesapsız
+participants-guest-sub = Hesap yok, yalnızca bir ad
+participants-rename = Yeniden adlandır: { $name }
+participants-remove = Kaldır: { $name }
+participants-rename-label = Yeni ad
+participants-rename-save = Adı kaydet
+participants-rename-hint = Bu projede herkesin gördüğü ad. Davet yine { $email } adresine gider.
+participants-invited-badge = Davet edildi
+participants-invited-sub = { $email } · henüz kabul edilmedi
+participants-invited-pending = Davet henüz kabul edilmedi
+participants-unlinked = Bir hesaba bağlı değil
+add-project-create-invite = Oluştur ve davet et: { $count }
+edit-project-save-invite = Kaydet ve davet et: { $count }
+edit-project-you-are = Bu cihazda sen { $name } olarak görünüyorsun
+edit-project-no-identity = Henüz kim olduğunu seçmedin
+edit-project-switch = Değiştir
+edit-project-choose = Seç
+invite-failed = Bu davetler gönderilemedi: { $emails }
+invite-again = Yeniden davet et
+friend-picker-title = Arkadaş ekle
+user-selection-invited-hint = { $email } seni “{ $project }” projesine davet etti.
+user-selection-suggested = Önerilen
+user-selection-suggested-sub = { $email } seni bu adla ekledi
+user-selection-confirm-as = Ben { $name }
+user-selection-missing = Adın burada yok mu? Bir katılımcıdan seni proje ayarlarından eklemesini iste.

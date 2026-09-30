@@ -5,17 +5,25 @@ use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use crate::tid;
 use shared::{
-    Account as AccountData, CreatableProject, CreatableUser, CreatableUserBatch,
-    ProjectPayload, UpsertAccountProject, UserPayload,
+    Account as AccountData, CreatableProject, CreatableUser, CreatableUserBatch, ProjectPayload,
+    UpsertAccountProject, UserPayload,
 };
 
-use crate::common::{error_message, update_ls, upsert_project, upsert_project_key, LocalStorageState};
+use crate::common::{
+    error_message, update_ls, upsert_project, upsert_project_key, InviteRetry, LocalStorageState,
+};
 use crate::crypto::{
     claim_token, claim_verifier, decrypt_json, encrypt_json, generate_key, key_to_fragment,
-    wrap_project_key,
+    wrap_key,
 };
-use crate::icons::{CloseIcon, TrashIcon, UserIcon, ICON_HEADER, ICON_INLINE};
+use crate::friends::friends_service::{invite_each, my_private_key, Invitee};
+use crate::icons::{CloseIcon, ICON_HEADER};
+use crate::participants::participants_service::{
+    can_create, invite_count, same_name, taken_names, DraftParticipant,
+};
+use crate::participants::{use_friend_list, use_my_display_name, ParticipantsEditor};
 use crate::route::Route;
+use uuid::Uuid;
 
 #[derive(Props, Clone, PartialEq)]
 pub struct AddProjectModalProps {
@@ -30,25 +38,39 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
     // this one, and there is no migration that could re-price an existing ledger, so
     // `EditProjectModal` shows it read-only.
     let mut currency = use_signal(|| "EUR".to_string());
-    let mut user_input = use_signal(String::new);
-    let mut users: Signal<Vec<String>> = use_signal(Vec::new);
-    let mut selected_name: Signal<Option<String>> = use_signal(|| None);
+    // You are never a row: the creator is always the first participant of the batch.
+    let account_name = use_my_display_name();
+    let mut me_name = use_signal(|| account_name.clone().unwrap_or_default());
+    let mut me_touched = use_signal(|| false);
+    let drafts: Signal<Vec<DraftParticipant>> = use_signal(Vec::new);
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
     let mut loading = use_signal(|| false);
+    // Set once the project row exists, so a retry after a failed participants step finishes this
+    // project instead of creating a second one.
+    let mut created: Signal<Option<(Uuid, [u8; 32])>> = use_signal(|| None);
 
+    let friend_list = use_friend_list();
     let nav = use_navigator();
     let auth_ctx = use_context::<Signal<Option<AccountData>>>();
     let account_key_ctx = use_context::<Signal<Option<[u8; 32]>>>();
     let ls_ctx = use_context::<Signal<LocalStorageState>>();
     let is_online = use_context::<Signal<bool>>();
+    let mut invite_retry = use_context::<Signal<Option<InviteRetry>>>();
+
+    // `me()` can land after the modal opened: fill the name then, unless it was already typed.
+    use_effect(use_reactive!(|account_name| {
+        if !me_touched() && me_name.peek().is_empty() {
+            if let Some(name) = account_name {
+                me_name.set(name);
+            }
+        }
+    }));
 
     let on_submit = move |e: FormEvent| {
         e.prevent_default();
 
         if !is_online() {
-            error_msg.set(Some(
-                tid!("add-project-offline"),
-            ));
+            error_msg.set(Some(tid!("add-project-offline")));
             return;
         }
 
@@ -57,13 +79,14 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
             error_msg.set(Some(tid!("add-project-name-required")));
             return;
         }
-        let user_list = users();
-        if user_list.len() < 2 {
-            error_msg.set(Some(tid!("add-project-need-two-participants")));
+        let me_val = me_name().trim().to_string();
+        let others = drafts();
+        if !can_create(&me_val, &others) {
             return;
         }
-        if selected_name().is_none() {
-            error_msg.set(Some(tid!("add-project-pick-yourself")));
+        // Renaming yourself after adding someone can still produce a clash.
+        if let Some(clash) = others.iter().find(|d| same_name(&d.name, &me_val)) {
+            error_msg.set(Some(tid!("participants-duplicate", name: clash.name.clone())));
             return;
         }
 
@@ -72,11 +95,10 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
 
         let desc_val = description().trim().to_string();
         let currency_val = currency();
-        let is_auth = auth_ctx().is_some();
+        let account = auth_ctx();
         let account_key = account_key_ctx();
-        let sel_name = selected_name().unwrap_or_default();
-        let key = generate_key();
-        let key_fragment = key_to_fragment(&key);
+        let resumed = created();
+        let key = resumed.map(|(_, k)| k).unwrap_or_else(generate_key);
 
         spawn(async move {
             // Encrypt all project fields as a single JSON blob
@@ -91,29 +113,40 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
 
             // Step A — create project
             // Born with its verifier, so no one holding only the UUID can ever seed one.
-            let claim_verifier = Some(claim_verifier(&key).to_vec());
-            let project = match add_project(Json(CreatableProject { payload, claim_verifier })).await {
-                Ok(p) => p,
-                Err(e) => {
-                    error_msg.set(Some(error_message(&e)));
-                    loading.set(false);
-                    return;
+            let project_id = match resumed {
+                Some((id, _)) => id,
+                None => {
+                    let claim_verifier = Some(claim_verifier(&key).to_vec());
+                    let project =
+                        match add_project(Json(CreatableProject { payload, claim_verifier })).await {
+                            Ok(p) => p,
+                            Err(e) => {
+                                error_msg.set(Some(error_message(&e)));
+                                loading.set(false);
+                                return;
+                            }
+                        };
+                    // The key is stored the moment the project exists: it used to wait for the
+                    // participants, and a failure there left a project nobody could ever decrypt.
+                    update_ls(ls_ctx, |state| {
+                        upsert_project(state, project.id, None);
+                        upsert_project_key(state, project.id, key_to_fragment(&key));
+                    });
+                    created.set(Some((project.id, key)));
+                    project.id
                 }
             };
 
-            // Step B — create encrypted users
+            // Step B — create encrypted users, you first
+            let names: Vec<String> =
+                std::iter::once(me_val.clone()).chain(others.iter().map(|d| d.name.clone())).collect();
             let mut creatables: Vec<CreatableUser> = Vec::new();
-            for user_name in &user_list {
+            for user_name in &names {
                 let payload = match encrypt_json(&key, &UserPayload { name: user_name.clone() }) {
                     Ok(v) => v,
                     Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
                 };
-                let invited_email = if is_auth && user_name.contains('@') {
-                    Some(user_name.clone())
-                } else {
-                    None
-                };
-                creatables.push(CreatableUser { payload, project_id: project.id, invited_email });
+                creatables.push(CreatableUser { payload, project_id });
             }
 
             let created_users = match add_user(Json(CreatableUserBatch::Multiple(creatables))).await
@@ -126,45 +159,65 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 }
             };
 
-            // Step C — resolve which user the person selected (decrypt returned names to compare)
-            let user_id = created_users
-                .iter()
-                .find(|u| {
-                    decrypt_json::<UserPayload>(&key, &u.payload)
-                        .map(|p| p.name.to_lowercase() == sel_name.to_lowercase())
-                        .unwrap_or(false)
-                })
-                .map(|u| u.id);
+            // Step C — the returned order is not guaranteed, so ids are matched back by name; the
+            // names were refused unless unique.
+            let id_of = |name: &str| {
+                created_users
+                    .iter()
+                    .find(|u| {
+                        decrypt_json::<UserPayload>(&key, &u.payload)
+                            .map(|p| same_name(&p.name, name))
+                            .unwrap_or(false)
+                    })
+                    .map(|u| u.id)
+            };
+            let user_id = id_of(&me_val);
 
-            // Step D — persist to localStorage (project entry + encryption key)
-            update_ls(ls_ctx, |state| {
-                upsert_project(state, project.id, user_id);
-                upsert_project_key(state, project.id, key_fragment);
-            });
+            // Step D — persist which participant this device is
+            update_ls(ls_ctx, |state| upsert_project(state, project_id, user_id));
 
             // Step E — if authenticated, also save to DB, escrowing the key we just generated so
             // the account's other devices can open this project without the share link.
-            if is_auth {
+            if let Some(account) = account.as_ref() {
                 // No claim label: these participants were created by this very request, so nobody
                 // can be holding one, and `ensure_membership` attaches the label on the project
                 // page this navigates to a line below.
                 let _ = upsert_account_project(Json(UpsertAccountProject {
-                    project_id: project.id,
+                    project_id,
                     user_id,
-                    key: account_key.and_then(|ak| wrap_project_key(&ak, &key)),
+                    key: account_key.and_then(|ak| wrap_key(&ak, &key)),
                     claim_label: None,
                     claim_token: Some(claim_token(&key).to_vec()),
                 }))
                 .await;
+
+                // Step F — invitations need the project and its participants to exist. The modal
+                // closes whatever they return: what failed is offered again on the project page.
+                let invitees: Vec<Invitee> = others
+                    .iter()
+                    .filter_map(|d| {
+                        d.friend.clone().map(|friend| Invitee { friend, user_id: id_of(&d.name) })
+                    })
+                    .collect();
+                if !invitees.is_empty() {
+                    let my_private = account_key.and_then(|ak| my_private_key(account, &ak));
+                    let failed = invite_each(project_id, &invitees, my_private, &key).await;
+                    if !failed.is_empty() {
+                        invite_retry.set(Some(InviteRetry { project_id, invitees: failed }));
+                    }
+                }
             }
 
-            // Step F — close modal and navigate
+            // Step G — close modal and navigate
             props.on_close.call(());
-            nav.push(Route::ExpensesPage { project_id: project.id });
+            nav.push(Route::ExpensesPage { project_id });
         });
     };
 
     let on_close = props.on_close;
+    let taken = taken_names(&me_name(), &[], &[]);
+    let invites = invite_count(&drafts.read());
+    let ready = can_create(&me_name(), &drafts.read());
 
     rsx! {
         div { class: "modal modal-open modal-bottom sm:modal-middle", role: "dialog",
@@ -181,131 +234,99 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 }
 
                 form { class: "flex flex-col flex-1 overflow-hidden", onsubmit: on_submit,
-                div { class: "flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4",
+                div { class: "flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-5",
                 if let Some(err) = error_msg() {
                     div { role: "alert", class: "alert alert-error text-sm", "{err}" }
                 }
 
-                    fieldset { class: "fieldset",
-                        label { class: "fieldset-legend", r#for: "add-project-name", {tid!("add-project-name-label")} }
-                        input {
-                            id: "add-project-name",
-                            class: "input w-full",
-                            r#type: "text",
-                            enterkeyhint: "next",
-                            aria_required: "true",
-                            placeholder: tid!("add-project-name-placeholder"),
-                            value: "{project_name}",
-                            oninput: move |e| project_name.set(e.value()),
-                        }
-
-                        label { class: "fieldset-legend", r#for: "add-project-description", {tid!("field-description")} }
-                        input {
-                            id: "add-project-description",
-                            class: "input w-full",
-                            r#type: "text",
-                            enterkeyhint: "next",
-                            placeholder: tid!("field-optional"),
-                            value: "{description}",
-                            oninput: move |e| description.set(e.value()),
-                        }
-
-                        label { class: "fieldset-legend", r#for: "add-project-currency", {tid!("project-currency")} }
-                        select {
-                            id: "add-project-currency",
-                            class: "select w-full",
-                            value: "{currency}",
-                            onchange: move |e| currency.set(e.value()),
-                            for c in shared::CURRENCIES {
-                                option { value: c.code, "{c.code} — {c.name}" }
+                    div { class: "flex flex-col gap-3",
+                        div {
+                            label { class: "text-xs font-semibold text-base-content/70 block mb-1.5", r#for: "add-project-name", {tid!("add-project-name-label")} }
+                            input {
+                                id: "add-project-name",
+                                class: "input w-full",
+                                r#type: "text",
+                                enterkeyhint: "next",
+                                aria_required: "true",
+                                placeholder: tid!("add-project-name-placeholder"),
+                                value: "{project_name}",
+                                oninput: move |e| project_name.set(e.value()),
                             }
                         }
-                        p { class: "label text-xs whitespace-normal", {tid!("project-currency-hint")} }
+                        div { class: "grid grid-cols-2 gap-2",
+                            div {
+                                label { class: "text-xs font-semibold text-base-content/70 block mb-1.5", r#for: "add-project-description", {tid!("field-description")} }
+                                input {
+                                    id: "add-project-description",
+                                    class: "input w-full",
+                                    r#type: "text",
+                                    enterkeyhint: "next",
+                                    placeholder: tid!("field-optional"),
+                                    value: "{description}",
+                                    oninput: move |e| description.set(e.value()),
+                                }
+                            }
+                            div {
+                                label { class: "text-xs font-semibold text-base-content/70 block mb-1.5", r#for: "add-project-currency", {tid!("project-currency")} }
+                                select {
+                                    id: "add-project-currency",
+                                    class: "select w-full",
+                                    value: "{currency}",
+                                    onchange: move |e| currency.set(e.value()),
+                                    for c in shared::CURRENCIES {
+                                        option { value: c.code, "{c.code} — {c.name}" }
+                                    }
+                                }
+                            }
+                        }
+                        p { class: "text-xs text-base-content/70", {tid!("project-currency-hint")} }
                     }
 
-                    fieldset { class: "fieldset bg-base-200 border-base-300 rounded-box border p-4",
-                        legend { class: "fieldset-legend", {tid!("add-project-participants")} }
-
-                        div { class: "flex gap-2",
-                            label { class: "input flex-1",
-                                UserIcon {}
-                                input {
-                                    r#type: "text",
-                                    aria_label: tid!("add-project-participant-name"),
-                                    id: "add-project-user",
-                                    placeholder: tid!("add-project-participant-placeholder"),
-                                    enterkeyhint: "done",
-                                    autocapitalize: "words",
-                                    autocomplete: "off",
-                                    value: "{user_input}",
-                                    oninput: move |e| user_input.set(e.value()),
-                                    // Enter adds the participant instead of submitting the form.
-                                    // Nothing blurs, so the keyboard stays up and the view does not
-                                    // reflow between names.
-                                    onkeydown: move |e| {
-                                        if e.key() == Key::Enter {
-                                            e.prevent_default();
-                                            let name = user_input().trim().to_string();
-                                            if !name.is_empty() {
-                                                users.write().push(name);
-                                                user_input.set(String::new());
-                                            }
-                                        }
-                                    },
-                                }
+                    div { class: "flex flex-col gap-1.5",
+                        label { class: "text-xs font-semibold text-base-content/70", r#for: "add-project-me", {tid!("participants-you-label")} }
+                        label { class: "input w-full",
+                            span { class: "w-7 h-7 rounded-full bg-neutral text-neutral-content flex items-center justify-center text-xs font-semibold flex-shrink-0", aria_hidden: "true",
+                                {crate::participants::participants_service::initial(&me_name())}
                             }
-                            button {
-                                id: "add-project-user-add",
-                                r#type: "button",
-                                class: "btn btn-neutral",
-                                onclick: move |_| {
-                                    let name = user_input().trim().to_string();
-                                    if !name.is_empty() {
-                                        users.write().push(name);
-                                        user_input.set(String::new());
-                                    }
+                            input {
+                                id: "add-project-me",
+                                r#type: "text",
+                                enterkeyhint: "next",
+                                aria_required: "true",
+                                autocapitalize: "words",
+                                autocomplete: "off",
+                                placeholder: tid!("add-project-participant-placeholder"),
+                                value: "{me_name}",
+                                oninput: move |e| {
+                                    me_touched.set(true);
+                                    me_name.set(e.value());
                                 },
-                                {tid!("add")}
+                            }
+                            span { class: "badge badge-neutral badge-sm", {tid!("participants-you-badge")} }
+                        }
+                        p { class: "text-xs text-base-content/70",
+                            if friend_list.signed_in && account_name.is_some() {
+                                {tid!("participants-you-from-account")}
+                            } else {
+                                {tid!("participants-you-required")}
                             }
                         }
+                    }
 
-                        ul { class: "flex flex-col gap-1 mt-2 max-h-48 overflow-y-auto",
-                            for i in 0..users().len() {
-                                {
-                                    let name = users().get(i).cloned().unwrap_or_default();
-                                    let is_me = selected_name() == Some(name.clone());
-                                    rsx! {
-                                    li { class: "flex items-center gap-2",
-                                        button {
-                                            r#type: "button",
-                                            class: "btn btn-square btn-sm btn-soft",
-                                            aria_label: tid!("add-project-remove-participant"),
-                                            onclick: move |_| {
-                                                let removed =
-                                                    users().get(i).cloned().unwrap_or_default();
-                                                users.write().remove(i);
-                                                if selected_name() == Some(removed) {
-                                                    selected_name.set(None);
-                                                }
-                                            },
-                                            TrashIcon { size: ICON_INLINE }
-                                        }
-                                        span { class: "flex-1 text-sm", "{name}" }
-                                        if is_me {
-                                            div { class: "badge badge-soft badge-accent", {tid!("add-project-me-badge")} }
-                                        } else {
-                                            button {
-                                                id: "add-project-user-me-{i}",
-                                                r#type: "button",
-                                                class: "btn btn-outline btn-xs",
-                                                onclick: move |_| selected_name.set(Some(name.clone())),
-                                                {tid!("add-project-thats-me")}
-                                            }
-                                        }
-                                    }
-                                }
-                                }
+                    div { class: "flex flex-col gap-2",
+                        div { class: "flex items-center justify-between",
+                            h4 { class: "text-xs font-bold uppercase tracking-wide text-base-content/70", {tid!("participants-others")} }
+                            if !drafts.read().is_empty() {
+                                span { class: "badge badge-ghost badge-sm", "{drafts.read().len()}" }
                             }
+                        }
+                        ParticipantsEditor {
+                            drafts,
+                            taken,
+                            friends: friend_list.friends.clone(),
+                            signed_in: friend_list.signed_in,
+                            id_prefix: "add-project",
+                            show_empty: true,
                         }
                     }
 
@@ -321,9 +342,11 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                             id: "add-project-submit",
                             r#type: "submit",
                             class: "btn btn-primary",
-                            disabled: loading(),
+                            disabled: loading() || !ready,
                             if loading() {
                                 {tid!("creating")}
+                            } else if invites > 0 {
+                                {tid!("add-project-create-invite", count: invites)}
                             } else {
                                 {tid!("create")}
                             }
@@ -367,12 +390,10 @@ mod tests {
         key: &[u8; 32],
         name: &str,
         project_id: Uuid,
-        invited_email: Option<String>,
     ) -> Result<CreatableUser, String> {
         Ok(CreatableUser {
             payload: encrypt_json(key, &UserPayload { name: name.to_string() })?,
             project_id,
-            invited_email,
         })
     }
 
@@ -428,26 +449,16 @@ mod tests {
     fn user_name_roundtrip() {
         let key = test_key();
         let pid = Uuid::nil();
-        let cu = make_creatable_user(&key, "Alice", pid, None).unwrap();
+        let cu = make_creatable_user(&key, "Alice", pid).unwrap();
         let up: UserPayload = decrypt_json(&key, &cu.payload).unwrap();
         assert_eq!(up.name, "Alice");
         assert_eq!(cu.project_id, pid);
-        assert!(cu.invited_email.is_none());
-    }
-
-    #[test]
-    fn user_with_email_preserved() {
-        let key = test_key();
-        let cu = make_creatable_user(&key, "Bob", Uuid::nil(), Some("bob@ex.com".into())).unwrap();
-        assert_eq!(cu.invited_email, Some("bob@ex.com".into()));
-        let up: UserPayload = decrypt_json(&key, &cu.payload).unwrap();
-        assert_eq!(up.name, "Bob");
     }
 
     #[test]
     fn user_wrong_key_fails() {
         let key = test_key();
-        let cu = make_creatable_user(&key, "Alice", Uuid::nil(), None).unwrap();
+        let cu = make_creatable_user(&key, "Alice", Uuid::nil()).unwrap();
         let mut bad = key;
         bad[1] ^= 0xAB;
         assert!(decrypt_json::<UserPayload>(&bad, &cu.payload).is_err());

@@ -26,6 +26,40 @@ pub async fn share_text(text: &str) -> bool {
     }
 }
 
+/// Hands a URL the webview cannot open to the OS, true when something took it.
+///
+/// The native interpreter routes every link through `webbrowser::open`, which on Android and iOS
+/// opens http(s) only and fails anything else — so a `mailto:` tap did nothing.
+pub type NativeOpener = Arc<dyn Fn(&str) -> bool + Send + Sync + 'static>;
+
+static OPENER: OnceLock<NativeOpener> = OnceLock::new();
+
+pub fn set_native_opener(opener: NativeOpener) {
+    let _ = OPENER.set(opener);
+}
+
+pub fn open_external(url: &str) -> bool {
+    OPENER.get().map(|open| open(url)).unwrap_or(false)
+}
+
+/// Writes `bytes` as `filename` where the platform can share it, and opens the share sheet on the
+/// file. The platform picks the directory: Android can only share what its FileProvider exposes.
+pub type NativeFileSharer =
+    Arc<dyn Fn(&str, &[u8], &str) -> Result<(), String> + Send + Sync + 'static>;
+
+static FILE_SHARER: OnceLock<NativeFileSharer> = OnceLock::new();
+
+pub fn set_native_file_sharer(sharer: NativeFileSharer) {
+    let _ = FILE_SHARER.set(sharer);
+}
+
+pub fn share_file(filename: &str, bytes: &[u8], mime: &str) -> Result<(), String> {
+    match FILE_SHARER.get() {
+        Some(share) => share(filename, bytes, mime),
+        None => Err("no share sheet on this platform".into()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

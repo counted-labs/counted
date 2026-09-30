@@ -93,6 +93,15 @@ pub fn is_project_gone_error(e: &ServerFnError) -> bool {
     )
 }
 
+/// True when the participant is already gone — for a removal, the outcome it asked for.
+pub fn is_user_gone_error(e: &ServerFnError) -> bool {
+    matches!(
+        e,
+        ServerFnError::ServerError { message, code, .. }
+            if *code == 404 && message == shared::errors::USER_NOT_FOUND
+    )
+}
+
 /// True when another account already claims the participant this device tried to become — drives
 /// dropping the local `user_id` and reopening the "who am I?" picker.
 ///
@@ -219,6 +228,13 @@ mod tests {
 
     // `ServerFnError::new` is a 500. Matching on the message alone would let an internal failure
     // that happens to carry this text trigger the "project deleted" recovery.
+    #[test]
+    fn test_user_gone_requires_both_the_message_and_a_404() {
+        assert!(is_user_gone_error(&with_code(shared::errors::USER_NOT_FOUND, 404)));
+        assert!(!is_user_gone_error(&with_code(shared::errors::USER_NOT_FOUND, 500)));
+        assert!(!is_user_gone_error(&with_code(shared::PROJECT_NOT_FOUND, 404)));
+    }
+
     #[test]
     fn test_project_gone_requires_both_the_message_and_a_404() {
         assert!(is_project_gone_error(&with_code(shared::PROJECT_NOT_FOUND, 404)));

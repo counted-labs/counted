@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 use crate::categories::get_expense_category;
-use crate::crypto::{DecryptedExpense, DecryptedPayment};
+use crate::decrypted::{DecryptedExpense, DecryptedPayment};
 
 pub const OTHER: &str = "Autres";
 pub const TOP_CATEGORIES: usize = 5;

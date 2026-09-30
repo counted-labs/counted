@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-	FileProvider paths for the receipt-scan camera capture.
+	FileProvider paths. Referenced by the <provider> the Makefile's patch_file_provider adds.
 
-	The root of `external-files-path` is Context.getExternalFilesDir(null); wry's
-	RustWebChromeClient.createImageFile writes into its Pictures/ subdirectory via
-	getExternalFilesDir(Environment.DIRECTORY_PICTURES), so that is the only subtree exposed.
+	captures: the receipt-scan camera capture. The root of `external-files-path` is
+	Context.getExternalFilesDir(null); wry's RustWebChromeClient.createImageFile writes into its
+	Pictures/ subdirectory via getExternalFilesDir(Environment.DIRECTORY_PICTURES), so that is the
+	only subtree exposed — see docs/plans/ocr-receipt-scan.md.
 
-	Referenced by the <provider> the Makefile's patch_file_provider adds — see
-	docs/plans/ocr-receipt-scan.md.
+	exports: JSON/CSV exports handed to the share sheet. `share_file` in packages/mobile/src/main.rs
+	writes them under getCacheDir()/exports/ and nowhere else.
 -->
 <paths>
     <external-files-path name="captures" path="Pictures/" />
+    <cache-path name="exports" path="exports/" />
 </paths>

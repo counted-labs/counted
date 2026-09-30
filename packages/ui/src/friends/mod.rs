@@ -1,3 +1,4 @@
+mod friend_checklist;
 pub mod friends_service;
 mod friends_page;
 mod invitations_card;
@@ -7,5 +8,5 @@ mod use_friends;
 
 pub use friends_page::FriendsPage;
 pub use invitations_card::InvitationsCard;
-pub use invite_friends_modal::InviteFriendsModal;
+pub use invite_friends_modal::{FriendPickerModal, InviteFriendsModal};
 pub use notifications_bell::NotificationsBell;

@@ -484,6 +484,10 @@ pub struct FriendsView {
 pub struct CreatableProjectInvitation {
     pub to_account_id: Uuid,
     pub key: EncryptedPair,
+    /// The participant the sender created for this friend, preselected when they pick who they
+    /// are. Must belong to the project.
+    #[serde(default)]
+    pub user_id: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -495,6 +499,18 @@ pub struct ProjectInvitation {
     pub from_public_key: Vec<u8>,
     pub key: EncryptedPair,
     pub created_at: NaiveDateTime,
+    #[serde(default)]
+    pub user_id: Option<i32>,
+}
+
+/// `GET /projects/{id}/invitations/sent`: the caller's own pending invitations that name a
+/// participant, so the edit modal can mark that row as invited.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "server", derive(sqlx::FromRow))]
+pub struct SentInvitation {
+    pub to_account_id: Uuid,
+    pub user_id: i32,
 }
 
 /// The locales push bodies are hand-written for (`api::server::push::texts`), *not* the shipped
@@ -908,7 +924,6 @@ pub enum CreatableUserBatch {
 pub struct CreatableUser {
     pub payload: EncryptedPair,
     pub project_id: Uuid,
-    pub invited_email: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]

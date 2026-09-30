@@ -54,6 +54,7 @@ error-unauthenticated = Piesakies, lai to izdarītu.
 error-email-not-verified = Tava e-pasta adrese vēl nav apstiprināta.
 error-project-not-found = Šis projekts vairs nepastāv.
 error-expense-not-found = Šis izdevums vairs nepastāv.
+error-storage-full = Krātuve ir pilna: šī projekta atslēgu neizdevās saglabāt šajā ierīcē. Saglabā kopīgošanas saiti.
 error-user-not-found = Šis dalībnieks vairs nepastāv.
 error-tricount-not-found = Tricount nav atrasts, vai tā API atgrieza kļūdu.
 error-too-many-members = Šis projekts ir sasniedzis dalībnieku limitu.
@@ -251,13 +252,8 @@ add-project-name-placeholder = Mans ceļojums, Dzīvoklis 2024…
 add-project-participants = Dalībnieki
 add-project-participant-name = Dalībnieka vārds
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Noņemt dalībnieku
-add-project-me-badge = Es
-add-project-thats-me = Tas esmu es!
 add-project-offline = Bezsaistē nevar izveidot projektu. Pieslēdzies vēlreiz un mēģini atkal.
 add-project-name-required = Projektam nepieciešams nosaukums.
-add-project-need-two-participants = Pievieno vismaz 2 dalībniekus.
-add-project-pick-yourself = Norādi, kurš dalībnieks esi tu.
 
 join-link-label = Kopīgošanas saite
 join-link-hint = Saite satur atšifrēšanas atslēgu - nokopē to visu.
@@ -267,6 +263,7 @@ join-wrong-project = Šī saite ir citam projektam.
 import-tricount-link-label = Tricount saite vai atslēga
 import-tricount-key-required = Ievadi Tricount saiti vai atslēgu.
 import-tricount-encryption-failed = Šifrēšana neizdevās.
+import-tricount-unimportable = Nekas netika importēts: šajā Tricount ir dalībnieki ar Tricount kontu vai summas, kas nesakrīt (ietekmētie ieraksti: { $count }).
 
 ### Expenses
 
@@ -364,11 +361,8 @@ edit-project-title = Rediģēt projektu
 edit-project-new-badge = jauns
 edit-project-deferred-new-members = jaunu dalībnieku pievienošana
 edit-project-deferred-removals = dalībnieku noņemšana
-edit-project-deferred-me = izvēle „Tas esmu es”
 edit-project-offline-deferred = Bezsaistē: { $items } tiks piemērots pēc pieslēgšanās.
 
-export-saved = Fails saglabāts:
-    { $path }
 export-failed = Eksports neizdevās: { $reason }
 
 history-expense-added = Izdevums pievienots: { $name }
@@ -513,13 +507,24 @@ debtors-title-beneficiaries = Labuma guvēji
 
 welcome-title = Tava uzskaite nav neviena cita darīšana.
 welcome-subtitle = Dali izdevumus ar draugiem.
-welcome-e2ee-title = Viss šifrēts
-welcome-e2ee-body = Vārdi, summas, projekti: viss tiek šifrēts tavā ierīcē. Atslēga ir tikai tev. Neviens nevar lasīt tavus rēķinus. Pat ne mēs.
-welcome-e2ee-note = Nelasāms pat mums (serverim nav piekļuves)
+welcome-note = Bez maksas. Konts nav vajadzīgs. Bez reklāmām.
+welcome-link-title = Viena saite, un visi piedalās.
+welcome-link-body = Nevienam nav jāveido konts.
+welcome-link-account = Konts? Nekad nav obligāts. Tas ļauj atrast tavus projektus citā ierīcē, uzaicināt draugus no lietotnes un kopīgot tavus maksājumu datus.
+welcome-demo-project = Nedēļas nogale Lionā
+welcome-private-title = Neviens nevar lasīt tavus rēķinus. Pat ne mēs.
+welcome-private-body = Vārdi, summas, projekti: viss tiek šifrēts tavā ierīcē. Atslēga ir tikai tev.
+welcome-private-names = Vārdi
+welcome-private-amounts = Summas
+welcome-private-projects = Projekti
+welcome-scan-title = Nofotografē čeku.
+welcome-scan-body = Summa, datums un kategorija aizpildās paši. Viss notiek tavā tālrunī. Foto netiek saglabāts.
 welcome-eu-title = 100 % eiropeisks
-welcome-eu-body = Serveri Vācijā, e-pasti sūtīti no Francijas. Tavi dati nekad nepamet Eiropas Savienību.
-welcome-noads-title = Bez reklāmām. Bez izsekotājiem.
-welcome-noads-body = Mēs neko nevācam un nepārdodam tavus datus. Tas nav mūsu modelis.
+welcome-no-ads = Bez reklāmām
+welcome-no-trackers = Bez izsekotājiem
+welcome-step = { $current }. solis no { $total }
+welcome-next = Tālāk
+welcome-skip = Izlaist
 welcome-start = Sākt
 welcome-how-it-works = Kā tieši tas darbojas?
 
@@ -624,3 +629,49 @@ invitation-unreadable = Šo uzaicinājumu nevar atvērt šajā ierīcē
 invitation-from = No { $email }
 invitation-accept = Pievienoties
 invitation-decline = Noraidīt
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Tavs vārds šajā projektā
+participants-you-badge = Tu
+participants-you-from-account = Ņemts no tava konta vārda. Maini to šeit tikai šim projektam.
+participants-you-required = Obligāti. Tā tevi redzēs citi.
+participants-others = Citi dalībnieki
+participants-empty = Vēl neviena. Izvēlies draugu zemāk vai ieraksti jebkuru vārdu.
+participants-empty-signed-out = Vēl neviena. Ieraksti vārdu, lai kādu pievienotu.
+participants-duplicate = „{ $name }” jau ir sarakstā.
+participants-input-label = Pievienot draugu vai ierakstīt vārdu
+participants-input-placeholder = Draugs vai jebkurš vārds
+participants-suggest-friend = Draugs · pievienosies kā „{ $name }”, saņems ielūgumu
+participants-suggest-not-ready = Draugs · vēl nav gatavs
+participants-suggest-guest = Pievienot „{ $text }” bez konta
+participants-suggest-guest-sub = Bez konta, tikai vārds
+participants-friends = Tavi draugi
+participants-all-friends = Visi draugi
+participants-login-hint = Pieslēdzies, lai pievienotu cilvēkus tieši no sava draugu saraksta.
+participants-invite-badge = Uzaicināt
+participants-guest-badge = Bez konta
+participants-guest-sub = Bez konta, tikai vārds
+participants-rename = Pārdēvēt: { $name }
+participants-remove = Noņemt: { $name }
+participants-rename-label = Jauns vārds
+participants-rename-save = Saglabāt vārdu
+participants-rename-hint = Vārds, ko šajā projektā redz visi. Ielūgums joprojām tiks nosūtīts uz { $email }.
+participants-invited-badge = Uzaicināts
+participants-invited-sub = { $email } · vēl nav pieņemts
+participants-invited-pending = Ielūgums vēl nav pieņemts
+participants-unlinked = Nav saistīts ar kontu
+add-project-create-invite = Izveidot un uzaicināt: { $count }
+edit-project-save-invite = Saglabāt un uzaicināt: { $count }
+edit-project-you-are = Šajā ierīcē tu esi { $name }
+edit-project-no-identity = Tu vēl neesi izvēlējies, kas tu esi
+edit-project-switch = Mainīt
+edit-project-choose = Izvēlēties
+invite-failed = Šos ielūgumus neizdevās nosūtīt: { $emails }
+invite-again = Uzaicināt vēlreiz
+friend-picker-title = Pievienot draugus
+user-selection-invited-hint = { $email } tevi uzaicināja uz „{ $project }”.
+user-selection-suggested = Ieteikts
+user-selection-suggested-sub = { $email } tevi pievienoja ar šo vārdu
+user-selection-confirm-as = Es esmu { $name }
+user-selection-missing = Tava vārda šeit nav? Palūdz dalībniekam tevi pievienot projekta iestatījumos.

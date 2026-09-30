@@ -55,6 +55,7 @@ error-unauthenticated = Pro tuto akci se přihlas.
 error-email-not-verified = Tvoje e-mailová adresa ještě není ověřená.
 error-project-not-found = Tento projekt už neexistuje.
 error-expense-not-found = Tento výdaj už neexistuje.
+error-storage-full = Úložiště je plné: klíč tohoto projektu se na tomto zařízení nepodařilo uložit. Uschovej si odkaz ke sdílení.
 error-user-not-found = Tento účastník už neexistuje.
 error-tricount-not-found = Tricount nenalezen, nebo jeho API vrátilo chybu.
 error-too-many-members = Tento projekt dosáhl limitu členů.
@@ -252,13 +253,8 @@ add-project-name-placeholder = Můj výlet, Spolubydlení 2024…
 add-project-participants = Účastníci
 add-project-participant-name = Jméno účastníka
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Odebrat účastníka
-add-project-me-badge = Já
-add-project-thats-me = To jsem já!
 add-project-offline = Offline nelze projekt vytvořit. Znovu se připoj a zkus to znovu.
 add-project-name-required = Projekt potřebuje název.
-add-project-need-two-participants = Přidej alespoň 2 účastníky.
-add-project-pick-yourself = Řekni nám, který účastník jsi ty.
 
 join-link-label = Odkaz pro sdílení
 join-link-hint = Odkaz obsahuje dešifrovací klíč - zkopíruj ho celý.
@@ -268,6 +264,7 @@ join-wrong-project = Tento odkaz patří jinému projektu.
 import-tricount-link-label = Odkaz nebo klíč Tricount
 import-tricount-key-required = Zadej odkaz nebo klíč Tricount.
 import-tricount-encryption-failed = Šifrování selhalo.
+import-tricount-unimportable = Nic nebylo importováno: tento Tricount má členy s účtem Tricount nebo částky, které nesedí (dotčené položky: { $count }).
 
 ### Expenses
 
@@ -365,11 +362,8 @@ edit-project-title = Upravit projekt
 edit-project-new-badge = nový
 edit-project-deferred-new-members = přidání nových členů
 edit-project-deferred-removals = odebrání členů
-edit-project-deferred-me = výběr „To jsem já“
 edit-project-offline-deferred = Offline: { $items } se použije po opětovném připojení.
 
-export-saved = Soubor uložen:
-    { $path }
 export-failed = Export selhal: { $reason }
 
 history-expense-added = Výdaj přidán: { $name }
@@ -516,13 +510,24 @@ debtors-title-beneficiaries = Příjemci
 
 welcome-title = Do tvých účtů nikomu nic není.
 welcome-subtitle = Děl se o výdaje s přáteli.
-welcome-e2ee-title = Vše šifrované
-welcome-e2ee-body = Jména, částky, projekty: vše se šifruje na tvém zařízení. Klíč máš jen ty. Nikdo nemůže číst tvoje vyúčtování. Ani my.
-welcome-e2ee-note = Nečitelné i pro nás (nulový přístup serveru)
+welcome-note = Zdarma. Bez účtu. Bez reklam.
+welcome-link-title = Jeden odkaz a všichni se zapojí.
+welcome-link-body = Nikdo si nemusí zakládat účet.
+welcome-link-account = Účet? Nikdy není povinný. Slouží k nalezení tvých projektů na jiném zařízení, zvaní přátel z aplikace a sdílení tvých platebních údajů.
+welcome-demo-project = Víkend v Lyonu
+welcome-private-title = Nikdo nemůže číst tvoje vyúčtování. Ani my.
+welcome-private-body = Jména, částky, projekty: vše se šifruje na tvém zařízení. Klíč máš jen ty.
+welcome-private-names = Jména
+welcome-private-amounts = Částky
+welcome-private-projects = Projekty
+welcome-scan-title = Vyfoť účtenku.
+welcome-scan-body = Částka, datum a kategorie se vyplní samy. Vše probíhá v tvém telefonu. Fotka se neukládá.
 welcome-eu-title = 100% evropské
-welcome-eu-body = Servery v Německu, e-maily odesílané z Francie. Tvoje data nikdy neopustí Evropskou unii.
-welcome-noads-title = Žádné reklamy. Žádné sledování.
-welcome-noads-body = Nic nesbíráme a tvoje data neprodáváme. To není náš model.
+welcome-no-ads = Žádné reklamy
+welcome-no-trackers = Žádné sledování
+welcome-step = Krok { $current } z { $total }
+welcome-next = Další
+welcome-skip = Přeskočit
 welcome-start = Začít
 welcome-how-it-works = Jak to přesně funguje?
 
@@ -628,3 +633,49 @@ invitation-unreadable = Tuto pozvánku nelze na tomto zařízení otevřít
 invitation-from = Od { $email }
 invitation-accept = Připojit se
 invitation-decline = Odmítnout
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Tvoje jméno v tomto projektu
+participants-you-badge = Ty
+participants-you-from-account = Převzato ze jména tvého účtu. Změň ho tady jen pro tento projekt.
+participants-you-required = Povinné. Takhle tě uvidí ostatní.
+participants-others = Další účastníci
+participants-empty = Zatím nikdo. Vyber přítele níže nebo napiš jakékoli jméno.
+participants-empty-signed-out = Zatím nikdo. Napiš jméno a někoho přidej.
+participants-duplicate = „{ $name }“ už v seznamu je.
+participants-input-label = Přidat přítele nebo napsat jméno
+participants-input-placeholder = Přítel nebo jakékoli jméno
+participants-suggest-friend = Přítel · připojí se jako „{ $name }“, dostane pozvánku
+participants-suggest-not-ready = Přítel · zatím není připraven
+participants-suggest-guest = Přidat „{ $text }“ bez účtu
+participants-suggest-guest-sub = Bez účtu, jen jméno
+participants-friends = Tvoji přátelé
+participants-all-friends = Všichni přátelé
+participants-login-hint = Přihlas se a přidávej lidi přímo ze seznamu přátel.
+participants-invite-badge = Pozvat
+participants-guest-badge = Bez účtu
+participants-guest-sub = Bez účtu, jen jméno
+participants-rename = Přejmenovat: { $name }
+participants-remove = Odebrat: { $name }
+participants-rename-label = Nové jméno
+participants-rename-save = Uložit jméno
+participants-rename-hint = Jméno, které v tomto projektu vidí všichni. Pozvánka stále půjde na { $email }.
+participants-invited-badge = Pozván
+participants-invited-sub = { $email } · zatím nepřijato
+participants-invited-pending = Pozvánka zatím nepřijata
+participants-unlinked = Nepropojeno s účtem
+add-project-create-invite = Vytvořit a pozvat: { $count }
+edit-project-save-invite = Uložit a pozvat: { $count }
+edit-project-you-are = Na tomto zařízení jsi { $name }
+edit-project-no-identity = Ještě jsi nevybral(a), kdo jsi
+edit-project-switch = Změnit
+edit-project-choose = Vybrat
+invite-failed = Tyto pozvánky se nepodařilo odeslat: { $emails }
+invite-again = Pozvat znovu
+friend-picker-title = Přidat přátele
+user-selection-invited-hint = { $email } tě pozval(a) do „{ $project }“.
+user-selection-suggested = Navrženo
+user-selection-suggested-sub = { $email } tě přidal(a) pod tímto jménem
+user-selection-confirm-as = Jsem { $name }
+user-selection-missing = Není tu tvoje jméno? Požádej účastníka, ať tě přidá v nastavení projektu.

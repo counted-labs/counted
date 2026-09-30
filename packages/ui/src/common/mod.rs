@@ -105,7 +105,13 @@ mod session_flush;
 pub use session_flush::{flush_session, set_session_flusher, SessionFlusher};
 
 mod share_sheet;
-pub use share_sheet::{set_native_sharer, share_text, NativeSharer};
+pub use share_sheet::{
+    open_external, set_native_file_sharer, set_native_opener, set_native_sharer, share_file,
+    share_text, NativeFileSharer, NativeOpener, NativeSharer,
+};
+
+mod mail_link;
+pub use mail_link::MailLink;
 
 pub mod push;
 pub use push::{native_push, read_push_token, set_native_push, NativePush};
@@ -148,12 +154,12 @@ mod error_utils;
 pub use error_utils::{
     error_key, error_message, is_claim_proof_error, is_client_outdated_error,
     is_email_not_verified, is_identity_taken_error, is_offline_error, is_participant_gone_error,
-    is_payment_methods_stale_error, is_project_gone_error,
+    is_payment_methods_stale_error, is_project_gone_error, is_user_gone_error,
 };
 
 mod membership;
 pub use membership::{
-    ensure_membership, identity_locked, leave_project_and_forget, ClaimOutcome,
+    adopt_project_key, ensure_membership, identity_locked, leave_project_and_forget, ClaimOutcome,
     LEAVE_CONFIRM_MESSAGE, LEAVE_CONFIRM_TITLE,
 };
 
@@ -170,7 +176,9 @@ mod queue_replay;
 pub use queue_replay::{replay_queue, SyncFailure};
 
 mod app_contexts;
-pub use app_contexts::{use_app_contexts, AuthResolved, Flash, ProjectKey, UpdateRequired};
+pub use app_contexts::{
+    use_app_contexts, AcceptedInvite, AuthResolved, Flash, InviteRetry, ProjectKey, UpdateRequired,
+};
 
 mod splash;
 pub use splash::{use_client_ready, SplashScreen};

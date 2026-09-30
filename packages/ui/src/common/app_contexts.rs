@@ -2,7 +2,9 @@ use api::auth::auth_controller::me;
 use dioxus::prelude::*;
 use shared::Account;
 use std::collections::VecDeque;
+use uuid::Uuid;
 
+use crate::friends::friends_service::Invitee;
 use super::{is_client_outdated_error, read_from_ls, read_queue, LocalStorageState, QueuedOp};
 use crate::crypto::key_from_fragment;
 use crate::i18n::{set_language, use_init_locale};
@@ -23,6 +25,24 @@ impl Flash {
     pub fn err(msg: impl Into<String>) -> Self {
         Self { msg: msg.into(), success: false }
     }
+}
+
+/// Invitations the create or edit modal could not send. The modal closes regardless, so it hands
+/// them to the project page, which offers to send them again.
+#[derive(Clone, PartialEq)]
+pub struct InviteRetry {
+    pub project_id: Uuid,
+    pub invitees: Vec<Invitee>,
+}
+
+/// The invitation just accepted, read once by the "who are you?" picker it leads to: who sent it,
+/// and which participant they created for this person.
+#[derive(Clone, PartialEq)]
+pub struct AcceptedInvite {
+    pub project_id: Uuid,
+    pub from_email: String,
+    pub project_name: Option<String>,
+    pub user_id: Option<i32>,
 }
 
 /// Whether `me()` has come back yet, whatever it said.
@@ -98,6 +118,9 @@ pub fn use_app_contexts() {
     let account_enc_key: Signal<Option<[u8; 32]>> =
         use_context_provider(|| Signal::new(restored_key));
     let _flash: Signal<Option<Flash>> = use_context_provider(|| Signal::new(None));
+    let _invite_retry: Signal<Option<InviteRetry>> = use_context_provider(|| Signal::new(None));
+    let _accepted_invite: Signal<Option<AcceptedInvite>> =
+        use_context_provider(|| Signal::new(None));
     let _ls: Signal<LocalStorageState> = use_context_provider(|| Signal::new(ls_state));
     // No Signal<bool> for is_mobile: it would collide with is_online (contexts are keyed by type).
     // Always true on web; updated by DOM events on mobile native.
@@ -174,7 +197,8 @@ pub fn use_app_contexts() {
         let mut is_online = is_online;
         spawn(async move {
             let mut eval = document::eval(
-                "window.addEventListener('online',  () => dioxus.send('online'));
+                "dioxus.send(navigator.onLine ? 'online' : 'offline');
+                 window.addEventListener('online',  () => dioxus.send('online'));
                  window.addEventListener('offline', () => dioxus.send('offline'));",
             );
             loop {

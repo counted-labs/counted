@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use super::helpers::export;
 use crate::common::{
-    copy_text, is_mobile, leave_project_and_forget, pending, read_from_ls,
+    copy_text, is_mobile, leave_project_and_forget, pending, read_from_ls, InviteRetry,
     remove_project, scheme_link_for, share_link_for, share_text, write_to_ls, AppHeader, AvatarGroup, ConfirmModal, Flash,
     LocalStorageState, ProjectKey, PullToRefresh, SizeClass, Toast, LEAVE_CONFIRM_MESSAGE,
     LEAVE_CONFIRM_TITLE,
@@ -17,7 +17,9 @@ use crate::expenses::helpers::expenses_page_helpers::{
 };
 use crate::expenses::hooks::use_project_store::ProjectStore;
 use crate::expenses::project_header::ProjectHeader;
+use crate::friends::friends_service::{invitee_emails, Invitee};
 use crate::friends::InviteFriendsModal;
+use crate::icons::{CloseIcon, ICON_INLINE};
 use crate::projects::JoinProjectModal;
 use crate::expenses::project_states::{
     ExpensesSkeleton, MissingKeyScreen, NoLocalDataScreen, Spinner,
@@ -42,6 +44,9 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
     let mut show_transfer_modal = use_signal(|| false);
     let mut show_edit_modal = use_signal(|| false);
     let mut show_invite_modal = use_signal(|| false);
+    let mut show_switch = use_signal(|| false);
+    let mut invite_retry = use_context::<Signal<Option<InviteRetry>>>();
+    let mut retry_invitees: Signal<Vec<Invitee>> = use_signal(Vec::new);
     let mut show_leave_confirm = use_signal(|| false);
     let mut show_unlock_modal = use_signal(|| false);
     let mut transfer = use_signal(|| None::<(String, f64, i32, i32)>);
@@ -166,11 +171,43 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                 on_forget: forget_project,
             }
 
+            // What the create or edit modal could not send. It closed anyway, so the offer to send
+            // them again lives here.
+            if let Some(retry) = invite_retry().filter(|r| r.project_id == project_id) {
+                div { role: "alert", id: "invite-retry", class: "alert alert-warning alert-soft text-sm items-start",
+                    div { class: "flex flex-col gap-2 flex-1",
+                        span { {tid!("invite-failed", emails: invitee_emails(&retry.invitees))} }
+                        button {
+                            id: "invite-retry-again",
+                            r#type: "button",
+                            class: "btn btn-sm self-start",
+                            onclick: move |_| {
+                                retry_invitees.set(retry.invitees.clone());
+                                invite_retry.set(None);
+                                show_invite_modal.set(true);
+                            },
+                            {tid!("invite-again")}
+                        }
+                    }
+                    button {
+                        r#type: "button",
+                        class: "btn btn-ghost btn-circle btn-sm",
+                        aria_label: tid!("close"),
+                        onclick: move |_| invite_retry.set(None),
+                        CloseIcon { size: ICON_INLINE }
+                    }
+                }
+            }
+
             if show_invite_modal() {
                 InviteFriendsModal {
                     project_id,
                     project_key: key,
-                    on_close: move |_| show_invite_modal.set(false),
+                    preselected: retry_invitees(),
+                    on_close: move |_| {
+                        show_invite_modal.set(false);
+                        retry_invitees.set(Vec::new());
+                    },
                 }
             }
 
@@ -202,6 +239,12 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
 
                         if uid.is_none() {
                             UserSelectionModal { users: user_list.clone(), project_id }
+                        } else if show_switch() {
+                            UserSelectionModal {
+                                users: user_list.clone(),
+                                project_id,
+                                on_close: move |_| show_switch.set(false),
+                            }
                         }
 
                         div { class: "flex justify-center",
@@ -300,6 +343,10 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                                         show_edit_modal.set(false);
                                         sync.restart();
                                     },
+                                    on_switch: EventHandler::new(move |_| {
+                                        show_edit_modal.set(false);
+                                        show_switch.set(true);
+                                    }),
                                 }
                             }
                         }

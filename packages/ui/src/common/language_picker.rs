@@ -21,8 +21,8 @@ pub fn LanguagePicker() -> Element {
     let on_change = move |e: FormEvent| {
         let code = e.value();
         set_language(&code);
-        // Only a deliberate pick syncs, and only with a key to encrypt it — a session restored from
-        // the cookie has none, and the choice then stays on this device like an anonymous one.
+        // Only a deliberate pick syncs, and only with a key to encrypt it — without one (local store
+        // cleared) the choice stays on this device like an anonymous one.
         if auth_ctx().is_some() {
             if let Some(key) = account_enc_key_ctx() {
                 push_language(key, code);

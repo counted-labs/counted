@@ -53,6 +53,7 @@ error-unauthenticated = Συνδέσου για να το κάνεις αυτό.
 error-email-not-verified = Η διεύθυνση email σου δεν έχει επαληθευτεί ακόμα.
 error-project-not-found = Αυτό το έργο δεν υπάρχει πια.
 error-expense-not-found = Αυτή η δαπάνη δεν υπάρχει πια.
+error-storage-full = Ο χώρος αποθήκευσης είναι γεμάτος: το κλειδί αυτού του έργου δεν αποθηκεύτηκε σε αυτή τη συσκευή. Κράτα τον σύνδεσμο κοινοποίησης.
 error-user-not-found = Αυτός ο συμμετέχων δεν υπάρχει πια.
 error-tricount-not-found = Το Tricount δεν βρέθηκε ή το API του επέστρεψε σφάλμα.
 error-too-many-members = Αυτό το έργο έφτασε το όριο μελών.
@@ -250,13 +251,8 @@ add-project-name-placeholder = Το ταξίδι μου, Συγκάτοικοι 
 add-project-participants = Συμμετέχοντες
 add-project-participant-name = Όνομα συμμετέχοντα
 add-project-participant-placeholder = Κλαρκ Κεντ
-add-project-remove-participant = Αφαίρεση συμμετέχοντα
-add-project-me-badge = Εγώ
-add-project-thats-me = Εγώ είμαι!
 add-project-offline = Δεν μπορείς να δημιουργήσεις έργο εκτός σύνδεσης. Συνδέσου ξανά και δοκίμασε πάλι.
 add-project-name-required = Το έργο χρειάζεται όνομα.
-add-project-need-two-participants = Πρόσθεσε τουλάχιστον 2 συμμετέχοντες.
-add-project-pick-yourself = Πες μας ποιος συμμετέχων είσαι.
 
 join-link-label = Σύνδεσμος κοινής χρήσης
 join-link-hint = Ο σύνδεσμος περιέχει το κλειδί αποκρυπτογράφησης - αντέγραψέ τον ολόκληρο.
@@ -266,6 +262,7 @@ join-wrong-project = Αυτός ο σύνδεσμος αφορά άλλο έργ
 import-tricount-link-label = Σύνδεσμος ή κλειδί Tricount
 import-tricount-key-required = Εισήγαγε έναν σύνδεσμο ή κλειδί Tricount.
 import-tricount-encryption-failed = Η κρυπτογράφηση απέτυχε.
+import-tricount-unimportable = Δεν εισήχθη τίποτα: αυτό το Tricount έχει μέλη με λογαριασμό Tricount ή ποσά που δεν συμφωνούν (επηρεαζόμενες εγγραφές: { $count }).
 
 ### Expenses
 
@@ -363,11 +360,8 @@ edit-project-title = Επεξεργασία έργου
 edit-project-new-badge = νέο
 edit-project-deferred-new-members = η προσθήκη νέων μελών
 edit-project-deferred-removals = η αφαίρεση μελών
-edit-project-deferred-me = η επιλογή «Εγώ είμαι»
 edit-project-offline-deferred = Εκτός σύνδεσης: { $items } θα εφαρμοστεί όταν συνδεθείς ξανά.
 
-export-saved = Το αρχείο αποθηκεύτηκε:
-    { $path }
 export-failed = Η εξαγωγή απέτυχε: { $reason }
 
 history-expense-added = Προστέθηκε δαπάνη: { $name }
@@ -510,13 +504,24 @@ debtors-title-beneficiaries = Δικαιούχοι
 
 welcome-title = Οι λογαριασμοί σου δεν αφορούν κανέναν άλλο.
 welcome-subtitle = Μοιράσου έξοδα με φίλους.
-welcome-e2ee-title = Όλα κρυπτογραφημένα
-welcome-e2ee-body = Ονόματα, ποσά, έργα: όλα κρυπτογραφούνται στη συσκευή σου. Μόνο εσύ έχεις το κλειδί. Κανείς δεν μπορεί να διαβάσει τους λογαριασμούς σου. Ούτε εμείς.
-welcome-e2ee-note = Αδιάβαστα ακόμα και για εμάς (μηδενική πρόσβαση διακομιστή)
+welcome-note = Δωρεάν. Χωρίς λογαριασμό. Χωρίς διαφημίσεις.
+welcome-link-title = Ένας σύνδεσμος, και συμμετέχουν όλοι.
+welcome-link-body = Κανείς δεν χρειάζεται να δημιουργήσει λογαριασμό.
+welcome-link-account = Λογαριασμός; Ποτέ υποχρεωτικός. Χρησιμεύει για να βρίσκεις τα έργα σου σε άλλη συσκευή, να προσκαλείς φίλους από την εφαρμογή και να μοιράζεσαι τα στοιχεία πληρωμής σου.
+welcome-demo-project = Σαββατοκύριακο στη Λιόν
+welcome-private-title = Κανείς δεν μπορεί να διαβάσει τους λογαριασμούς σου. Ούτε εμείς.
+welcome-private-body = Ονόματα, ποσά, έργα: όλα κρυπτογραφούνται στη συσκευή σου. Μόνο εσύ έχεις το κλειδί.
+welcome-private-names = Ονόματα
+welcome-private-amounts = Ποσά
+welcome-private-projects = Έργα
+welcome-scan-title = Φωτογράφισε την απόδειξη.
+welcome-scan-body = Το ποσό, η ημερομηνία και η κατηγορία συμπληρώνονται μόνα τους. Όλα γίνονται στο τηλέφωνό σου. Η φωτογραφία δεν αποθηκεύεται.
 welcome-eu-title = 100% ευρωπαϊκό
-welcome-eu-body = Διακομιστές στη Γερμανία, email από τη Γαλλία. Τα δεδομένα σου δεν φεύγουν ποτέ από την Ευρωπαϊκή Ένωση.
-welcome-noads-title = Χωρίς διαφημίσεις. Χωρίς ιχνηλάτες.
-welcome-noads-body = Δεν συλλέγουμε τίποτα και δεν πουλάμε τα δεδομένα σου. Δεν είναι αυτό το μοντέλο μας.
+welcome-no-ads = Χωρίς διαφημίσεις
+welcome-no-trackers = Χωρίς ιχνηλάτες
+welcome-step = Βήμα { $current } από { $total }
+welcome-next = Επόμενο
+welcome-skip = Παράλειψη
 welcome-start = Ξεκίνα
 welcome-how-it-works = Πώς ακριβώς λειτουργεί;
 
@@ -620,3 +625,49 @@ invitation-unreadable = Αυτή η πρόσκληση δεν μπορεί να 
 invitation-from = Από { $email }
 invitation-accept = Συμμετοχή
 invitation-decline = Απόρριψη
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Το όνομά σου σε αυτό το έργο
+participants-you-badge = Εσύ
+participants-you-from-account = Από το όνομα του λογαριασμού σου. Άλλαξέ το εδώ μόνο για αυτό το έργο.
+participants-you-required = Υποχρεωτικό. Έτσι θα σε βλέπουν οι άλλοι.
+participants-others = Άλλοι συμμετέχοντες
+participants-empty = Κανείς ακόμα. Διάλεξε έναν φίλο παρακάτω ή γράψε οποιοδήποτε όνομα.
+participants-empty-signed-out = Κανείς ακόμα. Γράψε ένα όνομα για να προσθέσεις κάποιον.
+participants-duplicate = Το «{ $name }» υπάρχει ήδη στη λίστα.
+participants-input-label = Πρόσθεσε φίλο ή γράψε όνομα
+participants-input-placeholder = Φίλος ή οποιοδήποτε όνομα
+participants-suggest-friend = Φίλος · μπαίνει ως «{ $name }», παίρνει πρόσκληση
+participants-suggest-not-ready = Φίλος · δεν είναι ακόμα έτοιμος
+participants-suggest-guest = Προσθήκη «{ $text }» χωρίς λογαριασμό
+participants-suggest-guest-sub = Χωρίς λογαριασμό, μόνο όνομα
+participants-friends = Οι φίλοι σου
+participants-all-friends = Όλοι οι φίλοι
+participants-login-hint = Συνδέσου για να προσθέτεις άτομα κατευθείαν από τη λίστα φίλων σου.
+participants-invite-badge = Πρόσκληση
+participants-guest-badge = Χωρίς λογαριασμό
+participants-guest-sub = Χωρίς λογαριασμό, μόνο όνομα
+participants-rename = Μετονομασία: { $name }
+participants-remove = Αφαίρεση: { $name }
+participants-rename-label = Νέο όνομα
+participants-rename-save = Αποθήκευση ονόματος
+participants-rename-hint = Το όνομα που βλέπουν όλοι σε αυτό το έργο. Η πρόσκληση πηγαίνει ακόμα στο { $email }.
+participants-invited-badge = Προσκλήθηκε
+participants-invited-sub = { $email } · δεν έγινε ακόμα αποδεκτή
+participants-invited-pending = Η πρόσκληση δεν έγινε ακόμα αποδεκτή
+participants-unlinked = Δεν συνδέεται με λογαριασμό
+add-project-create-invite = Δημιουργία και πρόσκληση: { $count }
+edit-project-save-invite = Αποθήκευση και πρόσκληση: { $count }
+edit-project-you-are = Σε αυτή τη συσκευή είσαι ο/η { $name }
+edit-project-no-identity = Δεν έχεις διαλέξει ακόμα ποιος είσαι
+edit-project-switch = Αλλαγή
+edit-project-choose = Επιλογή
+invite-failed = Δεν ήταν δυνατή η αποστολή αυτών των προσκλήσεων: { $emails }
+invite-again = Νέα πρόσκληση
+friend-picker-title = Προσθήκη φίλων
+user-selection-invited-hint = Ο/Η { $email } σε προσκάλεσε στο «{ $project }».
+user-selection-suggested = Προτείνεται
+user-selection-suggested-sub = Ο/Η { $email } σε πρόσθεσε με αυτό το όνομα
+user-selection-confirm-as = Είμαι ο/η { $name }
+user-selection-missing = Δεν βρίσκεις το όνομά σου; Ζήτα από έναν συμμετέχοντα να σε προσθέσει στις ρυθμίσεις του έργου.

@@ -31,8 +31,38 @@ const FONT_INTER_500: Asset = asset!("/assets/fonts/inter-500.woff2");
 const FONT_INTER_600: Asset = asset!("/assets/fonts/inter-600.woff2");
 const FONT_JAKARTA_600: Asset = asset!("/assets/fonts/jakarta-600.woff2");
 const FONT_JAKARTA_700: Asset = asset!("/assets/fonts/jakarta-700.woff2");
+const FONT_INTER_LATIN_EXT: Asset = asset!("/assets/fonts/inter-latin-ext.woff2");
+const FONT_INTER_GREEK: Asset = asset!("/assets/fonts/inter-greek.woff2");
+const FONT_INTER_CYRILLIC: Asset = asset!("/assets/fonts/inter-cyrillic.woff2");
+const FONT_JAKARTA_LATIN_EXT: Asset = asset!("/assets/fonts/jakarta-latin-ext.woff2");
+
+const LATIN_EXT: &str = "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF";
+const GREEK: &str = "U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF";
+const CYRILLIC: &str = "U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116";
 
 fn font_face_css() -> String {
+    let mut css = latin_font_face_css();
+    // The Latin files above carry no unicode-range, so these must come after them: faces with
+    // the same descriptors are tried last-declared first (CSS Fonts 4 §4.5), which sends only
+    // these ranges here and leaves every other character on the unchanged Latin files. Each
+    // subset is one variable file, declared once per weight the app uses.
+    let subsets = [
+        ("Inter", &[400, 500, 600][..], FONT_INTER_LATIN_EXT, LATIN_EXT),
+        ("Inter", &[400, 500, 600][..], FONT_INTER_GREEK, GREEK),
+        ("Inter", &[400, 500, 600][..], FONT_INTER_CYRILLIC, CYRILLIC),
+        ("Plus Jakarta Sans", &[600, 700][..], FONT_JAKARTA_LATIN_EXT, LATIN_EXT),
+    ];
+    for (family, weights, file, range) in subsets {
+        for weight in weights {
+            css.push_str(&format!(
+                "\n@font-face{{font-family:\"{family}\";font-style:normal;font-weight:{weight};font-display:swap;src:url(\"{file}\") format(\"woff2\");unicode-range:{range}}}"
+            ));
+        }
+    }
+    css
+}
+
+fn latin_font_face_css() -> String {
     const TEMPLATE: &str = r#"@font-face{font-family:"Inter";font-style:normal;font-weight:400;font-display:swap;src:url("$I4") format("woff2")}
 @font-face{font-family:"Inter";font-style:normal;font-weight:500;font-display:swap;src:url("$I5") format("woff2")}
 @font-face{font-family:"Inter";font-style:normal;font-weight:600;font-display:swap;src:url("$I6") format("woff2")}
@@ -573,12 +603,17 @@ fn share_text(text: &str) -> bool {
 /// asynchronously, so the JS would run outside the click's activation that WebKit gates `share()`
 /// on. On iPad the popover must have a source view or UIKit aborts.
 #[cfg(target_os = "ios")]
-#[allow(deprecated)]
 fn share_text(text: &str) -> bool {
     use objc2::rc::Retained;
-    use objc2::runtime::AnyObject;
+    use objc2_foundation::NSString;
+    present_share_sheet(Retained::into_super(Retained::into_super(NSString::from_str(text))))
+}
+
+#[cfg(target_os = "ios")]
+#[allow(deprecated)]
+fn present_share_sheet(item: objc2::rc::Retained<objc2::runtime::AnyObject>) -> bool {
     use objc2::{MainThreadMarker, MainThreadOnly};
-    use objc2_foundation::{NSArray, NSString};
+    use objc2_foundation::NSArray;
     use objc2_ui_kit::{UIActivityViewController, UIApplication};
 
     let Some(mtm) = MainThreadMarker::new() else {
@@ -590,7 +625,6 @@ fn share_text(text: &str) -> bool {
     else {
         return false;
     };
-    let item: Retained<AnyObject> = Retained::into_super(Retained::into_super(NSString::from_str(text)));
     let items = NSArray::from_retained_slice(&[item]);
     let vc = unsafe {
         UIActivityViewController::initWithActivityItems_applicationActivities(
@@ -604,6 +638,124 @@ fn share_text(text: &str) -> bool {
     }
     root.presentViewController_animated_completion(&vc, true, None);
     true
+}
+
+/// Writes an export where the share sheet can reach it, replacing the previous one. `filename` is
+/// reduced to its last component, so it can never climb out of `dir`.
+#[cfg(any(target_os = "android", target_os = "ios"))]
+fn write_export(dir: &std::path::Path, filename: &str, bytes: &[u8]) -> Result<std::path::PathBuf, String> {
+    let name = std::path::Path::new(filename).file_name().ok_or("empty file name")?;
+    let _ = std::fs::remove_dir_all(dir);
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    let path = dir.join(name);
+    std::fs::write(&path, bytes).map_err(|e| e.to_string())?;
+    Ok(path)
+}
+
+/// `MainActivity.openUri` (packages/mobile/android-kotlin/MainActivity.kt): `ACTION_SENDTO` for a
+/// `mailto:`, false when no app takes it.
+#[cfg(target_os = "android")]
+fn open_url(url: &str) -> bool {
+    fn inner(env: &mut jni::JNIEnv, url: &str) -> jni::errors::Result<bool> {
+        let ctx = ndk_context::android_context();
+        let activity = unsafe { jni::objects::JObject::from_raw(ctx.context().cast()) };
+        let url = env.new_string(url)?;
+        env.call_method(&activity, "openUri", "(Ljava/lang/String;)Z", &[(&url).into()])?.z()
+    }
+
+    let ctx = ndk_context::android_context();
+    let Ok(vm) = (unsafe { jni::JavaVM::from_raw(ctx.vm().cast()) }) else {
+        return false;
+    };
+    let Ok(mut env) = vm.attach_current_thread() else {
+        return false;
+    };
+    match inner(&mut env, url) {
+        Ok(opened) => opened,
+        Err(e) => {
+            let _ = env.exception_clear();
+            tracing::warn!("counted: openUri failed: {e}");
+            false
+        }
+    }
+}
+
+/// Under `getCacheDir()/exports/`, the one directory `res/xml/file_paths.xml` exposes for this,
+/// then `MainActivity.shareFile` builds the FileProvider URI and opens the chooser.
+#[cfg(target_os = "android")]
+fn share_file(filename: &str, bytes: &[u8], mime: &str) -> Result<(), String> {
+    fn cache_dir(env: &mut jni::JNIEnv) -> jni::errors::Result<String> {
+        let ctx = ndk_context::android_context();
+        let activity = unsafe { jni::objects::JObject::from_raw(ctx.context().cast()) };
+        let dir = env.call_method(&activity, "getCacheDir", "()Ljava/io/File;", &[])?.l()?;
+        let abs = env.call_method(&dir, "getAbsolutePath", "()Ljava/lang/String;", &[])?.l()?;
+        Ok(env.get_string(&jni::objects::JString::from(abs))?.into())
+    }
+    fn share(env: &mut jni::JNIEnv, path: &str, mime: &str) -> jni::errors::Result<()> {
+        let ctx = ndk_context::android_context();
+        let activity = unsafe { jni::objects::JObject::from_raw(ctx.context().cast()) };
+        let path = env.new_string(path)?;
+        let mime = env.new_string(mime)?;
+        env.call_method(
+            &activity,
+            "shareFile",
+            "(Ljava/lang/String;Ljava/lang/String;)V",
+            &[(&path).into(), (&mime).into()],
+        )?;
+        Ok(())
+    }
+
+    let ctx = ndk_context::android_context();
+    let vm = unsafe { jni::JavaVM::from_raw(ctx.vm().cast()) }.map_err(|e| e.to_string())?;
+    let mut env = vm.attach_current_thread().map_err(|e| e.to_string())?;
+    let result = cache_dir(&mut env).map_err(|e| e.to_string()).and_then(|cache| {
+        let path = write_export(&std::path::Path::new(&cache).join("exports"), filename, bytes)?;
+        share(&mut env, &path.to_string_lossy(), mime).map_err(|e| e.to_string())
+    });
+    if result.is_err() {
+        let _ = env.exception_clear();
+    }
+    result
+}
+
+/// `openURL:options:completionHandler:`, not `openURL:` — the iOS 18 SDK turns the deprecated one
+/// into a logged no-op that returns false.
+#[cfg(target_os = "ios")]
+fn open_url(url: &str) -> bool {
+    use objc2::MainThreadMarker;
+    use objc2_foundation::{NSDictionary, NSString, NSURL};
+    use objc2_ui_kit::UIApplication;
+
+    let Some(mtm) = MainThreadMarker::new() else {
+        return false;
+    };
+    let Some(url) = NSURL::URLWithString(&NSString::from_str(url)) else {
+        return false;
+    };
+    unsafe {
+        UIApplication::sharedApplication(mtm).openURL_options_completionHandler(
+            &url,
+            &NSDictionary::new(),
+            None,
+        );
+    }
+    true
+}
+
+/// A file URL in the share sheet: Save to Files, Mail, AirDrop. Under the app's tmp directory,
+/// which iOS may purge on its own.
+#[cfg(target_os = "ios")]
+fn share_file(filename: &str, bytes: &[u8], _mime: &str) -> Result<(), String> {
+    use objc2::rc::Retained;
+    use objc2_foundation::{NSString, NSURL};
+
+    let path = write_export(&std::env::temp_dir().join("exports"), filename, bytes)?;
+    let url = NSURL::fileURLWithPath(&NSString::from_str(&path.to_string_lossy()));
+    if present_share_sheet(Retained::into_super(Retained::into_super(url))) {
+        Ok(())
+    } else {
+        Err("no window to present the share sheet from".into())
+    }
 }
 
 /// Bridges `ocr::scan` to the shape `ui` asks for, and installs the platform's temp-file purge.
@@ -827,7 +979,11 @@ fn main() {
     ui::common::set_haptics_player(std::sync::Arc::new(play_haptic));
 
     #[cfg(any(target_os = "android", target_os = "ios"))]
-    ui::common::set_native_sharer(std::sync::Arc::new(share_text));
+    {
+        ui::common::set_native_sharer(std::sync::Arc::new(share_text));
+        ui::common::set_native_opener(std::sync::Arc::new(open_url));
+        ui::common::set_native_file_sharer(std::sync::Arc::new(share_file));
+    }
 
     // Same contract: installed before launch, so no call site can race an unset scanner. Every
     // other target leaves it unset and the Scan button does not render.

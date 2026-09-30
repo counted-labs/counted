@@ -53,6 +53,7 @@ error-email-not-verified = O teu endereço de e-mail ainda não foi verificado.
 error-claim-proof-invalid = Este dispositivo não tem a chave do projeto, por isso não pode reivindicar um participante. Abra novamente a ligação de partilha.
 error-project-not-found = Este projeto já não existe.
 error-expense-not-found = Esta despesa já não existe.
+error-storage-full = O armazenamento está cheio: não foi possível guardar a chave deste projeto neste dispositivo. Guarda a ligação de partilha.
 error-user-not-found = Este participante já não existe.
 error-tricount-not-found = Tricount não encontrado, ou a sua API devolveu um erro.
 error-too-many-members = Este projeto atingiu o limite de participantes.
@@ -227,13 +228,8 @@ add-project-name-placeholder = A minha viagem, Casa 2024…
 add-project-participants = Participantes
 add-project-participant-name = Nome do participante
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Remover participante
-add-project-me-badge = Eu
-add-project-thats-me = Sou eu!
 add-project-offline = Não podes criar um projeto offline. Liga-te novamente e tenta outra vez.
 add-project-name-required = O projeto precisa de um nome.
-add-project-need-two-participants = Adiciona pelo menos 2 participantes.
-add-project-pick-yourself = Indica qual dos participantes és tu.
 
 join-link-label = Ligação de partilha
 join-link-hint = A ligação contém a chave de desencriptação - copia-a por inteiro.
@@ -243,6 +239,7 @@ join-wrong-project = Essa ligação pertence a outro projeto.
 import-tricount-link-label = Ligação ou chave Tricount
 import-tricount-key-required = Introduz uma ligação ou chave Tricount.
 import-tricount-encryption-failed = Erro de encriptação.
+import-tricount-unimportable = Nada foi importado: este Tricount tem membros com conta Tricount ou montantes que não batem certo (entradas afetadas: { $count }).
 
 ### Expenses
 
@@ -310,11 +307,8 @@ user-selection-required = Seleciona um participante.
 
 edit-project-deferred-new-members = adicionar novos membros
 edit-project-deferred-removals = remover membros
-edit-project-deferred-me = a escolha «Sou eu»
 edit-project-offline-deferred = Offline: { $items } será aplicado quando voltares a ligar-te.
 
-export-saved = Ficheiro guardado:
-    { $path }
 export-failed = Falha na exportação: { $reason }
 
 history-expense-added = Despesa adicionada: { $name }
@@ -403,13 +397,24 @@ debtors-title-beneficiaries = Beneficiários
 
 welcome-title = As tuas contas só a ti dizem respeito.
 welcome-subtitle = Divide despesas entre amigos.
-welcome-e2ee-title = Dados totalmente cifrados
-welcome-e2ee-body = Nomes, valores, projetos: tudo é cifrado no teu dispositivo. Só tu tens a chave. Ninguém consegue ler as tuas contas. Nem mesmo nós.
-welcome-e2ee-note = Indecifrável, mesmo para nós (zero acesso do servidor)
+welcome-note = Grátis. Sem necessidade de conta. Sem publicidade.
+welcome-link-title = Um link, e todos participam.
+welcome-link-body = Ninguém precisa de criar uma conta.
+welcome-link-account = Uma conta? Nunca obrigatória. Serve para encontrares os teus projetos noutro dispositivo, convidares amigos a partir da app e partilhares os teus dados de pagamento.
+welcome-demo-project = Fim de semana em Lyon
+welcome-private-title = Ninguém consegue ler as tuas contas. Nem mesmo nós.
+welcome-private-body = Nomes, valores, projetos: tudo é cifrado no teu dispositivo. Só tu tens a chave.
+welcome-private-names = Nomes
+welcome-private-amounts = Valores
+welcome-private-projects = Projetos
+welcome-scan-title = Tira uma foto ao recibo.
+welcome-scan-body = O valor, a data e a categoria preenchem-se sozinhos. Tudo acontece no teu telemóvel. A foto não é guardada.
 welcome-eu-title = 100 % europeu
-welcome-eu-body = Servidores na Alemanha, e-mails enviados de França. Os teus dados nunca saem da União Europeia.
-welcome-noads-title = Zero publicidade. Zero rastreadores.
-welcome-noads-body = Não recolhemos nada nem vendemos os teus dados. Não é esse o nosso modelo.
+welcome-no-ads = Zero publicidade
+welcome-no-trackers = Zero rastreadores
+welcome-step = Passo { $current } de { $total }
+welcome-next = Seguinte
+welcome-skip = Saltar
 welcome-start = Começar
 welcome-how-it-works = Como funciona exatamente?
 
@@ -648,3 +653,49 @@ invitation-unreadable = Este convite não pode ser aberto neste dispositivo
 invitation-from = De { $email }
 invitation-accept = Entrar
 invitation-decline = Recusar
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = O teu nome neste projeto
+participants-you-badge = Tu
+participants-you-from-account = Vem do nome da tua conta. Altera-o aqui só para este projeto.
+participants-you-required = Obrigatório. É assim que os outros te vão ver.
+participants-others = Outros participantes
+participants-empty = Ainda ninguém. Escolhe um amigo abaixo ou escreve qualquer nome.
+participants-empty-signed-out = Ainda ninguém. Escreve um nome para adicionar alguém.
+participants-duplicate = «{ $name }» já está na lista.
+participants-input-label = Adicionar um amigo ou escrever um nome
+participants-input-placeholder = Um amigo ou qualquer nome
+participants-suggest-friend = Amigo · entra como «{ $name }», recebe um convite
+participants-suggest-not-ready = Amigo · ainda não está pronto
+participants-suggest-guest = Adicionar «{ $text }» sem conta
+participants-suggest-guest-sub = Sem conta, só um nome
+participants-friends = Os teus amigos
+participants-all-friends = Todos os amigos
+participants-login-hint = Inicia sessão para adicionar pessoas diretamente da tua lista de amigos.
+participants-invite-badge = Convidar
+participants-guest-badge = Sem conta
+participants-guest-sub = Sem conta, só um nome
+participants-rename = Mudar o nome de { $name }
+participants-remove = Remover { $name }
+participants-rename-label = Novo nome
+participants-rename-save = Guardar o nome
+participants-rename-hint = O nome que todos veem neste projeto. O convite continua a ir para { $email }.
+participants-invited-badge = Convidado
+participants-invited-sub = { $email } · ainda não aceite
+participants-invited-pending = Convite ainda não aceite
+participants-unlinked = Não ligado a nenhuma conta
+add-project-create-invite = Criar e convidar { $count }
+edit-project-save-invite = Guardar e convidar { $count }
+edit-project-you-are = Neste dispositivo és { $name }
+edit-project-no-identity = Ainda não escolheste quem és
+edit-project-switch = Mudar
+edit-project-choose = Escolher
+invite-failed = Não foi possível enviar estes convites: { $emails }
+invite-again = Convidar de novo
+friend-picker-title = Adicionar amigos
+user-selection-invited-hint = { $email } convidou-te para «{ $project }».
+user-selection-suggested = Sugerido
+user-selection-suggested-sub = { $email } adicionou-te com este nome
+user-selection-confirm-as = Sou { $name }
+user-selection-missing = O teu nome não está aqui? Pede a um participante que te adicione nas definições do projeto.

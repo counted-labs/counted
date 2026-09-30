@@ -55,6 +55,7 @@ error-unauthenticated = Connectez-vous pour effectuer cette action.
 error-email-not-verified = Votre adresse e-mail n'est pas encore vérifiée.
 error-project-not-found = Ce projet n'existe plus.
 error-expense-not-found = Cette dépense n'existe plus.
+error-storage-full = Le stockage est plein : la clé de ce projet n'a pas pu être enregistrée sur cet appareil. Conservez son lien de partage.
 error-user-not-found = Ce participant n'existe plus.
 error-tricount-not-found = Tricount introuvable ou erreur de son API.
 error-too-many-members = Ce projet a atteint sa limite de participants.
@@ -253,13 +254,8 @@ add-project-name-placeholder = Mon voyage, Coloc 2024…
 add-project-participants = Liste des utilisateurs
 add-project-participant-name = Nom du participant
 add-project-participant-placeholder = Clark Kent
-add-project-remove-participant = Retirer le participant
-add-project-me-badge = Moi
-add-project-thats-me = C'est moi !
 add-project-offline = Impossible de créer un projet hors ligne. Reconnectez-vous et réessayez.
 add-project-name-required = Le nom du projet est requis.
-add-project-need-two-participants = Ajoutez au moins 2 participants.
-add-project-pick-yourself = Indiquez quel participant vous êtes.
 
 join-link-label = Lien de partage
 join-link-hint = Le lien contient la clé de déchiffrement - copiez-le en entier.
@@ -269,6 +265,7 @@ join-wrong-project = Ce lien correspond à un autre projet.
 import-tricount-link-label = Lien ou clé Tricount
 import-tricount-key-required = Entrez un lien ou une clé Tricount.
 import-tricount-encryption-failed = Erreur de chiffrement.
+import-tricount-unimportable = Rien n'a été importé : ce Tricount contient des membres ayant un compte Tricount ou des montants qui ne tombent pas juste (entrées concernées : { $count }).
 
 ### Expenses
 
@@ -367,11 +364,8 @@ edit-project-title = Modifier le projet
 edit-project-new-badge = nouveau
 edit-project-deferred-new-members = l'ajout de nouveaux membres
 edit-project-deferred-removals = la suppression de membres
-edit-project-deferred-me = la sélection de « C'est moi »
 edit-project-offline-deferred = Hors ligne : { $items } sera appliqué à la reconnexion.
 
-export-saved = Fichier enregistré :
-    { $path }
 export-failed = Erreur d'export : { $reason }
 
 # Les entrées d'historique sont chiffrées et stockées : elles gardent la langue de leur auteur.
@@ -516,13 +510,24 @@ debtors-title-beneficiaries = Bénéficiaires
 
 welcome-title = Vos comptes ne regardent que vous.
 welcome-subtitle = Partagez vos dépenses entre amis.
-welcome-e2ee-title = Données entièrement chiffrées
-welcome-e2ee-body = Noms, montants, projets : tout est chiffré sur votre appareil. Vous seul avez la clé. Personne ne peut lire vos comptes. Pas même nous.
-welcome-e2ee-note = Indéchiffrable, même pour nous (Zéro accès serveur)
+welcome-note = Gratuit. Pas besoin de compte. Pas de pub.
+welcome-link-title = Un lien, et tout le monde participe.
+welcome-link-body = Aucun compte à créer, pour personne.
+welcome-link-account = Un compte ? Jamais obligatoire. Il sert à retrouver vos projets sur un autre appareil, inviter vos amis depuis l'app et partager vos coordonnées de paiement.
+welcome-demo-project = Week-end à Lyon
+welcome-private-title = Personne ne peut lire vos comptes. Pas même nous.
+welcome-private-body = Noms, montants, projets : tout est chiffré sur votre appareil. Vous seul avez la clé.
+welcome-private-names = Noms
+welcome-private-amounts = Montants
+welcome-private-projects = Projets
+welcome-scan-title = Prenez le ticket en photo.
+welcome-scan-body = Montant, date et catégorie se remplissent automatiquement. Tout se passe sur votre téléphone. La photo n'est pas conservée.
 welcome-eu-title = 100 % européen
-welcome-eu-body = Serveurs en Allemagne, emails envoyés depuis la France. Vos données ne quittent jamais l'Union européenne.
-welcome-noads-title = Zéro pub. Zéro traqueur.
-welcome-noads-body = Nous ne collectons rien, nous ne vendons pas vos données. Ce n'est pas notre modèle.
+welcome-no-ads = Zéro pub
+welcome-no-trackers = Zéro traqueur
+welcome-step = Étape { $current } sur { $total }
+welcome-next = Suivant
+welcome-skip = Passer
 welcome-start = Commencer
 welcome-how-it-works = Comment ça marche exactement ?
 
@@ -569,7 +574,7 @@ help-contact = Une autre question ? Écrivez-nous à
 
 ### Legal
 
-legal-updated = Dernière mise à jour : 27 septembre 2026
+legal-updated = Dernière mise à jour : 28 septembre 2026
 
 legal-publisher-title = 1. Éditeur du site
 legal-publisher-body = Counted (« le Service ») est édité à titre non professionnel par une personne physique, Jonathan Bosi.
@@ -650,13 +655,15 @@ privacy-collected-salt-def = utilisé pour générer votre clé de chiffrement c
 privacy-collected-content-term = Contenu chiffré des projets
 privacy-collected-content-def = (noms, dépenses, participants, montants). Ces données sont chiffrées sur votre appareil avant d'être envoyées au serveur, qui n'en stocke qu'une version inintelligible.
 privacy-collected-prefs-term = Vos préférences chiffrées
-privacy-collected-prefs-def = (langue de l'interface), pour les retrouver sur vos autres appareils. Chiffrées sur votre appareil avec la même clé que le reste : le serveur ne peut pas savoir quelle langue vous utilisez.
+privacy-collected-prefs-def = (langue de l'interface), pour les retrouver sur vos autres appareils. Chiffrées sur votre appareil avec la même clé que le reste : le serveur ne peut pas les lire.
 privacy-collected-keys-term = Vos clés de projet, scellées
 privacy-collected-keys-def = pour qu'une connexion depuis un nouvel appareil vous rende des projets réellement lisibles, et non une liste que vous ne pouvez pas ouvrir. Chacune est chiffrée sur votre appareil avec la clé dérivée de votre mot de passe ; le serveur les conserve sans pouvoir les desceller. La contrepartie est réelle et nous préférons l'énoncer : quelqu'un qui détiendrait à la fois notre base et votre mot de passe atteindrait vos projets. C'est pourquoi le mot de passe n'est jamais transmis ni stocké : ce que nous recevons à la connexion est une preuve distincte dont il ne peut être retrouvé, et nous n'en gardons qu'une empreinte.
 privacy-collected-invite-term = Empreinte de l'email d'un participant invité
 privacy-collected-invite-def = (SHA-256), lorsque vous invitez quelqu'un par email. Elle sert uniquement à rattacher l'invitation à son compte s'il en crée un, et disparaît avec le participant.
 privacy-collected-friends-term = Vos amis
-privacy-collected-friends-def = si vous utilisez la liste d'amis : avec quels comptes vous êtes amis, une empreinte (SHA-256) d'une adresse à qui vous avez envoyé une demande avant qu'elle n'ait de compte, et quel ami vous avez invité dans quel projet. Le nom que vous donnez à une demande et la clé de projet qu'une invitation transporte sont chiffrés sur votre appareil - la clé avec la clé publique de votre ami, que nous stockons en clair car elle est publique par nature - et le serveur ne peut lire ni l'un ni l'autre.
+privacy-collected-friends-def = si vous utilisez la liste d'amis : avec quels comptes vous êtes amis, une empreinte (SHA-256) d'une adresse à qui vous avez envoyé une demande avant qu'elle n'ait de compte, et quel ami vous avez invité dans quel projet, et en tant que quel participant. Le nom que vous donnez à une demande et la clé de projet qu'une invitation transporte sont chiffrés sur votre appareil - la clé avec la clé publique de votre ami, que nous stockons en clair car elle est publique par nature - et le serveur ne peut lire ni l'un ni l'autre.
+privacy-collected-push-term = Jeton de notification
+privacy-collected-push-def = si vous autorisez les notifications dans l'application mobile : l'adresse que le service de notification de votre téléphone lui attribue (sur Android, avec deux clés publiques de chiffrement), rattachée à votre compte, ainsi que la langue de votre téléphone pour rédiger la notification dans cette langue. Supprimé à la déconnexion, lorsque le service de notification le signale comme invalide, et avec votre compte.
 privacy-collected-logs-term = Journaux techniques
 privacy-collected-logs-def = (adresse IP, user-agent, horodatage) conservés pour la sécurité et la prévention des abus.
 privacy-purposes-title = 3. Finalités
@@ -664,6 +671,7 @@ privacy-purpose-1 = Authentifier vos sessions et protéger votre compte.
 privacy-purpose-2 = Synchroniser vos projets entre vos appareils.
 privacy-purpose-3 = Vous envoyer un email de vérification lors de l'inscription.
 privacy-purpose-4 = Détecter et prévenir les abus (bruteforce, scraping).
+privacy-purpose-5 = Si vous avez autorisé les notifications, prévenir votre téléphone d'une demande d'ami ou de son acceptation, d'une invitation à un projet ou de la clôture d'un projet.
 privacy-legal-basis-title = 4. Base légale
 privacy-legal-basis-body = Le traitement repose sur l'exécution du contrat qui nous lie (création et fourniture du service) et sur notre intérêt légitime à sécuriser la plateforme.
 privacy-e2ee-title = 5. Chiffrement de bout en bout
@@ -678,7 +686,10 @@ privacy-processor-hetzner = (Allemagne, UE) - hébergement des serveurs et de la
 privacy-processor-scaleway = (France, UE) - envoi des emails transactionnels (vérification d'email).
 privacy-processor-tricount = - contacté uniquement si vous déclenchez vous-même un import depuis Tricount, afin de récupérer le projet que vous souhaitez importer.
 privacy-processor-grafana = (région UE) - supervision technique du serveur. Seules des métriques d'infrastructure (processeur, mémoire, disque, état des services) et des totaux d'usage quotidiens (nombre de comptes, de projets, d'adhésions et d'inscriptions, et le nombre d'inscriptions et de connexions effectuées dans chaque langue d'interface) y sont envoyés : ni contenu, ni identifiant, ni adresse IP de visiteur.
-privacy-no-transfer-outside-eu = Aucune donnée personnelle n'est transférée hors de l'Union européenne.
+privacy-processor-apple = (Apple Push Notification service) - uniquement si vous autorisez les notifications sur iPhone : reçoit le jeton de votre téléphone et une phrase générique comme « Nouvelle demande d'ami », jamais un nom, un montant ou un projet.
+privacy-processor-android-push-term = Le service de notification de votre téléphone Android
+privacy-processor-android-push-def = (Google Firebase Cloud Messaging sur la plupart des téléphones, ou le distributeur UnifiedPush que vous avez installé) - uniquement si vous autorisez les notifications sur Android : reçoit un message chiffré pour votre seul téléphone et complété à une taille fixe, si bien qu'il ne peut même pas savoir de quel type de notification il s'agit.
+privacy-no-transfer-outside-eu = Ces deux services de notification peuvent traiter des données hors de l'Union européenne. En dehors d'eux, aucune donnée personnelle n'est transférée hors de l'Union européenne.
 privacy-retention-title = 7. Durée de conservation
 privacy-retention-a = Vos données sont conservées tant que votre compte est actif. La suppression du compte entraîne une suppression
 privacy-retention-em = immédiate et définitive
@@ -791,3 +802,49 @@ invitation-unreadable = Cette invitation ne peut pas être ouverte sur cet appar
 invitation-from = De { $email }
 invitation-accept = Rejoindre
 invitation-decline = Refuser
+
+# Participants in the create and edit modals, and the "who are you?" picker - see
+# docs/plans/friends.md §11.
+participants-you-label = Votre nom dans ce projet
+participants-you-badge = Vous
+participants-you-from-account = Rempli avec le nom de votre compte. Modifiez-le ici pour ce projet uniquement.
+participants-you-required = Obligatoire. C’est ainsi que les autres vous verront.
+participants-others = Autres participants
+participants-empty = Personne pour l’instant. Choisissez un ami ci-dessous ou tapez un nom.
+participants-empty-signed-out = Personne pour l’instant. Tapez un nom pour ajouter quelqu’un.
+participants-duplicate = « { $name } » est déjà dans la liste.
+participants-input-label = Ajouter un ami ou taper un nom
+participants-input-placeholder = Un ami ou n’importe quel nom
+participants-suggest-friend = Ami · rejoint le projet en tant que « { $name } », reçoit une invitation
+participants-suggest-not-ready = Ami · pas encore prêt
+participants-suggest-guest = Ajouter « { $text } » sans compte
+participants-suggest-guest-sub = Pas de compte, juste un nom
+participants-friends = Vos amis
+participants-all-friends = Tous les amis
+participants-login-hint = Connectez-vous pour ajouter des personnes directement depuis votre liste d’amis.
+participants-invite-badge = À inviter
+participants-guest-badge = Sans compte
+participants-guest-sub = Pas de compte, juste un nom
+participants-rename = Renommer { $name }
+participants-remove = Retirer { $name }
+participants-rename-label = Nouveau nom
+participants-rename-save = Enregistrer le nom
+participants-rename-hint = Le nom que tout le monde voit dans ce projet. L’invitation part toujours vers { $email }.
+participants-invited-badge = Invité
+participants-invited-sub = { $email } · pas encore acceptée
+participants-invited-pending = Invitation pas encore acceptée
+participants-unlinked = Non lié à un compte
+add-project-create-invite = Créer et inviter { $count }
+edit-project-save-invite = Enregistrer et inviter { $count }
+edit-project-you-are = Sur cet appareil, vous êtes { $name }
+edit-project-no-identity = Vous n’avez pas encore indiqué qui vous êtes
+edit-project-switch = Changer
+edit-project-choose = Choisir
+invite-failed = Ces invitations n’ont pas pu être envoyées : { $emails }
+invite-again = Inviter à nouveau
+friend-picker-title = Ajouter des amis
+user-selection-invited-hint = { $email } vous a invité dans « { $project } ».
+user-selection-suggested = Suggéré
+user-selection-suggested-sub = { $email } vous a ajouté sous ce nom
+user-selection-confirm-as = Je suis { $name }
+user-selection-missing = Votre nom n’y est pas ? Demandez à un participant de vous ajouter dans les paramètres du projet.
