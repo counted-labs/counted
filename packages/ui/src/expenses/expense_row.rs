@@ -16,7 +16,7 @@ use dioxus::prelude::*;
 use crate::tid;
 
 use crate::common::{haptic, Avatar, Haptic, SizeClass};
-use crate::icons::{PencilIcon, TrashIcon, ICON_ACTION};
+use crate::icons::{PencilIcon, RepeatIcon, TrashIcon, ICON_ACTION};
 
 /// How far the finger must travel before a release commits the action.
 const SWIPE_THRESHOLD: f64 = 72.0;
@@ -117,6 +117,10 @@ pub struct ExpenseRowProps {
     /// "Mes dettes" filter only: this user's share, shown under the total. Every other call site
     /// omits it.
     pub my_debt: Option<f64>,
+    #[props(default)]
+    pub recurring: bool,
+    #[props(default)]
+    pub estimate: bool,
     pub can_edit: bool,
     pub can_delete: bool,
     /// A tap or Enter/Space — navigation is the parent's job, so this row needs no router.
@@ -285,7 +289,12 @@ pub fn ExpenseRow(props: ExpenseRowProps) -> Element {
                     size: SizeClass::W10,
                 }
                 div { class: "flex-1 min-w-0",
-                    p { class: "font-medium truncate", "{props.name}" }
+                    p { class: "font-medium flex items-center gap-1.5 min-w-0",
+                        span { class: "truncate", "{props.name}" }
+                        if props.recurring {
+                            span { class: "shrink-0 text-primary", title: tid!("occurrence-recurring"), aria_label: tid!("occurrence-recurring"), RepeatIcon { size: 14 } }
+                        }
+                    }
                     p { class: "text-xs text-base-content/70", "{props.subtitle}" }
                 }
                 div { class: "shrink-0 flex items-center gap-2",
@@ -300,6 +309,9 @@ pub fn ExpenseRow(props: ExpenseRowProps) -> Element {
                     // A flex *item*, so `items-center` above centres the badge against the whole
                     // of it — one line or two.
                     div { class: "flex flex-col items-end leading-tight",
+                        if props.estimate {
+                            span { class: "badge badge-warning badge-soft badge-xs mb-0.5", {tid!("estimate-badge")} }
+                        }
                         p { class: "text-sm font-semibold", "{props.amount:.2} {props.currency}" }
                         if let Some((source_amount, source_currency)) = props.source.clone() {
                             p { class: "text-xs text-base-content/60", "{source_amount:.2} {source_currency}" }

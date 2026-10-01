@@ -5,8 +5,8 @@ use std::collections::VecDeque;
 use uuid::Uuid;
 
 use crate::common::{
-    format_date_str, initials, pending, read_from_ls, user_color_class, AppHeader, Avatar,
-    ConfirmModal, DropdownButton, DropdownItem, Flash, ProjectKey, PullToRefresh, QueuedOp,
+    format_date, format_date_str, initials, pending, read_from_ls, user_color_class, AppHeader,
+    Avatar, DropdownButton, DropdownItem, Flash, ProjectKey, PullToRefresh, QueuedOp,
 };
 use crate::decrypted::DecryptedPayment;
 use crate::expenses::helpers::delete_expense_action::{
@@ -16,6 +16,11 @@ use crate::expenses::helpers::expenses_page_helpers::sync_error;
 use crate::expenses::hooks::use_project_store::ProjectStore;
 use crate::expenses::tabs::expenses_tab::ExpenseMutation;
 use crate::expenses::EditExpenseModal;
+use crate::icons::{RepeatIcon, ICON_INLINE};
+use crate::recurring::actions::stop_rule;
+use crate::recurring::dialog::DeleteExpenseDialog;
+use crate::recurring::store::live_rule_of;
+use crate::recurring::view::next_date;
 use crate::route::Route;
 
 /// Translation keys, not labels — the render site translates.
@@ -131,6 +136,13 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                             // Two clones: one the message formats, one the confirm closure owns.
                             let confirm_name = exp_name.clone();
                             let delete_name = exp_name.clone();
+                            let rules = store.recurring_for(project_id);
+                            let origin_next: Option<Option<chrono::NaiveDate>> = expense
+                                .recurring_id
+                                .and_then(|id| rules.as_ref()?.rule(id))
+                                .map(|r| next_date(&r.payload));
+                            let live_rule = live_rule_of(&d, expense_id, rules.as_ref());
+                            let expense_date = expense.date.clone();
                             rsx! {
                                 AppHeader {
                                     title: "{exp_name}",
@@ -174,6 +186,49 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                             rate: format!("{rate}"),
                                             to: currency.clone()
                                         )}
+                                    }
+                                }
+
+                                if expense.estimate {
+                                    div { id: "estimate-alert", role: "alert", class: "alert alert-warning alert-soft text-sm items-start",
+                                        div { class: "flex flex-col gap-2",
+                                            span {
+                                                span { class: "font-semibold", {tid!("estimate-title")} }
+                                                " "
+                                                {tid!("estimate-body")}
+                                            }
+                                            if can_edit {
+                                                button {
+                                                    id: "estimate-confirm",
+                                                    r#type: "button",
+                                                    class: "btn btn-sm btn-secondary self-start",
+                                                    onclick: move |_| show_edit.set(true),
+                                                    {tid!("estimate-confirm")}
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if let Some(rule_id) = expense.recurring_id {
+                                    div { id: "occurrence-origin", class: "alert alert-soft text-sm items-start bg-primary/10 border-0",
+                                        RepeatIcon { size: ICON_INLINE }
+                                        div { class: "flex flex-col gap-1 min-w-0",
+                                            match origin_next {
+                                                Some(Some(date)) => rsx! { span { {tid!("occurrence-auto-next", date: format_date(date))} } },
+                                                Some(None) => rsx! { span { {tid!("occurrence-auto")} } },
+                                                None => rsx! { span { {tid!("occurrence-auto-stopped")} } },
+                                            }
+                                            if origin_next.is_some() {
+                                                button {
+                                                    id: "occurrence-manage",
+                                                    r#type: "button",
+                                                    class: "link link-primary font-semibold self-start text-sm",
+                                                    onclick: move |_| { nav.push(Route::RecurringRulePage { project_id, rule_id }); },
+                                                    {tid!("occurrence-manage")}
+                                                }
+                                            }
+                                        }
                                     }
                                 }
 
@@ -239,13 +294,19 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                 // A delete cascades to the payments and there is no undo, so it is
                                 // confirmed here exactly as it is behind the list's swipe shortcut.
                                 if show_delete_confirm() {
-                                    ConfirmModal {
-                                        title: tid!("expense-delete-title"),
-                                        message: tid!("expense-delete-message", name: confirm_name.clone()),
-                                        confirm_label: tid!("delete"),
+                                    DeleteExpenseDialog {
+                                        name: confirm_name.clone(),
+                                        date: expense_date.clone(),
+                                        occurrence: live_rule.is_some(),
                                         on_cancel: move |_| show_delete_confirm.set(false),
-                                        on_confirm: move |_| {
+                                        on_delete: move |stop: bool| {
                                             show_delete_confirm.set(false);
+                                            if let Some(rule) = live_rule.as_ref().filter(|_| stop) {
+                                                stop_rule(k, project_id, rule, stored_user_id, flash, move || {
+                                                    let mut sync = store.sync;
+                                                    sync.restart();
+                                                });
+                                            }
                                             let name = delete_name.clone();
                                             let req = delete_expense_request(
                                                 &k,

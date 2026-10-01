@@ -19,6 +19,7 @@ use crate::friends::friends_service::{invite_each, my_private_key, Invitee};
 use crate::icons::{CloseIcon, LockIcon, ICON_HEADER, ICON_INLINE};
 use crate::participants::participants_service::{invite_count, same_name, DraftParticipant};
 use crate::participants::{use_friend_list, Avatar, ParticipantsEditor};
+use crate::expenses::hooks::use_project_store::ProjectStore;
 
 #[derive(PartialEq, Props, Clone)]
 pub struct EditProjectModalProps {
@@ -76,6 +77,10 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
 
     let original_user_ids: Vec<i32> = props.users.iter().map(|u| u.id).collect();
+    let rules = use_context::<ProjectStore>()
+        .recurring_for(project_id)
+        .map(|r| r.rules)
+        .unwrap_or_default();
 
     // The caller's own pending invitations naming a participant: those rows read "Invited".
     let sent = use_resource(move || {
@@ -129,6 +134,20 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
         let current_new = drafts();
         let orig_ids = original_user_ids.clone();
         let currency = initial_currency.clone();
+
+        let kept: HashSet<i32> = current_existing.iter().map(|u| u.id).collect();
+        for uid in orig_ids.iter().filter(|id| !kept.contains(id)) {
+            let blocking: Vec<String> = rules
+                .iter()
+                .filter(|r| r.payload.template.involves(*uid))
+                .map(|r| r.payload.template.name.clone())
+                .collect();
+            if !blocking.is_empty() {
+                let who = initial_users.iter().find(|u| u.id == *uid).map(|u| u.name.clone()).unwrap_or_default();
+                error_msg.set(Some(tid!("recurring-blocks-removal", name: who, rules: blocking.join(", "))));
+                return;
+            }
+        }
 
         let actor_user_id = ls_ctx()
             .projects
@@ -382,13 +401,13 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                         div { class: "flex items-center gap-2.5 min-h-13 border border-base-200 rounded-box pl-3 pr-1.5 py-1",
                             match me.clone() {
                                 Some(u) => rsx! {
-                                    span { class: "w-9 h-9 rounded-full bg-neutral text-neutral-content flex items-center justify-center text-sm font-semibold flex-shrink-0", aria_hidden: "true",
+                                    span { class: "w-9 h-9 rounded-full bg-secondary text-secondary-content flex items-center justify-center text-sm font-semibold flex-shrink-0", aria_hidden: "true",
                                         {crate::participants::participants_service::initial(&u.name)}
                                     }
                                     span { class: "flex flex-col min-w-0 flex-1 gap-0.5",
                                         span { class: "flex items-center gap-1.5 min-w-0",
                                             span { class: "font-semibold truncate", "{u.name}" }
-                                            span { class: "badge badge-neutral badge-sm", {tid!("participants-you-badge")} }
+                                            span { class: "badge badge-secondary badge-sm", {tid!("participants-you-badge")} }
                                         }
                                         span { class: "text-sm text-base-content/70 leading-snug", {tid!("edit-project-you-are", name: u.name.clone())} }
                                     }

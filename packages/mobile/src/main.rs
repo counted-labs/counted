@@ -13,11 +13,15 @@ mod push;
 
 /// Where `UpdateRequiredScreen` sends the user. `webbrowser` — what an anchor click in the WebView
 /// goes through — only opens http(s), so the link is the store's web page, which hands off to the
-/// store app.
+/// store app. The F-Droid build overrides it at compile time (`android-apk-unsigned` in
+/// packages/mobile/android.mk), since its users have no Play Store to update from.
 #[cfg(target_os = "ios")]
 const STORE_URL: &str = "https://apps.apple.com/app/id6772807915";
 #[cfg(not(target_os = "ios"))]
-const STORE_URL: &str = "https://play.google.com/store/apps/details?id=fr.counted.app";
+const STORE_URL: &str = match option_env!("COUNTED_STORE_URL") {
+    Some(url) => url,
+    None => "https://play.google.com/store/apps/details?id=fr.counted.app",
+};
 
 const FAVICON: Asset = asset!("/assets/counted.ico");
 const LOGO: Asset = asset!("/assets/counted.png");

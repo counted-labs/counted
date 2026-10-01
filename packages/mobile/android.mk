@@ -231,7 +231,10 @@ android-fdroid-apk:
 android-apk-unsigned:
 	@echo "$(VERSION_CODE)" | grep -qE '^[0-9]+$$' || { echo "ERROR: VERSION_CODE must be an integer — pass VERSION_CODE=<n>"; exit 1; }
 	rm -rf $(ANDROID_BUILD_DIR)/dx/mobile/release/android/
-	CARGO_TARGET_DIR=$(ANDROID_BUILD_DIR) dx bundle --platform android --package mobile --release --target aarch64-linux-android
+	@# NO_DOWNLOADS: an F-Droid build must not fetch tools. dx takes any it needs from PATH or fails.
+	@# COUNTED_STORE_URL: the update-required screen links here instead of the Play Store.
+	CARGO_TARGET_DIR=$(ANDROID_BUILD_DIR) NO_DOWNLOADS=1 COUNTED_STORE_URL=https://f-droid.org/packages/fr.counted.app/ \
+		dx bundle --platform android --package mobile --release --target aarch64-linux-android
 	sed -i 's|<string name="app_name">Mobile</string>|<string name="app_name">Counted</string>|' \
 		$(ANDROID_BUILD_DIR)/dx/mobile/release/android/app/app/src/main/res/values/strings.xml
 	find $(ANDROID_BUILD_DIR)/dx/mobile/release/android/app/app/src/main/res \

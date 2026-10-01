@@ -285,7 +285,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                     div { class: "flex flex-col gap-1.5",
                         label { class: "text-xs font-semibold text-base-content/70", r#for: "add-project-me", {tid!("participants-you-label")} }
                         label { class: "input w-full",
-                            span { class: "w-7 h-7 rounded-full bg-neutral text-neutral-content flex items-center justify-center text-xs font-semibold flex-shrink-0", aria_hidden: "true",
+                            span { class: "w-7 h-7 rounded-full bg-secondary text-secondary-content flex items-center justify-center text-xs font-semibold flex-shrink-0", aria_hidden: "true",
                                 {crate::participants::participants_service::initial(&me_name())}
                             }
                             input {
@@ -302,7 +302,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                                     me_name.set(e.value());
                                 },
                             }
-                            span { class: "badge badge-neutral badge-sm", {tid!("participants-you-badge")} }
+                            span { class: "badge badge-secondary badge-sm", {tid!("participants-you-badge")} }
                         }
                         p { class: "text-xs text-base-content/70",
                             if friend_list.signed_in && account_name.is_some() {

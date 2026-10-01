@@ -215,7 +215,7 @@ pub fn ParticipantsEditor(props: ParticipantsEditorProps) -> Element {
             button {
                 id: "{prefix}-user-add",
                 r#type: "button",
-                class: "btn btn-neutral",
+                class: "btn btn-secondary",
                 onclick: move |_| add_for_button(Pick::Guest(query())),
                 {tid!("add")}
             }

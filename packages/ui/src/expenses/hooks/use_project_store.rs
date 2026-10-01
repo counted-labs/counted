@@ -21,6 +21,8 @@ use crate::expenses::helpers::expenses_page_helpers::{
 };
 use crate::expenses::helpers::project_data::{self, LiveData, ProjectData};
 use crate::expenses::tabs::expenses_tab::{apply_mutation, ExpenseMutation};
+use crate::recurring::materializer::use_recurring_materializer;
+use crate::recurring::store::{self as recurring_store, RecurringData, RecurringSnapshot};
 use crate::route::{project_id_of, Route};
 
 /// The URL fragment, web only — no other target has one.
@@ -51,6 +53,8 @@ pub struct ProjectStore {
     /// Only a retry changes it — see [`Outcome::Unusable`].
     pub unusable: Signal<bool>,
     pub on_expenses_changed: Callback<ExpenseMutation>,
+    /// The project's recurring rules, decrypted. Same caveat as `data`: check the project id.
+    pub recurring: Memo<RecurringData>,
 }
 
 impl ProjectStore {
@@ -58,6 +62,11 @@ impl ProjectStore {
     pub fn data_for(&self, project_id: Uuid) -> Option<Arc<ProjectData>> {
         let d = self.data.read().clone();
         (d.project_id == Some(project_id)).then_some(d)
+    }
+
+    pub fn recurring_for(&self, project_id: Uuid) -> Option<RecurringData> {
+        let r = self.recurring.read().clone();
+        (r.project_id == Some(project_id)).then_some(r)
     }
 }
 
@@ -76,6 +85,7 @@ pub fn use_project_store() -> ProjectStore {
     let mut key_missing = use_signal(|| false);
     let mut unusable = use_signal(|| false);
     let mut live: Signal<Option<LiveData>> = use_signal(|| None);
+    let mut recurring: Signal<Option<RecurringSnapshot>> = use_signal(|| None);
     let mut force_full_sync = use_signal(|| false);
 
     // The project the store is following. It never falls back to `None`: leaving a project for the
@@ -172,14 +182,31 @@ pub fn use_project_store() -> ProjectStore {
         // Every resource read stays in this block so the guards drop before anything below touches
         // a signal: one held across `sync.restart()` is a borrow conflict, across `ls_ctx.set()` a
         // re-entrancy panic.
-        let outcome = {
+        let (outcome, fresh_rules) = {
             let guard = sync.read();
             // `read_from_ls()`, not `ls_ctx()`: the effect below writes `ls_ctx`, and reading it
             // here would make that a self-trigger.
             let state = read_from_ls();
             let cached = state.projects.iter().find(|p| p.project_id == id);
-            decide(guard.as_ref().and_then(|r| r.as_ref()), cached, id)
+            let resolved = guard.as_ref().and_then(|r| r.as_ref());
+            let fresh_rules = resolved
+                .and_then(|r| r.as_ref().ok())
+                .filter(|(for_id, _)| *for_id == id)
+                .map(|(_, s)| RecurringSnapshot {
+                    project_id: id,
+                    rules: s.recurring.clone().unwrap_or_default(),
+                    server_date: s.server_date,
+                });
+            (decide(resolved, cached, id), fresh_rules)
         };
+
+        match fresh_rules {
+            Some(next) if recurring.peek().as_ref() != Some(&next) => recurring.set(Some(next)),
+            None if recurring.peek().as_ref().is_some_and(|r| r.project_id != id) => {
+                recurring.set(None)
+            }
+            _ => {}
+        }
 
         // Guarded like every other set here: an unguarded one notifies on an equal value and
         // re-renders the page on every resolution.
@@ -264,10 +291,21 @@ pub fn use_project_store() -> ProjectStore {
     // effect writes it) and pays for a second full decrypt.
     let data: Memo<Arc<ProjectData>> =
         use_memo(move || Arc::new(project_data::build(key_ctx(), live.read().as_ref())));
+    let recurring_data: Memo<RecurringData> =
+        use_memo(move || recurring_store::build(key_ctx(), recurring.read().as_ref()));
 
     use_revalidation(sync, is_online);
+    use_recurring_materializer(recurring_data, data, key_ctx, is_online, ls_ctx, sync, flash_ctx);
 
-    ProjectStore { sync, live, data, key_missing, unusable, on_expenses_changed }
+    ProjectStore {
+        sync,
+        live,
+        data,
+        key_missing,
+        unusable,
+        on_expenses_changed,
+        recurring: recurring_data,
+    }
 }
 
 /// Refetch on the two events that can have changed the project behind our back: the network coming

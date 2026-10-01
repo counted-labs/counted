@@ -12,6 +12,8 @@ use super::participants_fieldset::ParticipantsFieldset;
 use crate::categories::{category_label, infer_chart_category, parent_emoji, CHART_CATEGORIES as CATEGORIES};
 use crate::common::{format_month_str, haptic, Haptic};
 use crate::icons::{CloseIcon, ICON_HEADER};
+use crate::recurring::repeat_picker::RepeatRow;
+use crate::recurring::view::Repeat;
 
 /// The three type options, as (wire value, translation key).
 const TYPES: [(&str, &str); 3] = [
@@ -116,6 +118,25 @@ pub struct ExpenseFormProps {
     /// total came from the fallback rather than a keyword anchor — the one place a low-confidence
     /// read is surfaced.
     pub amount_hint: Option<&'static str>,
+    /// The Repeat row, shown only when set.
+    #[props(default)]
+    pub repeat: Option<RepeatSlot>,
+    /// False for a recurring rule, whose date is its next occurrence rather than today or yesterday.
+    #[props(default = true)]
+    pub date_chips: bool,
+    #[props(default)]
+    pub banner: Option<String>,
+    /// On an occurrence of a rule: whether saving also changes the next ones, and the hint naming
+    /// the date that change applies from.
+    #[props(default)]
+    pub apply_to_next: Option<(Signal<bool>, String)>,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub struct RepeatSlot {
+    pub value: Signal<Option<Repeat>>,
+    pub today: chrono::NaiveDate,
+    pub backfill: bool,
 }
 
 #[component]
@@ -134,6 +155,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
     let mut expense_currency = props.expense_currency;
     let mut source_amount = props.source_amount;
     let mut rate_input = props.rate_input;
+    let is_online = try_use_context::<Signal<bool>>();
 
     let project_currency = props.currency.clone();
     let foreign = expense_currency() != project_currency;
@@ -270,6 +292,10 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                     div { id: "expense-form-error", role: "alert", class: "alert alert-error text-sm mx-5 mb-2", "{err}" }
                 }
 
+                    if let Some(banner) = props.banner.clone() {
+                        div { id: "expense-form-banner", class: "alert alert-info alert-soft text-sm py-2 mx-5 mb-2", "{banner}" }
+                    }
+
                     if let Some(hint) = props.amount_hint {
                         div {
                             id: "amount-hint",
@@ -379,18 +405,22 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                     // both used to cost opening the native calendar. The field itself stays — it is
                     // the third chip, visible rather than hidden behind the other two.
                     div { class: "flex items-center gap-2 px-5 py-2 border-b border-base-200",
-                        label { class: "sr-only", r#for: "expense-date", {tid!("field-date")} }
-                        button {
-                            r#type: "button",
-                            class: if date_str() == today_iso() { "btn btn-sm btn-neutral" } else { "btn btn-sm btn-outline" },
-                            onclick: move |_| date_str.set(today_iso()),
-                            {tid!("date-today")}
-                        }
-                        button {
-                            r#type: "button",
-                            class: if date_str() == yesterday_iso() { "btn btn-sm btn-neutral" } else { "btn btn-sm btn-outline" },
-                            onclick: move |_| date_str.set(yesterday_iso()),
-                            {tid!("date-yesterday")}
+                        if props.date_chips {
+                            label { class: "sr-only", r#for: "expense-date", {tid!("field-date")} }
+                            button {
+                                r#type: "button",
+                                class: if date_str() == today_iso() { "btn btn-sm btn-secondary" } else { "btn btn-sm btn-outline" },
+                                onclick: move |_| date_str.set(today_iso()),
+                                {tid!("date-today")}
+                            }
+                            button {
+                                r#type: "button",
+                                class: if date_str() == yesterday_iso() { "btn btn-sm btn-secondary" } else { "btn btn-sm btn-outline" },
+                                onclick: move |_| date_str.set(yesterday_iso()),
+                                {tid!("date-yesterday")}
+                            }
+                        } else {
+                            label { class: "text-sm text-base-content/70", r#for: "expense-date", {tid!("recurring-next-on-label")} }
                         }
                         input {
                             id: "expense-date",
@@ -398,6 +428,17 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                             r#type: "date",
                             value: "{date_str}",
                             oninput: move |e| date_str.set(e.value()),
+                        }
+                    }
+
+                    if let Some(slot) = props.repeat {
+                        RepeatRow {
+                            repeat: slot.value,
+                            date_str,
+                            online: is_online.map(|s| s()).unwrap_or(true),
+                            today: slot.today,
+                            foreign: foreign.then(|| (total_amount(), props.currency.clone())),
+                            backfill: slot.backfill,
                         }
                     }
 
@@ -490,6 +531,37 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                                 total: total_amount,
                                 entries: debtors,
                                 share_mode: debtors_share_mode,
+                            }
+                        }
+                    }
+
+                    if let Some((mut apply_next, hint)) = props.apply_to_next.clone() {
+                        fieldset { id: "apply-to", class: "flex flex-col gap-1 px-5 pt-4",
+                            legend { class: "text-xs font-bold uppercase tracking-wide text-base-content/70 pb-1", {tid!("apply-to")} }
+                            label { class: "flex items-center gap-3 py-1 cursor-pointer",
+                                input {
+                                    id: "apply-this-only",
+                                    r#type: "radio",
+                                    name: "apply-to",
+                                    class: "radio radio-primary radio-sm",
+                                    checked: !apply_next(),
+                                    onchange: move |_| apply_next.set(false),
+                                }
+                                span { class: "text-sm", {tid!("apply-this-only")} }
+                            }
+                            label { class: "flex items-center gap-3 py-1 cursor-pointer",
+                                input {
+                                    id: "apply-and-next",
+                                    r#type: "radio",
+                                    name: "apply-to",
+                                    class: "radio radio-primary radio-sm",
+                                    checked: apply_next(),
+                                    onchange: move |_| apply_next.set(true),
+                                }
+                                span { class: "flex flex-col",
+                                    span { class: "text-sm", {tid!("apply-and-next")} }
+                                    span { class: "text-xs text-base-content/70", "{hint}" }
+                                }
                             }
                         }
                     }

@@ -10,7 +10,7 @@ publish = false
 version_code = 3002002
 
 [dependencies]
-dioxus = { workspace = true, features = ["router", "fullstack"] }
+dioxus = { workspace = true, features = ["router"] }
 ui = { workspace = true }
 shared = { workspace = true }
 api = { workspace = true }

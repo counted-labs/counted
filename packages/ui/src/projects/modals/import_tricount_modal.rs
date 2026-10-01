@@ -205,6 +205,8 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                     source_currency: None,
                     source_amount: None,
                     rate: None,
+                    recurring_id: None,
+                    estimate: false,
                 }) {
                     Ok(p) => p,
                     Err(_) => continue,

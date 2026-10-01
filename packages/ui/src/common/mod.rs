@@ -154,7 +154,8 @@ mod error_utils;
 pub use error_utils::{
     error_key, error_message, is_claim_proof_error, is_client_outdated_error,
     is_email_not_verified, is_identity_taken_error, is_offline_error, is_participant_gone_error,
-    is_payment_methods_stale_error, is_project_gone_error, is_user_gone_error,
+    is_payment_methods_stale_error, is_project_gone_error, is_recurring_stale_error,
+    is_user_gone_error,
 };
 
 mod membership;

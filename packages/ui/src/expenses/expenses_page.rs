@@ -135,6 +135,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                 state: header_state(sync.read().as_ref().and_then(|r| r.as_ref()), cached_project.as_ref(), &key, project_id),
                 native_app_link: offer_native_app.then(|| scheme_link_for(project_id, &key)),
                 on_history: move |_| { nav.push(Route::ProjectHistoryPage { project_id }); },
+                on_recurring: move |_| { nav.push(Route::RecurringPage { project_id }); },
                 on_edit: move |_| show_edit_modal.set(true),
                 on_leave: move |_| show_leave_confirm.set(true),
                 on_status: move |status| {

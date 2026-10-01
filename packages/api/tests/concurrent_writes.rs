@@ -7,11 +7,14 @@
 #![cfg(feature = "server")]
 
 use api::server::projects::projects_repository::update_project_by_id;
-use api::server::recurring::materialize;
+use api::server::recurring::{
+    add as add_recurring, delete as delete_recurring, edit as edit_recurring, materialize,
+};
 use api::server::users::remove_participant;
 use dioxus::prelude::ServerFnError;
 use shared::{
-    errors, CreatableExpense, EditableProject, EncryptedPair, EncryptedUserAmount,
+    errors, CreatableExpense, CreatableRecurringExpense, DeleteRecurringExpenseRequest, EditableProject,
+    EditableRecurringExpense, EncryptedPair, EncryptedUserAmount, HistoryAction, HistoryContext,
     MaterializeRecurringRequest, ProjectStatus,
 };
 use sqlx::{Connection, PgConnection};
@@ -488,5 +491,118 @@ fn removal_racing_a_materialization_leaves_both_intact() {
         assert!(removal.is_err(), "a participant was removed from under a live rule");
         assert_eq!(expenses, 1);
         assert_eq!(version, 1);
+    });
+}
+
+fn rule_history(actor_user_id: i32) -> Option<HistoryContext> {
+    Some(HistoryContext { actor_user_id, payload: EncryptedPair::default() })
+}
+
+async fn rule_history_actions(conn: &mut PgConnection, project_id: Uuid) -> Vec<HistoryAction> {
+    sqlx::query_as::<_, (HistoryAction,)>(
+        "SELECT action FROM project_history \
+         WHERE project_id = $1 AND entity = 'project' AND entity_id IS NULL ORDER BY id",
+    )
+    .bind(project_id)
+    .fetch_all(&mut *conn)
+    .await
+    .unwrap()
+    .into_iter()
+    .map(|(a,)| a)
+    .collect()
+}
+
+/// Setting up, editing and stopping a rule each leave one history row, filed under the project.
+#[test]
+#[ignore]
+fn each_rule_event_writes_one_history_row() {
+    run(async {
+        let mut setup = connect().await;
+        let project_id = project(&mut setup).await;
+        let payer = participant(&mut setup, project_id).await;
+        let debtor = participant(&mut setup, project_id).await;
+
+        let mut conn = connect().await;
+        let rule = add_recurring(
+            &mut conn,
+            CreatableRecurringExpense {
+                project_id,
+                author_id: payer,
+                participant_ids: vec![payer, debtor],
+                payload: EncryptedPair::default(),
+                history: rule_history(payer),
+            },
+            None,
+        )
+        .await
+        .unwrap();
+        edit_recurring(
+            &mut conn,
+            EditableRecurringExpense {
+                id: rule.id,
+                project_id,
+                participant_ids: vec![payer, debtor],
+                payload: EncryptedPair::default(),
+                expected_version: rule.version,
+                history: rule_history(debtor),
+            },
+            None,
+        )
+        .await
+        .unwrap();
+        delete_recurring(
+            &mut conn,
+            DeleteRecurringExpenseRequest { id: rule.id, project_id, history: rule_history(payer) },
+            None,
+        )
+        .await
+        .unwrap();
+
+        let actions = rule_history_actions(&mut setup, project_id).await;
+        drop_fixture(&mut setup, project_id, vec![payer, debtor]).await;
+
+        assert_eq!(actions, vec![HistoryAction::Created, HistoryAction::Updated, HistoryAction::Deleted]);
+    });
+}
+
+/// The history row shares the rule's transaction: an actor from outside the project is refused and
+/// the edit it would have signed does not happen.
+#[test]
+#[ignore]
+fn a_refused_history_actor_rolls_back_the_rule_edit() {
+    run(async {
+        let mut setup = connect().await;
+        let project_id = project(&mut setup).await;
+        let payer = participant(&mut setup, project_id).await;
+        let debtor = participant(&mut setup, project_id).await;
+        let elsewhere = project(&mut setup).await;
+        let outsider = participant(&mut setup, elsewhere).await;
+        let rule = recurring_rule(&mut setup, project_id, &[payer, debtor]).await;
+
+        let mut conn = connect().await;
+        sqlx::query("BEGIN").execute(&mut conn).await.unwrap();
+        let result = edit_recurring(
+            &mut conn,
+            EditableRecurringExpense {
+                id: rule,
+                project_id,
+                participant_ids: vec![payer, debtor],
+                payload: EncryptedPair::default(),
+                expected_version: 0,
+                history: rule_history(outsider),
+            },
+            None,
+        )
+        .await;
+        sqlx::query("ROLLBACK").execute(&mut conn).await.unwrap();
+
+        let version = rule_version(&mut setup, rule).await;
+        let actions = rule_history_actions(&mut setup, project_id).await;
+        drop_fixture(&mut setup, project_id, vec![payer, debtor]).await;
+        drop_fixture(&mut setup, elsewhere, vec![outsider]).await;
+
+        assert_eq!(message(&result.unwrap_err()), errors::PARTICIPANT_NOT_IN_PROJECT);
+        assert_eq!(version, 0, "the edit survived its refused history row");
+        assert!(actions.is_empty());
     });
 }

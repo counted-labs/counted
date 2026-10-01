@@ -42,7 +42,11 @@ pub fn route_depth(route: &Route) -> u8 {
         | Route::PrivacyPage {}
         | Route::TermsPage {}
         | Route::LegalNoticePage {} => 1,
-        Route::PaymentPage { .. } | Route::ProjectHistoryPage { .. } | Route::LicensesPage {} => 2,
+        Route::PaymentPage { .. }
+        | Route::ProjectHistoryPage { .. }
+        | Route::RecurringPage { .. }
+        | Route::RecurringRulePage { .. }
+        | Route::LicensesPage {} => 2,
     }
 }
 

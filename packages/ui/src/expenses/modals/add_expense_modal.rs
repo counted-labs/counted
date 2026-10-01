@@ -1,4 +1,5 @@
 use api::expenses::expenses_controller::add_expense;
+use api::recurring::recurring_controller::add_recurring_expense;
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use crate::tid;
@@ -10,7 +11,11 @@ use uuid::Uuid;
 
 use crate::common::{error_message, fx_cache, write_queue, OpKind, ProjectKey, QueuedOp};
 
-use super::expense_form::ExpenseForm;
+use super::expense_form::{ExpenseForm, RepeatSlot};
+use crate::expenses::hooks::use_project_store::ProjectStore;
+use crate::recurring::requests::{create_request, history};
+use crate::recurring::split::side_from_entries;
+use crate::recurring::view::{new_payload, template_from_form, Repeat};
 use super::super::helpers::expense_form_helpers::{seed_entries, UserEntry};
 use super::super::helpers::expense_modal_helpers::{
     conversion_matches_total, encrypt_expense_payload, encrypt_user_amounts, resolve_conversion,
@@ -99,6 +104,11 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
     let mut loading = use_signal(|| false);
     let is_online = use_context::<Signal<bool>>();
     let mut pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
+    let repeat: Signal<Option<Repeat>> = use_signal(|| None);
+    let today = use_context::<ProjectStore>()
+        .recurring_for(props.project_id)
+        .map(|r| r.today())
+        .unwrap_or_else(|| chrono::Utc::now().date_naive());
 
     // Only ever true once the user picks a different currency, so a single-currency project never
     // reaches `use_fx_rates`' resource body and never hits the server.
@@ -166,6 +176,50 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
         let author_id =
             stored_user_id.unwrap_or_else(|| users_for_author.first().map(|u| u.id).unwrap_or(0));
 
+        if let Some(r) = repeat() {
+            if !is_online() {
+                error_msg.set(Some(tid!("repeat-offline")));
+                return;
+            }
+            let Ok(anchor) = chrono::NaiveDate::parse_from_str(&form.date, "%Y-%m-%d") else {
+                error_msg.set(Some(tid!("expense-invalid-date")));
+                return;
+            };
+            let template = template_from_form(
+                &form,
+                &expense_type(),
+                category(),
+                conversion.as_ref(),
+                side_from_entries(&payers(), payers_share_mode()),
+                side_from_entries(&debtors(), debtors_share_mode()),
+                r.variable,
+            );
+            let summary = tid!("history-recurring-created", name: name_val.clone());
+            let history = history(&key, Some(author_id), summary);
+            let req = match create_request(&key, project_id, author_id, &new_payload(template, r, anchor), history) {
+                Ok(req) => req,
+                Err(e) => {
+                    error_msg.set(Some(e));
+                    return;
+                }
+            };
+            loading.set(true);
+            error_msg.set(None);
+            spawn(async move {
+                match add_recurring_expense(Json(req)).await {
+                    Ok(_) => {
+                        on_created.call(None);
+                        on_close_submit.call(());
+                    }
+                    Err(e) => {
+                        error_msg.set(Some(error_message(&e)));
+                        loading.set(false);
+                    }
+                }
+            });
+            return;
+        }
+
         let mut payload = match build_creatable_expense(
             &key,
             &form,
@@ -219,11 +273,13 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
 
     let title =
         if props.restrict_to_transfer { tid!("transfer-add") } else { tid!("expense-add") };
+    let submit_label = if repeat().is_some() { tid!("add-and-repeat") } else { tid!("add") };
 
     rsx! {
         ExpenseForm {
             title,
-            submit_label: tid!("add"),
+            submit_label,
+            repeat: (!props.restrict_to_transfer).then_some(RepeatSlot { value: repeat, today, backfill: true }),
             loading_label: tid!("adding"),
             currency: props.currency.clone(),
             show_type_selector: !props.restrict_to_transfer,

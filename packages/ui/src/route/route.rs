@@ -10,6 +10,7 @@ use crate::payments::PaymentPage;
 use crate::privacy::PrivacyPage;
 use crate::project_history::ProjectHistoryPage;
 use crate::projects::ProjectsPage;
+use crate::recurring::recurring_page::{RecurringPage, RecurringRulePage};
 use dioxus::prelude::*;
 use uuid::Uuid;
 
@@ -29,6 +30,10 @@ pub enum Route {
         PaymentPage { project_id: Uuid, expense_id: i32 },
         #[route("/projects/:project_id/history")]
         ProjectHistoryPage { project_id: Uuid },
+        #[route("/projects/:project_id/recurring")]
+        RecurringPage { project_id: Uuid },
+        #[route("/projects/:project_id/recurring/:rule_id")]
+        RecurringRulePage { project_id: Uuid, rule_id: Uuid },
         #[route("/charts")]
         ChartsPage {},
         #[route("/login")]
@@ -73,7 +78,9 @@ pub fn project_id_of(route: &Route) -> Option<Uuid> {
     match route {
         Route::ExpensesPage { project_id }
         | Route::PaymentPage { project_id, .. }
-        | Route::ProjectHistoryPage { project_id } => Some(*project_id),
+        | Route::ProjectHistoryPage { project_id }
+        | Route::RecurringPage { project_id }
+        | Route::RecurringRulePage { project_id, .. } => Some(*project_id),
         Route::ProjectsPage {}
         | Route::ChartsPage {}
         | Route::SettingsPage {}

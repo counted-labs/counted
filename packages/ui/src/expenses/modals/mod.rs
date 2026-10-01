@@ -3,7 +3,7 @@ mod amount_input;
 mod amount_operator_bar;
 mod edit_expense_modal;
 mod edit_project_modal;
-mod expense_form;
+pub(crate) mod expense_form;
 mod participants_fieldset;
 mod user_selection_modal;
 

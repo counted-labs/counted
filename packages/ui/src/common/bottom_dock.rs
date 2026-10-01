@@ -29,7 +29,7 @@ pub fn BottomDock() -> Element {
         if active {
             "justify-self-center flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-2xl bg-gradient-brand text-primary-content hover:brightness-110 active:brightness-95 transition"
         } else {
-            "justify-self-center flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-2xl hover:text-secondary active:bg-base-200 active:text-secondary transition-colors"
+            "justify-self-center flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-2xl hover:text-secondary-content active:bg-base-200 active:text-secondary-content transition-colors"
         }
     };
     let label_class = "text-[10px] leading-none font-medium";

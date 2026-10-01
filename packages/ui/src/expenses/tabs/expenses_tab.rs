@@ -6,7 +6,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::common::{
-    format_date, haptic, ConfirmModal, Flash, Haptic, Mascot, MascotPose, ProjectKey,
+    format_date, haptic, Flash, Haptic, Mascot, MascotPose, ProjectKey,
     QueuedOp, ScanSource, SpeedDialAction, Toast,
 };
 use crate::decrypted::{payments_are_inconsistent, DecryptedExpense, DecryptedPayment};
@@ -17,6 +17,11 @@ use crate::expenses::helpers::project_data::{LiveData, ProjectData, RowExpense};
 use crate::expenses::hooks::use_receipt_scan::use_receipt_scan;
 use crate::expenses::{AddExpenseModal, EditExpenseModal, ExpenseRow};
 use crate::icons::{CameraIcon, CloseIcon, PhotoIcon, PlusIcon, ICON_INLINE};
+use crate::expenses::hooks::use_project_store::ProjectStore;
+use crate::recurring::actions::stop_rule;
+use crate::recurring::dialog::DeleteExpenseDialog;
+use crate::recurring::recurring_page::RecurringStrip;
+use crate::recurring::store::live_rule_of;
 use crate::route::Route;
 
 #[cfg(test)]
@@ -38,6 +43,8 @@ mod tests {
             source_currency: None,
             source_amount: None,
             rate: None,
+            recurring_id: None,
+            estimate: false,
         }
     }
 
@@ -697,6 +704,8 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
 
     let is_empty = all_groups.is_empty();
     let project_id = props.project_id;
+    let store = use_context::<ProjectStore>();
+    let rules = store.recurring_for(project_id);
 
     // Every filter chip resets the window — carrying a scrolled offset into a different list
     // would open it part-way down.
@@ -707,6 +716,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
 
     rsx! {
         div { class: "flex flex-col gap-2",
+            RecurringStrip { project_id: props.project_id }
             // Chips stay on one row; longer locales scroll, never wrap.
             //
             // `text-sm!`: these are radios, so `main.css`'s unlayered iOS-zoom guard
@@ -785,6 +795,8 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                                             source: row.expense.conversion().map(|(a, c, _)| (a, c.to_string())),
                                             inconsistent: data.inconsistent.contains(&expense_id),
                                             my_debt,
+                                            recurring: row.expense.recurring_id.is_some(),
+                                            estimate: row.expense.estimate,
                                             can_edit: can_edit_expense(&project_status, &etype),
                                             can_delete: can_delete_expense(&project_status),
                                             on_open: move |_| {
@@ -988,14 +1000,22 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
             // Swipe-left shortcut. Always confirmed: the delete cascades to the payments, cannot
             // be undone, and the gesture is cheap enough to trigger by accident.
             if let Some((del_id, del_name)) = confirming_delete() {
-                ConfirmModal {
-                    title: tid!("expense-delete-title"),
-                    message: tid!("expense-delete-message", name: del_name.clone()),
-                    confirm_label: tid!("delete"),
+                DeleteExpenseDialog {
+                    name: del_name.clone(),
+                    date: data.expenses.iter().find(|r| r.expense.id == del_id).map(|r| r.expense.date.clone()).unwrap_or_default(),
+                    occurrence: live_rule_of(&data, del_id, rules.as_ref()).is_some(),
                     on_cancel: move |_| confirming_delete.set(None),
-                    on_confirm: move |_| {
+                    on_delete: move |stop: bool| {
                         confirming_delete.set(None);
                         let Some(k) = key_ctx() else { return };
+                        if stop {
+                            if let Some(rule) = live_rule_of(&props.data.read(), del_id, store.recurring_for(project_id).as_ref()) {
+                                stop_rule(k, project_id, &rule, props.stored_user_id, flash, move || {
+                                    let mut sync = store.sync;
+                                    sync.restart();
+                                });
+                            }
+                        }
                         let req = delete_expense_request(
                             &k,
                             del_id,

@@ -44,6 +44,13 @@ const KEYS: &[(&str, &str)] = &[
     (shared::errors::INVITATION_NOT_FOUND, "error-invitation-not-found"),
     (shared::errors::TOO_MANY_FRIEND_REQUESTS, "error-too-many-friend-requests"),
     (shared::errors::TOO_MANY_INVITATIONS, "error-too-many-invitations"),
+    (shared::errors::INVALID_OCCURRENCES, "error-generic"),
+    (shared::errors::OCCURRENCE_IN_FUTURE, "error-recurring-clock"),
+    (shared::errors::PARTICIPANT_NOT_IN_RECURRING, "error-participant-not-in-project"),
+    (shared::errors::RECURRING_NOT_FOUND, "error-recurring-not-found"),
+    (shared::errors::RECURRING_STALE, "error-recurring-stale"),
+    (shared::errors::TOO_MANY_RECURRING, "error-too-many-recurring"),
+    (shared::errors::USER_IN_RECURRING, "error-user-in-recurring"),
 ];
 
 fn is_network_error(e: &str) -> bool {
@@ -137,6 +144,15 @@ pub fn is_participant_gone_error(e: &ServerFnError) -> bool {
 
 /// True when `PUT /auth/payment-methods` found the stored blob no longer the one the caller
 /// derived its write from: another device saved in between. Code and message together, as above.
+/// Another member edited or materialized the rule first: resync, never retry.
+pub fn is_recurring_stale_error(e: &ServerFnError) -> bool {
+    matches!(
+        e,
+        ServerFnError::ServerError { message, code, .. }
+            if *code == 409 && message == shared::errors::RECURRING_STALE
+    )
+}
+
 pub fn is_payment_methods_stale_error(e: &ServerFnError) -> bool {
     matches!(
         e,

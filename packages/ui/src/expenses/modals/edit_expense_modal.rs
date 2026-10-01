@@ -9,12 +9,21 @@ use shared::{
 use std::collections::VecDeque;
 use uuid::Uuid;
 
-use crate::common::{error_message, fx_cache, write_queue, OpKind, ProjectKey, QueuedOp};
+use api::recurring::recurring_controller::edit_recurring_expense;
+
+use crate::common::{
+    error_message, format_date, fx_cache, write_queue, Flash, OpKind, ProjectKey, QueuedOp,
+};
+use crate::expenses::hooks::use_project_store::ProjectStore;
+use crate::recurring::model::RecurringPayload;
+use crate::recurring::requests::{edit_request, history};
+use crate::recurring::split::side_from_entries;
+use crate::recurring::view::{next_date, state, template_from_form, RuleState};
 
 use super::expense_form::ExpenseForm;
 use super::super::helpers::expense_form_helpers::{init_entries_from_payments, UserEntry};
 use super::super::helpers::expense_modal_helpers::{
-    conversion_matches_total, encrypt_expense_payload, encrypt_user_amounts, resolve_conversion,
+    conversion_matches_total, encrypt_user_amounts, expense_payload, resolve_conversion,
     validate_expense_form, Conversion, ValidatedExpense,
 };
 use super::super::hooks::use_fx_rates::use_fx_rates;
@@ -141,6 +150,19 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
     let rate_day = use_memo(move || fx().map(|t| t.day));
 
     let project_id = props.project_id;
+    let store = use_context::<ProjectStore>();
+    let mut flash = use_context::<Signal<Option<Flash>>>();
+    let recurring_id = decrypted_payload.as_ref().and_then(|ep| ep.recurring_id);
+    let estimate = decrypted_payload.as_ref().is_some_and(|ep| ep.estimate);
+    let rule = recurring_id
+        .and_then(|id| store.recurring_for(project_id).and_then(|r| r.rule(id).cloned()))
+        .filter(|r| state(&r.payload) != RuleState::Finished);
+    let apply_next = use_signal(|| false);
+    let apply_choice = rule
+        .as_ref()
+        .filter(|_| !estimate)
+        .and_then(|r| next_date(&r.payload))
+        .map(|d| (apply_next, tid!("apply-and-next-hint", date: format_date(d))));
     let stored_user_id = props.stored_user_id;
     let on_edited = props.on_edited;
     let on_close_submit = props.on_close;
@@ -198,10 +220,26 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
             actor_id,
             tid!("history-expense-edited", name: name_val.clone()),
             conversion.as_ref(),
+            recurring_id,
         ) {
             Ok(p) => p,
             Err(e) => { error_msg.set(Some(e)); return; }
         };
+
+        let rule_update = rule.clone().filter(|_| estimate || apply_next()).and_then(|rule| {
+            let template = template_from_form(
+                &form,
+                &expense_type(),
+                category(),
+                conversion.as_ref(),
+                side_from_entries(&payers(), payers_share_mode()),
+                side_from_entries(&debtors(), debtors_share_mode()),
+                rule.payload.template.variable,
+            );
+            let next = RecurringPayload { template, ..rule.payload.clone() };
+            let summary = tid!("history-recurring-edited", name: next.template.name.clone());
+            edit_request(&key, project_id, &rule, &next, history(&key, actor_id, summary)).ok()
+        });
 
         if !is_online() {
             pending_ops.write().push_back(QueuedOp {
@@ -210,6 +248,9 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
                 op: OpKind::EditExpense(payload),
             });
             write_queue(&pending_ops.read());
+            if rule_update.is_some() {
+                flash.set(Some(Flash::err(tid!("apply-rule-failed"))));
+            }
             on_edited.call(None);
             on_close_submit.call(());
             return;
@@ -223,6 +264,13 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
         spawn(async move {
             match edit_expense(Json(payload)).await {
                 Ok(edited) => {
+                    if let Some(req) = rule_update {
+                        if edit_recurring_expense(Json(req)).await.is_err() {
+                            flash.set(Some(Flash::err(tid!("apply-rule-failed"))));
+                        }
+                        let mut sync = store.sync;
+                        sync.restart();
+                    }
                     on_edited.call(Some(edited));
                     on_close_submit.call(());
                 }
@@ -259,6 +307,7 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
             rate_day: rate_day(),
             on_submit,
             on_close: props.on_close,
+            apply_to_next: apply_choice,
         }
     }
 }
@@ -281,6 +330,7 @@ fn build_editable_expense(
     // Already translated by the caller: this stays pure so it is testable without a runtime.
     history_summary: String,
     conversion: Option<&Conversion>,
+    recurring_id: Option<Uuid>,
 ) -> Result<EditableExpense, String> {
     // No actor, no history row. This device knows of no participant it is acting as — the original
     // author was removed and nothing is stored locally — and the server validates the actor against
@@ -298,14 +348,12 @@ fn build_editable_expense(
 
     Ok(EditableExpense {
         id,
-        payload: encrypt_expense_payload(
+        payload: encrypt_json(
             key,
-            &form.name,
-            form.total,
-            &form.date,
-            expense_type,
-            category,
-            conversion,
+            &ExpensePayload {
+                recurring_id,
+                ..expense_payload(&form.name, form.total, &form.date, expense_type, category, conversion)
+            },
         )?,
         project_id,
         payers: encrypt_user_amounts(key, &form.payers, false)?,
@@ -358,6 +406,7 @@ mod tests {
             Some(1),
             format!("edited: {name}"),
             None,
+            None,
         )
         .unwrap()
     }
@@ -375,10 +424,33 @@ mod tests {
             Some(2),
             "edited".to_string(),
             None,
+            None,
         )
         .unwrap();
         assert_eq!(ee.author_id, Some(1));
         assert_eq!(ee.history.unwrap().actor_user_id, 2);
+    }
+
+    #[test]
+    fn an_edited_occurrence_keeps_its_rule_and_is_no_longer_an_estimate() {
+        let rule = Uuid::from_u128(5);
+        let ee = build_editable_expense(
+            &test_key(),
+            1,
+            &validated("Electricity", 71.85, &[(1, 71.85)], &[(2, 71.85)]),
+            &ExpenseType::Expense,
+            None,
+            Uuid::nil(),
+            Some(1),
+            Some(1),
+            "edited".to_string(),
+            None,
+            Some(rule),
+        )
+        .unwrap();
+        let ep: ExpensePayload = decrypt_json(&test_key(), &ee.payload).unwrap();
+        assert_eq!(ep.recurring_id, Some(rule));
+        assert!(!ep.estimate, "saving a figure confirms it");
     }
 
     #[test]

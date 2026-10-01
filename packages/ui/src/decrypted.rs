@@ -49,6 +49,8 @@ pub struct DecryptedExpense {
     pub source_currency: Option<String>,
     pub source_amount: Option<f64>,
     pub rate: Option<f64>,
+    pub recurring_id: Option<Uuid>,
+    pub estimate: bool,
 }
 
 impl DecryptedExpense {
@@ -149,6 +151,8 @@ pub fn decrypt_expense(key: &[u8; 32], e: &Expense) -> Result<DecryptedExpense, 
         source_currency: ep.source_currency,
         source_amount: ep.source_amount,
         rate: ep.rate,
+        recurring_id: ep.recurring_id,
+        estimate: ep.estimate,
     })
 }
 
@@ -372,6 +376,8 @@ mod tests {
                 source_currency: None,
                 source_amount: None,
                 rate: None,
+                recurring_id: None,
+                estimate: false,
             })
             .unwrap(),
         };

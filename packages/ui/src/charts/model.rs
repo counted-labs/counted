@@ -440,6 +440,8 @@ mod tests {
             source_currency: None,
             source_amount: None,
             rate: None,
+            recurring_id: None,
+            estimate: false,
         }
     }
 

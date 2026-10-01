@@ -232,20 +232,30 @@ pub fn encrypt_expense_payload(
     category: Option<String>,
     conversion: Option<&Conversion>,
 ) -> Result<EncryptedPair, String> {
-    encrypt_json(
-        key,
-        &ExpensePayload {
-            name: name.to_string(),
-            amount,
-            expense_type: expense_type.as_str().to_string(),
-            date: date_str.to_string(),
-            description: None,
-            category,
-            source_currency: conversion.map(|c| c.source_currency.clone()),
-            source_amount: conversion.map(|c| c.source_amount),
-            rate: conversion.map(|c| c.rate),
-        },
-    )
+    encrypt_json(key, &expense_payload(name, amount, date_str, expense_type, category, conversion))
+}
+
+pub fn expense_payload(
+    name: &str,
+    amount: f64,
+    date_str: &str,
+    expense_type: &ExpenseType,
+    category: Option<String>,
+    conversion: Option<&Conversion>,
+) -> ExpensePayload {
+    ExpensePayload {
+        name: name.to_string(),
+        amount,
+        expense_type: expense_type.as_str().to_string(),
+        date: date_str.to_string(),
+        description: None,
+        category,
+        source_currency: conversion.map(|c| c.source_currency.clone()),
+        source_amount: conversion.map(|c| c.source_amount),
+        rate: conversion.map(|c| c.rate),
+        recurring_id: None,
+        estimate: false,
+    }
 }
 
 #[cfg(test)]

@@ -42,6 +42,21 @@ native binary, built from the private module; it is skipped because you cannot r
 never touches your plaintext. The pins that make this deterministic (compiler digest, `dx`
 version, `Cargo.lock`) are in `Dockerfile.client` and `rust-toolchain.toml`.
 
+## Checking the signature
+
+Each release carries `SHA256SUMS.txt.sigstore.json`: a Sigstore keyless signature of its
+`SHA256SUMS.txt` by the private build's `main` pipeline, recorded in the public Rekor log. With
+[cosign](https://github.com/sigstore/cosign), from the release's two files:
+
+```sh
+cosign verify-blob --bundle SHA256SUMS.txt.sigstore.json \
+  --certificate-identity "https://gitlab.com/jbosi/counted//.gitlab-ci.yml@refs/heads/main" \
+  --certificate-oidc-issuer https://gitlab.com SHA256SUMS.txt
+curl -s https://counted.fr/SHA256SUMS.txt | cmp - SHA256SUMS.txt && echo served == signed
+```
+
+It proves where the list comes from, not that the code is safe; the rebuild above is that proof.
+
 ## Licence
 
 Copyright (C) 2022-2026 Jonathan Bosi.

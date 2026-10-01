@@ -20,5 +20,6 @@ pub mod preferences;
 pub mod privacy;
 pub mod project_history;
 pub mod projects;
+pub mod recurring;
 pub mod route;
 pub mod welcome;

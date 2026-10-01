@@ -322,6 +322,13 @@ pub struct ExpensePayload {
     /// expense keeps the rate it was booked at rather than drifting with the market.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rate: Option<f64>,
+    /// The recurring rule this occurrence was materialized from. Inside the ciphertext, so the
+    /// server cannot link an expense to its rule.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recurring_id: Option<Uuid>,
+    /// Added with the previous occurrence's amount, awaiting the real figure.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub estimate: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1092,6 +1099,8 @@ pub struct CreatableRecurringExpense {
     pub author_id: i32,
     pub participant_ids: Vec<i32>,
     pub payload: EncryptedPair,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub history: Option<HistoryContext>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1102,6 +1111,8 @@ pub struct EditableRecurringExpense {
     pub participant_ids: Vec<i32>,
     pub payload: EncryptedPair,
     pub expected_version: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub history: Option<HistoryContext>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1109,6 +1120,8 @@ pub struct EditableRecurringExpense {
 pub struct DeleteRecurringExpenseRequest {
     pub id: Uuid,
     pub project_id: Uuid,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub history: Option<HistoryContext>,
 }
 
 /// Claims the occurrences due up to `due_through` and writes them, in one transaction: the rule's
@@ -1369,11 +1382,15 @@ mod tests {
             source_currency: None,
             source_amount: None,
             rate: None,
+            recurring_id: None,
+            estimate: false,
         };
         let json = serde_json::to_string(&p).unwrap();
         assert!(!json.contains("sourceCurrency"), "{json}");
         assert!(!json.contains("sourceAmount"), "{json}");
         assert!(!json.contains("rate"), "{json}");
+        assert!(!json.contains("recurringId"), "{json}");
+        assert!(!json.contains("estimate"), "{json}");
     }
 
     #[test]
@@ -1388,6 +1405,8 @@ mod tests {
             source_currency: Some("USD".to_string()),
             source_amount: Some(135.0),
             rate: Some(0.860437),
+            recurring_id: None,
+            estimate: false,
         };
         let json = serde_json::to_string(&p).unwrap();
         assert!(json.contains("\"sourceCurrency\":\"USD\""), "{json}");

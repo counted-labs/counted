@@ -67,6 +67,8 @@ pub(crate) fn make_expense(
                 source_currency: None,
                 source_amount: None,
                 rate: None,
+                recurring_id: None,
+                estimate: false,
             },
         )
         .unwrap(),
@@ -97,6 +99,8 @@ pub(crate) fn make_expense_with_category(
                 source_currency: None,
                 source_amount: None,
                 rate: None,
+                recurring_id: None,
+                estimate: false,
             },
         )
         .unwrap(),

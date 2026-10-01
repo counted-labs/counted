@@ -12,6 +12,7 @@ use crate::route::Route;
 pub struct ProjectHeaderProps {
     pub state: HeaderState,
     pub on_history: EventHandler<()>,
+    pub on_recurring: EventHandler<()>,
     pub on_edit: EventHandler<()>,
     pub on_leave: EventHandler<()>,
     pub on_status: EventHandler<ProjectStatus>,
@@ -83,6 +84,13 @@ pub fn ProjectHeader(props: ProjectHeaderProps) -> Element {
                         variant: "primary",
                         label: tid!("edit"),
                         onclick: move |_| props.on_edit.call(()),
+                    }
+                    li {
+                        button {
+                            id: "recurring-menu-item",
+                            onclick: move |_| props.on_recurring.call(()),
+                            {tid!("recurring-title")}
+                        }
                     }
                     DropdownItem {
                         variant: "error",

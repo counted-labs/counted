@@ -69,7 +69,7 @@ pub fn ParticipantsFieldset(props: ParticipantsFieldsetProps) -> Element {
                     for (shares , key) in [(false, "split-amounts"), (true, "participants-by-shares")] {
                         button {
                             r#type: "button",
-                            class: if share_mode() == shares { "join-item btn btn-xs btn-neutral" } else { "join-item btn btn-xs btn-outline" },
+                            class: if share_mode() == shares { "join-item btn btn-xs btn-secondary" } else { "join-item btn btn-xs btn-outline" },
                             aria_pressed: "{share_mode() == shares}",
                             onclick: move |_| {
                                 if share_mode() == shares {

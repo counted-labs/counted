@@ -58,14 +58,14 @@ pub fn LinkArt() -> Element {
                     color_class: "bg-warning text-warning-content".to_string(),
                     size: SizeClass::W10,
                 }
-                div { class: "size-10 rounded-full border-2 border-dashed border-secondary bg-base-200 flex items-center justify-center",
+                div { class: "size-10 rounded-full border-2 border-dashed border-secondary-content/40 bg-base-200 flex items-center justify-center",
                     Icon { path: PLUS_PATH, class: "size-4 text-base-content/70" }
                 }
             }
             div { class: "mt-3 flex items-center gap-2 rounded-xl bg-base-200 py-2 ps-3 pe-2",
                 Icon { path: LINK_PATH, class: "size-4 shrink-0 text-base-content/70" }
                 span { class: "flex-1 min-w-0 truncate text-sm text-base-content/70", "counted.fr/…" }
-                span { class: "rounded-lg bg-neutral px-2.5 py-1 text-xs font-semibold text-neutral-content",
+                span { class: "rounded-lg bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-content",
                     {tid!("share-link")}
                 }
             }
