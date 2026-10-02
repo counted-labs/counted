@@ -375,6 +375,7 @@ mod tests {
                 status: ProjectStatus::Ongoing,
                 created_at: chrono::DateTime::UNIX_EPOCH.naive_utc(),
                 owner_account_id: None,
+                read_only: false,
             }
         }
 

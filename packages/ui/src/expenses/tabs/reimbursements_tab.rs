@@ -17,6 +17,7 @@ pub struct ReimbursementsTabProps {
     pub users: Vec<User>,
     pub currency: String,
     pub project_status: ProjectStatus,
+    pub read_only: bool,
     /// The participant this device is. `None` renders every row the same, with no way to pay.
     pub stored_user_id: Option<i32>,
     pub on_reimburse: EventHandler<ReimbursementSuggestion>,
@@ -43,7 +44,7 @@ pub fn ReimbursementsTab(props: ReimbursementsTabProps) -> Element {
         props.suggestions.iter().filter(|s| is_mine(s)).cloned().collect();
     let others: Vec<ReimbursementSuggestion> =
         props.suggestions.iter().filter(|s| !is_mine(s)).cloned().collect();
-    let editable = props.project_status != ProjectStatus::Archived;
+    let editable = !props.read_only && props.project_status != ProjectStatus::Archived;
     let key = key_ctx();
 
     let row = |suggestion: &ReimbursementSuggestion, highlighted: bool| {

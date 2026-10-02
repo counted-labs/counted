@@ -170,6 +170,14 @@ project-close = Закрити
 project-archive = Архівувати
 project-reopen = Відкрити знову
 project-unarchive = Розархівувати
+project-sheet-invite = Запросити
+project-sheet-recurring = Регулярні
+project-sheet-edit = Змінити проєкт
+project-sheet-close = Закрити проєкт
+project-sheet-archive = Архівувати проєкт
+project-sheet-reopen = Відкрити проєкт знову
+project-sheet-unarchive = Розархівувати проєкт
+project-sheet-leave = Вийти з проєкту
 
 ### Dates
 
@@ -227,6 +235,8 @@ projects-count-label = Проєкти
 projects-empty = Немає проєктів
 projects-empty-hint = Створи проєкт кнопкою нижче
 projects-offline-banner = Дані офлайн - під’єднайся, щоб оновити.
+demo-banner = Демонстраційний проєкт - лише для читання.
+demo-start-own = Створити власний проєкт
 projects-no-local-data = Немає локальних даних
 projects-no-local-data-hint = Увійди, щоб уперше завантажити свої проєкти.
 projects-add = Додати проєкт
@@ -339,6 +349,9 @@ stats-my-expenses = Мої витрати
 tab-expenses = Витрати
 tab-balance = Баланс
 tab-reimbursements = Розрахунок
+balance-gets-back = Має отримати
+balance-owes = Має віддати
+balance-settled = Розраховано
 reimbursements-empty-title = Усе розраховано!
 reimbursements-empty-hint = Пропозиції розрахунку з’являться тут, коли рахунки не зійдуться
 reimbursement-owes = { $debtor } винен { $creditor }

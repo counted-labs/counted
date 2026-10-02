@@ -74,7 +74,7 @@ mod dropdown_button;
 pub use dropdown_button::{DropdownButton, DropdownItem};
 
 mod project_status_menu;
-pub use project_status_menu::ProjectStatusItems;
+pub use project_status_menu::{status_transitions, ProjectStatusItems};
 
 mod speed_dial_fab;
 pub use speed_dial_fab::{SpeedDialAction, SpeedDialFab};
@@ -195,7 +195,7 @@ pub mod web_dom;
 
 mod share_link;
 pub use share_link::{
-    copy_js, copy_text, parse_share_link, scheme_link_for, share_link_for, APP_BASE_URL,
+    copy_js, copy_text, parse_share_link, parse_verify_email_link, scheme_link_for, share_link_for, APP_BASE_URL,
     APP_SCHEME, READ_CLIPBOARD_JS,
 };
 

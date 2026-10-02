@@ -127,8 +127,8 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                 d.payments.iter().filter(of_expense).filter(|dp| dp.is_debt).collect();
                             let payers_sum: f64 = payers.iter().map(|dp| dp.amount).sum();
                             let debtors_sum: f64 = debtors.iter().map(|dp| dp.amount).sum();
-                            let can_delete = can_delete_expense(&d.project_status);
-                            let can_edit = can_edit_expense(&d.project_status, &expense_type);
+                            let can_delete = can_delete_expense(&d.project_status, d.read_only);
+                            let can_edit = can_edit_expense(&d.project_status, d.read_only, &expense_type);
                             let currency = d.currency.clone();
                             let name_of = |id: i32| {
                                 d.user_names.get(&id).cloned().unwrap_or_else(|| "?".to_string())

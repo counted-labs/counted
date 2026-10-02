@@ -15,6 +15,7 @@ pub struct DecryptedProject {
     pub currency: String,
     pub status: ProjectStatus,
     pub created_at: NaiveDateTime,
+    pub read_only: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -84,6 +85,7 @@ pub fn decrypt_project(key: &[u8; 32], p: &ProjectDto) -> Result<DecryptedProjec
         currency: pp.currency,
         status: p.status.clone(),
         created_at: p.created_at,
+        read_only: p.read_only,
     })
 }
 
@@ -280,6 +282,7 @@ mod tests {
             status: shared::ProjectStatus::Ongoing,
             created_at: chrono::NaiveDateTime::default(),
             owner_account_id: None,
+            read_only: false,
         }
     }
 

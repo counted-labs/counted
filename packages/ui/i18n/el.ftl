@@ -168,6 +168,14 @@ project-close = Κλείσιμο
 project-archive = Αρχειοθέτηση
 project-reopen = Άνοιγμα ξανά
 project-unarchive = Επαναφορά από αρχείο
+project-sheet-invite = Πρόσκληση
+project-sheet-recurring = Επαναλαμβανόμενες
+project-sheet-edit = Επεξεργασία έργου
+project-sheet-close = Κλείσιμο έργου
+project-sheet-archive = Αρχειοθέτηση έργου
+project-sheet-reopen = Άνοιγμα έργου ξανά
+project-sheet-unarchive = Επαναφορά έργου από αρχείο
+project-sheet-leave = Αποχώρηση από το έργο
 
 ### Dates
 
@@ -225,6 +233,8 @@ projects-count-label = Έργα
 projects-empty = Δεν υπάρχουν έργα
 projects-empty-hint = Δημιούργησε ένα έργο με το κουμπί παρακάτω
 projects-offline-banner = Δεδομένα εκτός σύνδεσης - συνδέσου ξανά για ανανέωση.
+demo-banner = Έργο επίδειξης - μόνο για ανάγνωση.
+demo-start-own = Δημιούργησε το δικό σου έργο
 projects-no-local-data = Δεν υπάρχουν τοπικά δεδομένα
 projects-no-local-data-hint = Συνδέσου για να φορτώσεις τα έργα σου για πρώτη φορά.
 projects-add = Προσθήκη έργου
@@ -337,6 +347,9 @@ stats-my-expenses = Οι δαπάνες μου
 tab-expenses = Δαπάνες
 tab-balance = Υπόλοιπο
 tab-reimbursements = Εξόφληση
+balance-gets-back = Παίρνει πίσω
+balance-owes = Χρωστάει
+balance-settled = Εξοφλημένοι
 reimbursements-empty-title = Όλα εξοφλημένα!
 reimbursements-empty-hint = Οι προτάσεις εξόφλησης εμφανίζονται εδώ όταν οι λογαριασμοί δεν ισορροπούν
 reimbursement-owes = { $debtor } χρωστάει σε { $creditor }

@@ -691,6 +691,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
     let data = props.data.read().clone();
     let currency = data.currency.clone();
     let project_status = data.project_status.clone();
+    let read_only = data.read_only;
 
     // Only the debt filter shows the second amount.
     let my_debts: HashMap<i32, f64> = match (filter(), props.stored_user_id) {
@@ -797,8 +798,8 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                                             my_debt,
                                             recurring: row.expense.recurring_id.is_some(),
                                             estimate: row.expense.estimate,
-                                            can_edit: can_edit_expense(&project_status, &etype),
-                                            can_delete: can_delete_expense(&project_status),
+                                            can_edit: can_edit_expense(&project_status, read_only, &etype),
+                                            can_delete: can_delete_expense(&project_status, read_only),
                                             on_open: move |_| {
                                                 nav.push(Route::PaymentPage {
                                                     project_id,
@@ -842,7 +843,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                 }
             }
 
-            if project_status != ProjectStatus::Archived {
+            if !read_only && project_status != ProjectStatus::Archived {
                 // Same offsets as `SpeedDialFab` — `safe-bottom-fab` is what clears the bottom dock
                 // (and the OS navigation bar on mobile, where the class adds `var(--sab)`).
                 // One FAB shell, not two buttons in a row: the gradient, the shadow and the pill
@@ -857,7 +858,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                 // shell, not the viewport.
                 if scan_menu() {
                     div {
-                        class: "fixed inset-0 z-30 bg-base-content/10",
+                        class: "fixed inset-0 z-30 bg-base-content/30",
                         onclick: move |e| {
                             e.stop_propagation();
                             scan_menu.set(false);

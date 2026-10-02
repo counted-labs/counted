@@ -26,11 +26,11 @@ fn the_category_is_a_stable_chart_category_id() {
     assert!(crate::categories::CHART_CATEGORIES.contains(&p.category.as_deref().unwrap()));
 }
 
-/// The keyword table matches whole words and their plurals, not derivations — "Pizzeria" is not
-/// "pizza". Worth pinning so nobody assumes the scan path does its own smarter matching.
+/// The keyword table matches whole words, plurals and truncations, not derivations — "Pizzaiolo"
+/// is not "pizza". Worth pinning so nobody assumes the scan path does its own smarter matching.
 #[test]
 fn a_derived_word_is_not_a_keyword_match() {
-    let p = prefill_from_scan(&fields(Some("Pizzeria Roma"), Some(20.0), true));
+    let p = prefill_from_scan(&fields(Some("Pizzaiolo Roma"), Some(20.0), true));
     assert_eq!(p.category.as_deref(), Some("Autres"));
 }
 

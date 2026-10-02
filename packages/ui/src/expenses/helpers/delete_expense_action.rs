@@ -12,15 +12,20 @@ use uuid::Uuid;
 use crate::common::{error_message, write_queue, Flash, OpKind, QueuedOp};
 use crate::crypto::encrypt_json;
 
-/// An archived project is frozen: nothing may be removed from it.
-pub(crate) fn can_delete_expense(status: &ProjectStatus) -> bool {
-    *status != ProjectStatus::Archived
+/// An archived project is frozen: nothing may be removed from it. Neither may the read-only demo.
+pub(crate) fn can_delete_expense(status: &ProjectStatus, read_only: bool) -> bool {
+    !read_only && *status != ProjectStatus::Archived
 }
 
 /// A closed project keeps its transfers editable — that is how a settlement is corrected after the
 /// fact — but nothing else.
-pub(crate) fn can_edit_expense(status: &ProjectStatus, expense_type: &ExpenseType) -> bool {
-    *status != ProjectStatus::Archived
+pub(crate) fn can_edit_expense(
+    status: &ProjectStatus,
+    read_only: bool,
+    expense_type: &ExpenseType,
+) -> bool {
+    !read_only
+        && *status != ProjectStatus::Archived
         && (*status != ProjectStatus::Closed || *expense_type == ExpenseType::Transfer)
 }
 
@@ -81,26 +86,34 @@ mod tests {
     #[test]
     fn an_archived_project_allows_neither() {
         let s = ProjectStatus::Archived;
-        assert!(!can_delete_expense(&s));
-        assert!(!can_edit_expense(&s, &ExpenseType::Expense));
-        assert!(!can_edit_expense(&s, &ExpenseType::Transfer));
+        assert!(!can_delete_expense(&s, false));
+        assert!(!can_edit_expense(&s, false, &ExpenseType::Expense));
+        assert!(!can_edit_expense(&s, false, &ExpenseType::Transfer));
     }
 
     #[test]
     fn a_closed_project_keeps_transfers_editable() {
         let s = ProjectStatus::Closed;
-        assert!(can_delete_expense(&s));
-        assert!(!can_edit_expense(&s, &ExpenseType::Expense));
-        assert!(!can_edit_expense(&s, &ExpenseType::Gain));
-        assert!(can_edit_expense(&s, &ExpenseType::Transfer));
+        assert!(can_delete_expense(&s, false));
+        assert!(!can_edit_expense(&s, false, &ExpenseType::Expense));
+        assert!(!can_edit_expense(&s, false, &ExpenseType::Gain));
+        assert!(can_edit_expense(&s, false, &ExpenseType::Transfer));
     }
 
     #[test]
     fn an_ongoing_project_allows_everything() {
         let s = ProjectStatus::Ongoing;
-        assert!(can_delete_expense(&s));
-        assert!(can_edit_expense(&s, &ExpenseType::Expense));
-        assert!(can_edit_expense(&s, &ExpenseType::Transfer));
+        assert!(can_delete_expense(&s, false));
+        assert!(can_edit_expense(&s, false, &ExpenseType::Expense));
+        assert!(can_edit_expense(&s, false, &ExpenseType::Transfer));
+    }
+
+    #[test]
+    fn a_read_only_project_allows_neither() {
+        let s = ProjectStatus::Ongoing;
+        assert!(!can_delete_expense(&s, true));
+        assert!(!can_edit_expense(&s, true, &ExpenseType::Expense));
+        assert!(!can_edit_expense(&s, true, &ExpenseType::Transfer));
     }
 
     #[test]

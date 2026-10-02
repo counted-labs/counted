@@ -171,6 +171,14 @@ project-close = Dún
 project-archive = Cartlannaigh
 project-reopen = Athoscail
 project-unarchive = Bain as an gcartlann
+project-sheet-invite = Tabhair cuireadh
+project-sheet-recurring = Athfhillteach
+project-sheet-edit = Cuir an tionscadal in eagar
+project-sheet-close = Dún an tionscadal
+project-sheet-archive = Cartlannaigh an tionscadal
+project-sheet-reopen = Athoscail an tionscadal
+project-sheet-unarchive = Bain an tionscadal as an gcartlann
+project-sheet-leave = Fág an tionscadal
 
 ### Dates
 
@@ -228,6 +236,8 @@ projects-count-label = Tionscadail
 projects-empty = Gan tionscadail
 projects-empty-hint = Cruthaigh tionscadal leis an gcnaipe thíos
 projects-offline-banner = Sonraí as líne - athnasc chun athnuachan.
+demo-banner = Tionscadal taispeána - inléite amháin.
+demo-start-own = Cruthaigh do thionscadal féin
 projects-no-local-data = Gan sonraí áitiúla
 projects-no-local-data-hint = Logáil isteach chun do thionscadail a lódáil den chéad uair.
 projects-add = Cuir tionscadal leis
@@ -340,6 +350,9 @@ stats-my-expenses = Mo chostais
 tab-expenses = Costais
 tab-balance = Iarmhéid
 tab-reimbursements = Socraigh suas
+balance-gets-back = Faigheann ar ais
+balance-owes = I bhfiacha
+balance-settled = Socraithe
 reimbursements-empty-title = Gach rud socraithe!
 reimbursements-empty-hint = Feictear moltaí socraithe anseo nuair nach mbíonn na cuntais cothrom
 reimbursement-owes = Tá fiacha ag { $debtor } ar { $creditor }

@@ -168,6 +168,14 @@ project-close = Kapat
 project-archive = Arşivle
 project-reopen = Yeniden aç
 project-unarchive = Arşivden çıkar
+project-sheet-invite = Davet et
+project-sheet-recurring = Tekrarlanan
+project-sheet-edit = Projeyi düzenle
+project-sheet-close = Projeyi kapat
+project-sheet-archive = Projeyi arşivle
+project-sheet-reopen = Projeyi yeniden aç
+project-sheet-unarchive = Projeyi arşivden çıkar
+project-sheet-leave = Projeden ayrıl
 
 ### Dates
 
@@ -225,6 +233,8 @@ projects-count-label = Projeler
 projects-empty = Proje yok
 projects-empty-hint = Aşağıdaki düğmeyle bir proje oluştur
 projects-offline-banner = Çevrimdışı veriler - yenilemek için yeniden bağlan.
+demo-banner = Demo proje - salt okunur.
+demo-start-own = Kendi projeni oluştur
 projects-no-local-data = Yerel veri yok
 projects-no-local-data-hint = Projelerini ilk kez yüklemek için giriş yap.
 projects-add = Proje ekle
@@ -337,6 +347,9 @@ stats-my-expenses = Harcamalarım
 tab-expenses = Harcamalar
 tab-balance = Bakiye
 tab-reimbursements = Hesaplaşma
+balance-gets-back = Geri alacak
+balance-owes = Borçlu
+balance-settled = Ödeşildi
 reimbursements-empty-title = Hesaplar kapandı!
 reimbursements-empty-hint = Hesaplar denk olmadığında hesaplaşma önerileri burada görünür
 reimbursement-owes = { $debtor }, { $creditor } kişisine borçlu

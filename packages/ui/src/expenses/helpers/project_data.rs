@@ -90,6 +90,7 @@ pub struct ProjectData {
     pub real_expense_ids: HashSet<i32>,
     pub currency: String,
     pub project_status: ProjectStatus,
+    pub read_only: bool,
     /// False while the three body resources have produced neither live data nor a usable cache.
     /// The page shows its error/spinner instead of an empty project.
     pub loaded: bool,
@@ -117,6 +118,7 @@ impl Default for ProjectData {
             real_expense_ids: HashSet::new(),
             currency: "...".to_string(),
             project_status: ProjectStatus::Ongoing,
+            read_only: false,
             loaded: false,
             revision: 0,
         }
@@ -234,6 +236,7 @@ pub fn build(key: Option<[u8; 32]>, live: Option<&LiveData>) -> ProjectData {
         real_expense_ids,
         currency,
         project_status,
+        read_only: project.is_some_and(|p| p.read_only),
         loaded: true,
         revision: next_revision(),
     }

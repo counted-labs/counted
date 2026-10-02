@@ -168,6 +168,14 @@ project-close = Luk
 project-archive = Arkivér
 project-reopen = Genåbn
 project-unarchive = Gendan fra arkiv
+project-sheet-invite = Inviter
+project-sheet-recurring = Tilbagevendende
+project-sheet-edit = Rediger projekt
+project-sheet-close = Luk projekt
+project-sheet-archive = Arkivér projekt
+project-sheet-reopen = Genåbn projekt
+project-sheet-unarchive = Gendan projekt fra arkiv
+project-sheet-leave = Forlad projekt
 
 ### Dates
 
@@ -225,6 +233,8 @@ projects-count-label = Projekter
 projects-empty = Ingen projekter
 projects-empty-hint = Opret et projekt med knappen nedenfor
 projects-offline-banner = Offlinedata - opret forbindelse igen for at opdatere.
+demo-banner = Demoprojekt - skrivebeskyttet.
+demo-start-own = Opret dit eget projekt
 projects-no-local-data = Ingen lokale data
 projects-no-local-data-hint = Log ind for at indlæse dine projekter for første gang.
 projects-add = Tilføj et projekt
@@ -337,6 +347,9 @@ stats-my-expenses = Mine udgifter
 tab-expenses = Udgifter
 tab-balance = Saldo
 tab-reimbursements = Afregn
+balance-gets-back = Får tilbage
+balance-owes = Skylder
+balance-settled = Udlignet
 reimbursements-empty-title = Alt er afregnet!
 reimbursements-empty-hint = Forslag til afregning vises her, når regnskabet ikke går op
 reimbursement-owes = { $debtor } skylder { $creditor }

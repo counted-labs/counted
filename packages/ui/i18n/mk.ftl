@@ -168,6 +168,14 @@ project-close = Затвори
 project-archive = Архивирај
 project-reopen = Отвори повторно
 project-unarchive = Врати од архива
+project-sheet-invite = Покани
+project-sheet-recurring = Повторливи
+project-sheet-edit = Уреди го проектот
+project-sheet-close = Затвори го проектот
+project-sheet-archive = Архивирај го проектот
+project-sheet-reopen = Отвори го проектот повторно
+project-sheet-unarchive = Врати го проектот од архива
+project-sheet-leave = Напушти го проектот
 
 ### Dates
 
@@ -225,6 +233,8 @@ projects-count-label = Проекти
 projects-empty = Нема проекти
 projects-empty-hint = Создај проект со копчето подолу
 projects-offline-banner = Офлајн податоци - поврзи се повторно за освежување.
+demo-banner = Демо проект - само за читање.
+demo-start-own = Создај свој проект
 projects-no-local-data = Нема локални податоци
 projects-no-local-data-hint = Најави се за да ги вчиташ проектите за прв пат.
 projects-add = Додај проект
@@ -337,6 +347,9 @@ stats-my-expenses = Моите трошоци
 tab-expenses = Трошоци
 tab-balance = Состојба
 tab-reimbursements = Порамнување
+balance-gets-back = Добива назад
+balance-owes = Должи
+balance-settled = Подмирено
 reimbursements-empty-title = Сè е порамнето!
 reimbursements-empty-hint = Предлози за порамнување се појавуваат овде кога сметките не се балансирани
 reimbursement-owes = { $debtor } должи на { $creditor }

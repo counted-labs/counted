@@ -168,6 +168,14 @@ project-close = Lezárás
 project-archive = Archiválás
 project-reopen = Újranyitás
 project-unarchive = Visszaállítás archívumból
+project-sheet-invite = Meghívás
+project-sheet-recurring = Ismétlődő
+project-sheet-edit = Projekt szerkesztése
+project-sheet-close = Projekt lezárása
+project-sheet-archive = Projekt archiválása
+project-sheet-reopen = Projekt újranyitása
+project-sheet-unarchive = Projekt visszaállítása archívumból
+project-sheet-leave = Kilépés a projektből
 
 ### Dates
 
@@ -225,6 +233,8 @@ projects-count-label = Projektek
 projects-empty = Nincs projekt
 projects-empty-hint = Hozz létre egy projektet a lenti gombbal
 projects-offline-banner = Offline adatok - frissítéshez csatlakozz újra.
+demo-banner = Bemutató projekt - csak olvasható.
+demo-start-own = Saját projekt indítása
 projects-no-local-data = Nincsenek helyi adatok
 projects-no-local-data-hint = Jelentkezz be a projektjeid első betöltéséhez.
 projects-add = Projekt hozzáadása
@@ -337,6 +347,9 @@ stats-my-expenses = Saját kiadásaim
 tab-expenses = Kiadások
 tab-balance = Egyenleg
 tab-reimbursements = Elszámolás
+balance-gets-back = Visszakap
+balance-owes = Tartozik
+balance-settled = Rendezve
 reimbursements-empty-title = Minden el van számolva!
 reimbursements-empty-hint = Az elszámolási javaslatok itt jelennek meg, ha az egyenlegek nem egyeznek
 reimbursement-owes = { $debtor } tartozik { $creditor } részére

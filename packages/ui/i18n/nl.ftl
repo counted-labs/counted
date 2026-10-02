@@ -148,6 +148,14 @@ project-close = Afsluiten
 project-archive = Archiveren
 project-reopen = Heropenen
 project-unarchive = Uit archief halen
+project-sheet-invite = Uitnodigen
+project-sheet-recurring = Terugkerend
+project-sheet-edit = Project bewerken
+project-sheet-close = Project afsluiten
+project-sheet-archive = Project archiveren
+project-sheet-reopen = Project heropenen
+project-sheet-unarchive = Project uit archief halen
+project-sheet-leave = Project verlaten
 
 ### Dates
 
@@ -202,6 +210,8 @@ projects-count-label = Projecten
 projects-empty = Geen projecten
 projects-empty-hint = Maak een project aan met de knop hieronder
 projects-offline-banner = Offlinegegevens - maak opnieuw verbinding om te vernieuwen.
+demo-banner = Demoproject - alleen-lezen.
+demo-start-own = Start je eigen project
 projects-no-local-data = Geen lokale gegevens
 projects-no-local-data-hint = Log in om je projecten voor het eerst te laden.
 projects-add = Project toevoegen
@@ -298,6 +308,9 @@ stats-my-expenses = Mijn uitgaven
 tab-expenses = Uitgaven
 tab-balance = Balans
 tab-reimbursements = Afrekenen
+balance-gets-back = Krijgt terug
+balance-owes = Is schuldig
+balance-settled = Verrekend
 reimbursements-empty-hint = Hier verschijnen afrekenvoorstellen zodra de rekeningen niet kloppen
 reimbursement-owes = { $debtor } is { $creditor } verschuldigd
 

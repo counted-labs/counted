@@ -223,6 +223,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                     let uid = stored_user_id().filter(|id| user_list.iter().any(|u| u.id == *id));
                     let currency = d.currency.clone();
                     let project_status = d.project_status.clone();
+                    let read_only = d.read_only;
                     // The edit modal must never open on another project's row.
                     let project_dto = live
                         .read()
@@ -238,7 +239,15 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                             }
                         }
 
-                        if uid.is_none() {
+                        if read_only {
+                            div { id: "demo-banner", role: "status",
+                                class: "alert alert-info alert-soft text-sm flex flex-wrap justify-between gap-2",
+                                span { {tid!("demo-banner")} }
+                                Link { class: "btn btn-primary btn-sm", to: Route::ProjectsPage {},
+                                    {tid!("demo-start-own")}
+                                }
+                            }
+                        } else if uid.is_none() {
                             UserSelectionModal { users: user_list.clone(), project_id }
                         } else if show_switch() {
                             UserSelectionModal {
@@ -282,6 +291,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                                     summary: summary.clone(),
                                     users: user_list.clone(),
                                     currency: currency.clone(),
+                                    stored_user_id: uid,
                                 }
                             },
                             Tab::Reimbursements => {
@@ -292,6 +302,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                                         users: user_list.clone(),
                                         currency: currency.clone(),
                                         project_status: project_status.clone(),
+                                        read_only,
                                         stored_user_id: uid,
                                         on_reimburse: move |s: ReimbursementSuggestion| {
                                             if let Some(preset) = transfer_preset(&key, &users_for_cb, &s) {

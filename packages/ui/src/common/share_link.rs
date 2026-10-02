@@ -74,6 +74,19 @@ pub fn parse_share_link(input: &str) -> Option<(Uuid, [u8; 32])> {
     match_project(path).map(|id| (id, key))
 }
 
+/// The token of a mailed `https://counted.fr/verify-email/<token>` link. http(s) only: the email
+/// never carries `counted://`, and accepting it would let any web page log the user in as someone
+/// else through the custom scheme.
+pub fn parse_verify_email_link(input: &str) -> Option<String> {
+    let input = input.trim();
+    let rest = input.strip_prefix("https://").or(input.strip_prefix("http://"))?;
+    let path = rest[rest.find('/')?..].split(['#', '?']).next()?;
+    match Route::from_str(path).ok()? {
+        Route::VerifyEmailPage { token } if !token.is_empty() => Some(token),
+        _ => None,
+    }
+}
+
 /// Accepts a path with or without its leading slash, and only when it is a project page.
 fn match_project(path: &str) -> Option<Uuid> {
     let path = if path.starts_with('/') { path.to_string() } else { format!("/{path}") };
@@ -376,6 +389,30 @@ mod tests {
             parse_share_link(&format!("https://staging.counted.fr/projects/{id}#{frag}")),
             Some((id, KEY))
         );
+    }
+
+    #[test]
+    fn parses_the_mailed_verify_email_link() {
+        let token = "deadbeef".repeat(8);
+        let url = format!("https://counted.fr{}", Route::VerifyEmailPage { token: token.clone() });
+        assert_eq!(parse_verify_email_link(&url), Some(token.clone()));
+        assert_eq!(parse_verify_email_link(&format!("  {url}\n")), Some(token));
+    }
+
+    #[test]
+    fn verify_email_link_rejects_every_other_shape() {
+        let id = Uuid::new_v4();
+        let frag = key_to_fragment(&KEY);
+        for input in [
+            "".to_string(),
+            "https://counted.fr/verify-email/".to_string(),
+            "https://counted.fr/verify-email".to_string(),
+            format!("https://counted.fr/projects/{id}#{frag}"),
+            "https://counted.fr/login".to_string(),
+            "counted://verify-email/abc".to_string(),
+        ] {
+            assert_eq!(parse_verify_email_link(&input), None, "{input}");
+        }
     }
 
     #[test]

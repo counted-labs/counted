@@ -1,294 +1,163 @@
+use std::collections::BTreeMap;
+use std::sync::LazyLock;
+
 use crate::tid;
 
 use crate::decrypted::DecryptedExpense;
 
+/// A leaf of the taxonomy. `id` keys the keyword files and is never persisted; `parent` is.
 pub struct Category {
-    pub name: &'static str,
+    pub id: &'static str,
     pub parent: &'static str,
     pub emoji: &'static str,
-    pub keywords: &'static [&'static str],
 }
 
-pub const DEFAULT_CATEGORY: Category =
-    Category { name: "Autres", parent: "Autres", emoji: "💵", keywords: &[] };
+pub const DEFAULT_CATEGORY: Category = Category { id: "other", parent: "Autres", emoji: "💵" };
 
-/// Skipped before matching: "thé" folds to "the", so the English article would be a coffee.
-/// No keyword may appear here — `no_keyword_is_a_stop_token` enforces it.
-const STOP_TOKENS: &[&str] = &[
-    "le", "la", "les", "un", "une", "du", "de", "des", "d", "l", "et", "au", "aux", "pour", "chez",
-    "avec", "en", "sur", "dans", "the", "a", "of", "and", "for", "to", "in",
-];
-
-/// Keywords must be stored **already normalized** (lowercase, accent-free): they are compared
-/// untouched against `normalize`d tokens, so anything else never matches. Guard:
-/// `keywords_are_already_normalized`. Plurals need no entry — `word_matches` handles them.
+/// Declaration order breaks ties: "Gâteau d'anniversaire" is a dessert because Desserts comes
+/// before Anniversaire. The first leaf of each parent is its emoji (`parent_emoji`).
 pub const CATEGORIES: &[Category] = &[
-    Category {
-        name: "Restaurants",
-        parent: "Nourriture",
-        emoji: "🍽️",
-        keywords: &[
-            "restaurant",
-            "resto",
-            "dinner",
-            "diner",
-            "repas",
-            "bouffe",
-            "dejeuner",
-            "lunch",
-            "brunch",
-            "breakfast",
-            "meal",
-            "food",
-            "eat",
-        ],
-    },
-    Category {
-        name: "Café",
-        parent: "Nourriture",
-        emoji: "☕",
-        // "thé" folds to "the", which is a stop token — "tisane" and "infusion" cover it instead.
-        keywords: &["coffee", "cafe", "starbucks", "tea", "tisane", "infusion", "expresso"],
-    },
-    Category { name: "Pizza", parent: "Nourriture", emoji: "🍕", keywords: &["pizza"] },
-    Category {
-        name: "Burger",
-        parent: "Nourriture",
-        emoji: "🍔",
-        keywords: &["burger", "hamburger", "mcdo", "mcdonald"],
-    },
-    Category {
-        name: "Sushi",
-        parent: "Nourriture",
-        emoji: "🍣",
-        keywords: &["sushi", "jap", "japonais", "japanese", "ramen"],
-    },
-    Category {
-        name: "Bar",
-        parent: "Nourriture",
-        emoji: "🍺",
-        keywords: &[
-            "beer", "bar", "pub", "biere", "drink", "wine", "vin", "apero", "cocktail", "alcohol",
-        ],
-    },
-    Category {
-        name: "Courses",
-        parent: "Nourriture",
-        emoji: "🛒",
-        keywords: &[
-            "grocery",
-            "groceries",
-            "supermarket",
-            "market",
-            "food shopping",
-            "courses",
-            "supermarche",
-            "marche",
-            "epicerie",
-            "carrefour",
-            "leclerc",
-            "lidl",
-            "auchan",
-            "monoprix",
-        ],
-    },
-    Category {
-        name: "Desserts",
-        parent: "Nourriture",
-        emoji: "🍦",
-        keywords: &["ice cream", "dessert", "glace", "gateau", "patisserie"],
-    },
-    Category {
-        name: "Taxi",
-        parent: "Transport",
-        emoji: "🚕",
-        keywords: &["uber", "taxi", "cab", "ride", "vtc"],
-    },
-    Category {
-        name: "Carburant",
-        parent: "Transport",
-        emoji: "⛽",
-        keywords: &["gas", "fuel", "essence", "petrol", "diesel", "gasoil"],
-    },
-    Category {
-        name: "Train",
-        parent: "Transport",
-        emoji: "🚆",
-        keywords: &["train", "railway", "sncf", "tgv"],
-    },
-    Category {
-        name: "Avion",
-        parent: "Transport",
-        emoji: "✈️",
-        keywords: &["plane", "flight", "airplane", "avion", "vol"],
-    },
-    Category {
-        name: "Bus",
-        parent: "Transport",
-        emoji: "🚌",
-        keywords: &["bus", "autobus", "metro", "tram", "tramway"],
-    },
-    Category {
-        name: "Voiture",
-        parent: "Transport",
-        emoji: "🚗",
-        keywords: &["car", "vehicle", "auto", "voiture"],
-    },
-    Category {
-        name: "Vélo",
-        parent: "Transport",
-        emoji: "🚲",
-        keywords: &["bike", "bicycle", "velo", "trottinette"],
-    },
-    Category { name: "Parking", parent: "Transport", emoji: "🅿️", keywords: &["parking"] },
-    Category {
-        name: "Hôtel",
-        parent: "Hébergement",
-        emoji: "🏨",
-        keywords: &[
-            "hotel",
-            "airbnb",
-            "accommodation",
-            "lodging",
-            "hebergement",
-            "auberge",
-            "camping",
-            "gite",
-        ],
-    },
-    Category {
-        name: "Loyer",
-        parent: "Hébergement",
-        emoji: "🏠",
-        keywords: &["rent", "loyer"],
-    },
-    Category {
-        name: "Cinéma",
-        parent: "Loisirs",
-        emoji: "🎬",
-        keywords: &["movie", "cinema", "film"],
-    },
-    Category {
-        name: "Musique",
-        parent: "Loisirs",
-        emoji: "🎵",
-        keywords: &["concert", "music", "musique", "festival"],
-    },
-    Category {
-        name: "Gaming",
-        parent: "Loisirs",
-        emoji: "🎮",
-        keywords: &["game", "gaming", "jeu", "console"],
-    },
-    Category {
-        name: "Ski",
-        parent: "Loisirs",
-        emoji: "🎿",
-        keywords: &["ski", "skiing", "snowboard"],
-    },
-    Category {
-        name: "Sport",
-        parent: "Loisirs",
-        emoji: "⚽",
-        keywords: &["sport", "gym", "fitness", "piscine", "tennis", "foot"],
-    },
-    Category {
-        name: "Tickets",
-        parent: "Loisirs",
-        emoji: "🎟️",
-        keywords: &["ticket", "billet"],
-    },
-    Category {
-        name: "Shopping",
-        parent: "Shopping",
-        emoji: "🛍️",
-        keywords: &["shop", "shopping", "clothes", "clothing", "fashion", "vetement"],
-    },
-    Category {
-        name: "Téléphone",
-        parent: "Shopping",
-        emoji: "📱",
-        keywords: &["phone", "mobile", "smartphone", "telephone", "forfait"],
-    },
-    Category {
-        name: "Informatique",
-        parent: "Shopping",
-        emoji: "💻",
-        keywords: &["computer", "laptop", "ordinateur", "pc"],
-    },
-    Category {
-        name: "Livres",
-        parent: "Shopping",
-        emoji: "📚",
-        keywords: &["book", "library", "livre", "librairie"],
-    },
-    Category {
-        name: "Internet",
-        parent: "Services",
-        emoji: "📡",
-        keywords: &["internet", "wifi", "fibre"],
-    },
-    Category {
-        name: "Électricité",
-        parent: "Services",
-        emoji: "⚡",
-        keywords: &["electricity", "electric", "electricite", "electrique", "edf"],
-    },
-    Category { name: "Eau", parent: "Services", emoji: "💧", keywords: &["water", "eau"] },
-    Category {
-        name: "Assurance",
-        parent: "Services",
-        emoji: "🛡️",
-        keywords: &["insurance", "assurance", "mutuelle"],
-    },
-    Category {
-        name: "Santé",
-        parent: "Services",
-        emoji: "🏥",
-        keywords: &[
-            "medical",
-            "doctor",
-            "hospital",
-            "health",
-            "pharmacy",
-            "docteur",
-            "medecin",
-            "hopital",
-            "pharmacie",
-            "dentiste",
-        ],
-    },
-    Category {
-        name: "Coiffeur",
-        parent: "Services",
-        emoji: "💇",
-        keywords: &["haircut", "salon", "coiffeur", "coiffure"],
-    },
-    Category {
-        name: "Spa",
-        parent: "Services",
-        emoji: "💆",
-        keywords: &["spa", "massage", "wellness"],
-    },
-    Category {
-        name: "Anniversaire",
-        parent: "Fêtes & Cadeaux",
-        emoji: "🎂",
-        keywords: &["birthday", "anniversaire"],
-    },
-    Category {
-        name: "Noël",
-        parent: "Fêtes & Cadeaux",
-        emoji: "🎄",
-        keywords: &["christmas", "noel"],
-    },
-    Category {
-        name: "Cadeau",
-        parent: "Fêtes & Cadeaux",
-        emoji: "🎁",
-        keywords: &["gift", "cadeau", "present"],
-    },
+    Category { id: "restaurants", parent: "Nourriture", emoji: "🍽️" },
+    Category { id: "cafe", parent: "Nourriture", emoji: "☕" },
+    Category { id: "pizza", parent: "Nourriture", emoji: "🍕" },
+    Category { id: "burger", parent: "Nourriture", emoji: "🍔" },
+    Category { id: "kebab", parent: "Nourriture", emoji: "🥙" },
+    Category { id: "sushi", parent: "Nourriture", emoji: "🍣" },
+    Category { id: "bar", parent: "Nourriture", emoji: "🍺" },
+    Category { id: "bakery", parent: "Nourriture", emoji: "🥖" },
+    Category { id: "groceries", parent: "Nourriture", emoji: "🛒" },
+    Category { id: "desserts", parent: "Nourriture", emoji: "🍦" },
+    Category { id: "taxi", parent: "Transport", emoji: "🚕" },
+    Category { id: "fuel", parent: "Transport", emoji: "⛽" },
+    Category { id: "train", parent: "Transport", emoji: "🚆" },
+    Category { id: "plane", parent: "Transport", emoji: "✈️" },
+    Category { id: "bus", parent: "Transport", emoji: "🚌" },
+    Category { id: "ferry", parent: "Transport", emoji: "⛴️" },
+    Category { id: "car", parent: "Transport", emoji: "🚗" },
+    Category { id: "toll", parent: "Transport", emoji: "🛣️" },
+    Category { id: "bike", parent: "Transport", emoji: "🚲" },
+    Category { id: "parking", parent: "Transport", emoji: "🅿️" },
+    Category { id: "hotel", parent: "Hébergement", emoji: "🏨" },
+    Category { id: "rent", parent: "Hébergement", emoji: "🏠" },
+    Category { id: "cinema", parent: "Loisirs", emoji: "🎬" },
+    Category { id: "music", parent: "Loisirs", emoji: "🎵" },
+    Category { id: "museum", parent: "Loisirs", emoji: "🏛️" },
+    Category { id: "gaming", parent: "Loisirs", emoji: "🎮" },
+    Category { id: "ski", parent: "Loisirs", emoji: "🎿" },
+    Category { id: "sport", parent: "Loisirs", emoji: "⚽" },
+    Category { id: "tickets", parent: "Loisirs", emoji: "🎟️" },
+    Category { id: "shopping", parent: "Shopping", emoji: "🛍️" },
+    Category { id: "phone", parent: "Shopping", emoji: "📱" },
+    Category { id: "computer", parent: "Shopping", emoji: "💻" },
+    Category { id: "books", parent: "Shopping", emoji: "📚" },
+    Category { id: "internet", parent: "Services", emoji: "📡" },
+    Category { id: "electricity", parent: "Services", emoji: "⚡" },
+    Category { id: "heating", parent: "Services", emoji: "🔥" },
+    Category { id: "water", parent: "Services", emoji: "💧" },
+    Category { id: "insurance", parent: "Services", emoji: "🛡️" },
+    Category { id: "health", parent: "Services", emoji: "🏥" },
+    Category { id: "pharmacy", parent: "Services", emoji: "💊" },
+    Category { id: "hairdresser", parent: "Services", emoji: "💇" },
+    Category { id: "spa", parent: "Services", emoji: "💆" },
+    Category { id: "pets", parent: "Services", emoji: "🐾" },
+    Category { id: "childcare", parent: "Services", emoji: "🧸" },
+    Category { id: "cleaning", parent: "Services", emoji: "🧹" },
+    Category { id: "birthday", parent: "Fêtes & Cadeaux", emoji: "🎂" },
+    Category { id: "christmas", parent: "Fêtes & Cadeaux", emoji: "🎄" },
+    Category { id: "gift", parent: "Fêtes & Cadeaux", emoji: "🎁" },
 ];
+
+/// Every locale's keywords, embedded on every target and matched as **one** table. With the
+/// category left on "auto", each device re-infers it from the name: a table keyed on the UI
+/// language would show two members of the same project two different charts.
+const KEYWORD_FILES: &[(&str, &str)] = &[
+    ("bg", include_str!("../categories/bg.txt")),
+    ("bs", include_str!("../categories/bs.txt")),
+    ("cs", include_str!("../categories/cs.txt")),
+    ("da", include_str!("../categories/da.txt")),
+    ("de", include_str!("../categories/de.txt")),
+    ("el", include_str!("../categories/el.txt")),
+    ("en", include_str!("../categories/en.txt")),
+    ("es", include_str!("../categories/es.txt")),
+    ("et", include_str!("../categories/et.txt")),
+    ("fi", include_str!("../categories/fi.txt")),
+    ("fr", include_str!("../categories/fr.txt")),
+    ("ga", include_str!("../categories/ga.txt")),
+    ("hr", include_str!("../categories/hr.txt")),
+    ("hu", include_str!("../categories/hu.txt")),
+    ("is", include_str!("../categories/is.txt")),
+    ("it", include_str!("../categories/it.txt")),
+    ("lt", include_str!("../categories/lt.txt")),
+    ("lv", include_str!("../categories/lv.txt")),
+    ("mk", include_str!("../categories/mk.txt")),
+    ("mt", include_str!("../categories/mt.txt")),
+    ("nl", include_str!("../categories/nl.txt")),
+    ("no", include_str!("../categories/no.txt")),
+    ("pl", include_str!("../categories/pl.txt")),
+    ("pt", include_str!("../categories/pt.txt")),
+    ("ro", include_str!("../categories/ro.txt")),
+    ("sk", include_str!("../categories/sk.txt")),
+    ("sl", include_str!("../categories/sl.txt")),
+    ("sq", include_str!("../categories/sq.txt")),
+    ("sr", include_str!("../categories/sr.txt")),
+    ("sv", include_str!("../categories/sv.txt")),
+    ("tr", include_str!("../categories/tr.txt")),
+    ("uk", include_str!("../categories/uk.txt")),
+];
+
+/// The `_stop` line of a keyword file. Never stripped at runtime — stripping every language's
+/// articles would eat other languages' keywords — only held against the keywords by the tests.
+const STOP_KEY: &str = "_stop";
+
+/// Below this a truncation is a real word of its own: "super" would be groceries, "inter" internet.
+const MIN_TRUNCATION_CHARS: usize = 6;
+
+/// `key = word, word, …` lines. Lenient on purpose: this runs on the render path, where a panic
+/// freezes the app, so a malformed line is skipped here and failed by the tests instead.
+fn entries(file: &str) -> impl Iterator<Item = (&str, &str)> {
+    file.lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .filter_map(|line| line.split_once('='))
+        .flat_map(|(key, words)| words.split(',').map(move |word| (key.trim(), word.trim())))
+        .filter(|(_, word)| !word.is_empty())
+}
+
+struct Index {
+    /// Single-word keywords, sorted so a truncation's completions are one contiguous range.
+    words: Vec<(String, usize)>,
+    phrases: Vec<(Vec<String>, usize)>,
+}
+
+static INDEX: LazyLock<Index> = LazyLock::new(|| {
+    let mut words = BTreeMap::new();
+    let mut phrases = Vec::new();
+    for (_, file) in KEYWORD_FILES {
+        for (key, keyword) in entries(file) {
+            let Some(category) = CATEGORIES.iter().position(|c| c.id == key) else { continue };
+            match normalize(keyword).as_slice() {
+                [] => {}
+                [word] => {
+                    let leaf = words.entry(word.clone()).or_insert(category);
+                    *leaf = (*leaf).min(category);
+                }
+                phrase => phrases.push((phrase.to_vec(), category)),
+            }
+        }
+    }
+    Index { words: words.into_iter().collect(), phrases }
+});
+
+impl Index {
+    fn exact(&self, word: &str) -> Option<usize> {
+        self.words.binary_search_by(|(k, _)| k.as_str().cmp(word)).ok().map(|i| self.words[i].1)
+    }
+
+    fn completions<'a>(&'a self, prefix: &'a str) -> impl Iterator<Item = usize> + 'a {
+        let start = self.words.partition_point(|(k, _)| k.as_str() < prefix);
+        self.words[start..].iter().take_while(move |(k, _)| k.starts_with(prefix)).map(|(_, c)| *c)
+    }
+}
 
 /// The display label for a chart category.
 ///
@@ -320,68 +189,98 @@ pub const CHART_CATEGORIES: &[&str] = &[
     "Autres",
 ];
 
-/// Title into whole words — lowercase, accents folded, split on non-alphanumerics ("l'eau",
-/// "taxi-moto", "Uber (aéroport)"), stop tokens dropped. Whole words, not `contains`, or "cadeau"
-/// is a glass of water ("eau"). Plurals belong to `word_matches`: stripping the "s" here would
-/// turn "repas" into "repa".
-fn normalize(name: &str) -> Vec<String> {
-    let folded: String = name
+/// Text into whole words — lowercase, diacritics folded for every shipped script, split on
+/// non-alphanumerics ("l'eau", "taxi-moto", "Uber (aéroport)"). Whole words, not `contains`, or
+/// "cadeau" is a glass of water ("eau"). Plurals belong to `word_matches`: stripping the "s" here
+/// would turn "repas" into "repa".
+fn normalize(text: &str) -> Vec<String> {
+    let folded: String = text
         .to_lowercase()
         .replace('œ', "oe")
         .replace('æ', "ae")
+        .replace('ß', "ss")
+        .replace('þ', "th")
         .chars()
-        .map(|c| match c {
-            'á' | 'à' | 'â' | 'ä' | 'ã' | 'å' => 'a',
-            'é' | 'è' | 'ê' | 'ë' => 'e',
-            'í' | 'ì' | 'î' | 'ï' => 'i',
-            'ó' | 'ò' | 'ô' | 'ö' | 'õ' => 'o',
-            'ú' | 'ù' | 'û' | 'ü' => 'u',
-            'ç' => 'c',
-            'ñ' => 'n',
-            'ý' | 'ÿ' => 'y',
-            c if c.is_alphanumeric() => c,
-            _ => ' ',
+        .filter_map(|c| match c {
+            // Combining marks: "İ" lowercases to "i" + U+0307, which must not split the word.
+            '\u{300}'..='\u{36f}' => None,
+            'á' | 'à' | 'â' | 'ä' | 'ã' | 'å' | 'ā' | 'ą' | 'ă' => Some('a'),
+            'ç' | 'ć' | 'č' | 'ċ' => Some('c'),
+            'ď' | 'đ' | 'ð' => Some('d'),
+            'é' | 'è' | 'ê' | 'ë' | 'ē' | 'ę' | 'ė' | 'ě' => Some('e'),
+            'ğ' | 'ģ' | 'ġ' => Some('g'),
+            'ħ' => Some('h'),
+            'í' | 'ì' | 'î' | 'ï' | 'ī' | 'į' | 'ı' => Some('i'),
+            'ķ' => Some('k'),
+            'ł' | 'ļ' | 'ľ' | 'ĺ' => Some('l'),
+            'ñ' | 'ń' | 'ň' | 'ņ' => Some('n'),
+            'ó' | 'ò' | 'ô' | 'ö' | 'õ' | 'ő' | 'ø' => Some('o'),
+            'ř' | 'ŕ' => Some('r'),
+            'ś' | 'š' | 'ş' | 'ș' => Some('s'),
+            'ť' | 'ţ' | 'ț' => Some('t'),
+            'ú' | 'ù' | 'û' | 'ü' | 'ū' | 'ů' | 'ű' | 'ų' => Some('u'),
+            'ý' | 'ÿ' => Some('y'),
+            'ź' | 'ż' | 'ž' => Some('z'),
+            'ά' => Some('α'),
+            'έ' => Some('ε'),
+            'ή' => Some('η'),
+            'ί' | 'ϊ' | 'ΐ' => Some('ι'),
+            'ό' => Some('ο'),
+            'ύ' | 'ϋ' | 'ΰ' => Some('υ'),
+            'ώ' => Some('ω'),
+            'ς' => Some('σ'),
+            'ё' | 'ѐ' => Some('е'),
+            'ѝ' => Some('и'),
+            c if c.is_alphanumeric() => Some(c),
+            _ => Some(' '),
         })
         .collect();
 
-    folded
-        .split_whitespace()
-        .map(str::to_string)
-        .filter(|t| !STOP_TOKENS.contains(&t.as_str()))
-        .collect()
+    folded.split_whitespace().map(str::to_string).collect()
 }
 
-/// Tolerates the plural the user typed ("cadeaux" is "cadeau"). Only the token is de-pluralized,
-/// so keywords merely ending in "s" ("repas", "starbucks") stay whole words.
+/// The token as typed, then de-pluralized ("cadeaux" is "cadeau"). Only the token is, so keywords
+/// merely ending in "s" ("repas", "starbucks") stay whole words.
+fn singulars(token: &str) -> impl Iterator<Item = &str> {
+    [Some(token), token.strip_suffix('s'), token.strip_suffix('x')].into_iter().flatten()
+}
+
+/// Tolerates a plural and a word cut short ("restau" is "restaurant"). A short keyword never
+/// swallows a longer word: only the token is truncated.
 fn word_matches(token: &str, keyword: &str) -> bool {
-    token == keyword
-        || token.strip_suffix('s') == Some(keyword)
-        || token.strip_suffix('x') == Some(keyword)
+    singulars(token).any(|t| {
+        t == keyword || (t.chars().count() >= MIN_TRUNCATION_CHARS && keyword.starts_with(t))
+    })
 }
 
-fn matches(tokens: &[String], keyword: &str) -> bool {
-    if !keyword.contains(' ') {
-        return tokens.iter().any(|t| word_matches(t, keyword));
-    }
-    let words: Vec<&str> = keyword.split(' ').collect();
-    tokens
-        .windows(words.len())
-        .any(|w| w.iter().zip(&words).all(|(t, k)| word_matches(t, k)))
-}
-
+/// Phrases, then whole words, then truncations — each level only when the previous found nothing,
+/// so "food shopping" is groceries although "food" alone is a restaurant. Within a level the leaf
+/// declared first wins.
 pub fn find_category(name: &str) -> &'static Category {
     let tokens = normalize(name);
-    // Multi-word first: Restaurants owns "food" and is declared earlier, so a single pass in
-    // table order would never reach Courses' "food shopping".
-    for multi_word in [true, false] {
-        let found = CATEGORIES.iter().find(|c| {
-            c.keywords.iter().filter(|k| k.contains(' ') == multi_word).any(|k| matches(&tokens, k))
-        });
-        if let Some(c) = found {
-            return c;
-        }
-    }
-    &DEFAULT_CATEGORY
+    let index = &*INDEX;
+    let phrase = || {
+        index
+            .phrases
+            .iter()
+            .filter(|(words, _)| {
+                tokens
+                    .windows(words.len())
+                    .any(|w| w.iter().zip(words).all(|(t, k)| word_matches(t, k)))
+            })
+            .map(|(_, c)| *c)
+            .min()
+    };
+    let exact = || tokens.iter().flat_map(|t| singulars(t)).filter_map(|t| index.exact(t)).min();
+    let truncated = || {
+        tokens
+            .iter()
+            .flat_map(|t| singulars(t))
+            .filter(|t| t.chars().count() >= MIN_TRUNCATION_CHARS)
+            .flat_map(|t| index.completions(t))
+            .min()
+    };
+    phrase().or_else(exact).or_else(truncated).map_or(&DEFAULT_CATEGORY, |i| &CATEGORIES[i])
 }
 
 pub fn get_expense_emoji(name: &str) -> &'static str {
@@ -414,6 +313,20 @@ pub fn parent_emoji(parent: &str) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::{BTreeSet, HashMap};
+
+    fn keywords(file: &str) -> impl Iterator<Item = (&str, String)> {
+        entries(file).filter(|(key, _)| *key != STOP_KEY).map(|(key, k)| (key, normalize(k).join(" ")))
+    }
+
+    fn stop_words() -> HashMap<String, &'static str> {
+        KEYWORD_FILES
+            .iter()
+            .flat_map(|(lang, file)| {
+                entries(file).filter(|(key, _)| *key == STOP_KEY).map(move |(_, w)| (normalize(w).join(" "), *lang))
+            })
+            .collect()
+    }
 
     #[test]
     fn every_chart_category_has_an_emoji() {
@@ -426,28 +339,92 @@ mod tests {
         assert_eq!(parent_emoji("Autres"), DEFAULT_CATEGORY.emoji);
     }
 
-    /// A keyword that does not survive `normalize` unchanged could never match.
     #[test]
-    fn keywords_are_already_normalized() {
+    fn every_parent_is_a_chart_category_and_every_id_is_unique() {
+        let mut ids = BTreeSet::new();
         for cat in CATEGORIES {
-            for k in cat.keywords {
-                assert_eq!(
-                    &normalize(k).join(" "),
-                    k,
-                    "keyword {k:?} of {} is not normalized",
-                    cat.name
+            assert!(CHART_CATEGORIES.contains(&cat.parent), "{} has parent {}", cat.id, cat.parent);
+            assert!(ids.insert(cat.id), "duplicate id {}", cat.id);
+        }
+    }
+
+    #[test]
+    fn keyword_files_are_exactly_the_shipped_locales() {
+        let files: BTreeSet<&str> = KEYWORD_FILES.iter().map(|(code, _)| *code).collect();
+        let shipped: BTreeSet<&str> = crate::i18n::SUPPORTED.iter().map(|(code, _)| *code).collect();
+        assert_eq!(files, shipped);
+        assert_eq!(files.len(), KEYWORD_FILES.len(), "a locale is listed twice");
+    }
+
+    /// `entries` skips what it cannot read; this is where a typo is caught.
+    #[test]
+    fn every_line_is_a_known_key_with_words() {
+        for (lang, file) in KEYWORD_FILES {
+            for line in file.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')) {
+                let (key, words) = line.split_once('=').unwrap_or_else(|| panic!("{lang}: no '=' in {line:?}"));
+                let key = key.trim();
+                assert!(
+                    key == STOP_KEY || CATEGORIES.iter().any(|c| c.id == key),
+                    "{lang}: unknown key {key:?}"
                 );
+                for word in words.split(',') {
+                    assert!(!normalize(word).is_empty(), "{lang}: empty word in {line:?}");
+                }
             }
         }
     }
 
     #[test]
-    fn no_keyword_is_a_stop_token() {
-        for cat in CATEGORIES {
-            for k in cat.keywords {
-                assert!(!STOP_TOKENS.contains(k), "keyword {k:?} of {} is a stop token", cat.name);
+    fn every_leaf_has_keywords_in_every_locale() {
+        for (lang, file) in KEYWORD_FILES {
+            let keys: BTreeSet<&str> = keywords(file).map(|(key, _)| key).collect();
+            for cat in CATEGORIES {
+                assert!(keys.contains(cat.id), "{lang}: no keyword for {}", cat.id);
             }
         }
+    }
+
+    /// The table is the union of every language, so a word two languages file under different
+    /// leaves would categorise by declaration order — silently wrong for one of them.
+    #[test]
+    fn a_keyword_belongs_to_one_leaf_across_every_language() {
+        let mut owner: HashMap<String, (&str, &str)> = HashMap::new();
+        let mut clashes = Vec::new();
+        for (lang, file) in KEYWORD_FILES {
+            for (key, keyword) in keywords(file) {
+                match owner.get(&keyword) {
+                    Some((other_key, other_lang)) if *other_key != key => {
+                        clashes.push(format!("{keyword:?}: {other_lang} {other_key} / {lang} {key}"))
+                    }
+                    Some(_) => {}
+                    None => {
+                        owner.insert(keyword, (key, lang));
+                    }
+                }
+            }
+        }
+        assert!(clashes.is_empty(), "keywords in two leaves:\n{}", clashes.join("\n"));
+    }
+
+    /// "thé" folds to "the": a keyword that is some language's article categorises every title
+    /// written in that language.
+    #[test]
+    fn no_keyword_is_a_stop_word_of_any_language() {
+        let stops = stop_words();
+        let mut hits = Vec::new();
+        for (lang, file) in KEYWORD_FILES {
+            for (key, keyword) in keywords(file).filter(|(_, k)| !k.contains(' ')) {
+                if let Some(stop_lang) = stops.get(&keyword) {
+                    hits.push(format!("{lang} {key} {keyword:?} is a {stop_lang} stop word"));
+                }
+                for stop in stops.keys().filter(|s| s.chars().count() >= MIN_TRUNCATION_CHARS) {
+                    if keyword.starts_with(stop.as_str()) {
+                        hits.push(format!("{lang} {key} {keyword:?} completes the stop word {stop:?}"));
+                    }
+                }
+            }
+        }
+        assert!(hits.is_empty(), "{}", hits.join("\n"));
     }
 
     #[test]
@@ -459,17 +436,29 @@ mod tests {
     }
 
     #[test]
+    fn normalize_folds_every_shipped_script() {
+        assert_eq!(normalize("Straße"), ["strasse"]);
+        assert_eq!(normalize("Łódź"), ["lodz"]);
+        assert_eq!(normalize("Șosea Țară"), ["sosea", "tara"]);
+        assert_eq!(normalize("Kőbánya Ůžasný"), ["kobanya", "uzasny"]);
+        assert_eq!(normalize("İSTANBUL ılık"), ["istanbul", "ilik"]);
+        assert_eq!(normalize("ΤΑΒΈΡΝΑΣ"), ["ταβερνασ"]);
+        assert_eq!(normalize("Ёлка"), ["елка"]);
+        assert_eq!(normalize("Þingvellir"), ["thingvellir"]);
+    }
+
+    #[test]
     fn normalize_splits_on_punctuation() {
-        assert_eq!(normalize("l'eau"), ["eau"]);
+        assert_eq!(normalize("l'eau"), ["l", "eau"]);
         assert_eq!(normalize("taxi-moto"), ["taxi", "moto"]);
         assert_eq!(normalize("Uber (aéroport)"), ["uber", "aeroport"]);
         assert_eq!(normalize("Resto, bar"), ["resto", "bar"]);
     }
 
     #[test]
-    fn normalize_drops_stop_tokens() {
-        assert_eq!(normalize("Hotel du Nord"), ["hotel", "nord"]);
-        assert_eq!(normalize("The Ivy"), ["ivy"]);
+    fn the_english_article_is_not_tea() {
+        assert_eq!(get_expense_emoji("The Ivy"), "💵");
+        assert_eq!(get_expense_emoji("Hotel du Nord"), "🏨");
     }
 
     /// "repas" and "starbucks" are whole words, not plurals of "repa" and "starbuck".
@@ -483,11 +472,32 @@ mod tests {
         assert!(!word_matches("cadeau", "eau"));
     }
 
+    #[test]
+    fn a_short_truncation_is_not_a_match() {
+        assert!(!word_matches("super", "supermarket"));
+        assert!(!word_matches("inter", "internet"));
+        assert!(!word_matches("training", "train"));
+        assert!(!word_matches("marketing", "market"));
+    }
+
+    #[test]
+    fn a_truncated_word_matches_its_keyword() {
+        assert_eq!(get_expense_emoji("Restau"), "🍽️");
+        assert_eq!(get_expense_emoji("restaus midi"), "🍽️");
+        assert_eq!(get_expense_emoji("pharma"), "💊");
+        assert_eq!(get_expense_emoji("supermarch"), "🛒");
+    }
+
+    #[test]
+    fn a_whole_word_beats_a_truncation() {
+        assert_eq!(get_expense_emoji("restaura cinéma"), "🎬");
+    }
+
     /// Each of these once matched a keyword buried inside a longer word.
     #[test]
     fn a_keyword_inside_a_word_is_not_a_match() {
         assert_eq!(get_expense_emoji("cadeau"), "🎁"); // was 💧, via "eau"
-        assert_eq!(get_expense_emoji("bateau"), "💵"); // was 💧
+        assert_ne!(get_expense_emoji("bateau"), "💧");
         assert_eq!(get_expense_emoji("transport"), "💵"); // was ⚽, via "sport"
         assert_eq!(get_expense_emoji("parent"), "💵"); // was 🏠, via "rent"
         assert_eq!(get_expense_emoji("carte SNCF"), "🚆"); // "carte" was 🚗, via "car"
@@ -498,12 +508,22 @@ mod tests {
         assert_eq!(get_expense_emoji("spaghetti"), "💵"); // was 💆, via "spa"
     }
 
-    /// Courses owns "food shopping"; Restaurants owns "food" and comes first in the table.
+    /// Words common in French and English titles that another language's keyword could claim.
     #[test]
-    fn a_multi_word_keyword_beats_a_single_word_one() {
+    fn everyday_titles_stay_uncategorised() {
+        for name in ["carte", "carte bleue", "total", "remboursement", "virement", "super", "divers"] {
+            assert_eq!(get_expense_emoji(name), "💵", "{name}");
+        }
+    }
+
+    #[test]
+    fn a_phrase_beats_a_single_word() {
         assert_eq!(get_expense_emoji("food shopping"), "🛒");
         assert_eq!(get_expense_emoji("food"), "🍽️");
         assert_eq!(get_expense_emoji("ice cream"), "🍦");
+        assert_eq!(get_expense_emoji("forfait de ski"), "🎿");
+        assert_eq!(get_expense_emoji("salon de thé"), "☕");
+        assert_eq!(get_expense_emoji("car park"), "🅿️");
     }
 
     #[test]
@@ -514,5 +534,79 @@ mod tests {
         assert_eq!(get_expense_emoji("2 tickets"), "🎟️");
         assert_eq!(get_expense_emoji("Courses Carrefour"), "🛒");
         assert_eq!(get_expense_emoji("Bière & frites"), "🍺");
+    }
+
+    /// Two or three real titles per shipped language.
+    #[test]
+    fn every_language_categorises_its_own_titles() {
+        let samples: &[(&str, &str, &str)] = &[
+            ("bg", "Ресторант", "🍽️"),
+            ("bg", "Бензин", "⛽"),
+            ("bs", "Restoran", "🍽️"),
+            ("bs", "Gorivo", "⛽"),
+            ("cs", "Kavárna", "☕"),
+            ("cs", "Nájem", "🏠"),
+            ("da", "Husleje", "🏠"),
+            ("da", "Indkøb", "🛒"),
+            ("de", "Tankstelle", "⛽"),
+            ("de", "Miete", "🏠"),
+            ("el", "Ταβέρνα", "🍽️"),
+            ("el", "Σούπερ μάρκετ", "🛒"),
+            ("en", "Gas bill", "🔥"),
+            ("es", "Gasolina", "⛽"),
+            ("es", "Alquiler", "🏠"),
+            ("et", "Kohvik", "☕"),
+            ("et", "Üür", "🏠"),
+            ("fi", "Ravintola", "🍽️"),
+            ("fi", "Vuokra", "🏠"),
+            ("fr", "Péage autoroute", "🛣️"),
+            ("ga", "Bialann", "🍽️"),
+            ("hr", "Najam", "🏠"),
+            ("hr", "Rođendan", "🎂"),
+            ("hu", "Étterem", "🍽️"),
+            ("hu", "Benzinkút", "⛽"),
+            ("is", "Veitingastaður", "🍽️"),
+            ("it", "Benzina", "⛽"),
+            ("it", "Affitto", "🏠"),
+            ("lt", "Kavinė", "☕"),
+            ("lt", "Nuoma", "🏠"),
+            ("lv", "Kafejnīca", "☕"),
+            ("lv", "Degviela", "⛽"),
+            ("mk", "Ресторан", "🍽️"),
+            ("mk", "Кирија", "🏠"),
+            ("mt", "Ristorant", "🍽️"),
+            ("nl", "Boodschappen", "🛒"),
+            ("nl", "Huur", "🏠"),
+            ("no", "Husleie", "🏠"),
+            ("no", "Dagligvarer", "🛒"),
+            ("pl", "Kawiarnia", "☕"),
+            ("pl", "Czynsz", "🏠"),
+            ("pt", "Gasolina", "⛽"),
+            ("pt", "Aluguel", "🏠"),
+            ("ro", "Chirie", "🏠"),
+            ("ro", "Benzinărie", "⛽"),
+            ("sk", "Nájomné", "🏠"),
+            ("sk", "Potraviny", "🛒"),
+            ("sl", "Najemnina", "🏠"),
+            ("sl", "Gostilna", "🍽️"),
+            ("sq", "Qira", "🏠"),
+            ("sq", "Karburant", "⛽"),
+            ("sr", "Кирија", "🏠"),
+            ("sr", "Kirija", "🏠"),
+            ("sv", "Hyra", "🏠"),
+            ("sv", "Matbutik", "🛒"),
+            ("tr", "Kira", "🏠"),
+            ("tr", "Benzin", "⛽"),
+            ("uk", "Ресторан", "🍽️"),
+            ("uk", "Оренда", "🏠"),
+        ];
+        let mut wrong = Vec::new();
+        for (lang, name, emoji) in samples {
+            let got = get_expense_emoji(name);
+            if got != *emoji {
+                wrong.push(format!("{lang} {name:?}: {got} instead of {emoji}"));
+            }
+        }
+        assert!(wrong.is_empty(), "{}", wrong.join("\n"));
     }
 }

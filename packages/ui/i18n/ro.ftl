@@ -169,6 +169,14 @@ project-close = Închide
 project-archive = Arhivează
 project-reopen = Redeschide
 project-unarchive = Dezarhivează
+project-sheet-invite = Invită
+project-sheet-recurring = Recurente
+project-sheet-edit = Editează proiectul
+project-sheet-close = Închide proiectul
+project-sheet-archive = Arhivează proiectul
+project-sheet-reopen = Redeschide proiectul
+project-sheet-unarchive = Dezarhivează proiectul
+project-sheet-leave = Părăsește proiectul
 
 ### Dates
 
@@ -226,6 +234,8 @@ projects-count-label = Proiecte
 projects-empty = Niciun proiect
 projects-empty-hint = Creează un proiect cu butonul de mai jos
 projects-offline-banner = Date offline - reconectează-te pentru a actualiza.
+demo-banner = Proiect demonstrativ - doar citire.
+demo-start-own = Creează-ți propriul proiect
 projects-no-local-data = Nu există date locale
 projects-no-local-data-hint = Conectează-te pentru a-ți încărca proiectele pentru prima dată.
 projects-add = Adaugă un proiect
@@ -338,6 +348,9 @@ stats-my-expenses = Cheltuielile mele
 tab-expenses = Cheltuieli
 tab-balance = Balanță
 tab-reimbursements = Regularizare
+balance-gets-back = Primește înapoi
+balance-owes = Datorează
+balance-settled = Achitați
 reimbursements-empty-title = Totul e regularizat!
 reimbursements-empty-hint = Sugestiile de regularizare apar aici când socotelile nu sunt echilibrate
 reimbursement-owes = { $debtor } îi datorează lui { $creditor }

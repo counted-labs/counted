@@ -170,6 +170,14 @@ project-close = Uzavrieť
 project-archive = Archivovať
 project-reopen = Znova otvoriť
 project-unarchive = Obnoviť z archívu
+project-sheet-invite = Pozvať
+project-sheet-recurring = Opakované
+project-sheet-edit = Upraviť projekt
+project-sheet-close = Uzavrieť projekt
+project-sheet-archive = Archivovať projekt
+project-sheet-reopen = Znova otvoriť projekt
+project-sheet-unarchive = Obnoviť projekt z archívu
+project-sheet-leave = Opustiť projekt
 
 ### Dates
 
@@ -227,6 +235,8 @@ projects-count-label = Projekty
 projects-empty = Žiadne projekty
 projects-empty-hint = Vytvor projekt tlačidlom nižšie
 projects-offline-banner = Offline dáta - na obnovenie sa znova pripoj.
+demo-banner = Ukážkový projekt - iba na čítanie.
+demo-start-own = Založiť vlastný projekt
 projects-no-local-data = Žiadne miestne dáta
 projects-no-local-data-hint = Prihlás sa a načítaj svoje projekty prvýkrát.
 projects-add = Pridať projekt
@@ -339,6 +349,9 @@ stats-my-expenses = Moje výdavky
 tab-expenses = Výdavky
 tab-balance = Bilancia
 tab-reimbursements = Vyrovnanie
+balance-gets-back = Dostane späť
+balance-owes = Dlhuje
+balance-settled = Vyrovnané
 reimbursements-empty-title = Všetko vyrovnané!
 reimbursements-empty-hint = Návrhy na vyrovnanie sa tu objavia, keď účty nesedia
 reimbursement-owes = { $debtor } dlhuje { $creditor }

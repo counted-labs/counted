@@ -169,6 +169,14 @@ project-close = Slēgt
 project-archive = Arhivēt
 project-reopen = Atvērt no jauna
 project-unarchive = Atjaunot no arhīva
+project-sheet-invite = Uzaicināt
+project-sheet-recurring = Regulārie
+project-sheet-edit = Rediģēt projektu
+project-sheet-close = Slēgt projektu
+project-sheet-archive = Arhivēt projektu
+project-sheet-reopen = Atvērt projektu no jauna
+project-sheet-unarchive = Atjaunot projektu no arhīva
+project-sheet-leave = Pamest projektu
 
 ### Dates
 
@@ -226,6 +234,8 @@ projects-count-label = Projekti
 projects-empty = Nav projektu
 projects-empty-hint = Izveido projektu ar pogu zemāk
 projects-offline-banner = Bezsaistes dati - pieslēdzies vēlreiz, lai atjauninātu.
+demo-banner = Demonstrācijas projekts - tikai lasīšanai.
+demo-start-own = Izveido savu projektu
 projects-no-local-data = Nav lokālu datu
 projects-no-local-data-hint = Piesakies, lai pirmo reizi ielādētu savus projektus.
 projects-add = Pievienot projektu
@@ -338,6 +348,9 @@ stats-my-expenses = Mani izdevumi
 tab-expenses = Izdevumi
 tab-balance = Bilance
 tab-reimbursements = Norēķini
+balance-gets-back = Saņem atpakaļ
+balance-owes = Ir parādā
+balance-settled = Norēķinājušies
 reimbursements-empty-title = Viss norēķināts!
 reimbursements-empty-hint = Norēķinu ieteikumi parādās šeit, kad konti nav līdzsvarā
 reimbursement-owes = { $debtor } ir parādā { $creditor }

@@ -170,6 +170,14 @@ project-close = Agħlaq
 project-archive = Arkivja
 project-reopen = Erġa' iftaħ
 project-unarchive = Neħħi mill-arkivju
+project-sheet-invite = Stieden
+project-sheet-recurring = Rikorrenti
+project-sheet-edit = Editja l-proġett
+project-sheet-close = Agħlaq il-proġett
+project-sheet-archive = Arkivja l-proġett
+project-sheet-reopen = Erġa' iftaħ il-proġett
+project-sheet-unarchive = Neħħi l-proġett mill-arkivju
+project-sheet-leave = Itlaq mill-proġett
 
 ### Dates
 
@@ -227,6 +235,8 @@ projects-count-label = Proġetti
 projects-empty = L-ebda proġett
 projects-empty-hint = Oħloq proġett bil-buttuna t'hawn taħt
 projects-offline-banner = Data offline - erġa' ikkonnettja biex taġġorna.
+demo-banner = Proġett ta' dimostrazzjoni - qari biss.
+demo-start-own = Oħloq il-proġett tiegħek
 projects-no-local-data = L-ebda data lokali
 projects-no-local-data-hint = Idħol biex tgħabbi l-proġetti tiegħek għall-ewwel darba.
 projects-add = Żid proġett
@@ -339,6 +349,9 @@ stats-my-expenses = L-ispejjeż tiegħi
 tab-expenses = Spejjeż
 tab-balance = Bilanċ
 tab-reimbursements = Saldu
+balance-gets-back = Jieħu lura
+balance-owes = Għandu jħallas
+balance-settled = Imħallsin
 reimbursements-empty-title = Kollox saldat!
 reimbursements-empty-hint = Suġġerimenti ta' saldu jidhru hawn meta l-kontijiet ma jibbilanċjawx
 reimbursement-owes = { $debtor } għandu jagħti lil { $creditor }

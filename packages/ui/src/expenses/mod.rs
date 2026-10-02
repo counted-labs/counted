@@ -3,6 +3,7 @@ mod expenses_page;
 pub(crate) mod helpers;
 pub(crate) mod hooks;
 pub(crate) mod modals;
+mod project_actions_sheet;
 mod project_header;
 mod project_states;
 mod project_stats;

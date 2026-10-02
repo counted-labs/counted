@@ -168,6 +168,14 @@ project-close = Mbyll
 project-archive = Arkivo
 project-reopen = Rihap
 project-unarchive = Nxirr nga arkivi
+project-sheet-invite = Fto
+project-sheet-recurring = Të përsëritura
+project-sheet-edit = Ndrysho projektin
+project-sheet-close = Mbyll projektin
+project-sheet-archive = Arkivo projektin
+project-sheet-reopen = Rihap projektin
+project-sheet-unarchive = Nxirr projektin nga arkivi
+project-sheet-leave = Largohu nga projekti
 
 ### Dates
 
@@ -225,6 +233,8 @@ projects-count-label = Projektet
 projects-empty = Asnjë projekt
 projects-empty-hint = Krijo një projekt me butonin më poshtë
 projects-offline-banner = Të dhëna jashtë linje - lidhu sërish për të rifreskuar.
+demo-banner = Projekt demonstrues - vetëm për lexim.
+demo-start-own = Krijo projektin tënd
 projects-no-local-data = Asnjë e dhënë lokale
 projects-no-local-data-hint = Identifikohu për të ngarkuar projektet për herë të parë.
 projects-add = Shto një projekt
@@ -337,6 +347,9 @@ stats-my-expenses = Shpenzimet e mia
 tab-expenses = Shpenzimet
 tab-balance = Bilanci
 tab-reimbursements = Shlyerja
+balance-gets-back = Merr mbrapsht
+balance-owes = Ka borxh
+balance-settled = Të shlyer
 reimbursements-empty-title = Gjithçka e shlyer!
 reimbursements-empty-hint = Sugjerimet për shlyerje shfaqen këtu kur llogaritë nuk balancohen
 reimbursement-owes = { $debtor } i ka borxh { $creditor }

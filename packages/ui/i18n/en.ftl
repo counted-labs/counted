@@ -176,6 +176,14 @@ project-close = Close
 project-archive = Archive
 project-reopen = Reopen
 project-unarchive = Unarchive
+project-sheet-invite = Invite
+project-sheet-recurring = Recurring
+project-sheet-edit = Edit project
+project-sheet-close = Close project
+project-sheet-archive = Archive project
+project-sheet-reopen = Reopen project
+project-sheet-unarchive = Unarchive project
+project-sheet-leave = Leave project
 
 ### Dates
 #
@@ -236,6 +244,8 @@ projects-count-label = Projects
 projects-empty = No projects
 projects-empty-hint = Create a project with the button below
 projects-offline-banner = Offline data - reconnect to refresh.
+demo-banner = Demo project - read-only.
+demo-start-own = Start your own project
 projects-no-local-data = No local data
 projects-no-local-data-hint = Sign in to load your projects for the first time.
 projects-add = Add a project
@@ -349,6 +359,9 @@ stats-my-expenses = My expenses
 tab-expenses = Expenses
 tab-balance = Balance
 tab-reimbursements = Settle up
+balance-gets-back = Gets back
+balance-owes = Owes
+balance-settled = Settled up
 reimbursements-empty-title = All settled up!
 reimbursements-empty-hint = Settlement suggestions appear here when the accounts don’t balance
 reimbursement-owes = { $debtor } owes { $creditor }

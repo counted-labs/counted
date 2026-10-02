@@ -148,6 +148,14 @@ project-close = Chiudi
 project-archive = Archivia
 project-reopen = Riapri
 project-unarchive = Rimuovi dall’archivio
+project-sheet-invite = Invita
+project-sheet-recurring = Ricorrenti
+project-sheet-edit = Modifica progetto
+project-sheet-close = Chiudi progetto
+project-sheet-archive = Archivia progetto
+project-sheet-reopen = Riapri progetto
+project-sheet-unarchive = Rimuovi progetto dall’archivio
+project-sheet-leave = Esci dal progetto
 
 ### Dates
 
@@ -202,6 +210,8 @@ projects-count-label = Progetti
 projects-empty = Nessun progetto
 projects-empty-hint = Crea un progetto con il pulsante qui sotto
 projects-offline-banner = Dati offline - riconnettiti per aggiornare.
+demo-banner = Progetto dimostrativo - sola lettura.
+demo-start-own = Crea il tuo progetto
 projects-no-local-data = Nessun dato locale
 projects-no-local-data-hint = Accedi per caricare i tuoi progetti per la prima volta.
 projects-add = Aggiungi un progetto
@@ -298,6 +308,9 @@ stats-my-expenses = Le mie spese
 tab-expenses = Spese
 tab-balance = Bilancio
 tab-reimbursements = Rimborsi
+balance-gets-back = Riceve
+balance-owes = Deve
+balance-settled = In pari
 reimbursements-empty-hint = Qui compariranno i rimborsi suggeriti quando i conti non tornano
 reimbursement-owes = { $debtor } deve a { $creditor }
 

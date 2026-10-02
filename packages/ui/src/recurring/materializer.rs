@@ -38,7 +38,7 @@ pub fn use_recurring_materializer(
         let (Some(project_id), Some(today), Some(k)) = (r.project_id, r.server_date, key()) else {
             return;
         };
-        if !is_online() || d.project_id != Some(project_id) || d.project_status != ProjectStatus::Ongoing {
+        if !is_online() || d.project_id != Some(project_id) || d.project_status != ProjectStatus::Ongoing || d.read_only {
             return;
         }
         let member = ls_ctx

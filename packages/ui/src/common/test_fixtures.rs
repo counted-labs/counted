@@ -39,6 +39,7 @@ pub(crate) fn make_project(key: &[u8; 32], id: Uuid, name: &str, currency: &str)
         status: ProjectStatus::Ongoing,
         created_at: NaiveDateTime::default(),
         owner_account_id: None,
+        read_only: false,
     }
 }
 

@@ -529,3 +529,127 @@ pub fn RepeatIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         }
     }
 }
+
+#[component]
+pub fn MoreIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            circle { cx: "5", cy: "12", r: "1" }
+            circle { cx: "12", cy: "12", r: "1" }
+            circle { cx: "19", cy: "12", r: "1" }
+        }
+    }
+}
+
+#[component]
+pub fn ArchiveIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            rect { x: "2", y: "3", width: "20", height: "5", rx: "1" }
+            path { d: "M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" }
+            path { d: "M10 12h4" }
+        }
+    }
+}
+
+#[component]
+pub fn DownloadIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }
+            path { d: "m7 10 5 5 5-5" }
+            path { d: "M12 15V3" }
+        }
+    }
+}
+
+#[component]
+pub fn LogOutIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" }
+            path { d: "m16 17 5-5-5-5" }
+            path { d: "M21 12H9" }
+        }
+    }
+}
+
+#[component]
+pub fn SmartphoneIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            rect { x: "5", y: "2", width: "14", height: "20", rx: "2" }
+            path { d: "M12 18h.01" }
+        }
+    }
+}
+
+#[component]
+pub fn UndoIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M9 14 4 9l5-5" }
+            path { d: "M4 9h10.5a5.5 5.5 0 0 1 0 11H11" }
+        }
+    }
+}

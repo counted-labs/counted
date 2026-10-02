@@ -174,7 +174,7 @@ pub enum HeaderState {
     /// Offline with nothing but the cached project row: the name renders, the actions do not.
     /// Every dropdown entry needs the live project.
     Cached { title: String },
-    Ready { title: String, status: ProjectStatus },
+    Ready { title: String, status: ProjectStatus, read_only: bool },
 }
 
 pub fn header_state(
@@ -193,7 +193,11 @@ pub fn header_state(
         // `id == project_id`: the resource may still serve the previous project, and a wrongly
         // titled header is the most visible form of that.
         Some(Ok((id, s))) if *id == project_id => match &s.project {
-            Some(p) => HeaderState::Ready { title: project_name(key, p), status: p.status.clone() },
+            Some(p) => HeaderState::Ready {
+                title: project_name(key, p),
+                status: p.status.clone(),
+                read_only: p.read_only,
+            },
             // A server predating the merged sync; the cached row still names the project, but
             // every dropdown action needs the live one. With no cached row there is nothing to
             // title the header with and nothing further to wait for — a spinner here never stops.
@@ -491,7 +495,7 @@ mod tests {
         let out = header_state(sync_ok(pid(), 7, true).as_ref(), None, &test_key(), pid());
         assert_eq!(
             out,
-            HeaderState::Ready { title: "Live".to_string(), status: ProjectStatus::Ongoing }
+            HeaderState::Ready { title: "Live".to_string(), status: ProjectStatus::Ongoing, read_only: false }
         );
     }
 

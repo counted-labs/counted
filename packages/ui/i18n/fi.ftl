@@ -168,6 +168,14 @@ project-close = Sulje
 project-archive = Arkistoi
 project-reopen = Avaa uudelleen
 project-unarchive = Palauta arkistosta
+project-sheet-invite = Kutsu
+project-sheet-recurring = Toistuvat
+project-sheet-edit = Muokkaa projektia
+project-sheet-close = Sulje projekti
+project-sheet-archive = Arkistoi projekti
+project-sheet-reopen = Avaa projekti uudelleen
+project-sheet-unarchive = Palauta projekti arkistosta
+project-sheet-leave = Poistu projektista
 
 ### Dates
 
@@ -225,6 +233,8 @@ projects-count-label = Projektit
 projects-empty = Ei projekteja
 projects-empty-hint = Luo projekti alla olevalla painikkeella
 projects-offline-banner = Offline-tiedot - yhdistä uudelleen päivittääksesi.
+demo-banner = Esittelyprojekti - vain luku.
+demo-start-own = Aloita oma projekti
 projects-no-local-data = Ei paikallisia tietoja
 projects-no-local-data-hint = Kirjaudu sisään ladataksesi projektisi ensimmäistä kertaa.
 projects-add = Lisää projekti
@@ -337,6 +347,9 @@ stats-my-expenses = Omat kuluni
 tab-expenses = Kulut
 tab-balance = Saldo
 tab-reimbursements = Tasaus
+balance-gets-back = Saa takaisin
+balance-owes = Velkaa
+balance-settled = Tasoissa
 reimbursements-empty-title = Kaikki tasattu!
 reimbursements-empty-hint = Tasausehdotukset näkyvät tässä, kun tilit eivät täsmää
 reimbursement-owes = { $debtor } on velkaa { $creditor }

@@ -170,6 +170,14 @@ project-close = Uždaryti
 project-archive = Archyvuoti
 project-reopen = Atidaryti iš naujo
 project-unarchive = Grąžinti iš archyvo
+project-sheet-invite = Pakviesti
+project-sheet-recurring = Pasikartojančios
+project-sheet-edit = Redaguoti projektą
+project-sheet-close = Uždaryti projektą
+project-sheet-archive = Archyvuoti projektą
+project-sheet-reopen = Atidaryti projektą iš naujo
+project-sheet-unarchive = Grąžinti projektą iš archyvo
+project-sheet-leave = Išeiti iš projekto
 
 ### Dates
 
@@ -227,6 +235,8 @@ projects-count-label = Projektai
 projects-empty = Projektų nėra
 projects-empty-hint = Sukurk projektą mygtuku žemiau
 projects-offline-banner = Duomenys neprisijungus - prisijunk iš naujo, kad atnaujintum.
+demo-banner = Demonstracinis projektas - tik skaitymui.
+demo-start-own = Sukurk savo projektą
 projects-no-local-data = Nėra vietinių duomenų
 projects-no-local-data-hint = Prisijunk, kad pirmą kartą įkeltum savo projektus.
 projects-add = Pridėti projektą
@@ -339,6 +349,9 @@ stats-my-expenses = Mano išlaidos
 tab-expenses = Išlaidos
 tab-balance = Balansas
 tab-reimbursements = Atsiskaitymas
+balance-gets-back = Atgauna
+balance-owes = Skolingas
+balance-settled = Atsiskaityta
 reimbursements-empty-title = Viskas atsiskaityta!
 reimbursements-empty-hint = Atsiskaitymo pasiūlymai rodomi čia, kai sąskaitos nesubalansuotos
 reimbursement-owes = { $debtor } skolingas { $creditor }

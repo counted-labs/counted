@@ -31,7 +31,7 @@ pub fn SpeedDialFab(props: SpeedDialFabProps) -> Element {
         // lower on screen. `safe-bottom-fab` is the safe-area-aware offset.
         if is_open() {
             div {
-                class: "fixed inset-0 z-30 bg-base-content/10",
+                class: "fixed inset-0 z-30 bg-base-content/30",
                 onclick: move |e| {
                     e.stop_propagation();
                     is_open.set(false);

@@ -168,6 +168,14 @@ project-close = Sulge
 project-archive = Arhiveeri
 project-reopen = Ava uuesti
 project-unarchive = Taasta arhiivist
+project-sheet-invite = Kutsu
+project-sheet-recurring = Korduvad
+project-sheet-edit = Muuda projekti
+project-sheet-close = Sulge projekt
+project-sheet-archive = Arhiveeri projekt
+project-sheet-reopen = Ava projekt uuesti
+project-sheet-unarchive = Taasta projekt arhiivist
+project-sheet-leave = Lahku projektist
 
 ### Dates
 
@@ -225,6 +233,8 @@ projects-count-label = Projektid
 projects-empty = Projekte pole
 projects-empty-hint = Loo projekt allolevast nupust
 projects-offline-banner = Võrguühenduseta andmed - värskendamiseks loo ühendus uuesti.
+demo-banner = Näidisprojekt - ainult lugemiseks.
+demo-start-own = Loo oma projekt
 projects-no-local-data = Kohalikke andmeid pole
 projects-no-local-data-hint = Projektide esmakordseks laadimiseks logi sisse.
 projects-add = Lisa projekt
@@ -337,6 +347,9 @@ stats-my-expenses = Minu kulud
 tab-expenses = Kulud
 tab-balance = Saldo
 tab-reimbursements = Tasaarveldus
+balance-gets-back = Saab tagasi
+balance-owes = Võlgneb
+balance-settled = Tasaarveldatud
 reimbursements-empty-title = Kõik tasaarveldatud!
 reimbursements-empty-hint = Tasaarvelduse soovitused ilmuvad siia, kui arved ei klapi
 reimbursement-owes = { $debtor } võlgneb { $creditor }

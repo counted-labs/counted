@@ -168,6 +168,14 @@ project-close = Loka
 project-archive = Setja í geymslu
 project-reopen = Opna aftur
 project-unarchive = Taka úr geymslu
+project-sheet-invite = Bjóða
+project-sheet-recurring = Endurtekið
+project-sheet-edit = Breyta verkefni
+project-sheet-close = Loka verkefni
+project-sheet-archive = Setja verkefni í geymslu
+project-sheet-reopen = Opna verkefni aftur
+project-sheet-unarchive = Taka verkefni úr geymslu
+project-sheet-leave = Yfirgefa verkefni
 
 ### Dates
 
@@ -225,6 +233,8 @@ projects-count-label = Verkefni
 projects-empty = Engin verkefni
 projects-empty-hint = Stofnaðu verkefni með hnappinum hér að neðan
 projects-offline-banner = Gögn án nettengingar - tengstu aftur til að uppfæra.
+demo-banner = Sýniverkefni - aðeins til lestrar.
+demo-start-own = Stofnaðu eigið verkefni
 projects-no-local-data = Engin staðbundin gögn
 projects-no-local-data-hint = Skráðu þig inn til að hlaða verkefnunum þínum í fyrsta sinn.
 projects-add = Bæta við verkefni
@@ -337,6 +347,9 @@ stats-my-expenses = Mín útgjöld
 tab-expenses = Útgjöld
 tab-balance = Staða
 tab-reimbursements = Gera upp
+balance-gets-back = Fær til baka
+balance-owes = Skuldar
+balance-settled = Uppgert
 reimbursements-empty-title = Allt gert upp!
 reimbursements-empty-hint = Uppgjörstillögur birtast hér þegar reikningar stemma ekki
 reimbursement-owes = { $debtor } skuldar { $creditor }

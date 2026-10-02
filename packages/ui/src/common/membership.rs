@@ -210,6 +210,7 @@ mod tests {
             status: shared::ProjectStatus::Ongoing,
             created_at: Default::default(),
             owner_account_id: None,
+            read_only: false,
         }
     }
 

@@ -4,16 +4,26 @@ use shared::ProjectStatus;
 
 use super::DropdownItem;
 
-/// Every status change offered in a project's dropdown, as (current status, target status,
-/// translation key, daisyUI variant). Both the list page and the details page render this same
-/// set; they differ only in what they do with the chosen target.
-const TRANSITIONS: &[(ProjectStatus, ProjectStatus, &str, &str)] = &[
-    (ProjectStatus::Ongoing, ProjectStatus::Closed, "project-close", "warning"),
-    (ProjectStatus::Ongoing, ProjectStatus::Archived, "project-archive", "neutral"),
-    (ProjectStatus::Closed, ProjectStatus::Ongoing, "project-reopen", "success"),
-    (ProjectStatus::Closed, ProjectStatus::Archived, "project-archive", "neutral"),
-    (ProjectStatus::Archived, ProjectStatus::Ongoing, "project-unarchive", "success"),
+/// Every status change offered for a project, as (current status, target status, dropdown key,
+/// daisyUI variant, actions-sheet key). The list page's dropdown and the details page's sheet
+/// render this same set; they differ only in wording and in what they do with the chosen target.
+const TRANSITIONS: &[(ProjectStatus, ProjectStatus, &str, &str, &str)] = &[
+    (ProjectStatus::Ongoing, ProjectStatus::Closed, "project-close", "warning", "project-sheet-close"),
+    (ProjectStatus::Ongoing, ProjectStatus::Archived, "project-archive", "neutral", "project-sheet-archive"),
+    (ProjectStatus::Closed, ProjectStatus::Ongoing, "project-reopen", "success", "project-sheet-reopen"),
+    (ProjectStatus::Closed, ProjectStatus::Archived, "project-archive", "neutral", "project-sheet-archive"),
+    (ProjectStatus::Archived, ProjectStatus::Ongoing, "project-unarchive", "success", "project-sheet-unarchive"),
 ];
+
+/// The transitions out of `status`, as (target status, actions-sheet key).
+pub fn status_transitions(
+    status: &ProjectStatus,
+) -> impl Iterator<Item = (ProjectStatus, &'static str)> + '_ {
+    TRANSITIONS
+        .iter()
+        .filter(move |(from, ..)| from == status)
+        .map(|(_, to, _, _, sheet_key)| (to.clone(), *sheet_key))
+}
 
 #[derive(PartialEq, Props, Clone)]
 pub struct ProjectStatusItemsProps {
@@ -27,7 +37,7 @@ pub struct ProjectStatusItemsProps {
 #[component]
 pub fn ProjectStatusItems(props: ProjectStatusItemsProps) -> Element {
     rsx! {
-        for (from , to , key , variant) in TRANSITIONS.iter() {
+        for (from , to , key , variant , _) in TRANSITIONS.iter() {
             if *from == props.status {
                 DropdownItem {
                     variant: *variant,
@@ -50,8 +60,9 @@ mod tests {
     #[test]
     fn every_transition_label_is_a_known_message() {
         let known = crate::i18n::locale_ids(crate::i18n::FALLBACK);
-        for (_, _, key, _) in TRANSITIONS {
+        for (_, _, key, _, sheet_key) in TRANSITIONS {
             assert!(known.contains(*key), "{key} is not defined in the fallback locale");
+            assert!(known.contains(*sheet_key), "{sheet_key} is not defined in the fallback locale");
         }
     }
 

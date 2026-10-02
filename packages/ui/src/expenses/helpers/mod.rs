@@ -1,3 +1,4 @@
+pub(crate) mod balance_groups;
 pub(crate) mod delete_expense_action;
 pub(crate) mod expense_form_helpers;
 pub(crate) mod expense_modal_helpers;

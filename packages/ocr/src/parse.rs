@@ -44,8 +44,8 @@ pub fn parse_receipt(lines: &[TextLine], today: NaiveDate) -> Receipt {
 
 /// Lowercase, accents folded, every non-alphanumeric collapsed to a single space.
 ///
-/// Deliberately not `ui::categories::normalize`: that one also drops stop tokens and returns a
-/// token vector, and "de"/"a" are load-bearing here ("net a payer", "te betalen").
+/// Deliberately not `ui::categories::normalize`: this crate does not depend on `ui`, and that one
+/// returns a token vector where this matches phrases like "net a payer" or "te betalen" in a string.
 fn fold(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     let mut pending_space = false;

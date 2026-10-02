@@ -37,22 +37,28 @@ pub fn deep_link_listener_active() -> bool {
 /// Records a URL handed to the app by the OS. Safe to call before the UI exists.
 #[cfg(any(target_os = "android", target_os = "ios"))]
 pub fn push_deep_link(url: String) {
-    tracing::info!("deep link received: {}", without_fragment(&url));
+    tracing::info!("deep link received: {}", loggable(&url));
     if let Ok(mut q) = PENDING_DEEP_LINKS.lock() {
         q.push(url);
     }
 }
 
-/// Everything before the `#`. **Never log a share link whole**: the fragment is the project's
-/// unrotatable E2EE key (docs/e2ee.md), and logcat / os_log is readable by a bug report, anyone
-/// holding the device, and on older Android any app with log access. The URL carries the project
-/// id, so logging both halves hands over the whole capability.
+/// Everything before the `#`, minus any verify-email token. **Never log a share link whole**: the
+/// fragment is the project's unrotatable E2EE key (docs/e2ee.md), and logcat / os_log is readable
+/// by a bug report, anyone holding the device, and on older Android any app with log access. The
+/// URL carries the project id, so logging both halves hands over the whole capability. A
+/// verify-email token mints a session on its own.
 ///
 /// Not behind the mobile `cfg` its call sites are: gated, only an android/iOS bundle would compile
 /// it and the tests below could never run.
 #[cfg_attr(not(any(target_os = "android", target_os = "ios")), allow(dead_code))]
-fn without_fragment(url: &str) -> &str {
-    url.split('#').next().unwrap_or("")
+fn loggable(url: &str) -> &str {
+    const VERIFY: &str = "/verify-email/";
+    let url = url.split('#').next().unwrap_or("");
+    match url.find(VERIFY) {
+        Some(i) => &url[..i + VERIFY.len()],
+        None => url,
+    }
 }
 
 #[cfg(any(target_os = "android", target_os = "ios"))]
@@ -66,7 +72,7 @@ fn take_deep_links() -> Vec<String> {
 #[cfg(any(target_os = "android", target_os = "ios"))]
 #[component]
 pub fn DeepLinkListener() -> Element {
-    use crate::common::{adopt_project_key, parse_share_link, LocalStorageState};
+    use crate::common::{adopt_project_key, parse_share_link, parse_verify_email_link, LocalStorageState};
     use crate::route::Route;
     use std::sync::atomic::Ordering;
 
@@ -76,14 +82,15 @@ pub fn DeepLinkListener() -> Element {
 
     let drain = use_callback(move |_: ()| {
         for url in take_deep_links() {
+            if let Some(token) = parse_verify_email_link(&url) {
+                nav.push(Route::VerifyEmailPage { token });
+                continue;
+            }
             let Some((project_id, key)) = parse_share_link(&url) else {
-                // The Android app-link filter claims every path on counted.fr, so a non-project URL
-                // is expected — leave the user put. Still stripped: a rejected URL can carry a
+                // The Android app-link filter claims every path on counted.fr, so any other URL is
+                // expected — leave the user put. Still stripped: a rejected URL can carry a
                 // fragment anyway.
-                tracing::info!(
-                    "ignoring a deep link that is not a project link: {}",
-                    without_fragment(&url)
-                );
+                tracing::info!("ignoring a deep link the app does not handle: {}", loggable(&url));
                 continue;
             };
             // The key must be in local storage before navigating: mobile runs on MemoryHistory, so
@@ -137,31 +144,40 @@ pub fn DeepLinkListener() -> Element {
 
 #[cfg(test)]
 mod tests {
-    use super::without_fragment;
+    use super::loggable;
 
     #[test]
     fn a_share_link_loses_its_key() {
         let key = "u9Xk3vQ2mNp7bRt5wYz8aCd1eFg4hJk6lMn0oPq2rSt";
         assert_eq!(
-            without_fragment(&format!("https://counted.fr/projects/{}#{key}", uuid::Uuid::nil())),
+            loggable(&format!("https://counted.fr/projects/{}#{key}", uuid::Uuid::nil())),
             format!("https://counted.fr/projects/{}", uuid::Uuid::nil())
         );
-        assert!(!without_fragment(&format!("counted://projects/x#{key}")).contains(key));
+        assert!(!loggable(&format!("counted://projects/x#{key}")).contains(key));
+    }
+
+    #[test]
+    fn a_verify_email_link_loses_its_token() {
+        let token = "deadbeef".repeat(8);
+        let url = format!("https://counted.fr/verify-email/{token}");
+        let logged = loggable(&url);
+        assert!(!logged.contains(&token), "{logged}");
+        assert_eq!(logged, "https://counted.fr/verify-email/");
     }
 
     #[test]
     fn a_url_without_a_fragment_is_unchanged() {
-        assert_eq!(without_fragment("https://counted.fr/help"), "https://counted.fr/help");
+        assert_eq!(loggable("https://counted.fr/help"), "https://counted.fr/help");
     }
 
     #[test]
     fn only_the_first_hash_matters() {
         // Splitting on the first '#' makes it irrelevant that base64url cannot contain one.
-        assert_eq!(without_fragment("https://counted.fr/p/1#a#b"), "https://counted.fr/p/1");
+        assert_eq!(loggable("https://counted.fr/p/1#a#b"), "https://counted.fr/p/1");
     }
 
     #[test]
     fn a_bare_fragment_yields_nothing() {
-        assert_eq!(without_fragment("#secretkey"), "");
+        assert_eq!(loggable("#secretkey"), "");
     }
 }

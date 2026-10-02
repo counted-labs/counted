@@ -2,10 +2,11 @@ use dioxus::prelude::*;
 use crate::tid;
 use shared::ProjectStatus;
 
-use crate::common::{AppHeader, DropdownButton, DropdownItem, ProjectStatusItems};
+use crate::common::{haptic, AppHeader, Haptic};
 use crate::expenses::helpers::expenses_page_helpers::HeaderState;
+use crate::expenses::project_actions_sheet::ProjectActionsSheet;
 use crate::expenses::project_states::Spinner;
-use crate::icons::{HistoryIcon, ShareIcon, ICON_HEADER};
+use crate::icons::MoreIcon;
 use crate::route::Route;
 
 #[derive(PartialEq, Props, Clone)]
@@ -30,9 +31,10 @@ pub struct ProjectHeaderProps {
     pub native_app_link: Option<String>,
 }
 
-/// The project page's header and its actions menu. Decides nothing — every entry calls back out.
+/// The project page's header and its actions sheet. Decides nothing — every entry calls back out.
 #[component]
 pub fn ProjectHeader(props: ProjectHeaderProps) -> Element {
+    let mut sheet_open = use_signal(|| false);
     match props.state.clone() {
         HeaderState::Loading => rsx! {
             Spinner {}
@@ -61,74 +63,40 @@ pub fn ProjectHeader(props: ProjectHeaderProps) -> Element {
         HeaderState::Cached { title } => rsx! {
             AppHeader { back_button_route: Route::ProjectsPage {}, title, sticky: true }
         },
-        HeaderState::Ready { title, status } => rsx! {
-            AppHeader { back_button_route: Route::ProjectsPage {}, title, sticky: true,
+        HeaderState::Ready { title, status, read_only } => rsx! {
+            AppHeader { back_button_route: Route::ProjectsPage {}, title: title.clone(), sticky: true,
                 button {
-                    id: "project-share-btn",
-                    class: "btn btn-ghost btn-circle btn-sm",
-                    aria_label: tid!("share-link"),
-                    onclick: move |_| props.on_share.call(()),
-                    ShareIcon { size: ICON_HEADER }
-                }
-                button {
-                    id: "project-history-btn",
-                    class: "btn btn-ghost btn-circle btn-sm",
-                    aria_label: tid!("project-history-title"),
-                    onclick: move |_| props.on_history.call(()),
-                    HistoryIcon { size: ICON_HEADER }
-                }
-                DropdownButton {
                     id: "project-actions",
-                    label: tid!("project-actions"),
-                    DropdownItem {
-                        variant: "primary",
-                        label: tid!("edit"),
-                        onclick: move |_| props.on_edit.call(()),
-                    }
-                    li {
-                        button {
-                            id: "recurring-menu-item",
-                            onclick: move |_| props.on_recurring.call(()),
-                            {tid!("recurring-title")}
-                        }
-                    }
-                    DropdownItem {
-                        variant: "error",
-                        label: tid!("leave"),
-                        onclick: move |_| props.on_leave.call(()),
-                    }
-                    ProjectStatusItems {
-                        status,
-                        on_apply: move |s| props.on_status.call(s),
-                    }
-                    li { hr { class: "my-1 border-base-200" } }
-                    li {
-                        button {
-                            onclick: move |_| props.on_export_json.call(()),
-                            {tid!("export-json")}
-                        }
-                    }
-                    li {
-                        button {
-                            onclick: move |_| props.on_export_csv.call(()),
-                            {tid!("export-csv")}
-                        }
-                    }
-                    if let Some(on_invite) = props.on_invite {
-                        li {
-                            button {
-                                id: "invite-friends-item",
-                                onclick: move |_| on_invite.call(()),
-                                {tid!("invite-friends-title")}
-                            }
-                        }
-                    }
-                    if let Some(link) = props.native_app_link.clone() {
-                        li {
-                            // Plain href so the OS resolves the scheme.
-                            a { href: "{link}", {tid!("open-in-app")} }
-                        }
-                    }
+                    r#type: "button",
+                    class: "btn btn-circle size-11 bg-base-200 border-0",
+                    aria_label: tid!("project-actions"),
+                    aria_haspopup: "dialog",
+                    aria_expanded: sheet_open(),
+                    onclick: move |_| {
+                        haptic(Haptic::Light);
+                        sheet_open.set(true);
+                    },
+                    MoreIcon { size: 24 }
+                }
+            }
+            // A sibling of the header, never inside it: a scrolled mobile header gets
+            // `backdrop-filter`, which would trap this `position: fixed` sheet in the header box.
+            if sheet_open() {
+                ProjectActionsSheet {
+                    title,
+                    status,
+                    read_only,
+                    native_app_link: props.native_app_link.clone(),
+                    on_close: move |_| sheet_open.set(false),
+                    on_share: props.on_share,
+                    on_invite: props.on_invite,
+                    on_history: props.on_history,
+                    on_recurring: props.on_recurring,
+                    on_edit: props.on_edit,
+                    on_status: props.on_status,
+                    on_export_csv: props.on_export_csv,
+                    on_export_json: props.on_export_json,
+                    on_leave: props.on_leave,
                 }
             }
         },

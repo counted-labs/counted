@@ -787,6 +787,9 @@ pub struct ProjectDto {
     /// only the wire drops it.
     #[serde(skip_serializing, default)]
     pub owner_account_id: Option<Uuid>,
+    /// The public demo. Enforced by triggers in the database; the client only hides the controls.
+    #[serde(default)]
+    pub read_only: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

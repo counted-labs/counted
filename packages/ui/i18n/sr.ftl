@@ -169,6 +169,14 @@ project-close = Zatvori
 project-archive = Arhiviraj
 project-reopen = Ponovo otvori
 project-unarchive = Vrati iz arhive
+project-sheet-invite = Pozovi
+project-sheet-recurring = Ponavljajući
+project-sheet-edit = Izmeni projekat
+project-sheet-close = Zatvori projekat
+project-sheet-archive = Arhiviraj projekat
+project-sheet-reopen = Ponovo otvori projekat
+project-sheet-unarchive = Vrati projekat iz arhive
+project-sheet-leave = Napusti projekat
 
 ### Dates
 
@@ -226,6 +234,8 @@ projects-count-label = Projekti
 projects-empty = Nema projekata
 projects-empty-hint = Napravi projekat dugmetom ispod
 projects-offline-banner = Podaci van mreže - ponovo se poveži za osvežavanje.
+demo-banner = Demo projekat - samo za čitanje.
+demo-start-own = Pokreni svoj projekat
 projects-no-local-data = Nema lokalnih podataka
 projects-no-local-data-hint = Prijavi se da prvi put učitaš svoje projekte.
 projects-add = Dodaj projekat
@@ -338,6 +348,9 @@ stats-my-expenses = Moji troškovi
 tab-expenses = Troškovi
 tab-balance = Stanje
 tab-reimbursements = Izmirenje
+balance-gets-back = Dobija nazad
+balance-owes = Duguje
+balance-settled = Izmireno
 reimbursements-empty-title = Sve je izmireno!
 reimbursements-empty-hint = Predlozi za izmirenje pojavljuju se ovde kad računi nisu u ravnoteži
 reimbursement-owes = { $debtor } duguje { $creditor }
