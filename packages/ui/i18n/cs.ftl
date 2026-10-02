@@ -584,6 +584,7 @@ expense-converted-from = Zaplaceno { $amount } { $from } · 1 { $from } = { $rat
 project-currency = Měna
 project-currency-hint = Každá částka se zobrazuje v této měně. Později ji nelze změnit.
 project-currency-locked = Měna se nastavuje při vytvoření projektu.
+currency-search = Hledat měnu
 
 update-required-title = Vyžadována aktualizace
 update-required-body = Tato verze Counted je příliš stará na komunikaci se serverem. Aktualizuj ji, abys mohl aplikaci dál používat.

@@ -524,6 +524,7 @@ expense-converted-from = { $amount } { $from } bezahlt · 1 { $from } = { $rate 
 project-currency = Währung
 project-currency-hint = Alle Beträge werden in dieser Währung angezeigt. Sie kann später nicht geändert werden.
 project-currency-locked = Die Währung wird beim Anlegen des Projekts festgelegt.
+currency-search = Währung suchen
 project-gone-title = Dieses Projekt existiert nicht mehr
 participants-by-shares = Nach Anteilen
 split-amounts = Beträge

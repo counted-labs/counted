@@ -247,3 +247,10 @@ pub async fn next_paint() {
     }
     gloo_timers::future::TimeoutFuture::new(0).await;
 }
+
+/// Whether a form field holds the focus — a button that opened a modal does not count.
+pub fn a_field_has_focus() -> bool {
+    document()
+        .and_then(|d| d.active_element())
+        .is_some_and(|el| matches!(el.tag_name().as_str(), "INPUT" | "TEXTAREA" | "SELECT"))
+}

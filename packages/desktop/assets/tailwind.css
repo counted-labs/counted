@@ -3687,6 +3687,9 @@
   .h-auto {
     height: auto;
   }
+  .max-h-60 {
+    max-height: calc(var(--spacing) * 60);
+  }
   .max-h-\[22\.5rem\] {
     max-height: 22.5rem;
   }
@@ -3954,9 +3957,6 @@
   }
   .grid-flow-col {
     grid-auto-flow: column;
-  }
-  .grid-cols-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -5085,6 +5085,9 @@
   }
   .text-warning-content {
     color: var(--color-warning-content);
+  }
+  .capitalize {
+    text-transform: capitalize;
   }
   .lowercase {
     text-transform: lowercase;

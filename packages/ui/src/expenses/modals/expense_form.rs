@@ -10,7 +10,7 @@ use super::amount_input::{AmountInput, FocusedAmount};
 use super::amount_operator_bar::AmountOperatorBar;
 use super::participants_fieldset::ParticipantsFieldset;
 use crate::categories::{category_label, infer_chart_category, parent_emoji, CHART_CATEGORIES as CATEGORIES};
-use crate::common::{format_month_str, haptic, Haptic};
+use crate::common::{format_month_str, haptic, CurrencyPicker, Haptic};
 use crate::icons::{CloseIcon, ICON_HEADER};
 use crate::recurring::repeat_picker::RepeatRow;
 use crate::recurring::view::Repeat;
@@ -308,9 +308,9 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                     // The amount leads and takes the focus: it is the one figure the user always
                     // knows, and its `inputmode="decimal"` makes the numeric keyboard the only one
                     // the common case needs — the name, still being decided, follows it. No `input`
-                    // box: the rule below is the field's whole edge, so the currency `select` stops
+                    // box: the rule below is the field's whole edge, so the currency picker stops
                     // reading as a second field sharing a frame.
-                    label { class: "flex items-baseline gap-2 px-5 pt-3 pb-4 border-b border-base-200 focus-within:border-primary transition-colors",
+                    label { class: "relative flex items-baseline gap-2 px-5 pt-3 pb-4 border-b border-base-200 focus-within:border-primary transition-colors",
                             span { class: "sr-only", {tid!("field-amount")} }
                             AmountInput {
                                 id: "expense-amount",
@@ -326,13 +326,12 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                                     resplit(v, foreign, rate);
                                 },
                             }
-                            select {
+                            CurrencyPicker {
                                 id: "expense-currency",
-                                class: "text-base font-medium text-base-content/70 bg-transparent border-0 focus:outline-none cursor-pointer",
-                                aria_label: tid!("expense-currency"),
-                                value: "{expense_currency}",
-                                onchange: move |e| {
-                                    let picked = e.value();
+                                value: expense_currency(),
+                                label: tid!("expense-currency"),
+                                button_class: "flex items-center gap-1 text-base font-medium text-base-content/70 bg-transparent border-0 focus:outline-none cursor-pointer",
+                                onchange: move |picked: String| {
                                     let now_foreign = picked != project_currency;
                                     expense_currency.set(picked);
                                     // The rate that applied to the old currency means nothing for
@@ -340,13 +339,6 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                                     rate_input.set(String::new());
                                     resplit(source_amount(), now_foreign, props.auto_rate);
                                 },
-                                // Code only: this select sits inside the amount input and a
-                                // browser sizes a closed `<select>` to its widest option, so
-                                // "MAD — Moroccan Dirham" here would push the amount off-screen.
-                                // The project picker carries the names.
-                                for c in shared::CURRENCIES {
-                                    option { value: c.code, "{c.code}" }
-                                }
                             }
                         }
 

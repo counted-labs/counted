@@ -105,6 +105,11 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
                         // landed, rather than hard-coding daisyUI's duration.
                         spawn(async move {
                             for _ in 0..FOCUS_TRIES {
+                                // The user (or a test) got to another field first: retrying
+                                // would yank them back mid-typing.
+                                if crate::common::a_field_has_focus().await {
+                                    return;
+                                }
                                 let _ = node.set_focus(true).await;
                                 if *focused.peek() {
                                     return;

@@ -578,6 +578,7 @@ expense-converted-from = Makstud { $amount } { $from } · 1 { $from } = { $rate 
 project-currency = Valuuta
 project-currency-hint = Kõik summad kuvatakse selles valuutas. Seda ei saa hiljem muuta.
 project-currency-locked = Valuuta määratakse projekti loomisel.
+currency-search = Otsi valuutat
 
 update-required-title = Vajalik on uuendus
 update-required-body = See Countedi versioon on serveriga suhtlemiseks liiga vana. Rakenduse kasutamise jätkamiseks uuenda seda.

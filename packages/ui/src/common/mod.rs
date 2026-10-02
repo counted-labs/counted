@@ -65,7 +65,7 @@ mod sleep;
 pub use sleep::sleep;
 
 mod select_focused;
-pub use select_focused::select_focused_input;
+pub use select_focused::{a_field_has_focus, select_focused_input};
 
 mod toast;
 pub use toast::Toast;
@@ -169,6 +169,9 @@ pub use confirm_modal::ConfirmModal;
 
 mod language_picker;
 pub use language_picker::LanguagePicker;
+
+mod currency_picker;
+pub use currency_picker::CurrencyPicker;
 
 pub mod offline_queue;
 pub use offline_queue::{read_queue, write_queue, OpKind, QueuedOp};

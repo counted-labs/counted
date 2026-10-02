@@ -752,6 +752,7 @@ expense-converted-from = Payé { $amount } { $from } · 1 { $from } = { $rate } 
 project-currency = Devise
 project-currency-hint = Tous les montants sont affichés dans cette devise. Elle ne pourra pas être modifiée.
 project-currency-locked = La devise est fixée à la création du projet.
+currency-search = Rechercher une devise
 
 update-required-title = Mise à jour requise
 update-required-body = Cette version de Counted est trop ancienne pour communiquer avec le serveur. Mettez-la à jour pour continuer à utiliser l'application.

@@ -584,6 +584,7 @@ expense-converted-from = Сплачено { $amount } { $from } · 1 { $from } =
 project-currency = Валюта
 project-currency-hint = Усі суми показуються в цій валюті. Пізніше її не можна змінити.
 project-currency-locked = Валюта фіксується під час створення проєкту.
+currency-search = Пошук валюти
 
 update-required-title = Потрібне оновлення
 update-required-body = Ця версія Counted застара для зв’язку із сервером. Онови її, щоб продовжити користуватися застосунком.

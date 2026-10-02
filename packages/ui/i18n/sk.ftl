@@ -584,6 +584,7 @@ expense-converted-from = Zaplatené { $amount } { $from } · 1 { $from } = { $ra
 project-currency = Mena
 project-currency-hint = Každá suma sa zobrazuje v tejto mene. Neskôr ju nemožno zmeniť.
 project-currency-locked = Mena sa nastavuje pri vytvorení projektu.
+currency-search = Hľadať menu
 
 update-required-title = Vyžaduje sa aktualizácia
 update-required-body = Táto verzia Counted je príliš stará na komunikáciu so serverom. Aktualizuj ju, aby si mohol aplikáciu ďalej používať.

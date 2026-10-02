@@ -584,6 +584,7 @@ expense-converted-from = Sumokėta { $amount } { $from } · 1 { $from } = { $rat
 project-currency = Valiuta
 project-currency-hint = Visos sumos rodomos šia valiuta. Vėliau jos pakeisti negalima.
 project-currency-locked = Valiuta nustatoma kuriant projektą.
+currency-search = Ieškoti valiutos
 
 update-required-title = Reikalingas atnaujinimas
 update-required-body = Ši Counted versija per sena, kad galėtų susisiekti su serveriu. Atnaujink ją, kad galėtum toliau naudotis programėle.

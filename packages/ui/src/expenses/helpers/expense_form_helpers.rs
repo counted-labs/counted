@@ -85,7 +85,8 @@ pub fn init_entries_from_payments(
         .collect()
 }
 
-/// Accepts the decimal comma (FR mobile keyboards) and one `a op b` with `/`, `*`, `+` or `-`.
+/// Accepts the decimal comma (FR mobile keyboards) and a chain of `/`, `*`, `+` and `-` without
+/// parentheses, `*` and `/` binding tighter.
 /// `None` means empty or mid-typing — callers must then touch nothing, or Dioxus rewrites `value`
 /// and clobbers the keystroke in progress.
 pub fn parse_amount(raw: &str) -> Option<f64> {
@@ -103,33 +104,41 @@ fn parse_plain(s: &str) -> Option<f64> {
 const OPERATORS: [char; 4] = ['/', '*', '+', '-'];
 
 /// A leading `-` is an operator with an empty left side, so `-5` and `2*-3` fail here as they do
-/// in `parse_plain`. Rounded to cents so the settled field reads `83.33`, not `83.333…`.
+/// in `parse_plain`. Only the result must be non-negative (`2-5+10` is 7), and it alone is rounded
+/// to cents, so the settled field reads `83.33`, not `83.333…`, and `250/3*3` is 250.
 fn evaluate_expression(s: &str) -> Option<f64> {
-    let mut ops = s.match_indices(OPERATORS);
-    let (at, op) = ops.next()?;
-    if ops.next().is_some() {
-        return None;
+    let mut sum = 0.0;
+    let mut term = 0.0;
+    let mut term_sign = 1.0;
+    let mut pending = "+";
+    let mut start = 0;
+    for (at, op) in s.match_indices(OPERATORS).chain([(s.len(), "+")]) {
+        let n = parse_plain(&s[start..at])?;
+        term = match pending {
+            "*" => term * n,
+            "/" => term / n,
+            _ => n,
+        };
+        if op == "+" || op == "-" {
+            sum += term_sign * term;
+            term_sign = if op == "-" { -1.0 } else { 1.0 };
+        }
+        pending = op;
+        start = at + op.len();
     }
-    let a = parse_plain(&s[..at])?;
-    let b = parse_plain(&s[at + op.len()..])?;
-    let result = match op {
-        "/" => a / b,
-        "*" => a * b,
-        "+" => a + b,
-        _ => a - b,
-    };
-    Some(shared::round_currency(result)).filter(|v| v.is_finite() && *v >= 0.0)
+    Some(shared::round_currency(sum)).filter(|v| v.is_finite() && *v >= 0.0)
 }
 
 pub fn is_expression(s: &str) -> bool {
     s.contains(OPERATORS)
 }
 
-/// The field text after tapping an operator key: appended to a plain number, swapped for a
-/// trailing operator, refused when there is nothing to operate on or the expression is complete.
+/// The field text after tapping an operator key: appended after a number, swapped for a trailing
+/// operator, refused when there is nothing to operate on.
 pub fn with_operator(shown: &str, op: char) -> Option<String> {
     let base = shown.trim_end_matches(OPERATORS);
-    parse_plain(&base.replace(',', ".")).map(|_| format!("{base}{op}"))
+    let last_operand = base.rsplit(OPERATORS).next().unwrap_or_default();
+    parse_plain(&last_operand.replace(',', ".")).map(|_| format!("{base}{op}"))
 }
 
 /// What an amount field displays: the keystrokes as typed while they still mean `value`, the
@@ -524,13 +533,26 @@ mod tests {
         assert_eq!(parse_amount("5-5"), Some(0.0));
     }
 
+    #[test]
+    fn parse_amount_chains_operators_with_multiplication_first() {
+        assert_eq!(parse_amount("1+2+3"), Some(6.0));
+        assert_eq!(parse_amount("10+5*2"), Some(20.0));
+        assert_eq!(parse_amount("100/4/5"), Some(5.0));
+        assert_eq!(parse_amount("2-5+10"), Some(7.0));
+        assert_eq!(parse_amount("250/3*3"), Some(250.0));
+        assert_eq!(parse_amount("10,5+0,25*2"), Some(11.0));
+    }
+
     /// A half-typed expression is `None` for the same reason "12." is kept: the handler must not
     /// touch the split, and the field must keep what was typed.
     #[test]
     fn parse_amount_rejects_incomplete_or_ambiguous_expressions() {
         assert_eq!(parse_amount("250/"), None);
         assert_eq!(parse_amount("/3"), None);
-        assert_eq!(parse_amount("1+2+3"), None);
+        assert_eq!(parse_amount("1+2+"), None);
+        assert_eq!(parse_amount("1++2"), None);
+        assert_eq!(parse_amount("5-10+2"), None);
+        assert_eq!(parse_amount("1+2/0"), None);
         assert_eq!(parse_amount("250/0"), None);
         assert_eq!(parse_amount("2*-3"), None);
         assert_eq!(parse_amount("abc/2"), None);
@@ -559,10 +581,15 @@ mod tests {
     }
 
     #[test]
-    fn with_operator_refuses_without_a_left_operand_or_after_a_complete_expression() {
+    fn with_operator_refuses_without_a_left_operand() {
         assert_eq!(with_operator("", '+'), None);
         assert_eq!(with_operator("-", '+'), None);
-        assert_eq!(with_operator("250/3", '+'), None);
+    }
+
+    #[test]
+    fn with_operator_extends_a_complete_expression() {
+        assert_eq!(with_operator("250/3", '+'), Some("250/3+".into()));
+        assert_eq!(with_operator("2-5", '*'), Some("2-5*".into()));
     }
 
     #[test]

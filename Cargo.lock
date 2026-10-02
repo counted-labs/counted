@@ -3781,8 +3781,6 @@ dependencies = [
 [[package]]
 name = "jni-macros"
 version = "0.22.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a00109accc170f0bdb141fed3e393c565b6f5e072365c3bd58f5b062591560a3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4334,7 +4332,7 @@ dependencies = [
 
 [[package]]
 name = "mobile"
-version = "3.2.2"
+version = "3.2.3"
 dependencies = [
  "api",
  "axum 0.7.9",

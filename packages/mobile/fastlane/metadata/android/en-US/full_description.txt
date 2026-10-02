@@ -19,6 +19,7 @@ No ads, no trackers, no subscription, no paid version, no cap on expenses or par
 • Expenses, transfers and gains, with several payers and several beneficiaries
 • Split equally, by shares or by exact amount, checked to the cent
 • The fewest transfers to settle the group
+• Recurring expenses like rent or subscriptions: entered once, added every time they fall due
 • Over 150 currencies, converted at the European Commission's monthly rate
 • Statistics by category, by person and month by month
 • History of who added, edited or deleted what

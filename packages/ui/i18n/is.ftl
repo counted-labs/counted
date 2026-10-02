@@ -578,6 +578,7 @@ expense-converted-from = Greitt { $amount } { $from } · 1 { $from } = { $rate }
 project-currency = Gjaldmiðill
 project-currency-hint = Allar upphæðir eru sýndar í þessum gjaldmiðli. Honum er ekki hægt að breyta síðar.
 project-currency-locked = Gjaldmiðillinn er festur þegar verkefnið er stofnað.
+currency-search = Leita að gjaldmiðli
 
 update-required-title = Uppfærslu krafist
 update-required-body = Þessi útgáfa af Counted er of gömul til að tala við þjóninn. Uppfærðu hana til að halda áfram að nota forritið.

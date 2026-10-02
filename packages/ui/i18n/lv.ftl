@@ -581,6 +581,7 @@ expense-converted-from = Samaksāts { $amount } { $from } · 1 { $from } = { $ra
 project-currency = Valūta
 project-currency-hint = Visas summas tiek rādītas šajā valūtā. To vēlāk nevar mainīt.
 project-currency-locked = Valūta tiek noteikta, izveidojot projektu.
+currency-search = Meklēt valūtu
 
 update-required-title = Nepieciešams atjauninājums
 update-required-body = Šī Counted versija ir pārāk veca, lai sazinātos ar serveri. Atjaunini to, lai turpinātu lietot lietotni.

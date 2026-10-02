@@ -584,6 +584,7 @@ expense-converted-from = Zapłacono { $amount } { $from } · 1 { $from } = { $ra
 project-currency = Waluta
 project-currency-hint = Każda kwota jest pokazywana w tej walucie. Nie można jej później zmienić.
 project-currency-locked = Waluta jest ustalana przy tworzeniu projektu.
+currency-search = Szukaj waluty
 
 update-required-title = Wymagana aktualizacja
 update-required-body = Ta wersja Counted jest za stara, by komunikować się z serwerem. Zaktualizuj ją, aby dalej korzystać z aplikacji.

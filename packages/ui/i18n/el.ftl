@@ -578,6 +578,7 @@ expense-converted-from = Πληρώθηκαν { $amount } { $from } · 1 { $from
 project-currency = Νόμισμα
 project-currency-hint = Κάθε ποσό εμφανίζεται σε αυτό το νόμισμα. Δεν μπορεί να αλλάξει αργότερα.
 project-currency-locked = Το νόμισμα ορίζεται κατά τη δημιουργία του έργου.
+currency-search = Αναζήτηση νομίσματος
 
 update-required-title = Απαιτείται ενημέρωση
 update-required-body = Αυτή η έκδοση του Counted είναι πολύ παλιά για να επικοινωνήσει με τον διακομιστή. Ενημέρωσέ την για να συνεχίσεις να χρησιμοποιείς την εφαρμογή.

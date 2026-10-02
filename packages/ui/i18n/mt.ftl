@@ -584,6 +584,7 @@ expense-converted-from = Imħallas { $amount } { $from } · 1 { $from } = { $rat
 project-currency = Munita
 project-currency-hint = Kull ammont jintwera f'din il-munita. Ma tistax tinbidel aktar tard.
 project-currency-locked = Il-munita tiġi ffissata meta jinħoloq il-proġett.
+currency-search = Fittex munita
 
 update-required-title = Aġġornament meħtieġ
 update-required-body = Din il-verżjoni ta' Counted hija qadima wisq biex titkellem mas-server. Aġġornaha biex tkompli tuża l-app.

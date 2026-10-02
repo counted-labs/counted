@@ -524,6 +524,7 @@ expense-converted-from = { $amount } { $from } betaald · 1 { $from } = { $rate 
 project-currency = Valuta
 project-currency-hint = Alle bedragen worden in deze valuta getoond. Dit kan later niet worden gewijzigd.
 project-currency-locked = De valuta wordt vastgelegd bij het aanmaken van het project.
+currency-search = Valuta zoeken
 project-gone-title = Dit project bestaat niet meer
 participants-by-shares = Op aandelen
 split-amounts = Bedragen

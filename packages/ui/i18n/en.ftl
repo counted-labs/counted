@@ -770,6 +770,7 @@ expense-converted-from = Paid { $amount } { $from } · 1 { $from } = { $rate } {
 project-currency = Currency
 project-currency-hint = Every amount is shown in this currency. It cannot be changed later.
 project-currency-locked = The currency is fixed when the project is created.
+currency-search = Search a currency
 
 update-required-title = Update required
 update-required-body = This version of Counted is too old to talk to the server. Update it to keep using the app.

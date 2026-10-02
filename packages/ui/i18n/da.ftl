@@ -578,6 +578,7 @@ expense-converted-from = Betalt { $amount } { $from } · 1 { $from } = { $rate }
 project-currency = Valuta
 project-currency-hint = Alle beløb vises i denne valuta. Den kan ikke ændres senere.
 project-currency-locked = Valutaen fastlægges, når projektet oprettes.
+currency-search = Søg efter valuta
 
 update-required-title = Opdatering påkrævet
 update-required-body = Denne version af Counted er for gammel til at tale med serveren. Opdater den for at fortsætte med at bruge appen.

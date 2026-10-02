@@ -10,7 +10,7 @@ use shared::{
 };
 
 use crate::common::{
-    error_message, update_ls, upsert_project, upsert_project_key, InviteRetry, LocalStorageState,
+    error_message, update_ls, CurrencyPicker, upsert_project, upsert_project_key, InviteRetry, LocalStorageState,
 };
 use crate::crypto::{
     claim_token, claim_verifier, decrypt_json, encrypt_json, generate_key, key_to_fragment,
@@ -253,8 +253,8 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                                 oninput: move |e| project_name.set(e.value()),
                             }
                         }
-                        div { class: "grid grid-cols-2 gap-2",
-                            div {
+                        div { class: "flex gap-2",
+                            div { class: "flex-1 min-w-0",
                                 label { class: "text-xs font-semibold text-base-content/70 block mb-1.5", r#for: "add-project-description", {tid!("field-description")} }
                                 input {
                                     id: "add-project-description",
@@ -266,16 +266,14 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                                     oninput: move |e| description.set(e.value()),
                                 }
                             }
-                            div {
+                            div { class: "relative",
                                 label { class: "text-xs font-semibold text-base-content/70 block mb-1.5", r#for: "add-project-currency", {tid!("project-currency")} }
-                                select {
+                                CurrencyPicker {
                                     id: "add-project-currency",
-                                    class: "select w-full",
-                                    value: "{currency}",
-                                    onchange: move |e| currency.set(e.value()),
-                                    for c in shared::CURRENCIES {
-                                        option { value: c.code, "{c.code} — {c.name}" }
-                                    }
+                                    value: currency(),
+                                    label: tid!("project-currency"),
+                                    button_class: "input w-auto gap-1 font-medium cursor-pointer",
+                                    onchange: move |code| currency.set(code),
                                 }
                             }
                         }

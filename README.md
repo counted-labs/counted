@@ -22,6 +22,7 @@ counted.fr serves is built from exactly these files, reproducibly, and its hashe
 | `packages/web` | The browser entry point |
 | `packages/mobile`, `packages/ocr` | The Android/iOS apps and the on-device receipt OCR |
 | `vendor/tao` | tao 0.34.8 with one upstream fix backported (see its README) |
+| `vendor/jni-macros` | jni-macros 0.22.4 with its generated code made deterministic, for reproducible APKs |
 
 The backend — `packages/api/src/server/`, the database, the deployment — stays private. The
 client is what handles your keys and your plaintext, and it is the part you can audit and rebuild.

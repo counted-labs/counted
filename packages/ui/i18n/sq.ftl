@@ -578,6 +578,7 @@ expense-converted-from = Paguar { $amount } { $from } · 1 { $from } = { $rate }
 project-currency = Monedha
 project-currency-hint = Çdo shumë shfaqet në këtë monedhë. Nuk mund të ndryshohet më vonë.
 project-currency-locked = Monedha fiksohet kur krijohet projekti.
+currency-search = Kërko një monedhë
 
 update-required-title = Kërkohet përditësim
 update-required-body = Ky version i Counted është shumë i vjetër për të komunikuar me serverin. Përditësoje për të vazhduar përdorimin e aplikacionit.

@@ -578,6 +578,7 @@ expense-converted-from = Fizetve { $amount } { $from } · 1 { $from } = { $rate 
 project-currency = Pénznem
 project-currency-hint = Minden összeg ebben a pénznemben jelenik meg. Később nem módosítható.
 project-currency-locked = A pénznem a projekt létrehozásakor rögzül.
+currency-search = Pénznem keresése
 
 update-required-title = Frissítés szükséges
 update-required-body = A Counted ezen verziója túl régi a szerverrel való kommunikációhoz. Frissítsd az alkalmazás további használatához.

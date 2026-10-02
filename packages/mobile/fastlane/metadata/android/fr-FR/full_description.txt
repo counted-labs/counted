@@ -19,6 +19,7 @@ Pas de pub ni de traqueur, pas d'abonnement, pas de version payante, pas de plaf
 • Dépenses, virements et gains, avec plusieurs payeurs et plusieurs bénéficiaires
 • Répartition à parts égales, par parts ou au montant exact, vérifiée au centime
 • Minimiser les virements pour équilibrer les comptes
+• Dépenses récurrentes, comme le loyer ou les abonnements : saisies une fois, ajoutées à chaque échéance
 • Plus de 150 devises, converties au taux mensuel de la Commission européenne
 • Statistiques par catégorie, par personne et mois par mois
 • Historique de ce qui a été ajouté, modifié ou supprimé

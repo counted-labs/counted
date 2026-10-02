@@ -581,6 +581,7 @@ expense-converted-from = Plaćeno { $amount } { $from } · 1 { $from } = { $rate
 project-currency = Valuta
 project-currency-hint = Svaki iznos prikazuje se u ovoj valuti. Ne može kasnije da se promeni.
 project-currency-locked = Valuta se određuje pri pravljenju projekta.
+currency-search = Pretraži valutu
 
 update-required-title = Potrebno ažuriranje
 update-required-body = Ova verzija Counteda prestara je za komunikaciju sa serverom. Ažuriraj je da nastaviš da koristiš aplikaciju.

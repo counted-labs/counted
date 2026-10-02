@@ -578,6 +578,7 @@ expense-converted-from = { $amount } { $from } ödendi · 1 { $from } = { $rate 
 project-currency = Para birimi
 project-currency-hint = Her tutar bu para biriminde gösterilir. Daha sonra değiştirilemez.
 project-currency-locked = Para birimi proje oluşturulurken sabitlenir.
+currency-search = Para birimi ara
 
 update-required-title = Güncelleme gerekli
 update-required-body = Counted'ın bu sürümü sunucuyla konuşamayacak kadar eski. Uygulamayı kullanmaya devam etmek için güncelle.

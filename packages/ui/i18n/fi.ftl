@@ -578,6 +578,7 @@ expense-converted-from = Maksettu { $amount } { $from } · 1 { $from } = { $rate
 project-currency = Valuutta
 project-currency-hint = Kaikki summat näytetään tässä valuutassa. Sitä ei voi muuttaa myöhemmin.
 project-currency-locked = Valuutta lukitaan projektia luotaessa.
+currency-search = Hae valuuttaa
 
 update-required-title = Päivitys vaaditaan
 update-required-body = Tämä Counted-versio on liian vanha keskustellakseen palvelimen kanssa. Päivitä se jatkaaksesi sovelluksen käyttöä.

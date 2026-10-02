@@ -115,6 +115,8 @@ shared = { path = "packages/shared" }
 ocr = { path = "packages/ocr" }
 
 # tao 0.34.8 + tauri-apps/tao#1211 backported: every 0.34.x aborts at launch on Android < 11, and
-# dioxus-desktop 0.7 pins 0.34. See docs/dioxus-overrides.md.
+# dioxus-desktop 0.7 pins 0.34. jni-macros 0.22.4 with its generated checks sorted: HashMap order
+# made libmain.so differ from build to build. See docs/dioxus-overrides.md.
 [patch.crates-io]
 tao = { path = "vendor/tao" }
+jni-macros = { path = "vendor/jni-macros" }

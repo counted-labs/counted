@@ -587,6 +587,7 @@ expense-converted-from = Íoctha { $amount } { $from } · 1 { $from } = { $rate 
 project-currency = Airgeadra
 project-currency-hint = Taispeántar gach suim san airgeadra seo. Ní féidir é a athrú níos déanaí.
 project-currency-locked = Socraítear an t-airgeadra nuair a chruthaítear an tionscadal.
+currency-search = Cuardaigh airgeadra
 
 update-required-title = Nuashonrú ag teastáil
 update-required-body = Tá an leagan seo de Counted róshean chun labhairt leis an bhfreastalaí. Nuashonraigh é chun leanúint ar aghaidh ag úsáid na haipe.
