@@ -325,6 +325,23 @@ main {
   inset-inline-end: calc(1rem + var(--sar));
 }
 
+/* iOS only (`-webkit-touch-callout` is WebKit-only, so the Android WebView never matches): the home
+   indicator's inset is already the gap a floating tab bar sits on, and the extra 1.5rem above it left
+   the dock floating ~56pt off the edge. FAB and toast drop by the same 1.5rem to keep their spacing. */
+@supports (-webkit-touch-callout: none) {
+  .safe-bottom-dock {
+    bottom: var(--sab);
+  }
+
+  .safe-bottom-fab {
+    bottom: calc(4.5rem + var(--sab));
+  }
+
+  .safe-toast {
+    bottom: calc(9rem + var(--sab));
+  }
+}
+
 /* Page transitions — see docs/mobile-navigation.md and
    packages/ui/src/common/page_transition.rs. `.page-shell` is the route-keyed wrapper around the
    Outlet, so a new one is created on every navigation and its animation runs once; `.page-exiting`

@@ -10,8 +10,12 @@ use super::amount_input::FocusedAmount;
 ///
 /// Rendered as the last row of `.modal-box`, below the footer: on phones the box's
 /// `padding-bottom: max(--sab, --kb)` is what puts it directly above the keyboard, so nothing here
-/// positions itself. `onpointerdown` preventDefault keeps the field focused across the tap, which
-/// is also what keeps the keyboard up and this bar on screen.
+/// positions itself. Each key cancels both `pointerdown` and `mousedown` so the field keeps focus
+/// across the tap, which is also what keeps the keyboard up and this bar on screen. `pointerdown`
+/// alone is enough for Chromium, which then suppresses the compatibility `mousedown`; iOS WebKit
+/// does not — a tap's synthetic `mousedown` skips the pointer-event check (`Element.cpp`,
+/// `dispatchPointerEventIfNeeded`), and unless that `mousedown` is cancelled, it moves the focus
+/// and drops the keyboard.
 #[component]
 pub fn AmountOperatorBar() -> Element {
     let bar = use_context::<FocusedAmount>();
@@ -31,6 +35,7 @@ pub fn AmountOperatorBar() -> Element {
 
     rsx! {
         div {
+            id: "amount-operator-bar",
             class: "hidden pointer-coarse:flex gap-2 px-6 py-2 border-t border-base-200 shrink-0 relative",
             if let Some(expr) = expression.clone() {
                 span {
@@ -41,41 +46,51 @@ pub fn AmountOperatorBar() -> Element {
             button {
                 r#type: "button",
                 class: "btn btn-sm btn-ghost flex-1 text-lg",
+                id: "amount-op-add",
                 aria_label: tid!("amount-op-add"),
                 onpointerdown: move |e| e.prevent_default(),
+                onmousedown: move |e| e.prevent_default(),
                 onclick: move |_| tap('+'),
                 "+"
             }
             button {
                 r#type: "button",
                 class: "btn btn-sm btn-ghost flex-1 text-lg",
+                id: "amount-op-subtract",
                 aria_label: tid!("amount-op-subtract"),
                 onpointerdown: move |e| e.prevent_default(),
+                onmousedown: move |e| e.prevent_default(),
                 onclick: move |_| tap('-'),
                 "−"
             }
             button {
                 r#type: "button",
                 class: "btn btn-sm btn-ghost flex-1 text-lg",
+                id: "amount-op-multiply",
                 aria_label: tid!("amount-op-multiply"),
                 onpointerdown: move |e| e.prevent_default(),
+                onmousedown: move |e| e.prevent_default(),
                 onclick: move |_| tap('*'),
                 "×"
             }
             button {
                 r#type: "button",
                 class: "btn btn-sm btn-ghost flex-1 text-lg",
+                id: "amount-op-divide",
                 aria_label: tid!("amount-op-divide"),
                 onpointerdown: move |e| e.prevent_default(),
+                onmousedown: move |e| e.prevent_default(),
                 onclick: move |_| tap('/'),
                 "÷"
             }
             button {
                 r#type: "button",
                 class: "btn btn-sm btn-ghost flex-1 text-lg",
+                id: "amount-op-equals",
                 aria_label: tid!("amount-op-equals"),
                 disabled: expression.is_none(),
                 onpointerdown: move |e| e.prevent_default(),
+                onmousedown: move |e| e.prevent_default(),
                 // Exactly what blur does, without dropping focus: the draft goes, the field shows
                 // the number the split already used.
                 onclick: move |_| {
@@ -85,7 +100,8 @@ pub fn AmountOperatorBar() -> Element {
                 },
                 "="
             }
-            // The one key here that must NOT preventDefault: letting the tap's default action run
+            // The one key here that must NOT preventDefault its `pointerdown` or `mousedown`:
+            // letting the tap's default action run
             // is what blurs the field, which is what lowers the keyboard — and blurring also
             // clears `FocusedAmount`, so this bar goes with it. It exists because suppressing
             // iOS's own accessory view (packages/mobile/src/main.rs) took away the ✓ that was the
@@ -93,6 +109,7 @@ pub fn AmountOperatorBar() -> Element {
             button {
                 r#type: "button",
                 class: "btn btn-sm btn-ghost flex-1",
+                id: "amount-op-done",
                 aria_label: tid!("amount-op-done"),
                 svg {
                     xmlns: "http://www.w3.org/2000/svg",
