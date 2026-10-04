@@ -57,6 +57,9 @@ pub fn keyboard_inset(layout_h: f64, visual_h: f64, offset_top: f64) -> f64 {
 /// up under the footer. Same script, so the new padding is laid out before the scroll is computed;
 /// `nearest` touches only the ancestors that actually clip the field and is a no-op when nothing
 /// does, which is what makes it safe on every page rather than just the sheets.
+///
+/// It keys on either variable, not on `kb` alone: when WebKit pans by the whole keyboard, `kb` is
+/// 0 while `--vvo` has shrunk the sheet by that much, and the field ends up just as hidden.
 pub fn css_viewport_vars(kb: f64, offset_top: f64) -> String {
     // Same degradation as `keyboard_inset`: nonsense from a viewport mid-teardown becomes "no
     // offset" rather than a `calc()` that drops the whole declaration.
@@ -65,7 +68,7 @@ pub fn css_viewport_vars(kb: f64, offset_top: f64) -> String {
         "document.documentElement.style.setProperty('--kb','{kb:.1}px');\
          document.documentElement.style.setProperty('--vvo','{vvo:.1}px');"
     );
-    if kb > 0.0 {
+    if kb > 0.0 || vvo > 0.0 {
         set + "document.activeElement?.scrollIntoView({block:'nearest'});"
     } else {
         set
@@ -194,5 +197,15 @@ mod tests {
         assert!(kb < scroll, "the padding must be laid out before the scroll is computed");
         assert!(vvo < scroll, "the max-height must be laid out before the scroll is computed");
         assert!(!css_viewport_vars(0.0, 0.0).contains("scrollIntoView"));
+    }
+
+    /// Measured on an iPhone 17 (iOS 26): focusing a field low in the add-project sheet made
+    /// WebKit pan the visual viewport by the whole keyboard (offsetTop 308, visual height 566 of
+    /// 874). `keyboard_inset` is then 0, yet `--vvo` has shrunk the sheet by 308 and the field sat
+    /// under the footer, never re-scrolled.
+    #[test]
+    fn a_keyboard_fully_absorbed_by_the_pan_still_rescrolls() {
+        assert_eq!(keyboard_inset(874.0, 566.0, 308.0), 0.0);
+        assert!(css_viewport_vars(0.0, 308.0).contains("scrollIntoView"));
     }
 }

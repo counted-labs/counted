@@ -8,6 +8,7 @@ below, which keep their upstream licences.
 | `vendor/tao/` | [tao](https://github.com/tauri-apps/tao) 0.34.8 — Copyright 2014-2021 The winit contributors, Copyright 2021-2023 Tauri Programme within The Commons Conservancy | Apache-2.0, [vendor/tao/LICENSE](vendor/tao/LICENSE) |
 | `vendor/jni-macros/` | [jni-macros](https://github.com/jni-rs/jni-rs) 0.22.4 — Copyright the jni-rs contributors | MIT OR Apache-2.0, Apache-2.0 text in [vendor/tao/LICENSE](vendor/tao/LICENSE) |
 | `packages/ocr/models/` | [PP-OCRv6_small_det](https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx) and [PP-OCRv6_small_rec](https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx) — Copyright PaddlePaddle Authors | Apache-2.0, text in [vendor/tao/LICENSE](vendor/tao/LICENSE) |
+| Logo and store artwork, listed in [README.md](README.md#licence) | Counted — Copyright 2022-2026 Jonathan Bosi | CC-BY-SA-4.0, [creativecommons.org/licenses/by-sa/4.0](https://creativecommons.org/licenses/by-sa/4.0/legalcode) |
 | `packages/*/assets/fonts/inter-*.woff2` | [Inter](https://github.com/rsms/inter) — Copyright (c) 2016 The Inter Project Authors | OFL-1.1, below |
 | `packages/*/assets/fonts/jakarta-*.woff2` | [Plus Jakarta Sans](https://github.com/tokotype/PlusJakartaSans) — Copyright 2020 The Plus Jakarta Sans Project Authors | OFL-1.1, below |
 

@@ -67,13 +67,15 @@ GNU Affero General Public License, **version 3 only** (`AGPL-3.0-only`), as publ
 Software Foundation. It is distributed without any warranty; see [LICENSE](LICENSE).
 Third-party files keep their own licences: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-**Name and logo.** Under section 7(e) of the licence, no rights are granted in the name "Counted",
-its logo or the counted.fr domain. The files below carry the logo and store artwork; they are **not
-licensed under the AGPL** — all rights reserved — and are present only so that the published build
-can be reproduced. A fork must replace them and must not present itself as Counted.
+**Name and logo.** Under section 7(e) of the licence, no trademark rights are granted in the name
+"Counted", its logo or the counted.fr domain. The files below carry the logo and store artwork;
+they are licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) instead of
+the AGPL, in every published version. That licence grants no trademark rights either: a fork may
+reuse the artwork but must not present itself as Counted.
 
 - `packages/mobile/assets/counted*.{png,svg,ico}`, `packages/mobile/assets/play-feature-*.png`
 - `packages/mobile/android-res/mipmap-*/ic_launcher*.png`
+- `packages/mobile/fastlane/metadata/android/en-US/images/icon.png`
 - `packages/web/assets/counted.png`, `packages/desktop/assets/favicon.ico`
 
 **Contributions.** This repository is a one-way mirror, updated once per release. Pull requests

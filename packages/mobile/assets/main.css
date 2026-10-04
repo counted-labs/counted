@@ -204,8 +204,11 @@ main {
        on the .modal already pins the box to the bottom edge — so growing its bottom padding lifts
        the content clear of the keyboard without touching that animation. The body inside is
        `flex-1 overflow-y-auto`, so it absorbs the loss by scrolling; css_viewport_vars re-scrolls
-       the focused field into it. */
-    padding-bottom: max(var(--sab), var(--kb));
+       the focused field into it. --sab less --vvo, because a panned visual viewport leaves this
+       box's bottom edge --vvo below the visible band: once WebKit pans by the whole keyboard (--kb
+       0, --vvo 308 on an iPhone 17) the indicator is under the keys, and a full --sab of padding
+       was a strip of blank sheet above them. */
+    padding-bottom: max(calc(var(--sab) - var(--vvo)), var(--kb));
     /* Just clears the grabber (0.5rem top + 0.3125rem tall). These boxes are `p-0` with their own
        section padding inside, so anything more stacks on top of the header section's `pt-5`. */
     padding-top: 0.875rem;
