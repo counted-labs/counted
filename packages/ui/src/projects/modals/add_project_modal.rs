@@ -277,7 +277,6 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                                 }
                             }
                         }
-                        p { class: "text-xs text-base-content/70", {tid!("project-currency-hint")} }
                     }
 
                     div { class: "flex flex-col gap-1.5",
@@ -301,13 +300,6 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                                 },
                             }
                             span { class: "badge badge-secondary badge-sm", {tid!("participants-you-badge")} }
-                        }
-                        p { class: "text-xs text-base-content/70",
-                            if friend_list.signed_in && account_name.is_some() {
-                                {tid!("participants-you-from-account")}
-                            } else {
-                                {tid!("participants-you-required")}
-                            }
                         }
                     }
 

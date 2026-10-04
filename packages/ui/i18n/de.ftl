@@ -112,7 +112,7 @@ account-member-since = Mitglied seit
 account-logout = Abmelden
 account-logging-out = Abmeldung läuft…
 account-delete-title = Mein Konto löschen
-account-delete-warning = Sofort und endgültig, ohne Papierkorb. Ausgaben, die du in einem geteilten Projekt eingetragen hast, bleiben für die anderen Beteiligten sichtbar - sie gehören zu deren Abrechnung.
+account-delete-warning = Sofortige und endgültige Löschung deines Kontos und deiner Daten.
 account-delete-confirm-title = Konto löschen
 account-delete-confirm-message = Dein Konto, deine Sitzungen und deine Projektliste werden endgültig gelöscht. Ohne dein Passwort sind die verschlüsselten Daten eines geteilten Projekts für dich nicht mehr lesbar - das lässt sich nicht rückgängig machen.
 
@@ -380,7 +380,6 @@ charts-expense-count =
        *[other] { $count } Ausgaben
     }
 charts-nothing-to-show = Nichts anzuzeigen
-charts-my-share-note = Diese Beträge sind dein Anteil an jeder Ausgabe.
 charts-my-share-skipped =
     { $count ->
         [one] 1 Projekt zählt nicht mit — keine Person ausgewählt, oder die Daten konnten nicht geladen werden.
@@ -511,7 +510,7 @@ error-payment-methods-stale = Deine Zahlungsdaten wurden auf einem anderen Gerä
 
 ### Payment methods (Teilen)
 
-settings-payment-methods-share-warning = Eine geteilte Zahlungsart ist für alle Mitglieder der Projekte sichtbar, in denen du deinen Namen gewählt hast - für jeden, der einen dieser Projektlinks besitzt.
+settings-payment-methods-share-warning = Eine geteilte Zahlungsart ist für alle Mitglieder deiner Projekte sichtbar.
 payment-method-share = Mit meinen Projekten teilen
 payment-method-share-hint = Wird neben deinem Namen angezeigt, wenn dir jemand Geld schuldet.
 payment-method-copy = { $name } kopieren
@@ -535,7 +534,6 @@ expense-rate-unavailable = Kein automatischer Kurs verfügbar - gib ihn von Hand
 expenses-show-more = Mehr anzeigen ({ $count } weitere)
 expense-converted-from = { $amount } { $from } bezahlt · 1 { $from } = { $rate } { $to }
 project-currency = Währung
-project-currency-hint = Alle Beträge werden in dieser Währung angezeigt. Sie kann später nicht geändert werden.
 project-currency-locked = Die Währung wird beim Anlegen des Projekts festgelegt.
 currency-search = Währung suchen
 project-gone-title = Dieses Projekt existiert nicht mehr
@@ -580,9 +578,9 @@ charts-currency = Währung
 charts-my-share = Mein Anteil
 charts-share-of-total = { $pct } % von { $total }
 charts-i-paid = Ich habe bezahlt
-charts-paid-more = { $amount } mehr als dein Anteil
-charts-paid-less = { $amount } weniger als dein Anteil
-charts-paid-even = Genau dein Anteil
+charts-paid-more = { $amount } mehr als mein Anteil
+charts-paid-less = { $amount } weniger als mein Anteil
+charts-paid-even = Genau mein Anteil
 charts-part-title = Dein Anteil je Kategorie
 charts-part-desc = Grau ist, was die Gruppe ausgegeben hat, farbig, was du verbraucht hast.
 charts-breakdown-title = Aufteilung nach Kategorie
@@ -591,7 +589,6 @@ charts-of-total = { $amount } von { $total }
 charts-show-all = Alle anzeigen ({ $count })
 charts-show-less = Weniger anzeigen
 charts-spend-title = Ausgaben im Zeitverlauf
-charts-spend-desc = Kurze Zeiträume nach Tag, längere nach Woche oder Monat.
 charts-group-by = Gruppieren nach
 bucket-day = Tag
 bucket-week = Woche
@@ -618,7 +615,7 @@ charts-balance-desc = Über der Linie schuldet dir die Gruppe etwas. Darunter sc
 charts-owed = Du bekommst
 charts-owe = Du schuldest
 charts-projects-title = Dein Anteil pro Projekt
-charts-projects-desc = Summen bleiben je Währung getrennt und werden nie addiert.
+charts-projects-desc = Summen bleiben je Währung getrennt.
 history-by = Von { $name }
 
 ### Notifications
@@ -672,24 +669,20 @@ invitation-decline = Ablehnen
 # docs/plans/friends.md §11.
 participants-you-label = Dein Name in diesem Projekt
 participants-you-badge = Du
-participants-you-from-account = Aus deinem Kontonamen übernommen. Hier nur für dieses Projekt ändern.
-participants-you-required = Pflichtfeld. So sehen dich die anderen.
 participants-others = Weitere Teilnehmende
-participants-empty = Noch niemand. Wähle unten einen Freund oder gib einen Namen ein.
-participants-empty-signed-out = Noch niemand. Gib einen Namen ein, um jemanden hinzuzufügen.
+participants-empty = Füge unten Teilnehmer hinzu.
 participants-duplicate = „{ $name }“ ist bereits in der Liste.
 participants-input-label = Freund hinzufügen oder Namen eingeben
 participants-input-placeholder = Freund oder beliebiger Name
 participants-suggest-friend = Freund · tritt als „{ $name }“ bei, erhält eine Einladung
 participants-suggest-not-ready = Freund · noch nicht bereit
-participants-suggest-guest = „{ $text }“ ohne Konto hinzufügen
-participants-suggest-guest-sub = Kein Konto, nur ein Name
+participants-suggest-guest = „{ $text }“ hinzufügen
+participants-suggest-guest-sub = Gast
 participants-friends = Deine Freunde
 participants-all-friends = Alle Freunde
 participants-login-hint = Melde dich an, um Leute direkt aus deiner Freundesliste hinzuzufügen.
 participants-invite-badge = Einladen
-participants-guest-badge = Ohne Konto
-participants-guest-sub = Kein Konto, nur ein Name
+participants-guest-badge = Gast
 participants-rename = { $name } umbenennen
 participants-remove = { $name } entfernen
 participants-rename-label = Neuer Name

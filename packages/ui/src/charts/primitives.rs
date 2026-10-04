@@ -1,23 +1,26 @@
 use dioxus::prelude::*;
 
 use super::svg::{area_path, column_path, compact, line_path, nice_scale, split_at, ticks, WIDTH};
-use crate::common::{Mascot, MascotPose, MASCOT_INLINE};
+use crate::common::{Mascot, MascotPose, MASCOT_EMPTY};
 use crate::tid;
 
 pub const AXIS_TEXT: &str = "font-size:10px;fill:var(--color-base-content);fill-opacity:.5";
-pub const LABEL_TEXT: &str = "font-size:11px;font-weight:600;fill:var(--color-base-content);fill-opacity:.7";
+pub const LABEL_TEXT: &str =
+    "font-size:11px;font-weight:600;fill:var(--color-base-content);fill-opacity:.7";
 pub const STRONG_TEXT: &str = "font-size:12px;font-weight:700;fill:var(--color-base-content)";
 const GRID: &str = "var(--color-base-300)";
 const INK: &str = "var(--color-base-content)";
 
 #[component]
-pub fn ChartCard(title: String, description: String, children: Element) -> Element {
+pub fn ChartCard(title: String, description: Option<String>, children: Element) -> Element {
     rsx! {
         section { class: "card bg-base-100 shadow-soft",
             div { class: "card-body p-0 gap-3",
                 header { class: "flex flex-col gap-0.5",
                     h2 { class: "text-sm font-semibold", "{title}" }
-                    p { class: "text-xs text-base-content/70", "{description}" }
+                    if let Some(description) = description {
+                        p { class: "text-xs text-base-content/70", "{description}" }
+                    }
                 }
                 {children}
             }
@@ -28,7 +31,10 @@ pub fn ChartCard(title: String, description: String, children: Element) -> Eleme
 #[component]
 pub fn Swatch(color: &'static str) -> Element {
     rsx! {
-        span { class: "w-2.5 h-2.5 rounded-[3px] inline-block shrink-0", style: "background: {color};" }
+        span {
+            class: "w-2.5 h-2.5 rounded-[3px] inline-block shrink-0",
+            style: "background: {color};",
+        }
     }
 }
 
@@ -49,9 +55,16 @@ pub struct Segment {
 /// `button`, not `input type=radio`: main.css's unlayered `input { font-size: 16px !important }`
 /// would outgrow the 360px row.
 #[component]
-pub fn Segmented(aria_label: String, segments: Vec<Segment>, on_select: EventHandler<usize>) -> Element {
+pub fn Segmented(
+    aria_label: String,
+    segments: Vec<Segment>,
+    on_select: EventHandler<usize>,
+) -> Element {
     rsx! {
-        div { role: "radiogroup", aria_label: "{aria_label}", class: "join w-full",
+        div {
+            role: "radiogroup",
+            aria_label: "{aria_label}",
+            class: "join w-full",
             for (i , s) in segments.into_iter().enumerate() {
                 button {
                     r#type: "button",
@@ -70,8 +83,8 @@ pub fn Segmented(aria_label: String, segments: Vec<Segment>, on_select: EventHan
 #[component]
 pub fn EmptyState() -> Element {
     rsx! {
-        div { class: "flex flex-col items-center gap-2 py-8 text-base-content/70",
-            Mascot { pose: MascotPose::Searching, size: MASCOT_INLINE }
+        div { class: "flex flex-col items-center gap-2 py-12 text-base-content/70",
+            Mascot { pose: MascotPose::Searching, size: MASCOT_EMPTY }
             span { class: "text-sm", {tid!("charts-nothing-to-show")} }
         }
     }
@@ -112,8 +125,21 @@ pub fn ColumnChart(
             role: "img",
             "aria-label": "{aria_label}",
             for t in ticks(0.0, top, step) {
-                line { x1: "{PAD_L}", x2: "{right}", y1: "{y(t):.2}", y2: "{y(t):.2}", stroke: GRID, stroke_width: "1" }
-                text { x: "{PAD_L - 6.0}", y: "{y(t) + 3.0:.2}", text_anchor: "end", style: AXIS_TEXT, "{compact(t)}" }
+                line {
+                    x1: "{PAD_L}",
+                    x2: "{right}",
+                    y1: "{y(t):.2}",
+                    y2: "{y(t):.2}",
+                    stroke: GRID,
+                    stroke_width: "1",
+                }
+                text {
+                    x: "{PAD_L - 6.0}",
+                    y: "{y(t) + 3.0:.2}",
+                    text_anchor: "end",
+                    style: AXIS_TEXT,
+                    "{compact(t)}"
+                }
             }
             for (i , c) in columns.iter().enumerate() {
                 {
@@ -125,18 +151,48 @@ pub fn ColumnChart(
                             path { d: column_path(x, top_y, bar_w, height), fill: "{color}" }
                         }
                         if !c.label.is_empty() {
-                            text { x: "{x + bar_w / 2.0:.2}", y: "{H - 5.0}", text_anchor: "middle", style: AXIS_TEXT, "{c.label}" }
+                            text {
+                                x: "{x + bar_w / 2.0:.2}",
+                                y: "{H - 5.0}",
+                                text_anchor: "middle",
+                                style: AXIS_TEXT,
+                                "{c.label}"
+                            }
                         }
                         if let Some(label) = &c.value_label {
-                            text { x: "{x + bar_w / 2.0:.2}", y: "{top_y - 5.0:.2}", text_anchor: "middle", style: STRONG_TEXT, "{label}" }
+                            text {
+                                x: "{x + bar_w / 2.0:.2}",
+                                y: "{top_y - 5.0:.2}",
+                                text_anchor: "middle",
+                                style: STRONG_TEXT,
+                                "{label}"
+                            }
                         }
                     }
                 }
             }
             if let Some((value, label)) = average {
-                line { x1: "{PAD_L}", x2: "{right + 2.0}", y1: "{y(value):.2}", y2: "{y(value):.2}", stroke: INK, stroke_opacity: ".55", stroke_width: "1" }
-                text { x: "{right + 6.0}", y: "{y(value) - 2.0:.2}", style: LABEL_TEXT, {tid!("charts-avg")} }
-                text { x: "{right + 6.0}", y: "{y(value) + 10.0:.2}", style: LABEL_TEXT, "{label}" }
+                line {
+                    x1: "{PAD_L}",
+                    x2: "{right + 2.0}",
+                    y1: "{y(value):.2}",
+                    y2: "{y(value):.2}",
+                    stroke: INK,
+                    stroke_opacity: ".55",
+                    stroke_width: "1",
+                }
+                text {
+                    x: "{right + 6.0}",
+                    y: "{y(value) - 2.0:.2}",
+                    style: LABEL_TEXT,
+                    {tid!("charts-avg")}
+                }
+                text {
+                    x: "{right + 6.0}",
+                    y: "{y(value) + 10.0:.2}",
+                    style: LABEL_TEXT,
+                    "{label}"
+                }
             }
         }
     }
@@ -144,7 +200,13 @@ pub fn ColumnChart(
 
 /// `signed`: a balance, washed green above zero and red below. Otherwise a running total.
 #[component]
-pub fn LineChart(values: Vec<f64>, labels: Vec<String>, end_label: String, signed: bool, aria_label: String) -> Element {
+pub fn LineChart(
+    values: Vec<f64>,
+    labels: Vec<String>,
+    end_label: String,
+    signed: bool,
+    aria_label: String,
+) -> Element {
     const H: f64 = 170.0;
     const PAD_L: f64 = 34.0;
     const PAD_R: f64 = 44.0;
@@ -163,7 +225,13 @@ pub fn LineChart(values: Vec<f64>, labels: Vec<String>, end_label: String, signe
     };
     let y = move |v: f64| PAD_T + plot_h - (v - low) / (high - low) * plot_h;
     let n = values.len();
-    let x = move |i: usize| if n > 1 { PAD_L + i as f64 / (n - 1) as f64 * plot_w } else { PAD_L + plot_w / 2.0 };
+    let x = move |i: usize| {
+        if n > 1 {
+            PAD_L + i as f64 / (n - 1) as f64 * plot_w
+        } else {
+            PAD_L + plot_w / 2.0
+        }
+    };
     let points: Vec<(f64, f64)> = values.iter().enumerate().map(|(i, v)| (x(i), y(*v))).collect();
     let base = y(0.0);
     let (above, below) = split_at(&points, base);
@@ -178,33 +246,95 @@ pub fn LineChart(values: Vec<f64>, labels: Vec<String>, end_label: String, signe
             "aria-label": "{aria_label}",
             for t in ticks(low, high, step) {
                 {
-                    let tick = if signed && t > 0.0 { format!("+{}", compact(t)) } else { compact(t) };
+                    let tick = if signed && t > 0.0 {
+                        format!("+{}", compact(t))
+                    } else {
+                        compact(t)
+                    };
                     rsx! {
-                        line { x1: "{PAD_L}", x2: "{PAD_L + plot_w}", y1: "{y(t):.2}", y2: "{y(t):.2}", stroke: GRID, stroke_width: "1" }
-                        text { x: "{PAD_L - 6.0}", y: "{y(t) + 3.0:.2}", text_anchor: "end", style: AXIS_TEXT, "{tick}" }
+                        line {
+                            x1: "{PAD_L}",
+                            x2: "{PAD_L + plot_w}",
+                            y1: "{y(t):.2}",
+                            y2: "{y(t):.2}",
+                            stroke: GRID,
+                            stroke_width: "1",
+                        }
+                        text {
+                            x: "{PAD_L - 6.0}",
+                            y: "{y(t) + 3.0:.2}",
+                            text_anchor: "end",
+                            style: AXIS_TEXT,
+                            "{tick}"
+                        }
                     }
                 }
             }
             if signed {
                 for stretch in above {
-                    path { d: area_path(&stretch, base), fill: "var(--color-success)", fill_opacity: ".12" }
+                    path {
+                        d: area_path(&stretch, base),
+                        fill: "var(--color-success)",
+                        fill_opacity: ".12",
+                    }
                 }
                 for stretch in below {
-                    path { d: area_path(&stretch, base), fill: "var(--color-error)", fill_opacity: ".1" }
+                    path {
+                        d: area_path(&stretch, base),
+                        fill: "var(--color-error)",
+                        fill_opacity: ".1",
+                    }
                 }
-                line { x1: "{PAD_L}", x2: "{PAD_L + plot_w}", y1: "{base:.2}", y2: "{base:.2}", stroke: INK, stroke_opacity: ".55", stroke_width: "1" }
+                line {
+                    x1: "{PAD_L}",
+                    x2: "{PAD_L + plot_w}",
+                    y1: "{base:.2}",
+                    y2: "{base:.2}",
+                    stroke: INK,
+                    stroke_opacity: ".55",
+                    stroke_width: "1",
+                }
             } else {
-                path { d: area_path(&points, base), fill: "var(--color-primary)", fill_opacity: ".1" }
+                path {
+                    d: area_path(&points, base),
+                    fill: "var(--color-primary)",
+                    fill_opacity: ".1",
+                }
             }
-            path { d: line_path(&points), fill: "none", stroke, stroke_width: "2", stroke_linejoin: "round", stroke_linecap: "round" }
+            path {
+                d: line_path(&points),
+                fill: "none",
+                stroke,
+                stroke_width: "2",
+                stroke_linejoin: "round",
+                stroke_linecap: "round",
+            }
             for (i , label) in labels.iter().enumerate() {
                 if !label.is_empty() {
-                    text { x: "{x(i):.2}", y: "{H - 5.0}", text_anchor: "middle", style: AXIS_TEXT, "{label}" }
+                    text {
+                        x: "{x(i):.2}",
+                        y: "{H - 5.0}",
+                        text_anchor: "middle",
+                        style: AXIS_TEXT,
+                        "{label}"
+                    }
                 }
             }
             if let Some((ex, ey)) = end {
-                circle { cx: "{ex:.2}", cy: "{ey:.2}", r: "4.5", fill: stroke, stroke: "var(--color-base-100)", stroke_width: "2" }
-                text { x: "{ex + 9.0:.2}", y: "{ey + 4.0:.2}", style: STRONG_TEXT, "{end_label}" }
+                circle {
+                    cx: "{ex:.2}",
+                    cy: "{ey:.2}",
+                    r: "4.5",
+                    fill: stroke,
+                    stroke: "var(--color-base-100)",
+                    stroke_width: "2",
+                }
+                text {
+                    x: "{ex + 9.0:.2}",
+                    y: "{ey + 4.0:.2}",
+                    style: STRONG_TEXT,
+                    "{end_label}"
+                }
             }
         }
     }

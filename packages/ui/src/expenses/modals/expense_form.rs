@@ -310,7 +310,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                     // the common case needs — the name, still being decided, follows it. No `input`
                     // box: the rule below is the field's whole edge, so the currency picker stops
                     // reading as a second field sharing a frame.
-                    label { class: "relative flex items-baseline gap-2 px-5 pt-3 pb-4 border-b border-base-200 focus-within:border-primary transition-colors",
+                    label { class: "relative flex items-baseline gap-2 px-5 pt-3 pb-4 border-b border-base-200",
                             span { class: "sr-only", {tid!("field-amount")} }
                             AmountInput {
                                 id: "expense-amount",
@@ -342,12 +342,14 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                             }
                         }
 
-                    div { class: "flex items-center gap-2 px-5 py-1 border-b border-base-200",
+                    div { class: "flex flex-col gap-1.5 px-5 pt-2.5 pb-3 border-b border-base-200",
+                        label { class: "text-sm font-medium", r#for: "expense-name", {tid!("field-name")} }
+                        div { class: "flex items-center h-12 rounded-field bg-base-100 border border-base-content/50 focus-within:border-primary focus-within:ring-3 focus-within:ring-primary/20",
                         if expense_type() == ExpenseType::Expense {
                             // The chip shows the emoji alone; the transparent native select on top
                             // takes the tap and opens the full labelled list. A closed `<select>`
                             // is sized to its widest option, so shown directly it truncated.
-                            label { class: "relative shrink-0 flex items-center gap-1 h-9 px-2.5 rounded-full bg-base-200 text-lg has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-primary",
+                            label { class: "relative shrink-0 flex items-center gap-1 h-full ps-3 pe-2.5 border-e border-base-300 text-lg has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-primary",
                             span { aria_hidden: "true",
                                 {parent_emoji(category().as_deref().unwrap_or(infer_chart_category(&expense_name())))}
                             }
@@ -379,10 +381,9 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                             }
                             }
                         }
-                        label { class: "sr-only", r#for: "expense-name", {tid!("field-name")} }
                         input {
                             id: "expense-name",
-                            class: "input input-ghost grow min-w-0 px-1",
+                            class: "grow min-w-0 h-full px-3 bg-transparent focus:outline-none",
                             r#type: "text",
                             enterkeyhint: "next",
                             aria_required: "true",
@@ -390,6 +391,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                             placeholder: tid!("expense-name-placeholder"),
                             value: "{expense_name}",
                             oninput: move |e| expense_name.set(e.value()),
+                        }
                         }
                     }
 

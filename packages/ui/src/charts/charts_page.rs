@@ -407,13 +407,8 @@ pub fn ChartsPage() -> Element {
                             my_share: total_spend(&mine),
                             my_paid: sum_over(&group, &d.my_paid),
                         }
-                        if all_mode {
-                            div { class: "flex flex-col gap-0.5 px-1",
-                                p { class: "text-xs text-base-content/70", {tid!("charts-my-share-note")} }
-                                if d.left_out > 0 {
-                                    p { class: "text-xs text-base-content/70", {tid!("charts-my-share-skipped", count: d.left_out as i64)} }
-                                }
-                            }
+                        if all_mode && d.left_out > 0 {
+                            p { class: "text-xs text-base-content/70 px-1", {tid!("charts-my-share-skipped", count: d.left_out as i64)} }
                         }
 
                         div { role: "tablist", class: "tabs tabs-box shadow-soft",

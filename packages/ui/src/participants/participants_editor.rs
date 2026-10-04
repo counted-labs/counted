@@ -149,11 +149,7 @@ pub fn ParticipantsEditor(props: ParticipantsEditorProps) -> Element {
             }
         } else if props.show_empty {
             p { class: "text-sm text-base-content/70 text-center border border-dashed border-base-300 rounded-box px-4 py-3",
-                if props.signed_in {
-                    {tid!("participants-empty")}
-                } else {
-                    {tid!("participants-empty-signed-out")}
-                }
+                {tid!("participants-empty")}
             }
         }
 
@@ -401,11 +397,8 @@ fn DraftRow(props: DraftRowProps) -> Element {
                         span { class: "badge badge-ghost badge-sm", {tid!("participants-guest-badge")} }
                     }
                 }
-                span { class: "text-sm text-base-content/70 truncate",
-                    match props.friend_email.clone() {
-                        Some(email) => rsx! { "{email}" },
-                        None => rsx! { {tid!("participants-guest-sub")} },
-                    }
+                if let Some(email) = props.friend_email.clone() {
+                    span { class: "text-sm text-base-content/70 truncate", "{email}" }
                 }
             }
             button {

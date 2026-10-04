@@ -112,7 +112,7 @@ account-member-since = Lid sinds
 account-logout = Uitloggen
 account-logging-out = Bezig met uitloggen…
 account-delete-title = Mijn account verwijderen
-account-delete-warning = Direct en definitief, zonder prullenbak. Uitgaven die je in een gedeeld project hebt ingevoerd blijven zichtbaar voor de andere deelnemers - die horen bij hun administratie.
+account-delete-warning = Directe en definitieve verwijdering van je account en je gegevens.
 account-delete-confirm-title = Account verwijderen
 account-delete-confirm-message = Je account, je sessies en je projectenlijst worden definitief verwijderd. Zonder je wachtwoord worden de versleutelde gegevens van een gedeeld project onleesbaar voor je - dit kan niet ongedaan worden gemaakt.
 
@@ -380,7 +380,6 @@ charts-expense-count =
        *[other] { $count } uitgaven
     }
 charts-nothing-to-show = Niets te tonen
-charts-my-share-note = Deze bedragen zijn jouw aandeel in elke uitgave.
 charts-my-share-skipped =
     { $count ->
         [one] 1 project telt niet mee — geen deelnemer gekozen, of de gegevens zijn niet geladen.
@@ -511,7 +510,7 @@ error-payment-methods-stale = Je betaalgegevens zijn op een ander apparaat gewij
 
 ### Payment methods (delen)
 
-settings-payment-methods-share-warning = Een gedeelde betaalmethode is zichtbaar voor alle leden van de projecten waarin je je naam hebt gekozen - iedereen die een van die projectlinks heeft.
+settings-payment-methods-share-warning = Een gedeelde betaalmethode is zichtbaar voor alle leden van je projecten.
 payment-method-share = Delen met mijn projecten
 payment-method-share-hint = Wordt naast je naam getoond wanneer iemand je geld schuldig is.
 payment-method-copy = { $name } kopiëren
@@ -535,7 +534,6 @@ expense-rate-unavailable = Geen automatische koers beschikbaar - voer er zelf ee
 expenses-show-more = Meer tonen ({ $count } resterend)
 expense-converted-from = { $amount } { $from } betaald · 1 { $from } = { $rate } { $to }
 project-currency = Valuta
-project-currency-hint = Alle bedragen worden in deze valuta getoond. Dit kan later niet worden gewijzigd.
 project-currency-locked = De valuta wordt vastgelegd bij het aanmaken van het project.
 currency-search = Valuta zoeken
 project-gone-title = Dit project bestaat niet meer
@@ -580,9 +578,9 @@ charts-currency = Valuta
 charts-my-share = Mijn deel
 charts-share-of-total = { $pct }% van { $total }
 charts-i-paid = Ik betaalde
-charts-paid-more = { $amount } meer dan jouw deel
-charts-paid-less = { $amount } minder dan jouw deel
-charts-paid-even = Precies jouw deel
+charts-paid-more = { $amount } meer dan mijn deel
+charts-paid-less = { $amount } minder dan mijn deel
+charts-paid-even = Precies mijn deel
 charts-part-title = Jouw deel per categorie
 charts-part-desc = Grijs is wat de groep uitgaf, kleur is wat jij verbruikte.
 charts-breakdown-title = Verdeling per categorie
@@ -591,7 +589,6 @@ charts-of-total = { $amount } van { $total }
 charts-show-all = Alles tonen ({ $count })
 charts-show-less = Minder tonen
 charts-spend-title = Uitgaven door de tijd
-charts-spend-desc = Korte periodes per dag, langere per week of maand.
 charts-group-by = Groeperen per
 bucket-day = Dag
 bucket-week = Week
@@ -618,7 +615,7 @@ charts-balance-desc = Boven de lijn is de groep jou iets schuldig. Eronder ben j
 charts-owed = Jij krijgt
 charts-owe = Jij bent schuldig
 charts-projects-title = Jouw deel, per project
-charts-projects-desc = Totalen blijven per valuta en worden nooit bij elkaar opgeteld.
+charts-projects-desc = Totalen blijven per valuta.
 history-by = Door { $name }
 
 ### Notifications
@@ -672,24 +669,20 @@ invitation-decline = Weigeren
 # docs/plans/friends.md §11.
 participants-you-label = Je naam in dit project
 participants-you-badge = Jij
-participants-you-from-account = Overgenomen van je accountnaam. Pas hem hier aan voor alleen dit project.
-participants-you-required = Verplicht. Zo zien de anderen je.
 participants-others = Andere deelnemers
-participants-empty = Nog niemand. Kies hieronder een vriend of typ een naam.
-participants-empty-signed-out = Nog niemand. Typ een naam om iemand toe te voegen.
+participants-empty = Voeg hieronder deelnemers toe.
 participants-duplicate = “{ $name }” staat al in de lijst.
 participants-input-label = Een vriend toevoegen of een naam typen
 participants-input-placeholder = Vriend of een naam
 participants-suggest-friend = Vriend · doet mee als “{ $name }”, krijgt een uitnodiging
 participants-suggest-not-ready = Vriend · nog niet klaar
-participants-suggest-guest = “{ $text }” zonder account toevoegen
-participants-suggest-guest-sub = Geen account, alleen een naam
+participants-suggest-guest = “{ $text }” toevoegen
+participants-suggest-guest-sub = Gast
 participants-friends = Je vrienden
 participants-all-friends = Alle vrienden
 participants-login-hint = Log in om mensen direct uit je vriendenlijst toe te voegen.
 participants-invite-badge = Uitnodigen
-participants-guest-badge = Zonder account
-participants-guest-sub = Geen account, alleen een naam
+participants-guest-badge = Gast
 participants-rename = { $name } hernoemen
 participants-remove = { $name } verwijderen
 participants-rename-label = Nieuwe naam

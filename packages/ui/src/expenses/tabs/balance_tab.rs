@@ -74,7 +74,7 @@ pub fn BalanceTab(props: BalanceTabProps) -> Element {
     rsx! {
         div { class: "flex flex-col gap-4",
             if groups.all_settled() {
-                div { class: "flex flex-col items-center gap-2 pt-8 pb-2 text-base-content/70",
+                div { class: "flex flex-col items-center gap-2 pt-12 pb-2 text-base-content/70",
                     Mascot { pose: MascotPose::Settled }
                     span { class: "font-bold text-base-content", {tid!("reimbursements-empty-title")} }
                 }

@@ -239,7 +239,7 @@ pub fn SpendOverTimeCard(
     range: String,
 ) -> Element {
     rsx! {
-        ChartCard { title: tid!("charts-spend-title"), description: tid!("charts-spend-desc"),
+        ChartCard { title: tid!("charts-spend-title"),
             Segmented {
                 aria_label: tid!("charts-group-by"),
                 segments: bucket_segments(bucket, fits),
