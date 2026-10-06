@@ -171,6 +171,12 @@ pub fn use_app_contexts() {
         let mut auth_resolved = auth_resolved;
         let mut update_required = update_required;
         spawn(async move {
+            // The demo is anonymous whatever cookie the browser holds: an account would escrow the
+            // throwaway project and sync the sandbox's store with the real one.
+            if crate::common::persist::is_demo() {
+                auth_resolved.set(AuthResolved(true));
+                return;
+            }
             match me().await {
                 Ok(account) => {
                     let account = match (account, account_enc_key()) {

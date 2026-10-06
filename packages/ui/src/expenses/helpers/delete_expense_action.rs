@@ -39,7 +39,7 @@ pub(crate) fn delete_expense_request(
     actor_user_id: i32,
 ) -> DeleteExpenseRequest {
     let history =
-        encrypt_json(key, &HistoryPayload { summary: history_summary })
+        encrypt_json(key, &HistoryPayload { summary: history_summary, actor_user_id: None })
             .ok()
             .map(|payload| HistoryContext { actor_user_id, payload });
     DeleteExpenseRequest { id: expense_id, project_id, history }

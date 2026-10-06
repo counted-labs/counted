@@ -13,7 +13,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::categories::{find_category, get_expense_category, parent_emoji};
 use crate::decrypted::{
-    decrypt_expense, decrypt_payment, decrypt_user, project_currency, DecryptedExpense,
+    decrypt_ledger, decrypt_user, project_currency, project_status, DecryptedExpense,
     DecryptedPayment,
 };
 use crate::expenses::tabs::expenses_tab::inconsistent_expense_ids;
@@ -183,16 +183,10 @@ pub fn build(key: Option<[u8; 32]>, live: Option<&LiveData>) -> ProjectData {
     let (users, expenses, payments) = (&live.users, &live.expenses, &live.payments);
     let project = live.project.as_ref();
 
-    let decrypted: Vec<DecryptedExpense> =
-        expenses.iter().filter_map(|e| decrypt_expense(&k, e).ok()).collect();
     // Only the payments of expenses the page lists: the rest used to move balances by rows nobody
     // could see.
-    let listed: HashSet<i32> = decrypted.iter().map(|d| d.id).collect();
-    let payments: Vec<DecryptedPayment> = payments
-        .iter()
-        .filter(|p| listed.contains(&p.expense_id))
-        .filter_map(|p| decrypt_payment(&k, p).ok())
-        .collect();
+    let (decrypted, payments): (Vec<DecryptedExpense>, Vec<DecryptedPayment>) =
+        decrypt_ledger(&k, expenses, payments);
     let user_names: HashMap<i32, String> =
         users.iter().filter_map(|u| decrypt_user(&k, u).ok().map(|d| (d.id, d.name))).collect();
 
@@ -220,7 +214,7 @@ pub fn build(key: Option<[u8; 32]>, live: Option<&LiveData>) -> ProjectData {
     let summary = summary_from_payments(&payments);
 
     let (currency, project_status) = project
-        .map(|p| (project_currency(&k, p), p.status.clone()))
+        .map(|p| (project_currency(&k, p), project_status(Some(&k), p)))
         .unwrap_or_else(|| ("...".to_string(), ProjectStatus::Ongoing));
 
     ProjectData {

@@ -6,6 +6,7 @@ use shared::{EditableProject, ExpenseType, ExpenseWithPayments, ReimbursementSug
 use uuid::Uuid;
 
 use super::helpers::export;
+use crate::common::persist::is_demo;
 use crate::common::{
     copy_text, is_mobile, leave_project_and_forget, pending, read_from_ls, InviteRetry,
     remove_project, scheme_link_for, share_link_for, share_text, write_to_ls, AppHeader, AvatarGroup, ConfirmModal, Flash,
@@ -21,6 +22,7 @@ use crate::friends::friends_service::{invitee_emails, Invitee};
 use crate::friends::InviteFriendsModal;
 use crate::icons::{CloseIcon, ICON_INLINE};
 use crate::projects::JoinProjectModal;
+use crate::decrypted::{payload_with_status, pickable_users};
 use crate::expenses::project_states::{
     ExpensesSkeleton, MissingKeyScreen, NoLocalDataScreen, Spinner,
 };
@@ -56,7 +58,8 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
     // gated post-mount like onboarding in app_layout.rs.
     let mut mounted = use_signal(|| false);
     use_effect(move || mounted.set(true));
-    let offer_native_app = mounted() && cfg!(target_arch = "wasm32") && is_mobile();
+    let demo = mounted() && is_demo();
+    let offer_native_app = mounted() && cfg!(target_arch = "wasm32") && is_mobile() && !demo;
 
     // Owned by AppLayout, so it survives navigating to an expense and back.
     let store = use_context::<ProjectStore>();
@@ -139,10 +142,16 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                 on_edit: move |_| show_edit_modal.set(true),
                 on_leave: move |_| show_leave_confirm.set(true),
                 on_status: move |status| {
+                    let payload = live
+                        .peek()
+                        .as_ref()
+                        .filter(|l| l.project_id == project_id)
+                        .and_then(|l| l.project.as_ref())
+                        .and_then(|p| payload_with_status(&key, p, &status));
                     spawn(async move {
                         let editable = EditableProject {
                             id: project_id,
-                            payload: None,
+                            payload,
                             status: Some(status),
                             history: None,
                         };
@@ -155,7 +164,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                 // `share_text` is false without a sheet (desktop browsers) or when it could not
                 // open, and true on dismiss — so the clipboard is only the fallback, never a second
                 // prompt after a shown sheet.
-                on_share: move |_| {
+                on_share: (!demo).then(|| EventHandler::new(move |_| {
                     let url = share_link_for(project_id, &key);
                     spawn(async move {
                         if share_text(&url).await {
@@ -167,7 +176,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                             copy_error.set(Some(tid!("copy-link-failed")));
                         }
                     });
-                },
+                })),
                 on_invite: auth_ctx().is_some().then(|| EventHandler::new(move |_| show_invite_modal.set(true))),
                 on_forget: forget_project,
             }
@@ -218,9 +227,10 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                 Some(d) => {
                     let summary = d.summary.clone();
                     let user_list = d.users.clone();
+                    let pickable = pickable_users(Some(&key), &user_list, &[]);
                     // A stored identity the roster no longer contains — removed by another member
                     // — counts as none, so the picker reopens instead of every write being refused.
-                    let uid = stored_user_id().filter(|id| user_list.iter().any(|u| u.id == *id));
+                    let uid = stored_user_id().filter(|id| pickable.iter().any(|u| u.id == *id));
                     let currency = d.currency.clone();
                     let project_status = d.project_status.clone();
                     let read_only = d.read_only;
@@ -248,10 +258,10 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                                 }
                             }
                         } else if uid.is_none() {
-                            UserSelectionModal { users: user_list.clone(), project_id }
+                            UserSelectionModal { users: pickable.clone(), project_id }
                         } else if show_switch() {
                             UserSelectionModal {
-                                users: user_list.clone(),
+                                users: pickable.clone(),
                                 project_id,
                                 on_close: move |_| show_switch.set(false),
                             }
@@ -259,7 +269,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
 
                         div { class: "flex justify-center",
                             AvatarGroup {
-                                users: user_list.clone(),
+                                users: pickable.clone(),
                                 encryption_key: Some(key),
                                 size: SizeClass::W10,
                             }
@@ -332,7 +342,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                                         });
                                     },
                                     project_id,
-                                    users: user_list.clone(),
+                                    users: pickable_users(Some(&key), &user_list, &[payer_id, debtor_id]),
                                     stored_user_id: uid,
                                     currency: currency.clone(),
                                     initial_name: Some(name),
@@ -349,7 +359,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                             if let Some(p) = project_dto {
                                 EditProjectModal {
                                     project: p,
-                                    users: user_list.clone(),
+                                    users: pickable.clone(),
                                     on_close: move |_| show_edit_modal.set(false),
                                     on_saved: move |_| {
                                         show_edit_modal.set(false);

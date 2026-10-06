@@ -255,6 +255,8 @@ pub fn expense_payload(
         rate: conversion.map(|c| c.rate),
         recurring_id: None,
         estimate: false,
+        author_id: None,
+        shares: None,
     }
 }
 

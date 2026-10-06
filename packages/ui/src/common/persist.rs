@@ -18,6 +18,51 @@ pub fn file_for(key: &str) -> std::path::PathBuf {
     data_dir().join(format!("{key}.json"))
 }
 
+#[cfg(target_arch = "wasm32")]
+const DEMO_FLAG: &str = "counted_demo";
+#[cfg(target_arch = "wasm32")]
+const DEMO_PATH: &str = "/demo";
+
+#[cfg(target_arch = "wasm32")]
+fn session_storage() -> Option<web_sys::Storage> {
+    web_sys::window()?.session_storage().ok().flatten()
+}
+
+/// The `/demo` sandbox. A tab in it keeps every store in sessionStorage under the same keys, so the
+/// visitor's own projects, keys and account are neither read nor written, and closing the tab
+/// erases the demo. Always false off the web: the demo is web-only.
+pub fn is_demo() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    return session_storage().is_some_and(|s| s.get_item(DEMO_FLAG).ok().flatten().is_some());
+    #[cfg(not(target_arch = "wasm32"))]
+    false
+}
+
+/// Must run before launch: the first render already reads the stores.
+#[cfg(target_arch = "wasm32")]
+pub fn enter_demo_if_requested() {
+    let on_demo = web_sys::window().and_then(|w| w.location().pathname().ok()).is_some_and(|p| p == DEMO_PATH);
+    if let (true, Some(s)) = (on_demo, session_storage()) {
+        let _ = s.set_item(DEMO_FLAG, "1");
+    }
+}
+
+/// Wipes the sandbox, flag included. The caller reloads, so every context re-reads the real stores.
+#[cfg(target_arch = "wasm32")]
+pub fn clear_demo() {
+    if let Some(s) = session_storage() {
+        let _ = s.clear();
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn web_storage() -> Option<web_sys::Storage> {
+    match is_demo() {
+        true => session_storage(),
+        false => web_sys::window()?.local_storage().ok().flatten(),
+    }
+}
+
 /// Reads a store, falling back to `T::default()` when there is nothing to read.
 ///
 /// **A parse failure is not the same as an empty store, and used to be indistinguishable from one.**
@@ -28,7 +73,7 @@ pub fn file_for(key: &str) -> std::path::PathBuf {
 pub fn read_json<T: DeserializeOwned + Default>(key: &str) -> T {
     #[cfg(target_arch = "wasm32")]
     {
-        let storage = web_sys::window().and_then(|w| w.local_storage().ok().flatten());
+        let storage = web_storage();
         let Some(raw) = storage.as_ref().and_then(|s| s.get_item(key).ok().flatten()) else {
             return T::default();
         };
@@ -85,9 +130,7 @@ pub fn write_json<T: Serialize>(key: &str, label: &str, value: &T) -> bool {
             dioxus::logger::tracing::error!("counted: serialize {label} failed");
             return false;
         };
-        let stored = web_sys::window()
-            .and_then(|w| w.local_storage().ok().flatten())
-            .map(|s| s.set_item(key, &json));
+        let stored = web_storage().map(|s| s.set_item(key, &json));
         match stored {
             Some(Ok(())) => return true,
             Some(Err(e)) => dioxus::logger::tracing::error!(

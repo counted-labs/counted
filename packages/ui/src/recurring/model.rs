@@ -104,6 +104,9 @@ pub struct RecurringPayload {
     #[serde(default)]
     pub paused: bool,
     pub seed: Uuid,
+    /// Replaces `recurring_expenses.author_id` — see docs/plans/participant-links-encryption.md.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub author_id: Option<i32>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -124,7 +127,7 @@ pub fn decrypt_rules(key: &[u8; 32], rules: &[RecurringExpense]) -> Vec<Decrypte
             Some(DecryptedRule {
                 id: r.id,
                 version: r.version,
-                author_id: r.author_id,
+                author_id: payload.author_id.or(r.author_id),
                 created_at: r.created_at,
                 payload,
             })
@@ -168,6 +171,7 @@ mod tests {
             next: 2,
             paused: false,
             seed: Uuid::new_v4(),
+            author_id: None,
         };
         let row = RecurringExpense {
             id: Uuid::new_v4(),

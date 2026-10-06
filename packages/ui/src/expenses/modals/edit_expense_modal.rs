@@ -28,7 +28,7 @@ use super::super::helpers::expense_modal_helpers::{
 };
 use super::super::hooks::use_fx_rates::use_fx_rates;
 use crate::crypto::{decrypt_json, encrypt_json};
-use crate::decrypted::{decrypt_payment, user_names};
+use crate::decrypted::{decrypt_expense_payments, pickable_users, user_names};
 
 #[derive(Props, Clone, PartialEq)]
 pub struct EditExpenseModalProps {
@@ -49,12 +49,13 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
     let key_snap = key_ctx();
 
     let expense_id = props.expense.id;
-    let expense_author_id = props.expense.author_id;
 
     // Decrypt initial expense values from single payload blob
     let decrypted_payload = key_snap
         .as_ref()
         .and_then(|k| decrypt_json::<ExpensePayload>(k, &props.expense.payload).ok());
+    let expense_author_id =
+        decrypted_payload.as_ref().and_then(|ep| ep.author_id).or(props.expense.author_id);
 
     let (initial_name, initial_date, initial_amount, initial_type, initial_category) =
         decrypted_payload
@@ -88,11 +89,13 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
     // Pre-decrypt all payments for payer/debtor initialization
     let decrypted_payments = key_snap
         .as_ref()
-        .map(|k| props.payments.iter().filter_map(|p| decrypt_payment(k, p).ok()).collect::<Vec<_>>())
+        .map(|k| decrypt_expense_payments(k, &props.expense, &props.payments))
         .unwrap_or_default();
 
+    let involved: Vec<i32> = decrypted_payments.iter().map(|p| p.user_id).collect();
+    let users = pickable_users(key_snap.as_ref(), &props.users, &involved);
     // Names for display — blank when the key is unavailable.
-    let names = user_names(key_snap.as_ref(), &props.users);
+    let names = user_names(key_snap.as_ref(), &users);
 
     let expense_name = use_signal(|| initial_name.clone());
     let date_str = use_signal(|| initial_date.clone());
@@ -117,14 +120,14 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
     let debtors_share_mode = use_signal(|| false);
 
     let init_payments_p = decrypted_payments.clone();
-    let init_users_p = props.users.clone();
+    let init_users_p = users.clone();
     let init_names_p = names.clone();
     let payers: Signal<Vec<UserEntry>> = use_signal(move || {
         init_entries_from_payments(&init_users_p, &init_names_p, &init_payments_p, false)
     });
 
     let init_payments_d = decrypted_payments.clone();
-    let init_users_d = props.users.clone();
+    let init_users_d = users.clone();
     let init_names_d = names.clone();
     let debtors: Signal<Vec<UserEntry>> = use_signal(move || {
         init_entries_from_payments(&init_users_d, &init_names_d, &init_payments_d, true)
@@ -340,7 +343,7 @@ fn build_editable_expense(
             actor_user_id,
             payload: encrypt_json(
                 key,
-                &HistoryPayload { summary: history_summary },
+                &HistoryPayload { summary: history_summary, actor_user_id: None },
             )?,
         }),
         None => None,

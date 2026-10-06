@@ -340,7 +340,7 @@ fn build_creatable_expense(
             actor_user_id: author_id,
             payload: encrypt_json(
                 key,
-                &HistoryPayload { summary: history_summary },
+                &HistoryPayload { summary: history_summary, actor_user_id: None },
             )?,
         }),
         client_op_id: None,

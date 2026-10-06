@@ -23,7 +23,7 @@ pub struct ProjectHeaderProps {
     pub on_invite: Option<EventHandler<()>>,
     /// The share link: platform share sheet where there is one, clipboard otherwise. The caller
     /// decides at click time, so the button renders identically on SSR and in the browser.
-    pub on_share: EventHandler<()>,
+    pub on_share: Option<EventHandler<()>>,
     /// Drops the dangling project from this device — the only exit from a deleted project's link.
     pub on_forget: EventHandler<()>,
     /// `counted://` link, set only on a phone browser: the one handoff where universal links are

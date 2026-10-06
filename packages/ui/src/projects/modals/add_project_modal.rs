@@ -106,6 +106,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 name: name_val.clone(),
                 currency: currency_val.clone(),
                 description: if desc_val.is_empty() { None } else { Some(desc_val.clone()) },
+                status: None,
             }) {
                 Ok(v) => v,
                 Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
@@ -118,7 +119,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 None => {
                     let claim_verifier = Some(claim_verifier(&key).to_vec());
                     let project =
-                        match add_project(Json(CreatableProject { payload, claim_verifier })).await {
+                        match add_project(Json(CreatableProject { payload, claim_verifier, demo: crate::common::persist::is_demo() })).await {
                             Ok(p) => p,
                             Err(e) => {
                                 error_msg.set(Some(error_message(&e)));
@@ -142,7 +143,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 std::iter::once(me_val.clone()).chain(others.iter().map(|d| d.name.clone())).collect();
             let mut creatables: Vec<CreatableUser> = Vec::new();
             for user_name in &names {
-                let payload = match encrypt_json(&key, &UserPayload { name: user_name.clone() }) {
+                let payload = match encrypt_json(&key, &UserPayload { name: user_name.clone(), removed: false }) {
                     Ok(v) => v,
                     Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
                 };
@@ -371,8 +372,10 @@ mod tests {
                 name: name.to_string(),
                 currency: currency.to_string(),
                 description: description.map(|d| d.to_string()),
+                status: None,
             })?,
             claim_verifier: Some(claim_verifier(key).to_vec()),
+            demo: false,
         })
     }
 
@@ -382,7 +385,7 @@ mod tests {
         project_id: Uuid,
     ) -> Result<CreatableUser, String> {
         Ok(CreatableUser {
-            payload: encrypt_json(key, &UserPayload { name: name.to_string() })?,
+            payload: encrypt_json(key, &UserPayload { name: name.to_string(), removed: false })?,
             project_id,
         })
     }
@@ -394,7 +397,7 @@ mod tests {
     fn make_user(key: &[u8; 32], id: i32, name: &str) -> User {
         User {
             id,
-            payload: encrypt_json(key, &UserPayload { name: name.to_string() }).unwrap(),
+            payload: encrypt_json(key, &UserPayload { name: name.to_string(), removed: false }).unwrap(),
             ..Default::default()
         }
     }

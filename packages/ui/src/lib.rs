@@ -6,6 +6,7 @@ pub mod charts;
 pub mod common;
 pub mod crypto;
 pub mod decrypted;
+pub mod demo;
 pub mod expenses;
 pub mod friends;
 pub mod help;

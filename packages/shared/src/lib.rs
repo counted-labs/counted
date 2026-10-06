@@ -275,6 +275,9 @@ pub enum ProjectStatus {
 #[serde(rename_all = "camelCase")]
 pub struct HistoryPayload {
     pub summary: String,
+    /// Replaces `project_history.actor_user_id` — see docs/plans/participant-links-encryption.md.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub actor_user_id: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -284,12 +287,29 @@ pub struct ProjectPayload {
     pub currency: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    /// Replaces `projects.status`; `None` means the column still holds it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<ProjectStatus>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct UserPayload {
     pub name: String,
+    /// Participants are never deleted once the server cannot see their payments: a removed one
+    /// leaves the pickers and keeps its name on past expenses.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub removed: bool,
+}
+
+/// One payer's or debtor's part of an expense, inside its payload. Replaces a `payments` row,
+/// whose `user_id` was in clear.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ExpenseShare {
+    pub user_id: i32,
+    pub amount: f64,
+    pub is_debt: bool,
 }
 
 /// `amount` is **always** in the project's currency, whatever currency the expense was entered in.
@@ -329,6 +349,22 @@ pub struct ExpensePayload {
     /// Added with the previous occurrence's amount, awaiting the real figure.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub estimate: bool,
+    /// Replaces `expenses.author_id`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub author_id: Option<i32>,
+    /// Replaces the `payments` rows. `Some` is the format of
+    /// docs/plans/participant-links-encryption.md; `None` means the rows still hold them.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shares: Option<Vec<ExpenseShare>>,
+}
+
+/// Pads serialised JSON with trailing spaces, which every JSON parser skips, to the next power of
+/// two from 256 bytes. XChaCha20 keeps `len(ct) == len(plaintext)`, so without it a payload's length
+/// would tell the server how many shares it holds.
+pub fn pad_json(mut json: String) -> String {
+    let target = json.len().max(256).next_power_of_two();
+    json.push_str(&" ".repeat(target - json.len()));
+    json
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -800,6 +836,9 @@ pub struct CreatableProject {
     /// which anyone holding the UUID could seed one. `default` for builds predating it.
     #[serde(default)]
     pub claim_verifier: Option<Vec<u8>>,
+    /// A visitor's throwaway copy from `/demo`: never owned, never a member, swept after 24h.
+    #[serde(default)]
+    pub demo: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -1197,8 +1236,9 @@ pub struct ReimbursementSuggestion {
 #[cfg(test)]
 mod tests {
     use super::{
-        convert_to_project, cross_rate, is_valid_rate, sums_to_total, to_cents, ExpensePayload,
-        HashMap, HistoryAction, HistoryEntity, CURRENCIES, MAX_EXCHANGE_RATE,
+        convert_to_project, cross_rate, is_valid_rate, pad_json, sums_to_total, to_cents,
+        ExpensePayload, ExpenseShare, HashMap, HistoryAction, HistoryEntity, HistoryPayload,
+        ProjectPayload, ProjectStatus, UserPayload, CURRENCIES, MAX_EXCHANGE_RATE,
     };
 
     #[test]
@@ -1387,6 +1427,8 @@ mod tests {
             rate: None,
             recurring_id: None,
             estimate: false,
+            author_id: None,
+            shares: None,
         };
         let json = serde_json::to_string(&p).unwrap();
         assert!(!json.contains("sourceCurrency"), "{json}");
@@ -1410,6 +1452,8 @@ mod tests {
             rate: Some(0.860437),
             recurring_id: None,
             estimate: false,
+            author_id: None,
+            shares: None,
         };
         let json = serde_json::to_string(&p).unwrap();
         assert!(json.contains("\"sourceCurrency\":\"USD\""), "{json}");
@@ -1434,5 +1478,54 @@ mod tests {
                 && !c.name.trim().is_empty()
         }));
         assert!(CURRENCIES.len() > 150, "{} currencies", CURRENCIES.len());
+    }
+
+    #[test]
+    fn pad_json_doubles_from_256() {
+        assert_eq!(pad_json("{}".to_string()).len(), 256);
+        assert_eq!(pad_json("x".repeat(256)).len(), 256);
+        assert_eq!(pad_json("x".repeat(257)).len(), 512);
+        assert_eq!(pad_json("x".repeat(3000)).len(), 4096);
+    }
+
+    #[test]
+    fn a_padded_payload_parses() {
+        let json = pad_json(r#"{"summary":"Edited","actorUserId":4}"#.to_string());
+        let p: HistoryPayload = serde_json::from_str(&json).unwrap();
+        assert_eq!(p.actor_user_id, Some(4));
+    }
+
+    /// Phase 1 of docs/plans/participant-links-encryption.md only reads the new fields: what it
+    /// writes must stay byte-identical to the format every older client reads.
+    #[test]
+    fn payloads_without_the_new_fields_serialise_as_before() {
+        let user = serde_json::to_string(&UserPayload { name: "Ann".into(), removed: false }).unwrap();
+        assert_eq!(user, r#"{"name":"Ann"}"#);
+        let history = serde_json::to_string(&HistoryPayload { summary: "s".into(), actor_user_id: None }).unwrap();
+        assert_eq!(history, r#"{"summary":"s"}"#);
+        let project = ProjectPayload { name: "T".into(), currency: "EUR".into(), description: None, status: None };
+        assert_eq!(serde_json::to_string(&project).unwrap(), r#"{"name":"T","currency":"EUR"}"#);
+        let expense: ExpensePayload = serde_json::from_str(
+            r#"{"name":"P","amount":1.0,"expenseType":"expense","date":"2026-10-01"}"#,
+        )
+        .unwrap();
+        let json = serde_json::to_string(&expense).unwrap();
+        assert!(!json.contains("authorId") && !json.contains("shares"), "{json}");
+    }
+
+    #[test]
+    fn the_new_fields_round_trip() {
+        let p: ProjectPayload =
+            serde_json::from_str(r#"{"name":"T","currency":"EUR","status":"archived"}"#).unwrap();
+        assert_eq!(p.status, Some(ProjectStatus::Archived));
+        let u: UserPayload = serde_json::from_str(r#"{"name":"Ann","removed":true}"#).unwrap();
+        assert!(u.removed);
+        let e: ExpensePayload = serde_json::from_str(
+            r#"{"name":"P","amount":2.0,"expenseType":"expense","date":"2026-10-01","authorId":3,
+                "shares":[{"userId":3,"amount":2.0,"isDebt":false}]}"#,
+        )
+        .unwrap();
+        assert_eq!(e.author_id, Some(3));
+        assert_eq!(e.shares, Some(vec![ExpenseShare { user_id: 3, amount: 2.0, is_debt: false }]));
     }
 }

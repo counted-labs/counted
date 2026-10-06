@@ -79,6 +79,8 @@ fn main() {
     // render or hydration diverges. Fetch it (hashed, immutable asset) and only then launch —
     // `dioxus_web::launch` is itself a `spawn_local`, so nesting it here changes nothing else.
     #[cfg(all(not(feature = "server"), target_arch = "wasm32"))]
+    ui::common::persist::enter_demo_if_requested();
+    #[cfg(all(not(feature = "server"), target_arch = "wasm32"))]
     wasm_bindgen_futures::spawn_local(async {
         ui::i18n::preload_request_locale().await;
         dioxus::launch(app);

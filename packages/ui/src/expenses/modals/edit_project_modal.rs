@@ -52,6 +52,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
         .as_ref()
         .and_then(|k| decrypt_json::<ProjectPayload>(k, &props.project.payload).ok());
     let initial_name = initial_project.as_ref().map(|p| p.name.clone()).unwrap_or_default();
+    let stored_status = initial_project.as_ref().and_then(|p| p.status.clone());
     let initial_description = initial_project
         .as_ref()
         .and_then(|p| p.description.clone())
@@ -187,12 +188,13 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             name: name_val.clone(),
             currency,
             description: desc,
+            status: stored_status.clone(),
         }) {
             Ok(v) => v,
             Err(e) => { error_msg.set(Some(e)); return; }
         };
 
-        let history = encrypt_json(&key, &HistoryPayload { summary })
+        let history = encrypt_json(&key, &HistoryPayload { summary, actor_user_id: None })
             .ok()
             .map(|p| HistoryContext { actor_user_id, payload: p });
 
@@ -246,7 +248,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             if !current_new.is_empty() {
                 let mut creatables: Vec<CreatableUser> = Vec::new();
                 for d in &current_new {
-                    let payload = match encrypt_json(&key, &UserPayload { name: d.name.clone() }) {
+                    let payload = match encrypt_json(&key, &UserPayload { name: d.name.clone(), removed: false }) {
                         Ok(v) => v,
                         Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
                     };
@@ -611,6 +613,7 @@ mod tests {
                 name: name.to_string(),
                 currency: "EUR".to_string(),
                 description: description.map(|d| d.to_string()),
+                status: None,
             })?),
             status: None,
             history: None,
@@ -623,7 +626,7 @@ mod tests {
         project_id: Uuid,
     ) -> Result<CreatableUser, String> {
         Ok(CreatableUser {
-            payload: encrypt_json(key, &UserPayload { name: name.to_string() })?,
+            payload: encrypt_json(key, &UserPayload { name: name.to_string(), removed: false })?,
             project_id,
         })
     }
@@ -743,7 +746,7 @@ mod tests {
         let key = test_key();
         let u = User {
             id: 99,
-            payload: encrypt_json(&key, &UserPayload { name: "Eve".to_string() }).unwrap(),
+            payload: encrypt_json(&key, &UserPayload { name: "Eve".to_string(), removed: false }).unwrap(),
             created_at: Some(NaiveDateTime::default()),
             ..Default::default()
         };

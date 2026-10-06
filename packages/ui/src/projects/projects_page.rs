@@ -23,6 +23,7 @@ use crate::common::{
     QueuedOp, SizeClass, SpeedDialAction, SpeedDialFab, LEAVE_CONFIRM_MESSAGE, LEAVE_CONFIRM_TITLE,
 };
 use crate::crypto::decrypt_json;
+use crate::decrypted::{payload_with_status, pickable_users, project_status};
 use crate::expenses::EditProjectModal;
 use crate::icons::{ImportIcon, LinkIcon, LockIcon, PlusIcon, ICON_INLINE};
 use crate::payment_methods::refill_project_copies;
@@ -36,7 +37,11 @@ use crate::route::Route;
 /// `Closed` does not count: it is a distinct status that stays in the list, and only `Archived`
 /// hides a row.
 fn has_archived(state: &LocalStorageState) -> bool {
-    state.cached_projects_list.iter().flatten().any(|p| p.status == ProjectStatus::Archived)
+    state.cached_projects_list.iter().flatten().any(|p| status_of(state, p) == ProjectStatus::Archived)
+}
+
+fn status_of(state: &LocalStorageState, p: &ProjectDto) -> ProjectStatus {
+    project_status(state.projects.iter().find(|lp| lp.project_id == p.id).and_then(key_of).as_ref(), p)
 }
 
 #[component]
@@ -165,7 +170,7 @@ pub fn ProjectsPage() -> Element {
     });
 
     let project_count = move || match &*projects.read() {
-        Some(Ok(list)) => list.iter().filter(|item| item.status != ProjectStatus::Archived).count(),
+        Some(Ok(list)) => list.iter().filter(|item| status_of(&ls_ctx.peek(), item) != ProjectStatus::Archived).count(),
         _ => 0,
     };
 
@@ -265,7 +270,7 @@ pub fn ProjectsPage() -> Element {
                         Some(list) => {
                             let filtered: Vec<ProjectDto> = list
                                 .iter()
-                                .filter(|p| show_archived() || p.status != ProjectStatus::Archived)
+                                .filter(|p| show_archived() || status_of(&ls_ctx.peek(), p) != ProjectStatus::Archived)
                                 .cloned()
                                 .collect();
                             rsx! {
@@ -304,7 +309,7 @@ pub fn ProjectsPage() -> Element {
                 Some(Ok(list)) => {
                     let filtered: Vec<ProjectDto> = list
                         .iter()
-                        .filter(|p| show_archived() || p.status != ProjectStatus::Archived)
+                        .filter(|p| show_archived() || status_of(&ls_ctx.peek(), p) != ProjectStatus::Archived)
                         .cloned()
                         .collect();
                     if filtered.is_empty() {
@@ -376,7 +381,6 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
     let nav = use_navigator();
     let project = props.project.clone();
     let project_id = project.id;
-    let project_status = project.status.clone();
     let mut show_edit_modal = use_signal(|| false);
 
     let is_online = use_context::<Signal<bool>>();
@@ -419,6 +423,8 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
     // case, which is what used to render as a blank card — so the card renders a locked state
     // instead, and offers the one action that fixes it.
     let locked = decrypted_project.is_none();
+    let project_status =
+        decrypted_project.as_ref().and_then(|p| p.status.clone()).unwrap_or_else(|| project.status.clone());
     let display_name = decrypted_project.as_ref().map(|p| p.name.clone()).unwrap_or_default();
     let display_desc = decrypted_project.as_ref().and_then(|p| p.description.clone());
     let display_currency =
@@ -441,9 +447,11 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
     // Offline this queues for replay and updates the cached list optimistically, so the card
     // reflects the new status until the queue drains.
     let queue_label = display_name.clone();
+    let status_source = project.clone();
     let apply_status = move |status: ProjectStatus| {
+        let payload = stored_key.and_then(|k| payload_with_status(&k, &status_source, &status));
         let editable =
-            EditableProject { id: project_id, payload: None, status: Some(status.clone()), history: None };
+            EditableProject { id: project_id, payload: payload.clone(), status: Some(status.clone()), history: None };
         let on_change = props.on_change;
         if !is_online() {
             pending_ops.write().push_back(QueuedOp {
@@ -456,6 +464,9 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
                 if let Some(ref mut list) = state.cached_projects_list {
                     if let Some(p) = list.iter_mut().find(|p| p.id == project_id) {
                         p.status = status;
+                        if let Some(payload) = payload {
+                            p.payload = payload;
+                        }
                     }
                 }
             });
@@ -592,12 +603,12 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
                     }
                 }
                 div { class: "flex items-center justify-between",
-                    StatusBadge { status: project.status.clone() }
+                    StatusBadge { status: project_status.clone() }
                     match &*users.read() {
                         Some(Ok(user_list)) if !user_list.is_empty() => {
                             rsx! {
                                 AvatarGroup {
-                                    users: user_list.clone(),
+                                    users: pickable_users(stored_key.as_ref(), user_list, &[]),
                                     encryption_key: stored_key,
                                     size: SizeClass::W8,
                                 }
@@ -625,7 +636,7 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
                 rsx! {
                     EditProjectModal {
                         project: project.clone(),
-                        users: user_list,
+                        users: pickable_users(stored_key.as_ref(), &user_list, &[]),
                         on_close: move |_| show_edit_modal.set(false),
                         on_saved: move |_| {
                             show_edit_modal.set(false);

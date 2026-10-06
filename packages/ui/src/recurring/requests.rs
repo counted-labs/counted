@@ -14,7 +14,7 @@ use crate::expenses::helpers::expense_modal_helpers::encrypt_user_amounts;
 pub fn history(key: &[u8; 32], actor: Option<i32>, summary: String) -> Option<HistoryContext> {
     Some(HistoryContext {
         actor_user_id: actor?,
-        payload: encrypt_json(key, &HistoryPayload { summary }).ok()?,
+        payload: encrypt_json(key, &HistoryPayload { summary, actor_user_id: None }).ok()?,
     })
 }
 
@@ -83,6 +83,8 @@ pub fn materialize_request(
                 rate: t.rate,
                 recurring_id: Some(rule.id),
                 estimate: t.variable,
+                author_id: None,
+                shares: None,
             };
             Ok(CreatableExpense {
                 project_id,
@@ -92,7 +94,7 @@ pub fn materialize_request(
                 debtors: encrypt_user_amounts(key, &side_amounts(&t.debtors, t.amount, *index), true)?,
                 history: Some(HistoryContext {
                     actor_user_id: rule.author_id.unwrap_or(actor_user_id),
-                    payload: encrypt_json(key, &HistoryPayload { summary: summary(*date) })?,
+                    payload: encrypt_json(key, &HistoryPayload { summary: summary(*date), actor_user_id: None })?,
                 }),
                 client_op_id: Some(super::schedule::occurrence_id(rule.payload.seed, *date)),
             })
@@ -145,6 +147,7 @@ mod tests {
                 next,
                 paused: false,
                 seed: Uuid::from_u128(99),
+                author_id: None,
             },
         }
     }

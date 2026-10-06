@@ -19,7 +19,7 @@ pub(crate) fn test_key() -> [u8; 32] {
 pub(crate) fn make_user(key: &[u8; 32], id: i32, name: &str) -> User {
     User {
         id,
-        payload: encrypt_json(key, &UserPayload { name: name.to_string() }).unwrap(),
+        payload: encrypt_json(key, &UserPayload { name: name.to_string(), removed: false }).unwrap(),
         ..Default::default()
     }
 }
@@ -33,6 +33,7 @@ pub(crate) fn make_project(key: &[u8; 32], id: Uuid, name: &str, currency: &str)
                 name: name.to_string(),
                 currency: currency.to_string(),
                 description: None,
+                status: None,
             },
         )
         .unwrap(),
@@ -70,6 +71,8 @@ pub(crate) fn make_expense(
                 rate: None,
                 recurring_id: None,
                 estimate: false,
+                author_id: None,
+                shares: None,
             },
         )
         .unwrap(),
@@ -102,6 +105,8 @@ pub(crate) fn make_expense_with_category(
                 rate: None,
                 recurring_id: None,
                 estimate: false,
+                author_id: None,
+                shares: None,
             },
         )
         .unwrap(),

@@ -201,7 +201,7 @@ mod tests {
     fn project_under(key: &[u8; 32]) -> ProjectDto {
         let payload = crate::crypto::encrypt_json(
             key,
-            &shared::ProjectPayload { name: "Trip".into(), currency: "EUR".into(), description: None },
+            &shared::ProjectPayload { name: "Trip".into(), currency: "EUR".into(), description: None, status: None },
         )
         .unwrap();
         ProjectDto {
@@ -246,6 +246,7 @@ mod tests {
             claimed,
             claim_name: claimed.then(|| "Jonathan".to_string()),
             payment_methods: vec![],
+            removed: false,
         }
     }
 

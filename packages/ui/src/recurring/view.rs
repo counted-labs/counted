@@ -124,7 +124,7 @@ pub fn template_from_form(
 }
 
 pub fn new_payload(template: Template, repeat: Repeat, anchor: NaiveDate) -> RecurringPayload {
-    RecurringPayload { template, rule: repeat.rule(anchor), next: 0, paused: false, seed: Uuid::new_v4() }
+    RecurringPayload { template, rule: repeat.rule(anchor), next: 0, paused: false, seed: Uuid::new_v4(), author_id: None }
 }
 
 /// A rule edited from "next on `next_on`". An unchanged schedule keeps its cursor; a changed one is
@@ -203,6 +203,7 @@ mod tests {
                 next,
                 paused,
                 seed: Uuid::nil(),
+                author_id: None,
             },
         }
     }

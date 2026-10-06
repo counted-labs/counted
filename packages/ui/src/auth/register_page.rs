@@ -10,6 +10,18 @@ use crate::route::Route;
 
 #[component]
 pub fn RegisterPage() -> Element {
+    let demo = crate::demo::use_demo_mode();
+    rsx! {
+        if demo {
+            crate::demo::DemoSignInBlocked {}
+        } else {
+            RegisterForm {}
+        }
+    }
+}
+
+#[component]
+fn RegisterForm() -> Element {
     let mut email = use_signal(String::new);
     let mut password = use_signal(String::new);
     let mut display_name = use_signal(String::new);

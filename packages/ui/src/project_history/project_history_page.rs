@@ -34,13 +34,14 @@ pub fn ProjectHistoryPage(project_id: Uuid) -> Element {
         (Some(k), Some(Ok(history_list))) => history_list
             .iter()
             .map(|e| {
-                let actor_name = e
-                    .actor_user_id
+                let payload = decrypt_json::<HistoryPayload>(&k, &e.payload).ok();
+                let actor_name = payload
+                    .as_ref()
+                    .and_then(|p| p.actor_user_id)
+                    .or(e.actor_user_id)
                     .and_then(|id| names.as_ref().and_then(|m| m.get(&id).cloned()))
                     .unwrap_or_else(|| "?".to_string());
-                let summary = decrypt_json::<HistoryPayload>(&k, &e.payload)
-                    .map(|p| p.summary)
-                    .unwrap_or_default();
+                let summary = payload.map(|p| p.summary).unwrap_or_default();
                 DecryptedEntry {
                     action: e.action.clone(),
                     actor_name,

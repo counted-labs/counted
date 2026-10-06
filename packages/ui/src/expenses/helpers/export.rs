@@ -6,7 +6,7 @@ use crate::tid;
 use shared::{Expense, Payment, ProjectDto, User};
 use std::collections::HashMap;
 
-use crate::decrypted::{decrypt_expense, decrypt_payment, decrypt_project, decrypt_user};
+use crate::decrypted::{decrypt_expense, decrypt_ledger, decrypt_project, decrypt_user};
 
 pub fn download_json(
     key: &[u8; 32],
@@ -55,6 +55,7 @@ fn to_csv(
 
     let mut sorted = expenses.to_vec();
     sorted.sort_by_key(|e| e.created_at);
+    let (_, ledger) = decrypt_ledger(key, &sorted, payments);
 
     for expense in &sorted {
         let de = decrypt_expense(key, expense).ok();
@@ -64,11 +65,7 @@ fn to_csv(
         let amount = de.as_ref().map(|d| format!("{:.2}", d.amount)).unwrap_or_default();
         let date = de.as_ref().map(|d| d.date.as_str()).unwrap_or("");
 
-        let decrypted_pmts: Vec<_> = payments
-            .iter()
-            .filter(|p| p.expense_id == expense.id)
-            .filter_map(|p| decrypt_payment(key, p).ok())
-            .collect();
+        let decrypted_pmts: Vec<_> = ledger.iter().filter(|p| p.expense_id == expense.id).collect();
 
         let payers = decrypted_pmts
             .iter()
@@ -143,17 +140,17 @@ fn to_json(
         })
         .collect();
 
-    let payments_json: Vec<serde_json::Value> = payments
+    let payments_json: Vec<serde_json::Value> = decrypt_ledger(key, expenses, payments)
+        .1
         .iter()
-        .map(|p| match decrypt_payment(key, p) {
-            Ok(dp) => serde_json::json!({
+        .map(|dp| {
+            serde_json::json!({
                 "id": dp.id,
                 "expense_id": dp.expense_id,
                 "user_id": dp.user_id,
                 "is_debt": dp.is_debt,
                 "amount": dp.amount,
-            }),
-            Err(_) => serde_json::json!({ "id": p.id }),
+            })
         })
         .collect();
 

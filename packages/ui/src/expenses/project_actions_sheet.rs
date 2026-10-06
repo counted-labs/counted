@@ -15,7 +15,8 @@ pub struct ProjectActionsSheetProps {
     pub read_only: bool,
     pub native_app_link: Option<String>,
     pub on_close: EventHandler<()>,
-    pub on_share: EventHandler<()>,
+    /// `None` in the demo: a shared demo link would land in the recipient's real store.
+    pub on_share: Option<EventHandler<()>>,
     pub on_invite: Option<EventHandler<()>>,
     pub on_history: EventHandler<()>,
     pub on_recurring: EventHandler<()>,
@@ -70,11 +71,13 @@ pub fn ProjectActionsSheet(props: ProjectActionsSheetProps) -> Element {
                     }
                 }
                 div { class: "flex gap-2",
-                    Tile {
-                        id: "project-share-btn",
-                        label: tid!("share-link"),
-                        onclick: pick(props.on_share),
-                        ShareIcon { size: 24 }
+                    if let Some(on_share) = props.on_share {
+                        Tile {
+                            id: "project-share-btn",
+                            label: tid!("share-link"),
+                            onclick: pick(on_share),
+                            ShareIcon { size: 24 }
+                        }
                     }
                     if let Some(on_invite) = invite {
                         Tile {
@@ -230,7 +233,7 @@ mod tests {
                 read_only: props.read_only,
                 native_app_link: None,
                 on_close: log("close"),
-                on_share: log("share"),
+                on_share: Some(EventHandler::new(log("share"))),
                 on_invite: Some(EventHandler::new(log("invite"))),
                 on_history: log("history"),
                 on_recurring: log("recurring"),

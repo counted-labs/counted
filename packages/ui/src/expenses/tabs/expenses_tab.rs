@@ -9,7 +9,7 @@ use crate::common::{
     format_date, haptic, Flash, Haptic, Mascot, MascotPose, ProjectKey,
     QueuedOp, ScanSource, SpeedDialAction, Toast,
 };
-use crate::decrypted::{payments_are_inconsistent, DecryptedExpense, DecryptedPayment};
+use crate::decrypted::{payments_are_inconsistent, pickable_users, DecryptedExpense, DecryptedPayment};
 use crate::expenses::helpers::delete_expense_action::{
     can_delete_expense, can_edit_expense, delete_expense_request, run_delete_expense,
 };
@@ -954,7 +954,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                         });
                     },
                     project_id: props.project_id,
-                    users: data.users.clone(),
+                    users: pickable_users(key_ctx().as_ref(), &data.users, &[]),
                     stored_user_id: props.stored_user_id,
                     currency: currency.clone(),
                     initial_name: scan.prefill.read().as_ref().and_then(|p| p.name.clone()),

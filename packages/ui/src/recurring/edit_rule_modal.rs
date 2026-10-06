@@ -8,7 +8,7 @@ use super::model::{DecryptedRule, Side};
 use super::split::{side_amounts, side_from_entries};
 use super::view::{edited_payload, next_date, repeat_of, template_from_form, Repeat};
 use crate::common::{format_date, fx_cache, Flash, ProjectKey};
-use crate::decrypted::user_names;
+use crate::decrypted::{pickable_users, user_names};
 use crate::expenses::helpers::expense_form_helpers::UserEntry;
 use crate::expenses::helpers::expense_modal_helpers::{
     conversion_matches_total, resolve_conversion, validate_expense_form,
@@ -55,6 +55,8 @@ pub fn EditRuleModal(
     let key_ctx = use_context::<ProjectKey>().0;
     let flash = use_context::<Signal<Option<Flash>>>();
     let t = rule.payload.template.clone();
+    let involved: Vec<i32> = t.payers.entries.iter().chain(&t.debtors.entries).map(|(id, _)| *id).collect();
+    let users = pickable_users(key_ctx().as_ref(), &users, &involved);
     let names = user_names(key_ctx().as_ref(), &users);
     let next = next_date(&rule.payload).unwrap_or(today);
     let rotation = rule.payload.next;

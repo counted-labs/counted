@@ -2,6 +2,7 @@ use crate::common::{
     is_mobile, replay_queue, use_overscroll, BottomDock, DeepLinkListener, Flash,
     LocalStorageState, NavigationSync, PageTransition, QueuedOp, SyncFailure, Toast,
 };
+use crate::demo::DemoBar;
 use crate::expenses::hooks::use_project_store::use_project_store;
 use crate::i18n::current_lang;
 use crate::route::Route;
@@ -103,6 +104,7 @@ pub fn AppLayout() -> Element {
                 }
             }
         }
+        DemoBar {}
         if show_onboarding {
             WelcomePage {}
         } else {

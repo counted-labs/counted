@@ -139,6 +139,11 @@ input[type="date"] {
   border-radius: 1.5rem;
 }
 
+/* The /demo bar (demo_page.rs, h-10) sits above the page in the flow. */
+body:has(#demo-bar) .app-container {
+  height: calc(100dvh - 3.5rem);
+}
+
 .modal-box {
   max-height: calc(100dvh - 1rem);
 }

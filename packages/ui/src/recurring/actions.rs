@@ -138,6 +138,7 @@ mod tests {
             next,
             paused: true,
             seed: Uuid::nil(),
+            author_id: None,
         }
     }
 

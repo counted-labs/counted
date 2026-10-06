@@ -1,11 +1,11 @@
 use chrono::NaiveDateTime;
 use shared::{
-    Expense, ExpensePayload, ExpenseType, Payment, PaymentMethod, PaymentMethods, PaymentPayload,
+    EncryptedPair, Expense, ExpensePayload, ExpenseType, Payment, PaymentMethod, PaymentMethods, PaymentPayload,
     ProjectDto, ProjectPayload, ProjectStatus, User, UserPayload,
 };
 use uuid::Uuid;
 
-use crate::crypto::decrypt_json;
+use crate::crypto::{decrypt_json, encrypt_json};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DecryptedProject {
@@ -31,6 +31,8 @@ pub struct DecryptedUser {
     /// The payment methods that account chose to share with the project. Empty when it shares
     /// nothing, when there is no claim, or when the copy does not decrypt.
     pub payment_methods: Vec<PaymentMethod>,
+    /// Out of the pickers; still named on past expenses and still in balances.
+    pub removed: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -83,7 +85,7 @@ pub fn decrypt_project(key: &[u8; 32], p: &ProjectDto) -> Result<DecryptedProjec
         name: pp.name,
         description: pp.description,
         currency: pp.currency,
-        status: p.status.clone(),
+        status: pp.status.unwrap_or_else(|| p.status.clone()),
         created_at: p.created_at,
         read_only: p.read_only,
     })
@@ -103,7 +105,22 @@ pub fn decrypt_user(key: &[u8; 32], u: &User) -> Result<DecryptedUser, String> {
             .and_then(|p| decrypt_json::<PaymentMethods>(key, p).ok())
             .map(|p| p.methods)
             .unwrap_or_default(),
+        removed: up.removed,
     })
+}
+
+/// The participants a picker offers: everyone not removed, plus `keep` — the ones an existing
+/// expense or rule already names, which editing must not silently drop. Without a key nothing
+/// can be read, so everyone is offered.
+pub fn pickable_users(key: Option<&[u8; 32]>, users: &[User], keep: &[i32]) -> Vec<User> {
+    users
+        .iter()
+        .filter(|u| {
+            keep.contains(&u.id)
+                || !key.and_then(|k| decrypt_json::<UserPayload>(k, &u.payload).ok()).is_some_and(|p| p.removed)
+        })
+        .cloned()
+        .collect()
 }
 
 /// Empty when the payload cannot be decrypted: call sites render it directly, so a failure
@@ -131,7 +148,33 @@ pub fn project_currency(key: &[u8; 32], p: &ProjectDto) -> String {
     decrypt_json::<ProjectPayload>(key, &p.payload).map(|pp| pp.currency).unwrap_or_default()
 }
 
+/// The payload's status when it carries one, else the `projects.status` column's.
+pub fn project_status(key: Option<&[u8; 32]>, p: &ProjectDto) -> ProjectStatus {
+    key.and_then(|k| decrypt_json::<ProjectPayload>(k, &p.payload).ok())
+        .and_then(|pp| pp.status)
+        .unwrap_or_else(|| p.status.clone())
+}
+
+/// The payload re-encrypted with `status`, for a project whose payload already carries one — the
+/// payload wins over the column, so a column-only write would not take. `None` for a payload that
+/// does not carry one: writing it there while a client that only knows the column can still change
+/// the status would freeze the status those clients see.
+pub fn payload_with_status(key: &[u8; 32], p: &ProjectDto, status: &ProjectStatus) -> Option<EncryptedPair> {
+    let mut pp = decrypt_json::<ProjectPayload>(key, &p.payload).ok().filter(|pp| pp.status.is_some())?;
+    pp.status = Some(status.clone());
+    encrypt_json(key, &pp).ok()
+}
+
 pub fn decrypt_expense(key: &[u8; 32], e: &Expense) -> Result<DecryptedExpense, String> {
+    decrypt_expense_and_shares(key, e).map(|(d, _)| d)
+}
+
+/// The expense and, when its payload carries them, its shares as payments. `None` means they are
+/// still `payments` rows — the format before docs/plans/participant-links-encryption.md.
+fn decrypt_expense_and_shares(
+    key: &[u8; 32],
+    e: &Expense,
+) -> Result<(DecryptedExpense, Option<Vec<DecryptedPayment>>), String> {
     let ep: ExpensePayload = decrypt_json(key, &e.payload)?;
     let expense_type = match ep.expense_type.as_str() {
         "expense" => ExpenseType::Expense,
@@ -139,9 +182,22 @@ pub fn decrypt_expense(key: &[u8; 32], e: &Expense) -> Result<DecryptedExpense, 
         "gain" => ExpenseType::Gain,
         other => return Err(format!("invalid expense type: {other}")),
     };
-    Ok(DecryptedExpense {
+    let shares = ep.shares.map(|shares| {
+        shares
+            .into_iter()
+            .map(|s| DecryptedPayment {
+                id: 0,
+                expense_id: e.id,
+                user_id: s.user_id,
+                is_debt: s.is_debt,
+                amount: s.amount,
+                created_at: e.created_at,
+            })
+            .collect()
+    });
+    let expense = DecryptedExpense {
         id: e.id,
-        author_id: e.author_id,
+        author_id: ep.author_id.or(e.author_id),
         project_id: e.project_id,
         created_at: e.created_at,
         name: ep.name,
@@ -155,7 +211,43 @@ pub fn decrypt_expense(key: &[u8; 32], e: &Expense) -> Result<DecryptedExpense, 
         rate: ep.rate,
         recurring_id: ep.recurring_id,
         estimate: ep.estimate,
-    })
+    };
+    Ok((expense, shares))
+}
+
+/// Every expense that opens, and its payments: from the payload's shares when it has them, from
+/// its `payments` rows otherwise. Rows of an expense that does not open are dropped with it, and
+/// rows of an expense that carries shares are ignored.
+pub fn decrypt_ledger(
+    key: &[u8; 32],
+    expenses: &[Expense],
+    payments: &[Payment],
+) -> (Vec<DecryptedExpense>, Vec<DecryptedPayment>) {
+    let mut decrypted = Vec::with_capacity(expenses.len());
+    let mut ledger = Vec::with_capacity(payments.len());
+    let mut from_rows = std::collections::HashSet::new();
+    for e in expenses {
+        let Ok((expense, shares)) = decrypt_expense_and_shares(key, e) else { continue };
+        match shares {
+            Some(shares) => ledger.extend(shares),
+            None => {
+                from_rows.insert(e.id);
+            }
+        }
+        decrypted.push(expense);
+    }
+    ledger.extend(
+        payments
+            .iter()
+            .filter(|p| from_rows.contains(&p.expense_id))
+            .filter_map(|p| decrypt_payment(key, p).ok()),
+    );
+    (decrypted, ledger)
+}
+
+/// The payments of one expense, either format.
+pub fn decrypt_expense_payments(key: &[u8; 32], e: &Expense, payments: &[Payment]) -> Vec<DecryptedPayment> {
+    decrypt_ledger(key, std::slice::from_ref(e), payments).1
 }
 
 pub fn decrypt_payment(key: &[u8; 32], p: &Payment) -> Result<DecryptedPayment, String> {
@@ -277,6 +369,7 @@ mod tests {
                 name: name.to_string(),
                 currency: currency.to_string(),
                 description: description.map(|s| s.to_string()),
+                status: None,
             })
             .unwrap(),
             status: shared::ProjectStatus::Ongoing,
@@ -381,6 +474,8 @@ mod tests {
                 rate: None,
                 recurring_id: None,
                 estimate: false,
+                author_id: None,
+                shares: None,
             })
             .unwrap(),
         };
@@ -444,5 +539,117 @@ mod tests {
         ct[0] ^= 0x01;
         p.payload.ct = STANDARD.encode(&ct);
         assert!(decrypt_payment(&key, &p).is_err());
+    }
+
+    /// The format of docs/plans/participant-links-encryption.md, padded the way it will be written.
+    fn v2_expense(key: &[u8; 32], id: i32, author_id: i32, shares: Vec<shared::ExpenseShare>) -> Expense {
+        let mut e = make_expense(key, id, "Pizza", 30.0, ExpenseType::Expense, "2026-10-01");
+        let mut ep: ExpensePayload = decrypt_json(key, &e.payload).unwrap();
+        ep.author_id = Some(author_id);
+        ep.shares = Some(shares);
+        e.payload = crate::crypto::encrypt(key, &shared::pad_json(serde_json::to_string(&ep).unwrap())).unwrap();
+        e.author_id = None;
+        e
+    }
+
+    fn share(user_id: i32, is_debt: bool, amount: f64) -> shared::ExpenseShare {
+        shared::ExpenseShare { user_id, amount, is_debt }
+    }
+
+    #[test]
+    fn a_ledger_reads_shares_from_the_payload_and_rows_from_the_table() {
+        let key = test_key();
+        let v1 = make_expense(&key, 1, "Taxi", 20.0, ExpenseType::Expense, "2026-10-01");
+        let v2 = v2_expense(&key, 2, 3, vec![share(3, false, 30.0), share(4, true, 30.0)]);
+        let rows = vec![
+            make_payment(&key, 10, 1, 1, false, 20.0),
+            make_payment(&key, 11, 1, 2, true, 20.0),
+            make_payment(&key, 12, 2, 9, true, 99.0),
+        ];
+
+        let (expenses, payments) = decrypt_ledger(&key, &[v1, v2], &rows);
+
+        assert_eq!(expenses.len(), 2);
+        let of = |id: i32| -> Vec<(i32, bool, f64)> {
+            payments.iter().filter(|p| p.expense_id == id).map(|p| (p.user_id, p.is_debt, p.amount)).collect()
+        };
+        assert_eq!(of(1), vec![(1, false, 20.0), (2, true, 20.0)]);
+        assert_eq!(of(2), vec![(3, false, 30.0), (4, true, 30.0)], "a row next to shares is ignored");
+    }
+
+    #[test]
+    fn a_ledger_drops_the_rows_of_an_expense_that_does_not_open() {
+        let key = test_key();
+        let e = make_expense(&generate_key(), 1, "Taxi", 20.0, ExpenseType::Expense, "2026-10-01");
+        let (expenses, payments) = decrypt_ledger(&key, &[e], &[make_payment(&key, 10, 1, 1, false, 20.0)]);
+        assert!(expenses.is_empty());
+        assert!(payments.is_empty());
+    }
+
+    #[test]
+    fn the_payload_author_wins_over_the_column() {
+        let key = test_key();
+        let v2 = v2_expense(&key, 2, 3, vec![]);
+        assert_eq!(decrypt_expense(&key, &v2).unwrap().author_id, Some(3));
+        let v1 = make_expense(&key, 1, "Taxi", 20.0, ExpenseType::Expense, "2026-10-01");
+        assert_eq!(decrypt_expense(&key, &v1).unwrap().author_id, Some(1));
+    }
+
+    #[test]
+    fn a_padded_payload_still_parses() {
+        let key = test_key();
+        let v2 = v2_expense(&key, 2, 3, vec![share(3, false, 30.0)]);
+        assert_eq!(crate::crypto::decrypt(&key, &v2.payload).unwrap().len(), 256);
+        assert_eq!(decrypt_expense_payments(&key, &v2, &[]).len(), 1);
+    }
+
+    fn project_with(key: &[u8; 32], status: Option<ProjectStatus>, column: ProjectStatus) -> ProjectDto {
+        let mut p = crate::common::test_fixtures::make_project(key, Uuid::nil(), "Trip", "EUR");
+        let mut pp: ProjectPayload = decrypt_json(key, &p.payload).unwrap();
+        pp.status = status;
+        p.payload = encrypt_json(key, &pp).unwrap();
+        p.status = column;
+        p
+    }
+
+    #[test]
+    fn the_payload_status_wins_over_the_column() {
+        let key = test_key();
+        let converted = project_with(&key, Some(ProjectStatus::Closed), ProjectStatus::Ongoing);
+        assert_eq!(project_status(Some(&key), &converted), ProjectStatus::Closed);
+        assert_eq!(decrypt_project(&key, &converted).unwrap().status, ProjectStatus::Closed);
+        assert_eq!(project_status(None, &converted), ProjectStatus::Ongoing, "without a key, the column");
+
+        let legacy = project_with(&key, None, ProjectStatus::Archived);
+        assert_eq!(project_status(Some(&key), &legacy), ProjectStatus::Archived);
+    }
+
+    /// A status change on a project whose payload carries the status must land in the payload, or
+    /// the payload would keep winning; one whose payload does not must stay column-only.
+    #[test]
+    fn a_status_change_follows_where_the_status_lives() {
+        let key = test_key();
+        let converted = project_with(&key, Some(ProjectStatus::Ongoing), ProjectStatus::Ongoing);
+        let payload = payload_with_status(&key, &converted, &ProjectStatus::Archived).unwrap();
+        let pp: ProjectPayload = decrypt_json(&key, &payload).unwrap();
+        assert_eq!(pp.status, Some(ProjectStatus::Archived));
+        assert_eq!(pp.name, "Trip");
+
+        let legacy = project_with(&key, None, ProjectStatus::Ongoing);
+        assert!(payload_with_status(&key, &legacy, &ProjectStatus::Archived).is_none());
+    }
+
+    #[test]
+    fn a_removed_participant_leaves_the_pickers_unless_kept() {
+        let key = test_key();
+        let mut removed = make_user(&key, 2, "Bob");
+        removed.payload = encrypt_json(&key, &UserPayload { name: "Bob".into(), removed: true }).unwrap();
+        let users = vec![make_user(&key, 1, "Alice"), removed];
+
+        let ids = |us: Vec<User>| us.iter().map(|u| u.id).collect::<Vec<_>>();
+        assert_eq!(ids(pickable_users(Some(&key), &users, &[])), vec![1]);
+        assert_eq!(ids(pickable_users(Some(&key), &users, &[2])), vec![1, 2], "an expense naming Bob keeps him");
+        assert_eq!(ids(pickable_users(None, &users, &[])), vec![1, 2], "no key, nothing to read");
+        assert!(decrypt_user(&key, &users[1]).unwrap().removed);
     }
 }

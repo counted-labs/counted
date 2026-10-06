@@ -93,18 +93,18 @@ pub struct SpeedDialActionProps {
 #[component]
 pub fn SpeedDialAction(props: SpeedDialActionProps) -> Element {
     rsx! {
-        div { class: "flex items-center gap-3",
+        button {
+            id: props.id.clone(),
+            r#type: "button",
+            class: "flex items-center gap-3 cursor-pointer",
+            "aria-label": "{props.label}",
+            onclick: move |_| props.onclick.call(()),
             span { class: "bg-base-100 shadow-soft rounded-box px-3 py-1 text-sm font-medium whitespace-nowrap",
                 "{props.label}"
             }
-            button {
-                id: props.id.clone(),
-                r#type: "button",
-                // Icons come from callers at whatever intrinsic size they were drawn at
-                // (PlusIcon is 16, LinkIcon 22); normalise here so the row reads as one set.
-                class: "btn btn-circle btn-lg bg-base-100 border-0 shadow-soft [&>svg]:size-6",
-                "aria-label": "{props.label}",
-                onclick: move |_| props.onclick.call(()),
+            // Icons come from callers at whatever intrinsic size they were drawn at
+            // (PlusIcon is 16, LinkIcon 22); normalise here so the row reads as one set.
+            span { class: "btn btn-circle btn-lg bg-base-100 border-0 shadow-soft [&>svg]:size-6",
                 {props.icon.clone()}
             }
         }

@@ -34,6 +34,7 @@ pub fn route_depth(route: &Route) -> u8 {
         | Route::SettingsPage {}
         | Route::LoginPage {}
         | Route::VerifyEmailPage { .. }
+        | Route::DemoPage { .. }
         | Route::NotFoundPage { .. } => 0,
         Route::ExpensesPage { .. }
         | Route::FriendsPage {}

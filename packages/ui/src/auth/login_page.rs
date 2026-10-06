@@ -17,6 +17,18 @@ use crate::{
 
 #[component]
 pub fn LoginPage() -> Element {
+    let demo = crate::demo::use_demo_mode();
+    rsx! {
+        if demo {
+            crate::demo::DemoSignInBlocked {}
+        } else {
+            LoginForm {}
+        }
+    }
+}
+
+#[component]
+fn LoginForm() -> Element {
     let mut email = use_signal(String::new);
     let mut password = use_signal(String::new);
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);

@@ -1,5 +1,6 @@
 use crate::auth::{LoginPage, RegisterPage, SettingsPage, VerifyEmailPage};
 use crate::charts::ChartsPage;
+use crate::demo::DemoPage;
 use crate::common::AppLayout;
 use crate::expenses::ExpensesPage;
 use crate::friends::FriendsPage;
@@ -59,6 +60,9 @@ pub enum Route {
         LicensesPage {},
         #[route("/help")]
         HelpPage {},
+        // `/en/demo` is the site's path space, so nginx redirects it here with `?lang=en`.
+        #[route("/demo?:lang")]
+        DemoPage { lang: String },
         // A security control, not a nicety. Without a catch-all, Route::from_str fails, the router
         // throws ParseRouteError, and dioxus-fullstack writes the parse error — which quotes the
         // raw request path — into the 404 body with no Content-Type at all. Only `nosniff` kept
@@ -93,6 +97,7 @@ pub fn project_id_of(route: &Route) -> Option<Uuid> {
         | Route::TermsPage {}
         | Route::LegalNoticePage {}
         | Route::LicensesPage {}
+        | Route::DemoPage { .. }
         | Route::NotFoundPage { .. } => None,
     }
 }
@@ -208,6 +213,12 @@ mod tests {
     #[test]
     fn route_licenses_page_roundtrip() {
         roundtrip(Route::LicensesPage {});
+    }
+
+    #[test]
+    fn demo_takes_an_optional_language() {
+        assert_eq!(Route::from_str("/demo").unwrap(), Route::DemoPage { lang: String::new() });
+        assert_eq!(Route::from_str("/demo?lang=en").unwrap(), Route::DemoPage { lang: "en".to_string() });
     }
 
     #[test]

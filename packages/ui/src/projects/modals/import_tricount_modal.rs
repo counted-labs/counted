@@ -109,6 +109,7 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                 name: registry.title.clone(),
                 currency: registry.currency.clone(),
                 description: None,
+                status: None,
             }) {
                 Ok(p) => p,
                 Err(_) => {
@@ -121,6 +122,7 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
             let project = match add_project(Json(CreatableProject {
                 payload: project_payload,
                 claim_verifier: Some(claim_verifier(&enc_key).to_vec()),
+                demo: crate::common::persist::is_demo(),
             }))
             .await
             {
@@ -145,6 +147,7 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                     Ok(CreatableUser {
                         payload: encrypt_json(&enc_key, &UserPayload {
                             name: m.alias.display_name.clone(),
+                            removed: false,
                         })?,
                         project_id: project.id,
                     })
@@ -207,6 +210,8 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                     rate: None,
                     recurring_id: None,
                     estimate: false,
+                    author_id: None,
+                    shares: None,
                 }) {
                     Ok(p) => p,
                     Err(_) => continue,

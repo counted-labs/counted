@@ -16,7 +16,7 @@ use crate::common::{
     LocalStorageState,
 };
 use crate::crypto::key_from_fragment;
-use crate::decrypted::{project_name, user_name};
+use crate::decrypted::{project_name, project_status, user_name};
 
 /// A fetch result paired with the project id it was fetched for.
 ///
@@ -195,7 +195,7 @@ pub fn header_state(
         Some(Ok((id, s))) if *id == project_id => match &s.project {
             Some(p) => HeaderState::Ready {
                 title: project_name(key, p),
-                status: p.status.clone(),
+                status: project_status(Some(key), p),
                 read_only: p.read_only,
             },
             // A server predating the merged sync; the cached row still names the project, but

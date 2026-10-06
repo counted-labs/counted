@@ -71,6 +71,13 @@ pub fn replace_state_hash(fragment: &str) {
     }
 }
 
+/// `location.assign(url)`: a full load, so every context starts again from the stores.
+pub fn assign_location(url: &str) {
+    if let Some(w) = web_sys::window() {
+        let _ = w.location().assign(url);
+    }
+}
+
 /// Calls `on_visible` every time the tab is foregrounded. The listener is leaked deliberately: it
 /// belongs to the app shell, which outlives every page, and there is nothing to detach it from.
 pub fn on_tab_visible(on_visible: impl Fn() + 'static) {

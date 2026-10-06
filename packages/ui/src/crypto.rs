@@ -329,7 +329,7 @@ mod tests {
     #[test]
     fn encrypt_json_decrypt_json_roundtrip() {
         let key = test_key();
-        let payload = UserPayload { name: "Alice".to_string() };
+        let payload = UserPayload { name: "Alice".to_string(), removed: false };
         let pair = encrypt_json(&key, &payload).unwrap();
         let decoded: UserPayload = decrypt_json(&key, &pair).unwrap();
         assert_eq!(decoded.name, "Alice");
@@ -338,7 +338,7 @@ mod tests {
     #[test]
     fn encrypt_json_wrong_key_fails() {
         let key = test_key();
-        let pair = encrypt_json(&key, &UserPayload { name: "Bob".to_string() }).unwrap();
+        let pair = encrypt_json(&key, &UserPayload { name: "Bob".to_string(), removed: false }).unwrap();
         let mut bad = key;
         bad[0] ^= 0xFF;
         assert!(decrypt_json::<UserPayload>(&bad, &pair).is_err());

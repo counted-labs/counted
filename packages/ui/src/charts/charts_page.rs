@@ -27,7 +27,7 @@ use crate::common::{
 };
 use crate::crypto::decrypt_json;
 use crate::decrypted::{
-    decrypt_expense, decrypt_payment, decrypt_user, DecryptedExpense, DecryptedPayment,
+    decrypt_expense, decrypt_ledger, decrypt_user, DecryptedExpense, DecryptedPayment,
     DecryptedUser,
 };
 use crate::expenses::helpers::export::csv_field;
@@ -191,12 +191,14 @@ async fn load_data(project_filter: Option<Uuid>) -> ChartData {
         let Ok(expenses) = get_expenses_by_project_id(p.project_id).await else {
             continue;
         };
-        data.expenses.extend(expenses.iter().filter_map(|e| decrypt_expense(&key, e).ok()));
         let Ok(payments) = get_payments_by_project_id(p.project_id).await else {
+            data.expenses.extend(expenses.iter().filter_map(|e| decrypt_expense(&key, e).ok()));
             data.left_out += 1;
             continue;
         };
-        let decrypted: Vec<DecryptedPayment> = payments.iter().filter_map(|p| decrypt_payment(&key, p).ok()).collect();
+        let (decrypted_expenses, decrypted): (_, Vec<DecryptedPayment>) =
+            decrypt_ledger(&key, &expenses, &payments);
+        data.expenses.extend(decrypted_expenses);
         match p.user_id {
             Some(user_id) => {
                 data.my_share.extend(sum_by_expense(&decrypted, user_id, true));
