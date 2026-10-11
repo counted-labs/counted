@@ -179,6 +179,9 @@ pub use offline_queue::{read_queue, write_queue, OpKind, QueuedOp};
 mod queue_replay;
 pub use queue_replay::{replay_queue, SyncFailure};
 
+mod project_write;
+pub use project_write::update_project_fresh;
+
 mod app_contexts;
 pub use app_contexts::{
     use_app_contexts, AcceptedInvite, AuthResolved, Flash, InviteRetry, ProjectKey, UpdateRequired,

@@ -2,7 +2,7 @@ use api::account_projects::account_projects_controller::{
     batch_upsert_account_projects, get_account_projects,
 };
 use api::auth::auth_controller::me;
-use api::projects::projects_controller::{get_projects_by_ids, update_project_by_id};
+use api::projects::projects_controller::get_projects_by_ids;
 use api::users::users_controller::get_users_by_project_id;
 use dioxus::core::Task;
 use dioxus::fullstack::Json;
@@ -16,7 +16,8 @@ use std::collections::VecDeque;
 use crate::common::{
     apply_pull, clear_user_id, copy_missing, error_message, haptic, is_offline_error, key_of,
     leave_project_and_forget, left_elsewhere, mark_synced, pending,
-    read_from_ls, remove_project, set_cached_projects_list, sleep, to_push, update_ls, write_queue,
+    read_from_ls, remove_project, set_cached_projects_list, sleep, to_push, update_ls,
+    update_project_fresh, write_queue,
     write_to_ls,
     AvatarGroup, ConfirmModal, DropdownButton, DropdownItem, Mascot, MascotPose,
     Flash, Haptic, LocalStorageState, OpKind, ProjectKey, ProjectStatusItems, PullToRefresh,
@@ -450,8 +451,13 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
     let status_source = project.clone();
     let apply_status = move |status: ProjectStatus| {
         let payload = stored_key.and_then(|k| payload_with_status(&k, &status_source, &status));
-        let editable =
-            EditableProject { id: project_id, payload: payload.clone(), status: Some(status.clone()), history: None };
+        let editable = EditableProject {
+            id: project_id,
+            payload: payload.clone(),
+            status: Some(status.clone()),
+            history: None,
+            expected_iv: None,
+        };
         let on_change = props.on_change;
         if !is_online() {
             pending_ops.write().push_back(QueuedOp {
@@ -474,7 +480,13 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
             return;
         }
         spawn(async move {
-            let _ = update_project_by_id(Json(editable)).await;
+            let edit = |stored: &ProjectDto| {
+                Ok(EditableProject {
+                    payload: stored_key.and_then(|k| payload_with_status(&k, stored, &status)),
+                    ..editable.clone()
+                })
+            };
+            let _ = update_project_fresh(project_id, edit).await;
             on_change.call(());
         });
     };

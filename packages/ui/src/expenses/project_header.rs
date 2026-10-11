@@ -42,11 +42,11 @@ pub fn ProjectHeader(props: ProjectHeaderProps) -> Element {
         // With the bar, not just the alert: an error here is often terminal for the page, and
         // without the back button the only way off it is the bottom dock.
         HeaderState::Error(key) => rsx! {
-            AppHeader { back_button_route: Route::ProjectsPage {}, title: "Counted", sticky: true }
+            AppHeader { back_button_route: Route::ProjectsPage {}, title: "Counted", brand: true, sticky: true }
             div { role: "alert", class: "alert alert-error", {tid!(key)} }
         },
         HeaderState::Gone => rsx! {
-            AppHeader { back_button_route: Route::ProjectsPage {}, title: "Counted", sticky: true }
+            AppHeader { back_button_route: Route::ProjectsPage {}, title: "Counted", brand: true, sticky: true }
             div { class: "flex flex-col items-center gap-3 py-8 text-center",
                 p { class: "font-semibold", {tid!("project-gone-title")} }
                 p { class: "text-sm text-base-content/70",

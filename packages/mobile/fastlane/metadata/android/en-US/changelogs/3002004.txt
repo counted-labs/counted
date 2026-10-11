@@ -1,0 +1,6 @@
+• New project menu: invite, recurring expenses, edit, archive or leave, all in one place
+• Clearer balances: who gets money back, who owes, who is settled up
+• Redesigned actions on the expense page
+• The email confirmation link now opens the app
+• The keyboard no longer hides form fields; bottom bar and sheets fixed
+• Security fixes, better translations and spacing

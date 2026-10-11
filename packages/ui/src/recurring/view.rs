@@ -120,11 +120,12 @@ pub fn template_from_form(
         rate: conversion.map(|c| c.rate),
         rate_ack: None,
         variable,
+        extra: Default::default(),
     }
 }
 
 pub fn new_payload(template: Template, repeat: Repeat, anchor: NaiveDate) -> RecurringPayload {
-    RecurringPayload { template, rule: repeat.rule(anchor), next: 0, paused: false, seed: Uuid::new_v4(), author_id: None }
+    RecurringPayload { template, rule: repeat.rule(anchor), next: 0, paused: false, seed: Uuid::new_v4(), author_id: None, extra: Default::default() }
 }
 
 /// A rule edited from "next on `next_on`". An unchanged schedule keeps its cursor; a changed one is
@@ -136,6 +137,7 @@ pub fn edited_payload(
     repeat: Repeat,
     next_on: NaiveDate,
 ) -> RecurringPayload {
+    let template = Template { extra: old.template.extra.clone(), ..template };
     let unchanged = old.rule.freq == repeat.freq
         && old.rule.interval == repeat.interval.max(1)
         && old.rule.ends == repeat.ends
@@ -186,6 +188,7 @@ mod tests {
             rate,
             rate_ack: None,
             variable: false,
+            extra: Default::default(),
         }
     }
 
@@ -204,6 +207,7 @@ mod tests {
                 paused,
                 seed: Uuid::nil(),
                 author_id: None,
+                extra: Default::default(),
             },
         }
     }

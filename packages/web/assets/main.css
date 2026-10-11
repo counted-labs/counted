@@ -144,6 +144,15 @@ body:has(#demo-bar) .app-container {
   height: calc(100dvh - 3.5rem);
 }
 
+/* The sticky AppHeader bleeds over the container's p-4, or scrolled content shows through the
+   1rem gutters around it. top: -1rem because sticky insets by the scroller's padding. */
+.app-container > header.nav-material {
+  margin: -1rem -1rem 0;
+  padding: 1.5rem 1rem 0.5rem;
+  min-height: 5rem;
+  top: -1rem;
+}
+
 .modal-box {
   max-height: calc(100dvh - 1rem);
 }

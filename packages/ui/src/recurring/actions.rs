@@ -133,12 +133,14 @@ mod tests {
                 rate: Some(1.07),
                 rate_ack: None,
                 variable: false,
+                extra: Default::default(),
             },
             rule: Rule { freq: Freq::Monthly, interval: 1, anchor: d(2026, 3, 5), ends: Ends::Never },
             next,
             paused: true,
             seed: Uuid::nil(),
             author_id: None,
+            extra: Default::default(),
         }
     }
 

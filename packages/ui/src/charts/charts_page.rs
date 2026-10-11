@@ -1,11 +1,10 @@
-use api::expenses::expenses_controller::get_expenses_by_project_id;
-use api::payments::payments_controller::get_payments_by_project_id;
+use api::payments::payments_controller::sync_project_data;
 use api::projects::projects_controller::get_projects_by_ids;
 use api::users::users_controller::get_users_by_project_id;
 use chrono::{Datelike, Local, NaiveDate};
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
-use shared::{BatchProject, ExpenseType, ProjectPayload};
+use shared::{BatchProject, Expense, ExpenseType, Payment, ProjectPayload, ProjectSync, NO_CACHED_VERSION};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
@@ -23,11 +22,11 @@ use super::svg::label_every;
 use crate::categories::get_expense_category;
 use crate::common::{
     format_date, initials, key_of, month_abbrev, pending, project_key, read_from_ls, user_color_class,
-    AppHeader, DropdownButton, DropdownItem, PullToRefresh,
+    AppHeader, DropdownButton, DropdownItem, LocalStorageProject, PullToRefresh,
 };
 use crate::crypto::decrypt_json;
 use crate::decrypted::{
-    decrypt_expense, decrypt_ledger, decrypt_user, DecryptedExpense, DecryptedPayment,
+    decrypt_ledger, decrypt_user, DecryptedExpense, DecryptedPayment,
     DecryptedUser,
 };
 use crate::expenses::helpers::export::csv_field;
@@ -181,6 +180,21 @@ async fn load_projects() -> Vec<ProjectInfo> {
         .collect()
 }
 
+/// The version the cached rows were stored at, claimed only when both halves are still there.
+fn known_version(p: &LocalStorageProject) -> i64 {
+    p.cached_data_version
+        .filter(|_| p.cached_expenses.is_some() && p.cached_payments.is_some())
+        .unwrap_or(NO_CACHED_VERSION)
+}
+
+/// The sync's rows, or the cached ones when the server answered "unchanged".
+fn synced_rows(sync: ProjectSync, cached: &LocalStorageProject) -> Option<(Vec<Expense>, Vec<Payment>)> {
+    match (sync.expenses, sync.payments) {
+        (Some(expenses), Some(payments)) => Some((expenses, payments)),
+        _ => cached.cached_expenses.clone().zip(cached.cached_payments.clone()),
+    }
+}
+
 async fn load_data(project_filter: Option<Uuid>) -> ChartData {
     let ls = read_from_ls();
     let mut data = ChartData::default();
@@ -188,12 +202,10 @@ async fn load_data(project_filter: Option<Uuid>) -> ChartData {
         let Some(key) = key_of(p) else {
             continue;
         };
-        let Ok(expenses) = get_expenses_by_project_id(p.project_id).await else {
+        let Ok(sync) = sync_project_data(p.project_id, known_version(p)).await else {
             continue;
         };
-        let Ok(payments) = get_payments_by_project_id(p.project_id).await else {
-            data.expenses.extend(expenses.iter().filter_map(|e| decrypt_expense(&key, e).ok()));
-            data.left_out += 1;
+        let Some((expenses, payments)) = synced_rows(sync, p) else {
             continue;
         };
         let (decrypted_expenses, decrypted): (_, Vec<DecryptedPayment>) =
@@ -551,7 +563,47 @@ mod tests {
     use super::*;
     use crate::categories::get_expense_category;
     use crate::charts::model::aggregate_by_category;
+    use crate::common::test_fixtures::{make_expense as make_row, make_payment, test_key};
     use chrono::NaiveDateTime;
+
+    fn cached(version: Option<i64>) -> LocalStorageProject {
+        let key = test_key();
+        LocalStorageProject {
+            cached_expenses: Some(vec![make_row(&key, 1, "cached", 10.0, ExpenseType::Expense, "2026-10-01")]),
+            cached_payments: Some(vec![make_payment(&key, 1, 1, 1, false, 10.0)]),
+            cached_data_version: version,
+            ..Default::default()
+        }
+    }
+
+    fn sync(rows: Option<Vec<Expense>>) -> ProjectSync {
+        ProjectSync {
+            data_version: 7,
+            project: None,
+            users: None,
+            payments: rows.as_ref().map(|_| vec![]),
+            expenses: rows,
+            recurring: None,
+            server_date: None,
+        }
+    }
+
+    #[test]
+    fn a_complete_cache_claims_its_version() {
+        assert_eq!(known_version(&cached(Some(7))), 7);
+        assert_eq!(known_version(&cached(None)), NO_CACHED_VERSION);
+        let half = LocalStorageProject { cached_payments: None, ..cached(Some(7)) };
+        assert_eq!(known_version(&half), NO_CACHED_VERSION);
+    }
+
+    #[test]
+    fn unchanged_reads_the_cache_and_changed_reads_the_response() {
+        let (expenses, payments) = synced_rows(sync(None), &cached(Some(7))).unwrap();
+        assert_eq!((expenses.len(), payments.len()), (1, 1));
+
+        let (expenses, payments) = synced_rows(sync(Some(vec![])), &cached(Some(6))).unwrap();
+        assert!(expenses.is_empty() && payments.is_empty());
+    }
 
     fn make_expense(name: &str, amount: f64, expense_type: ExpenseType, author_id: Option<i32>) -> DecryptedExpense {
         DecryptedExpense {

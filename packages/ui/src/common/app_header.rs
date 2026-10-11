@@ -10,6 +10,8 @@ pub struct AppHeaderProps {
     /// Pins the header to the top of the page's scroll container.
     #[props(default = false)]
     sticky: bool,
+    #[props(default = false)]
+    brand: bool,
     children: Element,
 }
 
@@ -97,7 +99,7 @@ pub fn AppHeader(props: AppHeaderProps) -> Element {
                 }
             }
             div { class: "flex flex-col items-center min-w-0 text-center",
-                h1 { id: "page-title", class: "text-xl font-bold font-display truncate max-w-full", "{props.title}" }
+                h1 { id: "page-title", class: if props.brand { "text-2xl font-extrabold font-display text-gradient-brand truncate max-w-full" } else { "text-xl font-bold font-display truncate max-w-full" }, "{props.title}" }
                 if let Some(sub_title) = props.sub_title {
                     div { class: "text-sm mb-3 truncate max-w-full", "{sub_title}" }
                 }

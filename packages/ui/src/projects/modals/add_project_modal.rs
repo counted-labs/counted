@@ -107,6 +107,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 currency: currency_val.clone(),
                 description: if desc_val.is_empty() { None } else { Some(desc_val.clone()) },
                 status: None,
+                extra: Default::default(),
             }) {
                 Ok(v) => v,
                 Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
@@ -373,6 +374,7 @@ mod tests {
                 currency: currency.to_string(),
                 description: description.map(|d| d.to_string()),
                 status: None,
+                extra: Default::default(),
             })?,
             claim_verifier: Some(claim_verifier(key).to_vec()),
             demo: false,

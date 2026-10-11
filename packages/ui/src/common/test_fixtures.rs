@@ -34,6 +34,7 @@ pub(crate) fn make_project(key: &[u8; 32], id: Uuid, name: &str, currency: &str)
                 currency: currency.to_string(),
                 description: None,
                 status: None,
+                extra: Default::default(),
             },
         )
         .unwrap(),
@@ -73,6 +74,7 @@ pub(crate) fn make_expense(
                 estimate: false,
                 author_id: None,
                 shares: None,
+                extra: Default::default(),
             },
         )
         .unwrap(),
@@ -107,6 +109,7 @@ pub(crate) fn make_expense_with_category(
                 estimate: false,
                 author_id: None,
                 shares: None,
+                extra: Default::default(),
             },
         )
         .unwrap(),

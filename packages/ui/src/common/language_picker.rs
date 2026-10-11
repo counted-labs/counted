@@ -23,9 +23,9 @@ pub fn LanguagePicker() -> Element {
         set_language(&code);
         // Only a deliberate pick syncs, and only with a key to encrypt it — without one (local store
         // cleared) the choice stays on this device like an anonymous one.
-        if auth_ctx().is_some() {
+        if let Some(account) = auth_ctx() {
             if let Some(key) = account_enc_key_ctx() {
-                push_language(key, code);
+                push_language(&account, key, code);
             }
         }
     };

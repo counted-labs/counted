@@ -153,7 +153,7 @@ fn concurrent_partial_project_edits_both_survive() {
         sqlx::query("BEGIN").execute(&mut closer).await.unwrap();
         update_project_by_id(
             &mut closer,
-            EditableProject { id: project_id, payload: None, status: Some(ProjectStatus::Closed), history: None },
+            EditableProject { id: project_id, payload: None, status: Some(ProjectStatus::Closed), history: None, expected_iv: None },
         )
         .await
         .unwrap();
@@ -167,7 +167,7 @@ fn concurrent_partial_project_edits_both_survive() {
                     sqlx::query("BEGIN").execute(&mut renamer).await.unwrap();
                     update_project_by_id(
                         &mut renamer,
-                        EditableProject { id: project_id, payload: Some(renamed), status: None, history: None },
+                        EditableProject { id: project_id, payload: Some(renamed), status: None, history: None, expected_iv: None },
                     )
                     .await
                     .unwrap();
@@ -189,6 +189,40 @@ fn concurrent_partial_project_edits_both_survive() {
 
         assert_eq!(payload_ct, b"renamed");
         assert_eq!(status, ProjectStatus::Closed, "the rename wrote the stale status back");
+    });
+}
+
+/// Two devices edit from the same payload. The second must be refused rather than overwrite the
+/// first with a payload that never saw it — what keeps fields one device added from being erased.
+#[test]
+#[ignore]
+fn a_payload_derived_from_a_replaced_one_is_refused() {
+    run(async {
+        let mut conn = connect().await;
+        let project_id = project(&mut conn).await;
+        let seeded_iv = "AA==".to_string();
+        let edit = |ct: &str, iv: &str, expected_iv: Option<String>| EditableProject {
+            id: project_id,
+            payload: Some(EncryptedPair { ct: ct.into(), iv: iv.repeat(32) }),
+            status: None,
+            history: None,
+            expected_iv,
+        };
+
+        let first = update_project_by_id(&mut conn, edit("Zmlyc3Q=", "A", Some(seeded_iv.clone()))).await;
+        let stale = update_project_by_id(&mut conn, edit("c3RhbGU=", "B", Some(seeded_iv))).await;
+        let (payload_ct,): (Vec<u8>,) = sqlx::query_as("SELECT payload_ct FROM projects WHERE id = $1")
+            .bind(project_id)
+            .fetch_one(&mut conn)
+            .await
+            .unwrap();
+        let unconditional = update_project_by_id(&mut conn, edit("b2xk", "C", None)).await;
+        drop_fixture(&mut conn, project_id, vec![]).await;
+
+        assert!(first.is_ok());
+        assert_eq!(message(&stale.unwrap_err()), errors::PROJECT_STALE);
+        assert_eq!(payload_ct, b"first", "the stale payload was written");
+        assert!(unconditional.is_ok(), "a client that sends no expected_iv must still write");
     });
 }
 

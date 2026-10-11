@@ -23,13 +23,25 @@ pub fn account_language(account: &Account, key: &[u8; 32]) -> Option<String> {
 /// Encrypts and stores the language on the account. Best effort: a failure leaves the local choice
 /// in place, which is the one that is actually driving the UI, so there is nothing to tell the user
 /// and nothing they could do about it.
-pub fn push_language(key: [u8; 32], code: String) {
-    let Ok(pair) = encrypt_json(&key, &Preferences { language: Some(code) }) else {
+pub fn push_language(account: &Account, key: [u8; 32], code: String) {
+    let Ok(pair) = encrypt_json(&key, &with_language(account, &key, code)) else {
         return;
     };
     spawn(async move {
         let _ = update_preferences(Json(pair)).await;
     });
+}
+
+/// The account's stored preferences with `code` as the language. A blob that does not decrypt is
+/// replaced, as before: nothing in it can be kept.
+fn with_language(account: &Account, key: &[u8; 32], code: String) -> Preferences {
+    let mut prefs = account
+        .preferences
+        .as_ref()
+        .and_then(|pair| decrypt_json::<Preferences>(key, pair).ok())
+        .unwrap_or_default();
+    prefs.language = Some(code);
+    prefs
 }
 
 #[cfg(test)]
@@ -59,7 +71,7 @@ mod tests {
 
     #[test]
     fn a_stored_language_round_trips() {
-        let pair = encrypt_json(&KEY, &Preferences { language: Some("de".to_string()) }).unwrap();
+        let pair = encrypt_json(&KEY, &Preferences { language: Some("de".to_string()), extra: Default::default() }).unwrap();
 
         assert_eq!(account_language(&account(Some(pair)), &KEY), Some("de".to_string()));
     }
@@ -73,7 +85,7 @@ mod tests {
     /// account key (local store cleared), and the display name already degrades the same way.
     #[test]
     fn an_undecryptable_blob_is_none_rather_than_a_panic() {
-        let pair = encrypt_json(&KEY, &Preferences { language: Some("de".to_string()) }).unwrap();
+        let pair = encrypt_json(&KEY, &Preferences { language: Some("de".to_string()), extra: Default::default() }).unwrap();
 
         assert_eq!(account_language(&account(Some(pair)), &[9u8; 32]), None);
     }
@@ -82,9 +94,20 @@ mod tests {
     /// reach `set_language` and be persisted onward.
     #[test]
     fn a_language_we_do_not_ship_is_rejected() {
-        let pair = encrypt_json(&KEY, &Preferences { language: Some("ja".to_string()) }).unwrap();
+        let pair = encrypt_json(&KEY, &Preferences { language: Some("ja".to_string()), extra: Default::default() }).unwrap();
 
         assert_eq!(account_language(&account(Some(pair)), &KEY), None);
+    }
+
+    #[test]
+    fn changing_the_language_keeps_preferences_from_newer_builds() {
+        let stored: Preferences = serde_json::from_str(r#"{"language":"de","theme":"dark"}"#).unwrap();
+        let pair = encrypt_json(&KEY, &stored).unwrap();
+
+        let prefs = with_language(&account(Some(pair)), &KEY, "fr".to_string());
+
+        assert_eq!(serde_json::to_string(&prefs).unwrap(), r#"{"language":"fr","theme":"dark"}"#);
+        assert_eq!(with_language(&account(None), &KEY, "fr".to_string()).language.as_deref(), Some("fr"));
     }
 
     /// Fields are added over time and old blobs must keep deserialising, or a preference added

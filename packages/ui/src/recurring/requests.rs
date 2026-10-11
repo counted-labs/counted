@@ -85,6 +85,7 @@ pub fn materialize_request(
                 estimate: t.variable,
                 author_id: None,
                 shares: None,
+                extra: Default::default(),
             };
             Ok(CreatableExpense {
                 project_id,
@@ -142,12 +143,14 @@ mod tests {
                     rate: None,
                     rate_ack: None,
                     variable: true,
+                    extra: Default::default(),
                 },
                 rule: Rule { freq: Freq::Monthly, interval: 1, anchor: d(2026, 8, 1), ends: Ends::Never },
                 next,
                 paused: false,
                 seed: Uuid::from_u128(99),
                 author_id: None,
+                extra: Default::default(),
             },
         }
     }

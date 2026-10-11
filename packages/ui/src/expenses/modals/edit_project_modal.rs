@@ -1,5 +1,4 @@
 use api::friends::invitations_controller::get_sent_invitations;
-use api::projects::projects_controller::update_project_by_id;
 use api::users::users_controller::{add_user, delete_user};
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
@@ -9,8 +8,8 @@ use std::collections::VecDeque;
 use uuid::Uuid;
 
 use crate::common::{
-    error_message, identity_locked, is_user_gone_error, write_queue, Flash, InviteRetry,
-    LocalStorageState, OpKind, ProjectKey, QueuedOp,
+    error_message, identity_locked, is_user_gone_error, update_project_fresh, write_queue, Flash,
+    InviteRetry, LocalStorageState, OpKind, ProjectKey, QueuedOp,
 };
 use std::collections::HashSet;
 use crate::crypto::{decrypt_json, encrypt_json};
@@ -52,18 +51,14 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
         .as_ref()
         .and_then(|k| decrypt_json::<ProjectPayload>(k, &props.project.payload).ok());
     let initial_name = initial_project.as_ref().map(|p| p.name.clone()).unwrap_or_default();
-    let stored_status = initial_project.as_ref().and_then(|p| p.status.clone());
     let initial_description = initial_project
         .as_ref()
         .and_then(|p| p.description.clone())
         .unwrap_or_default();
-    let initial_currency = initial_project
+    let displayed_currency = initial_project
         .as_ref()
         .map(|p| p.currency.clone())
         .unwrap_or_default();
-    // The submit closure below moves `initial_currency` (it writes the value straight back), so the
-    // read-only field needs its own copy.
-    let displayed_currency = initial_currency.clone();
     let initial_users: Vec<DecryptedUser> = key_snap
         .as_ref()
         .map(|k| props.users.iter().filter_map(|u| decrypt_user(k, u).ok()).collect())
@@ -113,6 +108,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     let on_saved = props.on_saved;
     let on_switch = props.on_switch;
 
+    let snapshot = props.project.clone();
     let on_submit = move |_| {
         let key = match key_snap {
             Some(k) => k,
@@ -134,7 +130,6 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
         let current_existing = existing_users();
         let current_new = drafts();
         let orig_ids = original_user_ids.clone();
-        let currency = initial_currency.clone();
 
         let kept: HashSet<i32> = current_existing.iter().map(|u| u.id).collect();
         for uid in orig_ids.iter().filter(|id| !kept.contains(id)) {
@@ -184,21 +179,15 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             diff.join(" • ")
         };
 
-        let payload = match encrypt_json(&key, &ProjectPayload {
-            name: name_val.clone(),
-            currency,
-            description: desc,
-            status: stored_status.clone(),
-        }) {
-            Ok(v) => v,
-            Err(e) => { error_msg.set(Some(e)); return; }
-        };
-
         let history = encrypt_json(&key, &HistoryPayload { summary, actor_user_id: None })
             .ok()
             .map(|p| HistoryContext { actor_user_id, payload: p });
 
         if !is_online() {
+            let payload = match edited_project_payload(&key, &snapshot, &name_val, desc) {
+                Ok(v) => v,
+                Err(e) => { error_msg.set(Some(e)); return; }
+            };
             pending_ops.write().push_back(QueuedOp {
                 id: Uuid::new_v4(),
                 label: name_val,
@@ -207,6 +196,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                     payload: Some(payload),
                     status: None,
                     history,
+                    expected_iv: None,
                 }),
             });
             write_queue(&pending_ops.read());
@@ -231,13 +221,16 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
         error_msg.set(None);
 
         spawn(async move {
-            if let Err(e) = update_project_by_id(Json(EditableProject {
-                id: project_id,
-                payload: Some(payload),
-                status: None,
-                history,
-            }))
-            .await
+            let edit = |stored: &ProjectDto| {
+                Ok(EditableProject {
+                    id: project_id,
+                    payload: Some(edited_project_payload(&key, stored, &name_val, desc.clone())?),
+                    status: None,
+                    history: history.clone(),
+                    expected_iv: None,
+                })
+            };
+            if let Err(e) = update_project_fresh(project_id, edit).await
             {
                 error_msg.set(Some(error_message(&e)));
                 loading.set(false);
@@ -592,6 +585,20 @@ fn SavedRow(props: SavedRowProps) -> Element {
     }
 }
 
+/// `stored` with the name and description the form owns. Everything else — currency, status and
+/// fields from newer builds — is kept as stored.
+fn edited_project_payload(
+    key: &[u8; 32],
+    stored: &ProjectDto,
+    name: &str,
+    description: Option<String>,
+) -> Result<shared::EncryptedPair, String> {
+    let mut payload: ProjectPayload = decrypt_json(key, &stored.payload)?;
+    payload.name = name.to_string();
+    payload.description = description;
+    encrypt_json(key, &payload)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -614,10 +621,36 @@ mod tests {
                 currency: "EUR".to_string(),
                 description: description.map(|d| d.to_string()),
                 status: None,
+                extra: Default::default(),
             })?),
             status: None,
             history: None,
+            expected_iv: None,
         })
+    }
+
+    #[test]
+    fn editing_keeps_what_the_form_does_not_own() {
+        let key = test_key();
+        let stored: ProjectPayload = serde_json::from_value(serde_json::json!({
+            "name": "Coloc", "currency": "CHF", "description": "old", "status": "closed",
+            "finance": { "budgets": [] },
+        }))
+        .unwrap();
+        let project = ProjectDto {
+            payload: encrypt_json(&key, &stored).unwrap(),
+            ..crate::common::test_fixtures::make_project(&key, Uuid::nil(), "x", "EUR")
+        };
+
+        let pair = edited_project_payload(&key, &project, "Flat", None).unwrap();
+
+        let edited: serde_json::Value = decrypt_json(&key, &pair).unwrap();
+        assert_eq!(
+            edited,
+            serde_json::json!({
+                "name": "Flat", "currency": "CHF", "status": "closed", "finance": { "budgets": [] },
+            })
+        );
     }
 
     fn make_creatable_user(

@@ -114,6 +114,7 @@ mod tests {
                 payload: None,
                 status: Some(ProjectStatus::Closed),
                 history: None,
+                expected_iv: None,
             }),
         }
     }

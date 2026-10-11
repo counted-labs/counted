@@ -86,7 +86,7 @@ fn adopt_account_language(account: &Account, key: [u8; 32]) {
         }
         None => {
             if let Some(local) = stored {
-                crate::preferences::push_language(key, local);
+                crate::preferences::push_language(account, key, local);
             }
         }
     }

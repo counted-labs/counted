@@ -152,6 +152,7 @@ fn a_read_only_project_refuses_every_content_write() {
                         payload: Some(EncryptedPair { ct: "cmVuYW1lZA==".into(), iv: "A".repeat(32) }),
                         status: None,
                         history: None,
+                        expected_iv: None,
                     },
                 )
                 .await
@@ -161,7 +162,7 @@ fn a_read_only_project_refuses_every_content_write() {
                 "change status",
                 update_project_by_id(
                     &mut conn,
-                    EditableProject { id: project_id, payload: None, status: Some(ProjectStatus::Archived), history: None },
+                    EditableProject { id: project_id, payload: None, status: Some(ProjectStatus::Archived), history: None, expected_iv: None },
                 )
                 .await
                 .is_err(),

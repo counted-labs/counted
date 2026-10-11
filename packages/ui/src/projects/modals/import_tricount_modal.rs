@@ -110,6 +110,7 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                 currency: registry.currency.clone(),
                 description: None,
                 status: None,
+                extra: Default::default(),
             }) {
                 Ok(p) => p,
                 Err(_) => {
@@ -212,6 +213,7 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                     estimate: false,
                     author_id: None,
                     shares: None,
+                    extra: Default::default(),
                 }) {
                     Ok(p) => p,
                     Err(_) => continue,

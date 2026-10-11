@@ -62,6 +62,8 @@ pub struct Template {
     /// "Amount changes each time": occurrences are written as estimates to confirm.
     #[serde(default)]
     pub variable: bool,
+    #[serde(flatten)]
+    pub extra: shared::Unknown,
 }
 
 impl Template {
@@ -107,6 +109,8 @@ pub struct RecurringPayload {
     /// Replaces `recurring_expenses.author_id` — see docs/plans/participant-links-encryption.md.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub author_id: Option<i32>,
+    #[serde(flatten)]
+    pub extra: shared::Unknown,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -154,6 +158,7 @@ mod tests {
             rate: None,
             rate_ack: None,
             variable: false,
+            extra: Default::default(),
         }
     }
 
@@ -172,6 +177,7 @@ mod tests {
             paused: false,
             seed: Uuid::new_v4(),
             author_id: None,
+            extra: Default::default(),
         };
         let row = RecurringExpense {
             id: Uuid::new_v4(),

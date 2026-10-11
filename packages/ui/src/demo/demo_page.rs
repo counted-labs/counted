@@ -81,8 +81,8 @@ pub fn DemoBar() -> Element {
     rsx! {
         div { id: "demo-bar", role: "status",
             class: "h-10 max-w-md mx-auto px-4 flex items-center justify-between gap-2 text-sm",
-            span { class: "badge badge-info badge-soft shrink-0", {tid!("demo-badge")} }
-            span { class: "truncate text-base-content/70", {tid!("demo-bar")} }
+            span { class: "badge badge-warning font-semibold shrink-0", {tid!("demo-badge")} }
+            span { class: "flex-1 min-w-0 text-xs leading-tight line-clamp-2 text-base-content/70", {tid!("demo-bar")} }
             button { id: "demo-leave", r#type: "button", class: "btn btn-primary btn-xs shrink-0",
                 onclick: move |_| leave_demo(),
                 {tid!("demo-leave")}

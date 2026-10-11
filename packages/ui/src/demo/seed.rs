@@ -24,6 +24,7 @@ pub async fn seed_demo(ls_ctx: Signal<LocalStorageState>, data: &'static Dataset
         currency: "EUR".to_string(),
         description: None,
         status: None,
+        extra: Default::default(),
     })?;
     let project = add_project(Json(CreatableProject {
         payload,
@@ -90,6 +91,7 @@ fn expense_creatables(
                 estimate: false,
                 author_id: None,
                 shares: None,
+                extra: Default::default(),
             })?;
             let paid = encrypt_json(key, &PaymentPayload { amount: e.amount, is_debt: false })?;
             let debtors = user_ids

@@ -290,7 +290,12 @@ pub struct ProjectPayload {
     /// Replaces `projects.status`; `None` means the column still holds it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub status: Option<ProjectStatus>,
+    /// Fields written by a newer build, kept so that an edit made here does not erase them.
+    #[serde(flatten)]
+    pub extra: Unknown,
 }
+
+pub type Unknown = serde_json::Map<String, serde_json::Value>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -356,6 +361,8 @@ pub struct ExpensePayload {
     /// docs/plans/participant-links-encryption.md; `None` means the rows still hold them.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shares: Option<Vec<ExpenseShare>>,
+    #[serde(flatten)]
+    pub extra: Unknown,
 }
 
 /// Pads serialised JSON with trailing spaces, which every JSON parser skips, to the next power of
@@ -649,6 +656,8 @@ pub struct VerifyPushToken {
 pub struct Preferences {
     #[serde(default)]
     pub language: Option<String>,
+    #[serde(flatten)]
+    pub extra: Unknown,
 }
 
 /// One way the account holder can be paid back.
@@ -851,6 +860,10 @@ pub struct EditableProject {
     pub status: Option<ProjectStatus>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub history: Option<HistoryContext>,
+    /// The `iv` of the payload this one was derived from. When set, the server writes nothing
+    /// unless that is still the stored payload (409 `PROJECT_STALE`); `None` writes unconditionally.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_iv: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1429,6 +1442,7 @@ mod tests {
             estimate: false,
             author_id: None,
             shares: None,
+            extra: Default::default(),
         };
         let json = serde_json::to_string(&p).unwrap();
         assert!(!json.contains("sourceCurrency"), "{json}");
@@ -1454,6 +1468,7 @@ mod tests {
             estimate: false,
             author_id: None,
             shares: None,
+            extra: Default::default(),
         };
         let json = serde_json::to_string(&p).unwrap();
         assert!(json.contains("\"sourceCurrency\":\"USD\""), "{json}");
@@ -1503,7 +1518,7 @@ mod tests {
         assert_eq!(user, r#"{"name":"Ann"}"#);
         let history = serde_json::to_string(&HistoryPayload { summary: "s".into(), actor_user_id: None }).unwrap();
         assert_eq!(history, r#"{"summary":"s"}"#);
-        let project = ProjectPayload { name: "T".into(), currency: "EUR".into(), description: None, status: None };
+        let project = ProjectPayload { name: "T".into(), currency: "EUR".into(), description: None, status: None, extra: Default::default() };
         assert_eq!(serde_json::to_string(&project).unwrap(), r#"{"name":"T","currency":"EUR"}"#);
         let expense: ExpensePayload = serde_json::from_str(
             r#"{"name":"P","amount":1.0,"expenseType":"expense","date":"2026-10-01"}"#,
@@ -1511,6 +1526,45 @@ mod tests {
         .unwrap();
         let json = serde_json::to_string(&expense).unwrap();
         assert!(!json.contains("authorId") && !json.contains("shares"), "{json}");
+    }
+
+    #[test]
+    fn known_payloads_reserialise_byte_identical() {
+        for json in [
+            r#"{"name":"Diner","amount":116.16,"expenseType":"expense","date":"2026-09-01","description":"d","category":"Restauration","sourceCurrency":"USD","sourceAmount":135.0,"rate":0.860437,"estimate":true}"#,
+            r#"{"name":"P","amount":1.0,"expenseType":"gain","date":"2026-10-01"}"#,
+        ] {
+            let p: ExpensePayload = serde_json::from_str(json).unwrap();
+            assert!(p.extra.is_empty());
+            assert_eq!(serde_json::to_string(&p).unwrap(), json);
+        }
+        let json = r#"{"name":"T","currency":"EUR","description":"x","status":"archived"}"#;
+        let p: ProjectPayload = serde_json::from_str(json).unwrap();
+        assert_eq!(serde_json::to_string(&p).unwrap(), json);
+        let json = r#"{"language":"de"}"#;
+        let p: crate::Preferences = serde_json::from_str(json).unwrap();
+        assert_eq!(serde_json::to_string(&p).unwrap(), json);
+    }
+
+    #[test]
+    fn unknown_fields_survive_a_round_trip() {
+        let mut e: ExpensePayload = serde_json::from_str(
+            r#"{"name":"P","amount":1.0,"expenseType":"expense","date":"2026-10-01","tags":["a"],"accountId":"x"}"#,
+        )
+        .unwrap();
+        e.name = "Q".into();
+        let json: serde_json::Value = serde_json::to_value(&e).unwrap();
+        assert_eq!(json["name"], "Q");
+        assert_eq!(json["tags"], serde_json::json!(["a"]));
+        assert_eq!(json["accountId"], "x");
+
+        let p: ProjectPayload =
+            serde_json::from_str(r#"{"name":"T","currency":"EUR","finance":{"budgets":[1]}}"#).unwrap();
+        assert_eq!(serde_json::to_value(&p).unwrap()["finance"]["budgets"][0], 1);
+
+        let mut prefs: crate::Preferences = serde_json::from_str(r#"{"language":"de","theme":"dark"}"#).unwrap();
+        prefs.language = Some("fr".into());
+        assert_eq!(serde_json::to_string(&prefs).unwrap(), r#"{"language":"fr","theme":"dark"}"#);
     }
 
     #[test]

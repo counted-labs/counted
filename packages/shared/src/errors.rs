@@ -71,6 +71,8 @@ pub const IDENTITY_TAKEN: &str = "Identity already claimed by another account";
 /// `PUT /auth/payment-methods` with an `expected_iv` that no longer matches the stored blob:
 /// another device saved in between, and the caller must reload before writing.
 pub const PAYMENT_METHODS_STALE: &str = "Payment methods were changed elsewhere";
+/// `PUT /projects` with an `expected_iv` that no longer matches the stored payload.
+pub const PROJECT_STALE: &str = "Project was changed elsewhere";
 /// The caller's `expected_version` is behind: another member edited or materialized the rule
 /// first. The caller resyncs; for a materialization, the winner's expenses come with it.
 pub const RECURRING_STALE: &str = "Recurring expense was changed elsewhere";

@@ -15,7 +15,7 @@ use crate::common::{
     error_message, format_date, fx_cache, write_queue, Flash, OpKind, ProjectKey, QueuedOp,
 };
 use crate::expenses::hooks::use_project_store::ProjectStore;
-use crate::recurring::model::RecurringPayload;
+use crate::recurring::model::{RecurringPayload, Template};
 use crate::recurring::requests::{edit_request, history};
 use crate::recurring::split::side_from_entries;
 use crate::recurring::view::{next_date, state, template_from_form, RuleState};
@@ -155,6 +155,7 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
     let project_id = props.project_id;
     let store = use_context::<ProjectStore>();
     let mut flash = use_context::<Signal<Option<Flash>>>();
+    let original = decrypted_payload.clone();
     let recurring_id = decrypted_payload.as_ref().and_then(|ep| ep.recurring_id);
     let estimate = decrypted_payload.as_ref().is_some_and(|ep| ep.estimate);
     let rule = recurring_id
@@ -223,7 +224,7 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
             actor_id,
             tid!("history-expense-edited", name: name_val.clone()),
             conversion.as_ref(),
-            recurring_id,
+            original.as_ref(),
         ) {
             Ok(p) => p,
             Err(e) => { error_msg.set(Some(e)); return; }
@@ -239,6 +240,7 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
                 side_from_entries(&debtors(), debtors_share_mode()),
                 rule.payload.template.variable,
             );
+            let template = Template { extra: rule.payload.template.extra.clone(), ..template };
             let next = RecurringPayload { template, ..rule.payload.clone() };
             let summary = tid!("history-recurring-edited", name: next.template.name.clone());
             edit_request(&key, project_id, &rule, &next, history(&key, actor_id, summary)).ok()
@@ -333,7 +335,7 @@ fn build_editable_expense(
     // Already translated by the caller: this stays pure so it is testable without a runtime.
     history_summary: String,
     conversion: Option<&Conversion>,
-    recurring_id: Option<Uuid>,
+    original: Option<&ExpensePayload>,
 ) -> Result<EditableExpense, String> {
     // No actor, no history row. This device knows of no participant it is acting as — the original
     // author was removed and nothing is stored locally — and the server validates the actor against
@@ -354,7 +356,9 @@ fn build_editable_expense(
         payload: encrypt_json(
             key,
             &ExpensePayload {
-                recurring_id,
+                recurring_id: original.and_then(|o| o.recurring_id),
+                description: original.and_then(|o| o.description.clone()),
+                extra: original.map(|o| o.extra.clone()).unwrap_or_default(),
                 ..expense_payload(&form.name, form.total, &form.date, expense_type, category, conversion)
             },
         )?,
@@ -437,6 +441,11 @@ mod tests {
     #[test]
     fn an_edited_occurrence_keeps_its_rule_and_is_no_longer_an_estimate() {
         let rule = Uuid::from_u128(5);
+        let original: ExpensePayload = serde_json::from_value(serde_json::json!({
+            "name": "Electricity", "amount": 70.0, "expenseType": "expense", "date": "2025-02-01",
+            "recurringId": rule, "estimate": true,
+        }))
+        .unwrap();
         let ee = build_editable_expense(
             &test_key(),
             1,
@@ -448,12 +457,41 @@ mod tests {
             Some(1),
             "edited".to_string(),
             None,
-            Some(rule),
+            Some(&original),
         )
         .unwrap();
         let ep: ExpensePayload = decrypt_json(&test_key(), &ee.payload).unwrap();
         assert_eq!(ep.recurring_id, Some(rule));
         assert!(!ep.estimate, "saving a figure confirms it");
+    }
+
+    #[test]
+    fn editing_keeps_the_description_and_fields_from_newer_builds() {
+        let original: ExpensePayload = serde_json::from_value(serde_json::json!({
+            "name": "Courses", "amount": 10.0, "expenseType": "expense", "date": "2025-02-01",
+            "description": "from Tricount", "tags": ["home"], "accountId": "card",
+        }))
+        .unwrap();
+        let ee = build_editable_expense(
+            &test_key(),
+            1,
+            &validated("Groceries", 12.0, &[(1, 12.0)], &[(2, 12.0)]),
+            &ExpenseType::Expense,
+            None,
+            Uuid::nil(),
+            Some(1),
+            Some(1),
+            "edited".to_string(),
+            None,
+            Some(&original),
+        )
+        .unwrap();
+        let ep: serde_json::Value = decrypt_json(&test_key(), &ee.payload).unwrap();
+        assert_eq!(ep["name"], "Groceries");
+        assert_eq!(ep["amount"], 12.0);
+        assert_eq!(ep["description"], "from Tricount");
+        assert_eq!(ep["tags"], serde_json::json!(["home"]));
+        assert_eq!(ep["accountId"], "card");
     }
 
     #[test]

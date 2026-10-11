@@ -257,6 +257,7 @@ pub fn expense_payload(
         estimate: false,
         author_id: None,
         shares: None,
+        extra: Default::default(),
     }
 }
 

@@ -1,0 +1,6 @@
+• Nouveau menu du projet : inviter, dépenses récurrentes, modifier, archiver ou quitter, au même endroit
+• Soldes plus clairs : qui récupère, qui doit, qui est à l'équilibre
+• Actions de la page dépense repensées
+• Le lien de confirmation par email ouvre désormais l'app
+• Le clavier ne masque plus les champs ; barre du bas et fenêtres corrigées
+• Corrections de sécurité, traductions et espacements améliorés

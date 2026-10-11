@@ -370,6 +370,7 @@ mod tests {
                 currency: currency.to_string(),
                 description: description.map(|s| s.to_string()),
                 status: None,
+                extra: Default::default(),
             })
             .unwrap(),
             status: shared::ProjectStatus::Ongoing,
@@ -476,6 +477,7 @@ mod tests {
                 estimate: false,
                 author_id: None,
                 shares: None,
+                extra: Default::default(),
             })
             .unwrap(),
         };

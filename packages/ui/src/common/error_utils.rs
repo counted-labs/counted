@@ -153,6 +153,14 @@ pub fn is_recurring_stale_error(e: &ServerFnError) -> bool {
     )
 }
 
+pub fn is_project_stale_error(e: &ServerFnError) -> bool {
+    matches!(
+        e,
+        ServerFnError::ServerError { message, code, .. }
+            if *code == 409 && message == shared::errors::PROJECT_STALE
+    )
+}
+
 pub fn is_payment_methods_stale_error(e: &ServerFnError) -> bool {
     matches!(
         e,

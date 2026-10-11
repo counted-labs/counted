@@ -1,15 +1,13 @@
-use api::projects::projects_controller::update_project_by_id;
-use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use crate::tid;
-use shared::{EditableProject, ExpenseType, ExpenseWithPayments, ReimbursementSuggestion};
+use shared::{EditableProject, ExpenseType, ExpenseWithPayments, ProjectDto, ProjectStatus, ReimbursementSuggestion};
 use uuid::Uuid;
 
 use super::helpers::export;
 use crate::common::persist::is_demo;
 use crate::common::{
     copy_text, is_mobile, leave_project_and_forget, pending, read_from_ls, InviteRetry,
-    remove_project, scheme_link_for, share_link_for, share_text, write_to_ls, AppHeader, AvatarGroup, ConfirmModal, Flash,
+    remove_project, scheme_link_for, share_link_for, share_text, update_project_fresh, write_to_ls, AppHeader, AvatarGroup, ConfirmModal, Flash,
     LocalStorageState, ProjectKey, PullToRefresh, SizeClass, Toast, LEAVE_CONFIRM_MESSAGE,
     LEAVE_CONFIRM_TITLE,
 };
@@ -98,6 +96,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                 AppHeader {
                     back_button_route: Route::ProjectsPage {},
                     title: "Counted",
+                    brand: true,
                     sticky: true,
                 }
                 if key_missing() {
@@ -141,21 +140,18 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                 on_recurring: move |_| { nav.push(Route::RecurringPage { project_id }); },
                 on_edit: move |_| show_edit_modal.set(true),
                 on_leave: move |_| show_leave_confirm.set(true),
-                on_status: move |status| {
-                    let payload = live
-                        .peek()
-                        .as_ref()
-                        .filter(|l| l.project_id == project_id)
-                        .and_then(|l| l.project.as_ref())
-                        .and_then(|p| payload_with_status(&key, p, &status));
+                on_status: move |status: ProjectStatus| {
                     spawn(async move {
-                        let editable = EditableProject {
-                            id: project_id,
-                            payload,
-                            status: Some(status),
-                            history: None,
+                        let edit = |stored: &ProjectDto| {
+                            Ok(EditableProject {
+                                id: project_id,
+                                payload: payload_with_status(&key, stored, &status),
+                                status: Some(status.clone()),
+                                history: None,
+                                expected_iv: None,
+                            })
                         };
-                        let _ = update_project_by_id(Json(editable)).await;
+                        let _ = update_project_fresh(project_id, edit).await;
                         sync.restart();
                     });
                 },
