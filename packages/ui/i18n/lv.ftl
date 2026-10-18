@@ -614,6 +614,7 @@ debtors-title-recipients = Saņēmēji
 debtors-title-beneficiaries = Labuma guvēji
 debtors-title-for = Kam
 debtors-title-recipient = Saņēmējs
+expense-split-between = sadalīts starp { $count }
 expense-people =
     { $count ->
         [zero] { $count } personu

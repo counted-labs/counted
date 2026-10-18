@@ -614,6 +614,7 @@ debtors-title-recipients = Destinatari
 debtors-title-beneficiaries = Beneficiari
 debtors-title-for = Pentru
 debtors-title-recipient = Destinatar
+expense-split-between = împărțit între { $count }
 expense-people =
     { $count ->
         [one] { $count } persoană

@@ -52,9 +52,9 @@ fn overscroll_js() -> String {
 ///
 /// State written to the DOM, all of it removed at rest:
 /// - `.app-container[data-overscroll]` + `--overscroll` - `pulling` while the finger is down,
-///   `settling` for the spring back. `main.css` transforms the container's children off it; nothing
-///   may stay transformed once settled, or the FAB and the dropdown scrims lose their viewport anchor
-///   (`page_transition.rs`).
+///   `settling` for the spring back. `main.css` moves the container's children off it - by `top`,
+///   not a transform, for a child holding a fixed element, or the FAB and the dropdown scrims lose
+///   their viewport anchor (`page_transition.rs`).
 /// - `.ptr[data-state]` + `--ptr-pull` - `pulling` → `armed` → `refreshing` → `done`.
 ///
 /// iOS keeps its native rubber band wherever the box is scrollable (`nativeBounce`): the JS bounce

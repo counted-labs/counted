@@ -608,6 +608,7 @@ debtors-title-recipients = Címzettek
 debtors-title-beneficiaries = Kedvezményezettek
 debtors-title-for = Kinek
 debtors-title-recipient = Címzett
+expense-split-between = { $count } fő között elosztva
 expense-people =
     { $count ->
         [one] { $count } fő

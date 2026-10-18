@@ -614,6 +614,7 @@ debtors-title-recipients = Destinataires
 debtors-title-beneficiaries = Bénéficiaires
 debtors-title-for = Pour
 debtors-title-recipient = Destinataire
+expense-split-between = partagé entre { $count }
 expense-people =
     { $count ->
         [one] { $count } personne
@@ -688,12 +689,12 @@ help-contact = Une autre question ? Écrivez-nous à
 
 ### Legal
 
-legal-updated = Dernière mise à jour : 28 septembre 2026
+legal-updated = Dernière mise à jour : 18 octobre 2026
 
 legal-publisher-title = 1. Éditeur du site
 legal-publisher-body = Counted (« le Service ») est édité à titre non professionnel par une personne physique, Jonathan Bosi.
 legal-contact-label = Contact :
-legal-publisher-address-note = Conformément à l'article 6-III-2 de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique, l'éditeur, personne physique éditant à titre non professionnel, ne publie pas son adresse postale. Ces éléments d'identification sont détenus par l'hébergeur, qui peut les communiquer à l'autorité judiciaire.
+legal-publisher-address-note = Conformément au II de l'article 1-1 de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans l'économie numérique, l'éditeur, personne physique éditant à titre non professionnel, ne publie pas son adresse postale. Ces éléments d'identification sont détenus par l'hébergeur, qui peut les communiquer à l'autorité judiciaire.
 legal-director-title = 2. Directeur de la publication
 legal-host-title = 3. Hébergeur
 legal-host-address = Industriestr. 25, 91710 Gunzenhausen, Allemagne
@@ -733,7 +734,7 @@ terms-acceptable-use-1 = utiliser le Service à des fins illicites ou frauduleus
 terms-acceptable-use-2 = tenter d'accéder à des projets qui ne vous ont pas été partagés ;
 terms-acceptable-use-3 = porter atteinte au fonctionnement du Service, notamment par des requêtes automatisées massives ;
 terms-acceptable-use-4 = contourner les limitations techniques mises en place (quotas, limitation de débit) ;
-terms-acceptable-use-5 = utiliser le Service pour envoyer des messages non sollicités à des tiers, y compris via les invitations par email.
+terms-acceptable-use-5 = utiliser le Service pour envoyer des messages non sollicités à des tiers, y compris via les demandes d'ami ou les invitations à un projet.
 terms-your-content-title = 6. Vos contenus
 terms-your-content-body = Vous restez propriétaire des données que vous saisissez. Elles sont chiffrées sur votre appareil avant d'être transmises : l'éditeur en héberge une version qu'il ne peut pas lire, et n'exerce donc aucune modération de leur contenu. Vous êtes seul responsable de ce que vous y inscrivez et de votre droit à y faire figurer des informations concernant d'autres personnes.
 terms-availability-title = 7. Disponibilité
@@ -769,7 +770,7 @@ privacy-collected-salt-def = utilisé pour générer votre clé de chiffrement c
 privacy-collected-content-term = Contenu chiffré des projets
 privacy-collected-content-def = (noms, dépenses, participants, montants). Ces données sont chiffrées sur votre appareil avant d'être envoyées au serveur, qui n'en stocke qu'une version inintelligible.
 privacy-collected-prefs-term = Vos préférences chiffrées
-privacy-collected-prefs-def = (langue de l'interface), pour les retrouver sur vos autres appareils. Chiffrées sur votre appareil avec la même clé que le reste : le serveur ne peut pas les lire.
+privacy-collected-prefs-def = (langue de l'interface, groupes exclus de « Mes dépenses »), pour les retrouver sur vos autres appareils. Chiffrées sur votre appareil avec la même clé que le reste : le serveur ne peut pas les lire.
 privacy-collected-keys-term = Vos clés de projet, scellées
 privacy-collected-keys-def = pour qu'une connexion depuis un nouvel appareil vous rende des projets réellement lisibles, et non une liste que vous ne pouvez pas ouvrir. Chacune est chiffrée sur votre appareil avec la clé dérivée de votre mot de passe ; le serveur les conserve sans pouvoir les desceller. La contrepartie est réelle et nous préférons l'énoncer : quelqu'un qui détiendrait à la fois notre base et votre mot de passe atteindrait vos projets. C'est pourquoi le mot de passe n'est jamais transmis ni stocké : ce que nous recevons à la connexion est une preuve distincte dont il ne peut être retrouvé, et nous n'en gardons qu'une empreinte.
 privacy-collected-payment-term = Vos coordonnées de paiement
@@ -796,7 +797,7 @@ privacy-legal-basis-body = Le traitement repose sur l'exécution du contrat qui 
 privacy-e2ee-title = 5. Chiffrement de bout en bout
 privacy-e2ee-a = Counted applique un modèle
 privacy-e2ee-b = : votre clé de chiffrement est dérivée de votre mot de passe et ne quitte jamais votre appareil. Le serveur stocke uniquement des blobs chiffrés qu'il est incapable de lire.
-privacy-e2ee-metadata = Ce que le serveur voit en clair, c'est ce dont il a besoin pour faire fonctionner le service : votre adresse email, les projets auxquels votre compte appartient et le participant que vous êtes dans chacun, le nombre de dépenses d'un projet, la date d'ajout et la taille approximative de chacune, et le moment où un projet change. Il ne voit ni nom, ni montant, ni catégorie, ni note, ni qui a payé ou qui doit dans une dépense. Une exception : un projet que vous importez depuis Tricount transite en clair par notre serveur jusqu'à votre appareil, qui le chiffre ensuite. Il n'est ni conservé ni journalisé.
+privacy-e2ee-metadata = Ce que le serveur voit en clair, c'est ce dont il a besoin pour faire fonctionner le service : votre adresse email, les projets auxquels votre compte appartient et le participant que vous êtes dans chacun, le nombre de dépenses d'un projet, la date d'ajout et la taille approximative de chacune, et le moment où un projet change. Il ne voit ni nom, ni montant, ni catégorie, ni note, ni qui a payé ou qui doit dans une dépense. Une réserve, le temps de la transition : dans un projet enregistré par une version antérieure de l'application et qu'aucun membre n'a rouvert depuis avec une version à jour, le serveur voit encore quels participants figurent dans chaque dépense, lequel l'a saisie et lequel a fait chaque modification de l'historique - jamais qui a payé ni qui doit, ni les montants. La première ouverture avec une version à jour efface ces liens ; les sauvegardes les conservent au plus 30 jours de plus. Une exception : un projet que vous importez depuis Tricount transite en clair par notre serveur jusqu'à votre appareil, qui le chiffre ensuite. Il n'est ni conservé ni journalisé.
 privacy-e2ee-consequence-label = Conséquence importante :
 privacy-e2ee-consequence-a = si vous oubliez votre mot de passe,
 privacy-e2ee-consequence-em = personne
@@ -810,7 +811,7 @@ privacy-processor-proton = (Suisse) - stockage de la copie externe des sauvegard
 privacy-processor-apple = (Apple Push Notification service) - uniquement si vous autorisez les notifications sur iPhone : reçoit le jeton de votre téléphone et une phrase générique comme « Nouvelle demande d'ami », jamais un nom, un montant ou un projet.
 privacy-processor-android-push-term = Le service de notification de votre téléphone Android
 privacy-processor-android-push-def = (Google Firebase Cloud Messaging sur la plupart des téléphones, ou le distributeur UnifiedPush que vous avez installé) - uniquement si vous autorisez les notifications sur Android : reçoit un message chiffré pour votre seul téléphone et complété à une taille fixe, si bien qu'il ne peut même pas savoir de quel type de notification il s'agit.
-privacy-no-transfer-outside-eu = Ces deux services de notification peuvent traiter des données hors de l'Union européenne. La copie de sauvegarde est conservée en Suisse, que la Commission européenne reconnaît comme offrant une protection adéquate. En dehors d'eux, aucune donnée personnelle n'est transférée hors de l'Union européenne.
+privacy-no-transfer-outside-eu = Ces deux services de notification peuvent traiter des données hors de l'Union européenne : Google y applique le cadre de protection des données UE - États-Unis (Data Privacy Framework), reconnu adéquat par la Commission européenne, et Apple les clauses contractuelles types de la Commission. Le distributeur UnifiedPush est celui que vous avez choisi. La copie de sauvegarde est conservée en Suisse, que la Commission européenne reconnaît comme offrant une protection adéquate. En dehors d'eux, aucune donnée personnelle n'est transférée hors de l'Union européenne.
 privacy-retention-title = 7. Durée de conservation
 privacy-retention-a = Vos données sont conservées tant que votre compte est actif. La suppression du compte entraîne une suppression
 privacy-retention-em = immédiate et définitive
@@ -851,6 +852,7 @@ privacy-right-access = droit d'accès et de rectification ;
 privacy-right-erasure = droit à l'effacement : le bouton « Supprimer mon compte » de la page « Réglages » supprime tout immédiatement, sans passer par nous ;
 privacy-right-portability = droit à la portabilité : chaque projet s'exporte en CSV ou en JSON déchiffrés depuis son menu ;
 privacy-right-object = droit d'opposition et de limitation ;
+privacy-right-post-mortem = droit de définir des directives relatives au sort de vos données après votre décès ;
 privacy-right-withdraw = droit de retirer à tout moment l'autorisation donnée aux notifications, depuis les réglages de votre téléphone ;
 privacy-right-complaint = droit d'introduire une réclamation auprès de la
 privacy-rights-contact = Pour exercer ces droits, écrivez à

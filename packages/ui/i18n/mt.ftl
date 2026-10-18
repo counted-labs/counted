@@ -620,6 +620,7 @@ debtors-title-recipients = Riċevituri
 debtors-title-beneficiaries = Benefiċjarji
 debtors-title-for = Għal
 debtors-title-recipient = Riċevitur
+expense-split-between = maqsum bejn { $count }
 expense-people =
     { $count ->
         [one] { $count } persuna

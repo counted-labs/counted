@@ -176,6 +176,7 @@ pub fn PrivacyPage() -> Element {
                         li { {tid!("privacy-right-erasure")} }
                         li { {tid!("privacy-right-portability")} }
                         li { {tid!("privacy-right-object")} }
+                        li { {tid!("privacy-right-post-mortem")} }
                         li { {tid!("privacy-right-withdraw")} }
                         li {
                             {tid!("privacy-right-complaint")}

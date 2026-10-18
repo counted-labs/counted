@@ -620,6 +620,7 @@ debtors-title-recipients = Příjemci
 debtors-title-beneficiaries = Příjemci
 debtors-title-for = Pro
 debtors-title-recipient = Příjemce
+expense-split-between = rozděleno mezi { $count }
 expense-people =
     { $count ->
         [one] { $count } osoba

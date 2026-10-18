@@ -502,6 +502,7 @@ debtors-title-recipients = Ontvangers
 debtors-title-beneficiaries = Begunstigden
 debtors-title-for = Voor
 debtors-title-recipient = Ontvanger
+expense-split-between = verdeeld over { $count }
 expense-people =
     { $count ->
         [one] { $count } persoon

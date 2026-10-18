@@ -608,6 +608,7 @@ debtors-title-recipients = Vastaanottajat
 debtors-title-beneficiaries = Edunsaajat
 debtors-title-for = Kenelle
 debtors-title-recipient = Vastaanottaja
+expense-split-between = jaettu { $count } kesken
 expense-people =
     { $count ->
         [one] { $count } henkilö

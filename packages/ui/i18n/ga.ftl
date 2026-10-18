@@ -626,6 +626,7 @@ debtors-title-recipients = Faighteoirí
 debtors-title-beneficiaries = Tairbhithe
 debtors-title-for = Do
 debtors-title-recipient = Faighteoir
+expense-split-between = roinnte ar { $count }
 expense-people =
     { $count ->
         [one] { $count } duine

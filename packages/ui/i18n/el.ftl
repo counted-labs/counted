@@ -608,6 +608,7 @@ debtors-title-recipients = Παραλήπτες
 debtors-title-beneficiaries = Δικαιούχοι
 debtors-title-for = Για
 debtors-title-recipient = Παραλήπτης
+expense-split-between = μοιράστηκε σε { $count }
 expense-people =
     { $count ->
         [one] { $count } άτομο

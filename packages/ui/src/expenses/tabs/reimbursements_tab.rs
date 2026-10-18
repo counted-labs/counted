@@ -91,7 +91,7 @@ pub fn ReimbursementsTab(props: ReimbursementsTabProps) -> Element {
                 }
 
                 div { class: "flex-1 min-w-0",
-                    p { class: "text-sm font-medium truncate", {tid!("reimbursement-owes", debtor: debtor_name.clone(), creditor: payer_name.clone())} }
+                    p { class: "text-sm font-medium break-words", {tid!("reimbursement-owes", debtor: debtor_name.clone(), creditor: payer_name.clone())} }
                     p { class: "text-xs font-semibold text-base-content/70 uppercase", "{amount}" }
                 }
                 if editable && highlighted && !payer_methods.is_empty() {

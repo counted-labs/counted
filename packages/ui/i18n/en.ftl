@@ -625,6 +625,7 @@ debtors-title-recipients = Recipients
 debtors-title-beneficiaries = Beneficiaries
 debtors-title-for = For
 debtors-title-recipient = Recipient
+expense-split-between = split between { $count }
 expense-people =
     { $count ->
         [one] { $count } person
@@ -706,12 +707,12 @@ help-contact = Another question? Write to us at
 # to English per message until a translation has actually been reviewed. Do not machine-translate
 # this section.
 
-legal-updated = Last updated: 28 September 2026
+legal-updated = Last updated: 18 October 2026
 
 legal-publisher-title = 1. Publisher
 legal-publisher-body = Counted (“the Service”) is published in a non-professional capacity by an individual, Jonathan Bosi.
 legal-contact-label = Contact:
-legal-publisher-address-note = Under article 6-III-2 of French law no. 2004-575 of 21 June 2004 on confidence in the digital economy, a publisher who is an individual acting in a non-professional capacity does not publish their postal address. Those identifying details are held by the host, who may disclose them to the judicial authority.
+legal-publisher-address-note = Under article 1-1 II of French law no. 2004-575 of 21 June 2004 on confidence in the digital economy, a publisher who is an individual acting in a non-professional capacity does not publish their postal address. Those identifying details are held by the host, who may disclose them to the judicial authority.
 legal-director-title = 2. Publication director
 legal-host-title = 3. Host
 legal-host-address = Industriestr. 25, 91710 Gunzenhausen, Germany
@@ -751,7 +752,7 @@ terms-acceptable-use-1 = use the Service for unlawful or fraudulent purposes;
 terms-acceptable-use-2 = attempt to reach projects that have not been shared with you;
 terms-acceptable-use-3 = interfere with the operation of the Service, in particular through massive automated requests;
 terms-acceptable-use-4 = circumvent the technical limits in place (quotas, rate limiting);
-terms-acceptable-use-5 = use the Service to send unsolicited messages to third parties, including through email invitations.
+terms-acceptable-use-5 = use the Service to send unsolicited messages to third parties, including through friend requests or project invitations.
 terms-your-content-title = 6. Your content
 terms-your-content-body = You remain the owner of the data you enter. It is encrypted on your device before being transmitted: the publisher hosts a version it cannot read, and therefore performs no moderation of its content. You alone are responsible for what you record there and for your right to include information about other people.
 terms-availability-title = 7. Availability
@@ -787,7 +788,7 @@ privacy-collected-salt-def = used to generate your encryption key on the client.
 privacy-collected-content-term = Encrypted project content
 privacy-collected-content-def = (names, expenses, participants, amounts). This data is encrypted on your device before being sent to the server, which stores nothing but an unintelligible version of it.
 privacy-collected-prefs-term = Your encrypted preferences
-privacy-collected-prefs-def = (interface language), so you find them again on your other devices. Encrypted on your device with the same key as the rest: the server cannot read them.
+privacy-collected-prefs-def = (interface language, groups left out of “My expenses”), so you find them again on your other devices. Encrypted on your device with the same key as the rest: the server cannot read them.
 privacy-collected-keys-term = Your project keys, wrapped
 privacy-collected-keys-def = so that signing in on a new device gives you back projects you can actually read, instead of a list you cannot open. Each one is encrypted on your device with the key derived from your password; the server stores them and cannot unwrap them. The trade-off is real and we would rather state it: someone holding both our database and your password could reach your projects. That is why the password is never transmitted and never stored: what we receive at sign-in is a separate proof it cannot be recovered from, and we keep only a hash of that.
 privacy-collected-payment-term = Your payment details
@@ -814,7 +815,7 @@ privacy-legal-basis-body = Processing rests on performance of the contract betwe
 privacy-e2ee-title = 5. End-to-end encryption
 privacy-e2ee-a = Counted applies a
 privacy-e2ee-b = model: your encryption key is derived from your password and never leaves your device. The server stores only encrypted blobs it is unable to read.
-privacy-e2ee-metadata = What the server does see in the clear is what it needs to run the service: your email address, which projects your account belongs to and which participant you are in each, how many expenses a project holds, when each was added and roughly how large it is, and when a project changes. It sees no name, amount, category or note, and not who paid or who owes in an expense. One exception: a project you import from Tricount passes through our server unencrypted on its way to your device, which then encrypts it. It is neither stored nor logged.
+privacy-e2ee-metadata = What the server does see in the clear is what it needs to run the service: your email address, which projects your account belongs to and which participant you are in each, how many expenses a project holds, when each was added and roughly how large it is, and when a project changes. It sees no name, amount, category or note, and not who paid or who owes in an expense. One caveat while the transition lasts: in a project saved by an earlier version of the app that no member has reopened since with an up-to-date version, the server still sees which participants are in each expense, which one entered it and which one made each change in the history - never who paid or who owes, nor the amounts. The first opening with an up-to-date version erases those links; backups keep them for at most 30 more days. One exception: a project you import from Tricount passes through our server unencrypted on its way to your device, which then encrypts it. It is neither stored nor logged.
 privacy-e2ee-consequence-label = An important consequence:
 privacy-e2ee-consequence-a = if you forget your password,
 privacy-e2ee-consequence-em = nobody
@@ -828,7 +829,7 @@ privacy-processor-proton = (Switzerland) - storage of the off-site copy of our d
 privacy-processor-apple = (Apple Push Notification service) - only if you allow notifications on iPhone: receives your phone's token and a generic sentence such as “New friend request”, never a name, an amount or a project.
 privacy-processor-android-push-term = Your Android phone's push service
 privacy-processor-android-push-def = (Google Firebase Cloud Messaging on most phones, or the UnifiedPush distributor you installed) - only if you allow notifications on Android: receives a message encrypted for your phone alone and padded to a fixed size, so it cannot tell even what kind of notification it is.
-privacy-no-transfer-outside-eu = These two push services may process data outside the European Union. The backup copy is kept in Switzerland, which the European Commission recognises as providing adequate protection. Apart from them, no personal data is transferred outside the European Union.
+privacy-no-transfer-outside-eu = These two push services may process data outside the European Union: Google relies on the EU-US Data Privacy Framework, which the European Commission recognises as adequate, and Apple on the Commission's standard contractual clauses. The UnifiedPush distributor is the one you chose. The backup copy is kept in Switzerland, which the European Commission recognises as providing adequate protection. Apart from them, no personal data is transferred outside the European Union.
 privacy-retention-title = 7. Retention
 privacy-retention-a = Your data is kept for as long as your account is active. Deleting the account causes an
 privacy-retention-em = immediate and permanent
@@ -869,6 +870,7 @@ privacy-right-access = right of access and rectification;
 privacy-right-erasure = right to erasure: the “Delete my account” button on the “Settings” page removes everything immediately, without going through us;
 privacy-right-portability = right to portability: every project exports to decrypted CSV or JSON from its own menu;
 privacy-right-object = right to object and to restriction;
+privacy-right-post-mortem = right to set instructions on what becomes of your data after your death;
 privacy-right-withdraw = right to withdraw the permission you gave for notifications at any time, from your phone’s settings;
 privacy-right-complaint = right to lodge a complaint with the French data protection authority, the
 privacy-rights-contact = To exercise these rights, write to

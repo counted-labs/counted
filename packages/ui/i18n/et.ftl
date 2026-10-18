@@ -608,6 +608,7 @@ debtors-title-recipients = Saajad
 debtors-title-beneficiaries = Kasusaajad
 debtors-title-for = Kellele
 debtors-title-recipient = Saaja
+expense-split-between = jagatud { $count } vahel
 expense-people =
     { $count ->
         [one] { $count } inimene

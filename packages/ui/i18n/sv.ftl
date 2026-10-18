@@ -608,6 +608,7 @@ debtors-title-recipients = Mottagare
 debtors-title-beneficiaries = Förmånstagare
 debtors-title-for = För
 debtors-title-recipient = Mottagare
+expense-split-between = delat mellan { $count }
 expense-people =
     { $count ->
         [one] { $count } person

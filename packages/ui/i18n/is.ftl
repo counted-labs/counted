@@ -608,6 +608,7 @@ debtors-title-recipients = Viðtakendur
 debtors-title-beneficiaries = Njótendur
 debtors-title-for = Fyrir
 debtors-title-recipient = Viðtakandi
+expense-split-between = skipt á milli { $count }
 expense-people =
     { $count ->
         [one] { $count } manneskja

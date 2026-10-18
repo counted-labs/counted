@@ -608,6 +608,7 @@ debtors-title-recipients = Получатели
 debtors-title-beneficiaries = Бенефициенти
 debtors-title-for = За
 debtors-title-recipient = Получател
+expense-split-between = разделено между { $count }
 expense-people =
     { $count ->
         [one] { $count } човек

@@ -545,14 +545,26 @@ main {
 }
 
 /* Present only mid-gesture: `pulling` follows the finger, `settling` springs back, then the
-   attribute is removed. Nothing may stay transformed at rest - even `translateY(0)` makes a child
-   the containing block of the fixed FAB and dropdown scrims (see page_transition.rs). */
+   attribute is removed. A transform - even `translateY(0)` - makes a child the containing block of
+   its fixed descendants (see page_transition.rs), so a child holding the FAB or a scrim is offset
+   with `top` instead, and a fixed child is not moved: both stay on the viewport, as over a native
+   bounce. */
 .app-container[data-overscroll] > * {
   transform: translateY(var(--overscroll));
 }
 
+.app-container[data-overscroll] > :has(.fixed) {
+  transform: none;
+  position: relative;
+  top: var(--overscroll);
+}
+
+.app-container[data-overscroll] > .fixed {
+  transform: none;
+}
+
 .app-container[data-overscroll="settling"] > * {
-  transition: transform 300ms cubic-bezier(0.2, 0, 0, 1);
+  transition: transform 300ms cubic-bezier(0.2, 0, 0, 1), top 300ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* The Material disc floats over the content rather than riding the rubber band with it; the iOS

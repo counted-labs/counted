@@ -203,6 +203,7 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                             let is_me = |id: i32| !is_transfer && stored_user_id == Some(id);
                             debtors.sort_by_key(|dp| !is_me(dp.user_id));
                             let debtors_heading = debtors_title(&expense_type, debtors.len());
+                            let split_count = (!is_transfer && !d.personal && debtors.len() > 1).then_some(debtors.len());
                             let state = read_from_ls();
                             let targets = destinations(state.cached_projects_list.as_deref().unwrap_or_default(), &state, project_id);
                             let movable = can_delete && can_move(&expense_type) && targets.iter().any(|t| !t.current);
@@ -336,36 +337,50 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                     }
                                 }
 
-                                div { class: "card bg-base-100 shadow-soft",
-                                    div { class: "card-body p-4 gap-0",
-                                        h2 { class: "font-semibold text-xs tracking-wide text-base-content/70 uppercase",
-                                            {tid!(payers_title(&expense_type))}
-                                        }
-                                        for dp in payers {
-                                            ParticipantRow {
-                                                name: name_of(dp.user_id),
-                                                user_id: dp.user_id,
-                                                amount: dp.amount,
-                                                currency: currency.clone(),
-                                                share: None,
-                                                is_me: is_me(dp.user_id),
-                                                highlight: is_me(dp.user_id) && !d.personal,
+                                div { class: "flex flex-col",
+                                    div { class: "card bg-base-100 shadow-soft",
+                                        div { class: "card-body p-4 gap-0",
+                                            h2 { class: "font-semibold text-xs tracking-wide text-base-content/70 uppercase mb-1",
+                                                {tid!(payers_title(&expense_type))}
                                             }
-                                        }
-                                        div { class: "h-px bg-base-content/10 my-2" }
-                                        h2 { id: "expense-debtors-title", class: "font-semibold text-xs tracking-wide text-base-content/70 uppercase mb-1",
-                                            {tid!(debtors_heading)}
-                                        }
-                                        div { id: "expense-debtors", class: "flex flex-col",
-                                            for dp in debtors {
+                                            for dp in payers {
                                                 ParticipantRow {
                                                     name: name_of(dp.user_id),
                                                     user_id: dp.user_id,
                                                     amount: dp.amount,
                                                     currency: currency.clone(),
-                                                    share: (!is_transfer && !d.personal).then(|| share_percent(dp.amount, total)),
+                                                    share: None,
                                                     is_me: is_me(dp.user_id),
                                                     highlight: is_me(dp.user_id) && !d.personal,
+                                                }
+                                            }
+                                        }
+                                    }
+                                    div { class: "relative flex justify-center py-2",
+                                        div { class: "absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 bg-base-content/10" }
+                                        span { id: "expense-split-connector", class: "relative flex items-center gap-1.5 rounded-full border border-base-content/10 bg-base-200 px-3 py-1 text-xs font-semibold text-base-content/70",
+                                            span { class: "flex rotate-90", RightArrowIcon { size: 12 } }
+                                            if let Some(count) = split_count {
+                                                {tid!("expense-split-between", count: count as i64)}
+                                            }
+                                        }
+                                    }
+                                    div { class: "card bg-base-100 shadow-soft",
+                                        div { class: "card-body p-4 gap-0",
+                                            h2 { id: "expense-debtors-title", class: "font-semibold text-xs tracking-wide text-base-content/70 uppercase mb-1",
+                                                {tid!(debtors_heading)}
+                                            }
+                                            div { id: "expense-debtors", class: "flex flex-col",
+                                                for dp in debtors {
+                                                    ParticipantRow {
+                                                        name: name_of(dp.user_id),
+                                                        user_id: dp.user_id,
+                                                        amount: dp.amount,
+                                                        currency: currency.clone(),
+                                                        share: (!is_transfer && !d.personal).then(|| share_percent(dp.amount, total)),
+                                                        is_me: is_me(dp.user_id),
+                                                        highlight: is_me(dp.user_id) && !d.personal,
+                                                    }
                                                 }
                                             }
                                         }

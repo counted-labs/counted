@@ -620,6 +620,7 @@ debtors-title-recipients = Gavėjai
 debtors-title-beneficiaries = Naudos gavėjai
 debtors-title-for = Kam
 debtors-title-recipient = Gavėjas
+expense-split-between = padalyta tarp { $count }
 expense-people =
     { $count ->
         [one] { $count } asmuo

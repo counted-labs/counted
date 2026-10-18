@@ -248,28 +248,26 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                     if props.show_type_selector {
                         div { role: "radiogroup", aria_label: tid!("expense-type-group"), class: "tabs tabs-box bg-base-300 shadow-none grid grid-flow-col auto-cols-fr flex-1",
                             for (value , label) in TYPES.into_iter().filter(|(v, _)| !props.personal || *v != "Transfer") {
-                                // `min-w-0`: overrides daisyUI's `min-width: fit-content` on radio
-                                // tabs, so the three share the row beside the ✕.
-                                //
-                                // `text-sm!`: these are radios, so `main.css`'s unlayered iOS-zoom
-                                // guard `input { font-size: 16px !important }` outranks `btn-sm`.
-                                // Tailwind's `!important` lives in `@layer utilities` and layer
-                                // order reverses for important declarations, so the layered one
-                                // wins. Radios never focus-auto-zoom anyway.
-                                input {
+                                // A `label.tab` around a hidden radio, not a radio styled as the
+                                // tab: iOS WebKit sizes a radio to its `::after` label even with
+                                // `w-full`, so the active pill hugged "Dépense" and the cells read
+                                // as uneven. A label stretches to its grid cell like any block.
+                                label {
                                     class: if type_value(&expense_type()) == value {
-                                        "tab tab-active flex-1 min-w-0 whitespace-nowrap text-sm! font-semibold"
+                                        "tab tab-active min-w-0 whitespace-nowrap text-sm font-semibold"
                                     } else {
-                                        "tab flex-1 min-w-0 whitespace-nowrap text-sm! text-base-content/70"
+                                        "tab min-w-0 whitespace-nowrap text-sm text-base-content/70"
                                     },
-                                    r#type: "radio",
-                                    name: "expense-type",
-                                    aria_label: tid!(label),
-                                    checked: type_value(&expense_type()) == value,
-                                    oninput: move |_| {
-                                        haptic(Haptic::Light);
-                                        expense_type.set(type_from_value(value));
-                                    },
+                                    input {
+                                        r#type: "radio",
+                                        name: "expense-type",
+                                        checked: type_value(&expense_type()) == value,
+                                        oninput: move |_| {
+                                            haptic(Haptic::Light);
+                                            expense_type.set(type_from_value(value));
+                                        },
+                                    }
+                                    {tid!(label)}
                                 }
                             }
                         }
@@ -315,7 +313,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                     // the common case needs - the name, still being decided, follows it. No `input`
                     // box: the rule below is the field's whole edge, so the currency picker stops
                     // reading as a second field sharing a frame.
-                    label { class: "relative flex items-baseline justify-between gap-2 px-5 pt-3 pb-4 border-b border-base-200",
+                    label { class: "relative flex items-baseline justify-between gap-2 px-5 pt-5 pb-4 border-b border-base-200",
                             AmountInput {
                                 id: "expense-amount",
                                 class: "min-w-0 text-4xl leading-tight font-bold tracking-tight font-display tabular-nums caret-primary",

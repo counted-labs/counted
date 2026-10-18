@@ -3873,6 +3873,9 @@
   .loading-sm {
     width: calc(var(--size-selector, 0.25rem) * 5);
   }
+  .w-0\.5 {
+    width: calc(var(--spacing) * 0.5);
+  }
   .w-1\/2 {
     width: calc(1/2 * 100%);
   }
@@ -4097,6 +4100,9 @@
   }
   .resize {
     resize: both;
+  }
+  .scroll-mt-5 {
+    scroll-margin-top: calc(var(--spacing) * 5);
   }
   .list-inside {
     list-style-position: inside;
@@ -4549,6 +4555,10 @@
     border-left-style: var(--tw-border-style);
     border-left-width: 2px;
   }
+  .border-l-4 {
+    border-left-style: var(--tw-border-style);
+    border-left-width: 4px;
+  }
   .border-dashed {
     --tw-border-style: dashed;
     border-style: dashed;
@@ -4596,6 +4606,12 @@
   }
   .border-base-300 {
     border-color: var(--color-base-300);
+  }
+  .border-base-content\/10 {
+    border-color: var(--color-base-content);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-base-content) 10%, transparent);
+    }
   }
   .border-base-content\/50 {
     border-color: var(--color-base-content);

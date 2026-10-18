@@ -502,6 +502,7 @@ debtors-title-recipients = Destinatari
 debtors-title-beneficiaries = Beneficiari
 debtors-title-for = Per
 debtors-title-recipient = Destinatario
+expense-split-between = diviso tra { $count }
 expense-people =
     { $count ->
         [one] { $count } persona

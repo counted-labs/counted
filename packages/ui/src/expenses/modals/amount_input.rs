@@ -89,7 +89,7 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
                 r#type: "text",
                 inputmode: "decimal",
                 value: shown.clone(),
-                class: "w-full outline-none",
+                class: "w-full outline-none scroll-mt-5",
                 // Chromium's UA sheet sets `text-align: start` on an input, so a `text-right` on
                 // the wrapper would not otherwise reach it.
                 text_align: "inherit",

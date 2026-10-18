@@ -219,7 +219,7 @@ pub fn RepeatPicker(
                             p { class: "text-xs text-base-content/70 px-5 pt-2", {tid!("repeat-month-end")} }
                         }
                         p { class: "text-xs font-bold uppercase tracking-wide text-base-content/70 px-5 pt-4 pb-2", {tid!("repeat-ends")} }
-                        div { role: "tablist", class: "tabs tabs-box mx-5",
+                        div { role: "tablist", class: "tabs tabs-box mx-5 grid grid-flow-col auto-cols-fr",
                             EndsTab { label: tid!("repeat-ends-never"), active: matches!(ends(), Ends::Never), onselect: move |_| ends.set(Ends::Never) }
                             EndsTab { label: tid!("repeat-ends-on"), active: matches!(ends(), Ends::On(_)), onselect: move |_| ends.set(Ends::On(until())) }
                             EndsTab { label: tid!("repeat-ends-after"), active: matches!(ends(), Ends::After(_)), onselect: move |_| ends.set(Ends::After(count())) }
@@ -341,7 +341,7 @@ fn EndsTab(label: String, active: bool, onselect: EventHandler<()>) -> Element {
             r#type: "button",
             role: "tab",
             aria_selected: "{active}",
-            class: if active { "tab tab-active flex-1 text-sm font-semibold" } else { "tab flex-1 text-sm" },
+            class: if active { "tab tab-active text-sm font-semibold" } else { "tab text-sm" },
             onclick: move |_| onselect.call(()),
             "{label}"
         }

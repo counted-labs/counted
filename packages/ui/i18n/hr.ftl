@@ -614,6 +614,7 @@ debtors-title-recipients = Primatelji
 debtors-title-beneficiaries = Korisnici
 debtors-title-for = Za
 debtors-title-recipient = Primatelj
+expense-split-between = podijeljeno na { $count }
 expense-people =
     { $count ->
         [one] { $count } osoba

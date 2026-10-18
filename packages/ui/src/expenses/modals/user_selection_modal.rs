@@ -139,14 +139,18 @@ pub fn UserSelectionModal(props: UserSelectionModalProps) -> Element {
             match result {
                 Ok(()) => {
                     update_ls(ls_ctx, |state| upsert_project(state, project_id, Some(user_id)));
-                    finish();
                     // The shared payment methods follow the identity, from a fresh `me()` rather
                     // than the `account` this session booted with - see `refill_project_copies`.
+                    // Not on this task: `finish` unmounts the modal, which drops it at the first
+                    // await.
                     if let Some(ak) = account_key_ctx() {
-                        if let Ok(Some(fresh)) = me().await {
-                            let _ = refill_project_copies(&fresh, &ak).await;
-                        }
+                        dioxus::dioxus_core::spawn_forever(async move {
+                            if let Ok(Some(fresh)) = me().await {
+                                let _ = refill_project_copies(&fresh, &ak).await;
+                            }
+                        });
                     }
+                    finish();
                 }
                 Err(e) if is_identity_taken_error(&e) => {
                     // Raced against another account between the render and the click - the list is

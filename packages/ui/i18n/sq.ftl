@@ -608,6 +608,7 @@ debtors-title-recipients = Marrësit
 debtors-title-beneficiaries = Përfituesit
 debtors-title-for = Për
 debtors-title-recipient = Marrësi
+expense-split-between = ndarë mes { $count }
 expense-people =
     { $count ->
         [one] { $count } person

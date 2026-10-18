@@ -608,6 +608,7 @@ debtors-title-recipients = Mottakere
 debtors-title-beneficiaries = Begunstigede
 debtors-title-for = For
 debtors-title-recipient = Mottaker
+expense-split-between = delt mellom { $count }
 expense-people =
     { $count ->
         [one] { $count } person
