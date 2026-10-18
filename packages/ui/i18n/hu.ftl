@@ -149,7 +149,7 @@ payment-method-invalid-characters = Távolítsd el a sortöréseket vagy láthat
 payment-method-limit = Legfeljebb { $max } fizetési módot menthetsz.
 payment-methods-saved = Fizetési adatok mentve.
 payment-methods-offline = A fizetési adatok mentéséhez online kell lenned.
-payment-methods-stale = A fizetési adataid egy másik eszközön módosultak. Újratöltöttük őket — próbáld újra.
+payment-methods-stale = A fizetési adataid egy másik eszközön módosultak. Újratöltöttük őket - próbáld újra.
 payment-methods-key-missing = Jelentkezz be újra a fizetési adatok kezeléséhez.
 settings-payment-methods-share-warning = A megosztott mód a projektjeid minden tagja számára látható.
 payment-method-share = Megosztás a projektjeimmel
@@ -231,7 +231,6 @@ projects-filter-active = Aktív
 projects-filter-all = Összes
 projects-count-label = Projektek
 projects-empty = Nincs projekt
-projects-empty-hint = Hozz létre egy projektet a lenti gombbal
 projects-offline-banner = Offline adatok - frissítéshez csatlakozz újra.
 demo-banner = Bemutató projekt - csak olvasható.
 demo-start-own = Saját projekt indítása
@@ -245,6 +244,67 @@ projects-no-local-data = Nincsenek helyi adatok
 projects-no-local-data-hint = Jelentkezz be a projektjeid első betöltéséhez.
 projects-add = Projekt hozzáadása
 projects-create = Projekt létrehozása
+projects-personal-expense = Saját kiadás
+personal-expense-banner = Hozzáadva a Saját kiadásokhoz
+personal-create-title = Hozd létre a saját projekted
+personal-create-hint = Kövesd, mit költesz egyedül
+group-create-title = Hozz létre közös projektet
+group-create-hint = Oszd meg a kiadásokat barátokkal és családdal
+personal-create-action = Létrehozás
+personal-create-signup = Fiók létrehozása
+personal-sheet-title = A saját projekted
+personal-sheet-intro = Arra, amit egyedül költesz. A csoportjaiddal együtt jelenik meg a Statisztikában.
+personal-sheet-point-alone = Egy tag: te, a fiókod nevével. Nincs megosztási link.
+personal-sheet-point-encrypted = Az eszközeiden titkosítva, mint a többi projekted.
+personal-sheet-point-stats = A csoportokban rád eső részek a Statisztikában hozzáadódnak ezekhez a kiadásokhoz.
+personal-default-name = Saját kiadások
+my-spending-prev-month = Előző hónap
+my-spending-next-month = Következő hónap
+my-spending-spent = Elköltött összeg
+my-spending-groups = Csoportok
+my-spending-income = Bevételek
+my-spending-balance = A hónap egyenlege
+my-spending-unconverted = A más pénznemű részek kimaradnak, amíg nincs ismert árfolyam.
+my-spending-empty = Ebben a hónapban semmi
+my-spending-empty-hint = Adj hozzá kiadást a + gombbal. A csoportokban lévő részeid automatikusan itt jelennek meg.
+my-spending-share-of = { $amount } összegből
+my-spending-uncounted = nem számít bele
+payer-you = te
+expense-received-by = kapta:
+counted-switch = Beszámítás ide: Saját kiadások
+counted-switch-on = Be: a részed beleszámít ide: Saját kiadások
+counted-switch-off = Ki: a részed nem jelenik meg itt: Saját kiadások
+counted-groups = Beszámított csoportok
+counted-groups-intro = A részed ezekben a csoportokban beleszámít ide: Saját kiadások, és a költségkeretekbe is.
+counted-groups-converted = { $from }, átváltva { $to } pénznemre
+counted-groups-encrypted = Ez a választás a fiókoddal titkosított, és követ az eszközeiden.
+counted-groups-empty = Ezen az eszközön még nincs csoport.
+counted-groups-done = OK
+counted-save-failed = Ezt a választást nem sikerült menteni. Próbáld újra.
+tab-budget = Költségkeret
+budget-title = Költségkeretek
+budget-manage = Kezelés
+budget-left = Maradt { $amount }
+budget-over = Túllépve { $amount } összeggel
+budget-empty = Nincs költségkeret
+budget-empty-hint = Állíts be felső határt kategóriánként. A csoportokban lévő részeid is beleszámítanak.
+budget-define = Költségkeret beállítása
+budget-sheet-title = Havi költségkeretek
+budget-sheet-intro = A részedre: saját és csoportok. Hagyd üresen, ha nem követnél egy kategóriát.
+budget-average = Átl. az előző 3 hónapban: { $amount }
+budget-for = Költségkeret: { $category }
+budget-alert = Figyelmeztess 80 %-nál
+budget-alert-hint = Ezen az eszközön számolva
+budget-invalid = Érvénytelen összeg: { $category }.
+budget-offline = A költségkeretek csak online menthetők. Csatlakozz újra, és próbáld meg ismét.
+budget-alert-near = { $category }: a havi keret { $percent } %-a
+budget-alert-over = { $category }: a havi keret túllépve
+personal-card-budget = { $month } · költségkeret { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } találat
+       *[other] { $count } találat
+    } · { $total } · saját és csoportok, minden hónap
 projects-join = Csatlakozás projekthez
 projects-import-tricount = Importálás Tricountból
 project-actions = Projektműveletek
@@ -321,6 +381,7 @@ expenses-show-more = Több mutatása (még { $count })
 expense-type-expense = Kiadás
 expense-type-transfer = Átutalás
 expense-type-gain = Bevétel
+expense-type-group = Típus
 expense-paid-by = fizette:
 expense-sent-by = küldte:
 expense-contributed-by = hozzájárult:
@@ -386,6 +447,23 @@ export-failed = Az exportálás nem sikerült: { $reason }
 history-expense-added = Kiadás hozzáadva: { $name }
 history-expense-edited = Kiadás szerkesztve: { $name }
 history-expense-deleted = Kiadás törölve: { $name }
+move-expense = Áthelyezés projektbe
+move-expense-title = Áthelyezés ide…
+move-current = Jelenlegi
+move-converted = { $currency }, havi árfolyamon átváltva
+move-note-personal = A következő lépésben választod ki, ki fizetett és kinek. A kiadás kikerül a Saját kiadásokból.
+move-note-group = A kiadás kikerül a(z) { $project } projektből minden tag számára, és a csoport egyenlege újraszámolódik. A következő lépésben választod ki, ki fizetett és kinek.
+move-banner = { $from } → { $to }
+move-submit = Áthelyezés
+move-done = Kiadás áthelyezve ide: { $project }
+move-delete-failed = A kiadás bekerült a másik projektbe, de még itt is szerepel: { $project }. Töröld ott.
+history-expense-moved = Kiadás áthelyezve egy másik projektbe: { $name }
+personal-badge = Saját
+move-members =
+    { $count ->
+        [one] { $count } tag
+       *[other] { $count } tag
+    }
 history-project-edited = Projekt szerkesztve: { $name }
 history-name-changed = Név: „{ $from }” → „{ $to }”
 history-description-added = Leírás hozzáadva: „{ $value }”
@@ -399,11 +477,23 @@ expense-name-placeholder = Étterem, bevásárlás…
 expense-actions = Kiadásműveletek
 expense-your-share = A te részed
 expense-your-share-value = A te részed: { $amount } { $currency }
+expense-share-percent = { $percent }%
+expense-added-by = Hozzáadta: { $name }, { $date }
 expense-inconsistent-detail = Az összegek nem egyeznek: { $paid } fizetve, { $owed } tartozás, egy { $total } összegű kiadásnál. Szerkeszd a kiadást a javításhoz.
 missing-access-key = Hiányzik a hozzáférési kulcs. Nyisd meg a projektet a megosztási linkjén keresztül.
 filter-all = Összes
 filter-my-payments = Saját fizetéseim
 filter-my-debts = Amivel tartozom
+expense-filter-group = Szűrő
+expenses-search = Kiadások keresése
+expenses-no-match = Nincs egyező kiadás.
+expenses-search-open = Keresés
+expenses-search-clear = Keresés törlése
+expenses-search-summary =
+    { $count ->
+        [one] { $count } találat
+       *[other] { $count } találat
+    } · { $total } · minden hónap
 participants-shares-for = { $name } részaránya
 participants-amount-for = { $name } összege
 reimbursement-add = Elszámolás hozzáadása
@@ -441,8 +531,8 @@ charts-expense-count =
 charts-nothing-to-show = Nincs megjeleníthető adat
 charts-my-share-skipped =
     { $count ->
-        [one] 1 projekt nincs beszámítva — nincs kiválasztott résztvevő, vagy az adatai nem töltődtek be.
-       *[other] { $count } projekt nincs beszámítva — nincs kiválasztott résztvevő, vagy az adataik nem töltődtek be.
+        [one] 1 projekt nincs beszámítva - nincs kiválasztott résztvevő, vagy az adatai nem töltődtek be.
+       *[other] { $count } projekt nincs beszámítva - nincs kiválasztott résztvevő, vagy az adataik nem töltődtek be.
     }
 
 ### Categories
@@ -516,6 +606,13 @@ payers-title-contributors = Hozzájárulók
 debtors-title-debtors = Tartozik
 debtors-title-recipients = Címzettek
 debtors-title-beneficiaries = Kedvezményezettek
+debtors-title-for = Kinek
+debtors-title-recipient = Címzett
+expense-people =
+    { $count ->
+        [one] { $count } fő
+       *[other] { $count } fő
+    }
 
 ### Welcome
 
@@ -648,6 +745,8 @@ invitation-decline = Elutasítás
 participants-you-label = A neved ebben a projektben
 participants-you-badge = Te
 participants-others = További résztvevők
+participants-removed = Eltávolítva
+participant-restore = Visszaállítás
 participants-empty = Adj hozzá résztvevőket lent.
 participants-duplicate = „{ $name }” már szerepel a listában.
 participants-input-label = Barát hozzáadása vagy név beírása
@@ -792,3 +891,16 @@ error-recurring-not-found = Ez az ismétlődő kiadás már nem létezik.
 error-recurring-stale = Valaki időközben módosította ezt az ismétlődő kiadást. Újratöltöttük: ellenőrizd, és mentsd újra.
 error-too-many-recurring = Ennek a projektnek már 50 ismétlődő kiadása van. Állíts le egy feleslegeset, hogy újat adhass hozzá.
 error-user-in-recurring = Ez a résztvevő egy ismétlődő kiadás része. Előbb vedd ki belőle, vagy állítsd le a kiadást.
+
+home-owed-to-you = Tartoznak neked
+home-you-owe = Tartozol
+home-details-show = Részletek
+home-details-hide = Részletek elrejtése
+home-all-settled = Minden rendezve
+home-pay = Fizetés
+home-remind = Emlékeztetés
+home-remind-message = Kis emlékeztető: a(z) { $project } projektben még vannak rendezetlen visszafizetések.
+home-row-owed = tartoznak neked
+home-row-owe = tartozol
+home-row-settled = Rendezve
+home-totals-partial = Árfolyam nélküli projektek nélkül

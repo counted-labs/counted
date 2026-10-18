@@ -149,7 +149,7 @@ payment-method-invalid-characters = Fjarlægðu línubil eða ósýnilega stafi.
 payment-method-limit = Þú getur vistað allt að { $max } greiðslumáta.
 payment-methods-saved = Greiðsluupplýsingar vistaðar.
 payment-methods-offline = Þú þarft að vera nettengd(ur) til að vista greiðsluupplýsingar.
-payment-methods-stale = Greiðsluupplýsingum þínum var breytt á öðru tæki. Þær hafa verið endurhlaðnar — reyndu aftur.
+payment-methods-stale = Greiðsluupplýsingum þínum var breytt á öðru tæki. Þær hafa verið endurhlaðnar - reyndu aftur.
 payment-methods-key-missing = Skráðu þig inn aftur til að stjórna greiðsluupplýsingum.
 settings-payment-methods-share-warning = Deildur greiðslumáti er sýnilegur öllum meðlimum verkefnanna þinna.
 payment-method-share = Deila með verkefnunum mínum
@@ -231,7 +231,6 @@ projects-filter-active = Virk
 projects-filter-all = Öll
 projects-count-label = Verkefni
 projects-empty = Engin verkefni
-projects-empty-hint = Stofnaðu verkefni með hnappinum hér að neðan
 projects-offline-banner = Gögn án nettengingar - tengstu aftur til að uppfæra.
 demo-banner = Sýniverkefni - aðeins til lestrar.
 demo-start-own = Stofnaðu eigið verkefni
@@ -245,6 +244,67 @@ projects-no-local-data = Engin staðbundin gögn
 projects-no-local-data-hint = Skráðu þig inn til að hlaða verkefnunum þínum í fyrsta sinn.
 projects-add = Bæta við verkefni
 projects-create = Stofna verkefni
+projects-personal-expense = Eigin útgjöld
+personal-expense-banner = Bætt við Mín útgjöld
+personal-create-title = Búðu til þitt eigið verkefni
+personal-create-hint = Fylgstu með því sem þú eyðir einn
+group-create-title = Stofnaðu sameiginlegt verkefni
+group-create-hint = Deildu kostnaði með vinum og fjölskyldu
+personal-create-action = Búa til
+personal-create-signup = Stofna aðgang
+personal-sheet-title = Þitt eigið verkefni
+personal-sheet-intro = Til að skrá það sem þú eyðir einn. Það birtist með hópunum þínum í Tölfræði.
+personal-sheet-point-alone = Einn meðlimur: þú, með nafni aðgangsins. Enginn deilitengill.
+personal-sheet-point-encrypted = Dulkóðað á tækjunum þínum, eins og önnur verkefni.
+personal-sheet-point-stats = Hlutir þínir í hópum bætast við þessi útgjöld í Tölfræði.
+personal-default-name = Mín útgjöld
+my-spending-prev-month = Fyrri mánuður
+my-spending-next-month = Næsti mánuður
+my-spending-spent = Þú eyddir
+my-spending-groups = Hópar
+my-spending-income = Tekjur
+my-spending-balance = Staða mánaðarins
+my-spending-unconverted = Hlutir í öðrum gjaldmiðli eru utan við þar til gengi er þekkt.
+my-spending-empty = Ekkert þennan mánuð
+my-spending-empty-hint = Bættu við útgjöldum með +. Hlutir þínir í hópum birtast hér sjálfkrafa.
+my-spending-share-of = af { $amount }
+my-spending-uncounted = ekki talið
+payer-you = þér
+expense-received-by = móttekið af
+counted-switch = Telja með í Mín útgjöld
+counted-switch-on = Kveikt: hlutur þinn bætist við Mín útgjöld
+counted-switch-off = Slökkt: hlutur þinn birtist ekki í Mín útgjöld
+counted-groups = Taldir hópar
+counted-groups-intro = Hlutur þinn í þessum hópum bætist við Mín útgjöld og fjárhagsáætlanirnar.
+counted-groups-converted = { $from }, umreiknað í { $to }
+counted-groups-encrypted = Þetta val er dulkóðað með reikningnum þínum og fylgir tækjunum þínum.
+counted-groups-empty = Enginn hópur á þessu tæki enn.
+counted-groups-done = Í lagi
+counted-save-failed = Ekki tókst að vista þetta val. Reyndu aftur.
+tab-budget = Fjárhagsáætlun
+budget-title = Fjárhagsáætlanir
+budget-manage = Stjórna
+budget-left = { $amount } eftir
+budget-over = Farið yfir um { $amount }
+budget-empty = Engin fjárhagsáætlun
+budget-empty-hint = Settu þak á hvern flokk. Hlutir þínir í hópum telja líka.
+budget-define = Setja fjárhagsáætlun
+budget-sheet-title = Mánaðarlegar áætlanir
+budget-sheet-intro = Á þinn hlut: persónuleg og hópar. Skildu eftir autt til að fylgjast ekki með flokki.
+budget-average = Meðaltal síðustu 3 mánaða: { $amount }
+budget-for = Áætlun { $category }
+budget-alert = Láttu mig vita við 80 %
+budget-alert-hint = Reiknað á þessu tæki
+budget-invalid = Ógild upphæð fyrir { $category }.
+budget-offline = Áætlanir vistast aðeins á netinu. Tengstu aftur og reyndu aftur.
+budget-alert-near = { $category }: { $percent } % af áætlun mánaðarins
+budget-alert-over = { $category }: farið yfir áætlun mánaðarins
+personal-card-budget = { $month } · fjárhagsáætlun { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } niðurstaða
+       *[other] { $count } niðurstöður
+    } · { $total } · persónuleg og hópar, allir mánuðir
 projects-join = Taka þátt í verkefni
 projects-import-tricount = Flytja inn úr Tricount
 project-actions = Aðgerðir verkefnis
@@ -321,6 +381,7 @@ expenses-show-more = Sýna meira ({ $count } eftir)
 expense-type-expense = Útgjöld
 expense-type-transfer = Millifærsla
 expense-type-gain = Innkoma
+expense-type-group = Tegund
 expense-paid-by = greitt af
 expense-sent-by = sent af
 expense-contributed-by = lagt til af
@@ -386,6 +447,23 @@ export-failed = Útflutningur mistókst: { $reason }
 history-expense-added = Útgjöldum bætt við: { $name }
 history-expense-edited = Útgjöldum breytt: { $name }
 history-expense-deleted = Útgjöldum eytt: { $name }
+move-expense = Færa í verkefni
+move-expense-title = Færa í…
+move-current = Núverandi
+move-converted = { $currency }, umreiknað á gengi mánaðarins
+move-note-personal = Þú velur í næsta skrefi hver greiddi og fyrir hvern. Útgjöldin fara úr Mín útgjöld.
+move-note-group = Útgjöldin fara úr { $project } hjá öllum meðlimum og staða hópsins verður reiknuð aftur. Þú velur í næsta skrefi hver greiddi og fyrir hvern.
+move-banner = Frá { $from } í { $to }
+move-submit = Færa
+move-done = Útgjöld færð í { $project }
+move-delete-failed = Útgjöldunum var bætt við hitt verkefnið en eru enn í { $project }: eyddu þeim þar.
+history-expense-moved = Útgjöld færð í annað verkefni: { $name }
+personal-badge = Eigið
+move-members =
+    { $count ->
+        [one] { $count } meðlimur
+       *[other] { $count } meðlimir
+    }
 history-project-edited = Verkefni breytt: { $name }
 history-name-changed = Heiti: „{ $from }“ → „{ $to }“
 history-description-added = Lýsingu bætt við: „{ $value }“
@@ -399,11 +477,23 @@ expense-name-placeholder = Veitingastaður, matvörur…
 expense-actions = Aðgerðir útgjalda
 expense-your-share = Þinn hluti
 expense-your-share-value = Þinn hluti: { $amount } { $currency }
+expense-share-percent = { $percent }%
+expense-added-by = Bætt við af { $name }, { $date }
 expense-inconsistent-detail = Upphæðir stemma ekki: { $paid } greitt, { $owed } skuldað, fyrir útgjöld upp á { $total }. Breyttu útgjöldunum til að laga það.
 missing-access-key = Aðgangslykil vantar. Opnaðu þetta verkefni í gegnum deilitengil þess.
 filter-all = Allt
 filter-my-payments = Mínar greiðslur
 filter-my-debts = Það sem ég skulda
+expense-filter-group = Sía
+expenses-search = Leita í útgjöldum
+expenses-no-match = Engin útgjöld passa.
+expenses-search-open = Leita
+expenses-search-clear = Hreinsa leit
+expenses-search-summary =
+    { $count ->
+        [one] { $count } niðurstaða
+       *[other] { $count } niðurstöður
+    } · { $total } · allir mánuðir
 participants-shares-for = Hlutir fyrir { $name }
 participants-amount-for = Upphæð fyrir { $name }
 reimbursement-add = Bæta við uppgjöri
@@ -441,8 +531,8 @@ charts-expense-count =
 charts-nothing-to-show = Ekkert að sýna
 charts-my-share-skipped =
     { $count ->
-        [one] 1 verkefni er ekki talið með — enginn þátttakandi valinn eða gögn þess hlóðust ekki.
-       *[other] { $count } verkefni eru ekki talin með — enginn þátttakandi valinn eða gögn þeirra hlóðust ekki.
+        [one] 1 verkefni er ekki talið með - enginn þátttakandi valinn eða gögn þess hlóðust ekki.
+       *[other] { $count } verkefni eru ekki talin með - enginn þátttakandi valinn eða gögn þeirra hlóðust ekki.
     }
 
 ### Categories
@@ -516,6 +606,13 @@ payers-title-contributors = Þátttakendur
 debtors-title-debtors = Skuldar
 debtors-title-recipients = Viðtakendur
 debtors-title-beneficiaries = Njótendur
+debtors-title-for = Fyrir
+debtors-title-recipient = Viðtakandi
+expense-people =
+    { $count ->
+        [one] { $count } manneskja
+       *[other] { $count } manneskjur
+    }
 
 ### Welcome
 
@@ -648,6 +745,8 @@ invitation-decline = Hafna
 participants-you-label = Nafnið þitt í þessu verkefni
 participants-you-badge = Þú
 participants-others = Aðrir þátttakendur
+participants-removed = Fjarlægðir
+participant-restore = Endurheimta
 participants-empty = Bættu við þátttakendum hér fyrir neðan.
 participants-duplicate = „{ $name }“ er þegar á listanum.
 participants-input-label = Bæta við vini eða skrifa nafn
@@ -792,3 +891,16 @@ error-recurring-not-found = Þessi endurtekni kostnaður er ekki lengur til.
 error-recurring-stale = Einhver breytti þessum endurtekna kostnaði á meðan. Hann var endurhlaðinn: athugaðu hann og vistaðu aftur.
 error-too-many-recurring = Verkefnið hefur þegar 50 endurtekna kostnaðarliði. Stöðvaðu einn sem þú þarft ekki lengur til að bæta við nýjum.
 error-user-in-recurring = Þátttakandinn er hluti af endurteknum kostnaði. Fjarlægðu þátttakandann þaðan eða stöðvaðu kostnaðinn fyrst.
+
+home-owed-to-you = Þú átt inni
+home-you-owe = Þú skuldar
+home-details-show = Sýna nánar
+home-details-hide = Fela nánar
+home-all-settled = Allt er uppgert
+home-pay = Borga
+home-remind = Minna á
+home-remind-message = Smá áminning: enn eru endurgreiðslur ógerðar í { $project }.
+home-row-owed = þú átt inni
+home-row-owe = þú skuldar
+home-row-settled = Uppgert
+home-totals-partial = Án verkefna án gengis

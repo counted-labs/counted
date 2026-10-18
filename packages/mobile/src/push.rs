@@ -74,15 +74,15 @@ mod ios {
         tracing::warn!("counted: APNs registration failed: {}", error.localizedDescription());
     }
 
-    /// tao declares its `AppDelegate` class while building the event loop — inside `launch`, so
-    /// after `main` — and implements none of the remote-notification callbacks. Adding them to the
+    /// tao declares its `AppDelegate` class while building the event loop - inside `launch`, so
+    /// after `main` - and implements none of the remote-notification callbacks. Adding them to the
     /// registered class at runtime is the only seam short of forking tao; it happens on the first
     /// `request_push`, which a Dioxus effect issues once the app is running.
     pub fn add_delegate_methods() {
         static ONCE: std::sync::Once = std::sync::Once::new();
         ONCE.call_once(|| {
             let Some(class) = AnyClass::get(c"AppDelegate") else {
-                tracing::error!("counted: no AppDelegate class — tao renamed it");
+                tracing::error!("counted: no AppDelegate class - tao renamed it");
                 return;
             };
             let class = class as *const AnyClass as *mut AnyClass;

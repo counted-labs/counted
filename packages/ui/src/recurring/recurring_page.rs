@@ -283,7 +283,7 @@ fn RuleCard(
     let t = &p.template;
     let st = state(p);
     let next = next_date(p);
-    let amount = if t.variable { format!("≈ {:.2} {currency}", t.amount) } else { format!("{:.2} {currency}", t.amount) };
+    let amount = if t.variable { format!("≈ {}", crate::common::amount(t.amount, &currency)) } else { crate::common::amount(t.amount, &currency) };
     rsx! {
         li {
             button {
@@ -341,6 +341,7 @@ fn RuleSheet(
     on_use_rate: EventHandler<f64>,
     on_keep_rate: EventHandler<f64>,
 ) -> Element {
+    crate::common::use_modal_focus("rule-sheet");
     let p = &rule.payload;
     let t = &p.template;
     let currency = data.currency.clone();
@@ -352,13 +353,19 @@ fn RuleSheet(
     let author = rule.author_id.map(name_of);
     let created = format_date(rule.created_at.date());
     rsx! {
-        div { class: "modal modal-open modal-bottom sm:modal-middle", role: "dialog", aria_labelledby: "rule-sheet-title",
+        div {
+            id: "rule-sheet",
+            class: "modal modal-open modal-bottom sm:modal-middle",
+            role: "dialog",
+            aria_modal: "true",
+            aria_labelledby: "rule-sheet-title",
+            tabindex: "-1",
             div { class: "modal-box max-w-md p-0 flex flex-col",
                 div { class: "flex items-center gap-2 px-5 pt-4 pb-1",
-                    h3 { id: "rule-sheet-title", class: "flex-1 min-w-0 truncate font-bold text-lg font-display", "{t.name}" }
+                    h2 { id: "rule-sheet-title", class: "flex-1 min-w-0 truncate font-bold text-lg font-display", "{t.name}" }
                     button {
                         r#type: "button",
-                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11",
+                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
                         aria_label: tid!("close"),
                         onclick: move |_| on_close.call(()),
                         CloseIcon { size: ICON_HEADER }
@@ -368,10 +375,10 @@ fn RuleSheet(
                     div { class: "text-center",
                         p { class: "font-display font-extrabold text-3xl tabular-nums",
                             if t.variable { "≈ " }
-                            "{t.amount:.2} {currency}"
+                            {crate::common::amount(t.amount, &currency)}
                         }
                         if let Some((amount, from, _)) = t.conversion() {
-                            p { class: "text-xs text-base-content/70 tabular-nums", "{amount:.2} {from}" }
+                            p { class: "text-xs text-base-content/70 tabular-nums", {crate::common::amount(amount, from)} }
                         }
                         p { class: "text-xs text-base-content/70", {schedule_label(&p.rule)} " · " {ends_label(&p.rule)} }
                     }
@@ -383,15 +390,15 @@ fn RuleSheet(
                                         "recurring-drift",
                                         currency: from.to_string(),
                                         percent: format!("{:.1}", drift.abs() * 100.0),
-                                        amount: format!("{:.2}", t.amount),
+                                        amount: crate::common::number(t.amount),
                                         project_currency: currency.clone(),
                                         rate: format!("{old_rate}"),
-                                        today_amount: format!("{:.2}", shared::convert_to_project(source_amount, rate))
+                                        today_amount: crate::common::number(shared::convert_to_project(source_amount, rate))
                                     )}
                                 }
                                 div { class: "flex flex-wrap gap-2",
                                     button { id: "recurring-use-rate", r#type: "button", class: "btn btn-sm btn-secondary", onclick: move |_| on_use_rate.call(rate), {tid!("recurring-use-rate")} }
-                                    button { id: "recurring-keep-rate", r#type: "button", class: "btn btn-sm", onclick: move |_| on_keep_rate.call(rate), {tid!("recurring-keep", amount: format!("{:.2}", t.amount), currency: currency.clone())} }
+                                    button { id: "recurring-keep-rate", r#type: "button", class: "btn btn-sm", onclick: move |_| on_keep_rate.call(rate), {tid!("recurring-keep", amount: crate::common::number(t.amount), currency: currency.clone())} }
                                 }
                             }
                         }
@@ -411,14 +418,14 @@ fn RuleSheet(
                         for (id , amount) in payers {
                             div { class: "flex justify-between gap-3 text-sm",
                                 span { class: "truncate", "{name_of(id)}" }
-                                span { class: "font-semibold tabular-nums", "{amount:.2}" }
+                                span { class: "font-semibold tabular-nums", {crate::common::number(amount)} }
                             }
                         }
                         span { class: "text-xs text-base-content/70 pt-1", {tid!("debtors-title-debtors")} }
                         for (id , amount) in debtors {
                             div { class: "flex justify-between gap-3 text-sm",
                                 span { class: "truncate", "{name_of(id)}" }
-                                span { class: "font-semibold tabular-nums", "{amount:.2}" }
+                                span { class: "font-semibold tabular-nums", {crate::common::number(amount)} }
                             }
                         }
                     }

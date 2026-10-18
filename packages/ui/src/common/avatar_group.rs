@@ -20,9 +20,15 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
     let shown: Vec<&User> = props.users.iter().take(MAX).collect();
     let overflow = props.users.len().saturating_sub(MAX);
     let size = props.size;
+    let everyone = props
+        .users
+        .iter()
+        .map(|u| user_name_opt(props.encryption_key.as_ref(), u))
+        .collect::<Vec<_>>()
+        .join(", ");
 
     rsx! {
-        div { class: "avatar-group -space-x-3",
+        div { class: "avatar-group -space-x-3", role: "img", aria_label: "{everyone}",
             for user in shown {
                 {
                     let name = user_name_opt(props.encryption_key.as_ref(), user);

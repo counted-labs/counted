@@ -10,7 +10,7 @@ pub async fn register_push_token(
 }
 
 /// A POST with a body rather than a DELETE: the token is too long and too opaque for a path
-/// segment, and DELETE bodies are dropped by enough intermediaries to not be trusted. Idempotent —
+/// segment, and DELETE bodies are dropped by enough intermediaries to not be trusted. Idempotent -
 /// the row may already be gone after the vendor reported the token dead.
 #[post("/api/v1/push/unregister")]
 pub async fn unregister_push_token(

@@ -25,7 +25,7 @@ impl NavDirection {
 ///
 /// Direction is inferred from this rather than signalled at each navigator call site: the back
 /// arrow, the hardware back button, every `push` and the dock's `replace` tabs then all agree
-/// without a single one of them knowing about animations. The match is exhaustive on purpose — a
+/// without a single one of them knowing about animations. The match is exhaustive on purpose - a
 /// new route must not silently default to a depth.
 pub fn route_depth(route: &Route) -> u8 {
     match route {
@@ -66,14 +66,14 @@ pub fn nav_direction(prev: &Route, next: &Route) -> NavDirection {
 /// Two things make it work, neither obvious:
 ///
 /// **It is keyed by the route.** A CSS animation only runs when its element is created, and the
-/// shell is the only node whose creation lines up exactly with a navigation — `.app-container`
+/// shell is the only node whose creation lines up exactly with a navigation - `.app-container`
 /// cannot carry the animation because `ExpensesPage` swaps between two different `.app-container`
 /// roots (key-missing vs. loaded) and would replay its entrance mid-view. A changed key on a
 /// one-item fragment makes `diff_keyed_middle` remove the old node and create the new one, which is
 /// both the animation trigger and the removal the exit observer below listens for.
 ///
 /// **It carries no `position` and no `will-change`.** The transform during the animation makes it a
-/// containing block for `position: fixed` descendants — the `SpeedDialFab`, the dropdown scrims —
+/// containing block for `position: fixed` descendants - the `SpeedDialFab`, the dropdown scrims -
 /// which is what makes them slide with the page. Anything that made that permanent would re-anchor
 /// them to the shell forever. It is full-height and opaque (`main.css`) for the same descendants:
 /// their `bottom:` resolves from the shell's edge while it is transformed, and the incoming shell
@@ -84,7 +84,7 @@ pub fn PageTransition() -> Element {
     let route = use_route::<Route>();
 
     // Not a signal: writing one during render would loop, and `use_route` already re-runs this body
-    // on every navigation. `None` is the first mount — a cold start or a deep link opened cold must
+    // on every navigation. `None` is the first mount - a cold start or a deep link opened cold must
     // not animate under the splash, and "none" matches no CSS rule.
     let previous: std::rc::Rc<std::cell::RefCell<Option<Route>>> =
         use_hook(|| std::rc::Rc::new(std::cell::RefCell::new(None)));
@@ -124,7 +124,7 @@ pub fn PageTransition() -> Element {
 /// Three details are load-bearing:
 ///
 /// - **`data-dioxus-id` is stripped from the whole subtree.** The interpreter's `getTargetId` climbs
-///   the DOM looking for that attribute, and Dioxus recycles ids it has freed — a stale one left in
+///   the DOM looking for that attribute, and Dioxus recycles ids it has freed - a stale one left in
 ///   this tree could route an event to the wrong scope. `inert` and `pointer-events: none` are the
 ///   other two layers.
 /// - **DOM order, never `z-index`, decides who paints on top.** New page over old on push, old over
@@ -136,11 +136,11 @@ pub fn PageTransition() -> Element {
 ///   `page-exiting` guard the observer adopts it as a fresh outgoing page: re-inserting it restarts
 ///   the animation and schedules another `animationend` and another 600ms timer, each of which
 ///   removes it and is adopted again. The pending timers then double every 600ms and pin the
-///   WebView's JS thread within seconds — and since Dioxus applies its mutations from that same
+///   WebView's JS thread within seconds - and since Dioxus applies its mutations from that same
 ///   thread, the Rust side keeps rendering into a DOM that never updates.
 ///
 /// The mutations arrive inside `requestAnimationFrame` (the interpreter's `rafEdits`), and this
-/// callback is a microtask after that flush, so the overlay lands in the same frame — no flash.
+/// callback is a microtask after that flush, so the overlay lands in the same frame - no flash.
 #[cfg(any(target_os = "android", target_os = "ios"))]
 const EXIT_ANIMATION_JS: &str = r#"
 if (!window._countedExitAnimRegistered) {
@@ -199,7 +199,7 @@ if (!window._countedExitAnimRegistered) {
 }
 "#;
 
-/// No-op passthrough for web and desktop — no wrapper, no keyed remount, nothing changes.
+/// No-op passthrough for web and desktop - no wrapper, no keyed remount, nothing changes.
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[component]
 pub fn PageTransition() -> Element {
@@ -247,7 +247,7 @@ mod tests {
     }
 
     /// The header arrow and the Android hardware back button both land here, and both must produce
-    /// the same animation — neither of them tells us it is a back press.
+    /// the same animation - neither of them tells us it is a back press.
     #[test]
     fn leaving_a_project_goes_back() {
         let id = Uuid::new_v4();

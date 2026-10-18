@@ -9,7 +9,7 @@ use super::error_utils::is_project_stale_error;
 const ATTEMPTS: usize = 3;
 
 /// Builds the edit from the project as stored now, not as the page last saw it, and writes it only
-/// if nothing replaced that payload in between — otherwise rereads and builds again. What another
+/// if nothing replaced that payload in between - otherwise rereads and builds again. What another
 /// device or a newer build wrote meanwhile is kept instead of overwritten.
 pub async fn update_project_fresh(
     project_id: Uuid,

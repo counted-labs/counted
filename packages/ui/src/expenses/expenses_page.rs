@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use crate::tid;
-use shared::{EditableProject, ExpenseType, ExpenseWithPayments, ProjectDto, ProjectStatus, ReimbursementSuggestion};
+use shared::{ExpenseType, ExpenseWithPayments, ProjectDto, ProjectStatus, ReimbursementSuggestion};
 use uuid::Uuid;
 
 use super::helpers::export;
@@ -11,6 +11,11 @@ use crate::common::{
     LocalStorageState, ProjectKey, PullToRefresh, SizeClass, Toast, LEAVE_CONFIRM_MESSAGE,
     LEAVE_CONFIRM_TITLE,
 };
+use crate::expenses::helpers::my_spending::load_ledgers;
+use crate::expenses::my_spending::{CountedGroup, CountedGroupsSheet};
+use crate::preferences::{push_counted, uncounted_projects};
+use crate::projects::personal_cards::is_personal_dto;
+use std::sync::Arc;
 use crate::expenses::helpers::expenses_page_helpers::{
     header_state, sync_error, transfer_preset, DownloadFn,
 };
@@ -20,18 +25,21 @@ use crate::friends::friends_service::{invitee_emails, Invitee};
 use crate::friends::InviteFriendsModal;
 use crate::icons::{CloseIcon, ICON_INLINE};
 use crate::projects::JoinProjectModal;
-use crate::decrypted::{payload_with_status, pickable_users};
+use crate::decrypted::{pickable_users, status_edit};
 use crate::expenses::project_states::{
     ExpensesSkeleton, MissingKeyScreen, NoLocalDataScreen, Spinner,
 };
 use crate::expenses::project_stats::ProjectStats;
 use crate::expenses::tabs::expenses_tab::ExpenseMutation;
-use crate::expenses::tabs::project_tabs::{ProjectTabs, Tab};
+use crate::expenses::tabs::project_tabs::{tab_id, ProjectTabs, Tab, TABPANEL_ID};
 use crate::expenses::{
     AddExpenseModal, BalanceTab, EditProjectModal, ExpensesTab, ReimbursementsTab,
     UserSelectionModal,
 };
 use crate::route::Route;
+
+/// Set by "Payer" on the projects page: the project whose page opens on its Remboursements tab.
+pub static OPEN_REIMBURSEMENTS: GlobalSignal<Option<Uuid>> = Signal::global(|| None);
 
 #[component]
 pub fn ExpensesPage(project_id: Uuid) -> Element {
@@ -41,6 +49,12 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
     let auth_ctx = use_context::<Signal<Option<shared::Account>>>();
     let mut copy_error: Signal<Option<String>> = use_signal(|| None);
     let mut active_tab = use_signal(|| Tab::Expenses);
+    use_effect(move || {
+        if *OPEN_REIMBURSEMENTS.peek() == Some(project_id) {
+            *OPEN_REIMBURSEMENTS.write() = None;
+            active_tab.set(Tab::Reimbursements);
+        }
+    });
     let mut show_transfer_modal = use_signal(|| false);
     let mut show_edit_modal = use_signal(|| false);
     let mut show_invite_modal = use_signal(|| false);
@@ -51,7 +65,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
     let mut show_unlock_modal = use_signal(|| false);
     let mut transfer = use_signal(|| None::<(String, f64, i32, i32)>);
 
-    // "Ouvrir dans l'application" targets a phone *browser* — not the native app, not desktop.
+    // "Ouvrir dans l'application" targets a phone *browser* - not the native app, not desktop.
     // The user agent is unknown to SSR, so deciding on the first render would break hydration;
     // gated post-mount like onboarding in app_layout.rs.
     let mut mounted = use_signal(|| false);
@@ -61,10 +75,45 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
 
     // Owned by AppLayout, so it survives navigating to an expense and back.
     let store = use_context::<ProjectStore>();
+    // One participant and no one to settle with: no sharing, no balance tabs, no avatars.
+    let personal = store.data_for(project_id).is_some_and(|d| d.personal);
     let (mut sync, live, data, key_missing, unusable) =
         (store.sync, store.live, store.data, store.key_missing, store.unusable);
     let on_expenses_changed = store.on_expenses_changed;
     let key_ctx = use_context::<ProjectKey>().0;
+    let account_key_ctx = use_context::<Signal<Option<[u8; 32]>>>();
+    let mut show_counted_groups = use_signal(|| false);
+
+    // "Mes dépenses" counts my share of every other project this device holds.
+    let personal_id = use_memo(move || {
+        let d = store.data.read();
+        d.personal.then_some(d.project_id).flatten()
+    });
+    let mut ledgers_res = use_resource(move || async move {
+        match personal_id() {
+            Some(id) => Some(Arc::new(load_ledgers(id).await)),
+            None => None,
+        }
+    });
+    let ledgers = use_memo(move || ledgers_res.read().clone().flatten().unwrap_or_default());
+    // The page mounts on the previous project's data, so the first answer is `None` and a rerun
+    // keeps it until the personal project's ledgers land.
+    let ledgers_loading = !matches!(*ledgers_res.read(), Some(Some(_)));
+    let uncounted = match (auth_ctx.read().as_ref(), account_key_ctx()) {
+        (Some(a), Some(k)) => Some(uncounted_projects(a, &k)),
+        _ => None,
+    };
+    // R4 only makes sense once there is a personal project to count in.
+    let has_personal = {
+        let state = ls_ctx.read();
+        state.projects.iter().any(|p| p.cached_project.as_ref().is_some_and(|dto| is_personal_dto(dto, &state)))
+    };
+    let counted = uncounted.as_ref().filter(|_| !personal && has_personal).map(|u| !u.contains(&project_id));
+    let set_counted = move |id: Uuid, on: bool| {
+        if let Some(k) = account_key_ctx() {
+            push_counted(auth_ctx, k, id, on, flash);
+        }
+    };
 
     let stored_user_id = move || {
         ls_ctx().projects.iter().find(|p| p.project_id == project_id).and_then(|p| p.user_id)
@@ -124,14 +173,22 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
         download(&key, proj, &l.users, &l.expenses, &l.payments);
     };
 
-    // (message, server-unreachable) — the second drives the cache fallback.
+    // (message, server-unreachable) - the second drives the cache fallback.
     let body_err = sync_error(sync.read().as_ref().and_then(|r| r.as_ref()));
     let is_stale = body_err.as_ref().map(|(_, offline)| *offline).unwrap_or(false);
     let body_err_msg = body_err.as_ref().map(|(msg, _)| msg.clone());
 
     rsx! {
         div { class: "container app-container bg-base-100 overflow-auto p-4 pb-36 max-w-md w-full mx-auto flex flex-col gap-4",
-            PullToRefresh { on_refresh: move |_| sync.restart(), busy: pending(&sync) }
+            PullToRefresh {
+                on_refresh: move |_| {
+                    sync.restart();
+                    if personal {
+                        ledgers_res.restart();
+                    }
+                },
+                busy: pending(&sync),
+            }
 
             ProjectHeader {
                 state: header_state(sync.read().as_ref().and_then(|r| r.as_ref()), cached_project.as_ref(), &key, project_id),
@@ -142,15 +199,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                 on_leave: move |_| show_leave_confirm.set(true),
                 on_status: move |status: ProjectStatus| {
                     spawn(async move {
-                        let edit = |stored: &ProjectDto| {
-                            Ok(EditableProject {
-                                id: project_id,
-                                payload: payload_with_status(&key, stored, &status),
-                                status: Some(status.clone()),
-                                history: None,
-                                expected_iv: None,
-                            })
-                        };
+                        let edit = |stored: &ProjectDto| status_edit(&key, stored, &status);
                         let _ = update_project_fresh(project_id, edit).await;
                         sync.restart();
                     });
@@ -158,9 +207,10 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                 on_export_json: move |_| export_all(export::download_json),
                 on_export_csv: move |_| export_all(export::download_csv),
                 // `share_text` is false without a sheet (desktop browsers) or when it could not
-                // open, and true on dismiss — so the clipboard is only the fallback, never a second
+                // open, and true on dismiss - so the clipboard is only the fallback, never a second
                 // prompt after a shown sheet.
-                on_share: (!demo).then(|| EventHandler::new(move |_| {
+                badge: personal.then(|| tid!("personal-badge")),
+                on_share: (!demo && !personal).then(|| EventHandler::new(move |_| {
                     let url = share_link_for(project_id, &key);
                     spawn(async move {
                         if share_text(&url).await {
@@ -173,8 +223,21 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                         }
                     });
                 })),
-                on_invite: auth_ctx().is_some().then(|| EventHandler::new(move |_| show_invite_modal.set(true))),
+                on_invite: (auth_ctx().is_some() && !personal).then(|| EventHandler::new(move |_| show_invite_modal.set(true))),
                 on_forget: forget_project,
+                counted,
+                on_counted: counted.is_some().then(|| EventHandler::new(move |on: bool| set_counted(project_id, on))),
+                on_counted_groups: personal.then(|| EventHandler::new(move |_| show_counted_groups.set(true))),
+            }
+
+            if show_counted_groups() {
+                CountedGroupsSheet {
+                    groups: ledgers.read().iter().filter(|l| l.me.is_some()).map(CountedGroup::from).collect::<Vec<_>>(),
+                    uncounted: uncounted.clone().unwrap_or_default(),
+                    currency: store.data_for(project_id).map(|d| d.currency.clone()).unwrap_or_default(),
+                    on_toggle: move |(id, on): (Uuid, bool)| set_counted(id, on),
+                    on_close: move |_| show_counted_groups.set(false),
+                }
             }
 
             // What the create or edit modal could not send. It closed anyway, so the offer to send
@@ -217,15 +280,15 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                 }
             }
 
-            // The store's decryption pass, but only once it is this project's — it still holds the
+            // The store's decryption pass, but only once it is this project's - it still holds the
             // previous one until the new sync lands.
             match store.data_for(project_id).filter(|d| d.loaded) {
                 Some(d) => {
                     let summary = d.summary.clone();
                     let user_list = d.users.clone();
                     let pickable = pickable_users(Some(&key), &user_list, &[]);
-                    // A stored identity the roster no longer contains — removed by another member
-                    // — counts as none, so the picker reopens instead of every write being refused.
+                    // A stored identity the roster no longer contains - removed by another member -
+                    // counts as none, so the picker reopens instead of every write being refused.
                     let uid = stored_user_id().filter(|id| pickable.iter().any(|u| u.id == *id));
                     let currency = d.currency.clone();
                     let project_status = d.project_status.clone();
@@ -263,26 +326,37 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                             }
                         }
 
-                        div { class: "flex justify-center",
-                            AvatarGroup {
-                                users: pickable.clone(),
-                                encryption_key: Some(key),
-                                size: SizeClass::W10,
+                        if !personal {
+                            div { class: "flex justify-center",
+                                AvatarGroup {
+                                    users: pickable.clone(),
+                                    encryption_key: Some(key),
+                                    size: SizeClass::W10,
+                                }
                             }
                         }
 
-                        ProjectStats {
-                            global_total: d.global_total,
-                            user_total: uid.map(|id| d.user_total(id)),
-                            currency: currency.clone(),
+                        if !personal {
+                            ProjectStats {
+                                global_total: d.global_total,
+                                user_total: uid.map(|id| d.user_total(id)),
+                                currency: currency.clone(),
+                            }
                         }
 
-                        ProjectTabs {
-                            active: active_tab(),
-                            on_select: move |t| active_tab.set(t),
+                        if !personal {
+                            ProjectTabs {
+                                active: active_tab(),
+                                on_select: move |t| active_tab.set(t),
+                            }
                         }
 
-                        match active_tab() {
+                        div {
+                            id: TABPANEL_ID,
+                            class: "flex flex-col gap-4",
+                            role: if !personal { "tabpanel" },
+                            aria_labelledby: if !personal { tab_id(active_tab()) },
+                        match if personal { Tab::Expenses } else { active_tab() } {
                             Tab::Expenses => rsx! {
                                 ExpensesTab {
                                     data,
@@ -290,6 +364,8 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                                     stored_user_id: uid,
                                     project_id,
                                     on_expenses_changed: move |m| on_expenses_changed.call(m),
+                                    ledgers,
+                                    ledgers_loading,
                                 }
                             },
                             Tab::Balance => rsx! {
@@ -319,6 +395,8 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                                     }
                                 }
                             }
+                        }
+
                         }
 
                         // Transfer modal opened from a reimbursement suggestion
@@ -355,7 +433,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                             if let Some(p) = project_dto {
                                 EditProjectModal {
                                     project: p,
-                                    users: pickable.clone(),
+                                    users: user_list.clone(),
                                     on_close: move |_| show_edit_modal.set(false),
                                     on_saved: move |_| {
                                         show_edit_modal.set(false);
@@ -420,7 +498,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                                 Ok(_) => {
                                     nav.push(Route::ProjectsPage {});
                                 }
-                                // Membership survives on the server, so keep the local entry —
+                                // Membership survives on the server, so keep the local entry -
                                 // dropping it leaves a member nobody can remove.
                                 Err(e) => flash.set(Some(Flash::err(e))),
                             }

@@ -1,10 +1,17 @@
 use dioxus::{fullstack::Json, prelude::*};
-use shared::{CreatableUserBatch, User};
+use shared::{CreatableUserBatch, EditableUser, User};
 use uuid::Uuid;
 
 #[delete("/api/v1/projects/{project_id}/users/{user_id}")]
 pub async fn delete_user(project_id: Uuid, user_id: i32) -> Result<(), ServerFnError> {
     crate::server::users::delete_user(project_id, user_id).await
+}
+
+/// Rewrites a participant's payload. How a participant is removed since
+/// docs/plans/participant-links-encryption.md: `removed` inside it, never a delete.
+#[put("/api/v1/users")]
+pub async fn edit_user(Json(payload): Json<EditableUser>) -> Result<(), ServerFnError> {
+    crate::server::users::edit_user(payload).await
 }
 
 #[post("/api/v1/users")]

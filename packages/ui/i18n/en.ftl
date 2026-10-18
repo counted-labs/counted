@@ -157,7 +157,7 @@ payment-method-invalid-characters = Remove any line breaks or invisible characte
 payment-method-limit = You can save up to { $max } payment methods.
 payment-methods-saved = Payment details saved.
 payment-methods-offline = You need to be online to save your payment details.
-payment-methods-stale = Your payment details were changed on another device. They have been reloaded — please try again.
+payment-methods-stale = Your payment details were changed on another device. They have been reloaded - please try again.
 payment-methods-key-missing = Sign in again to manage your payment details.
 settings-payment-methods-share-warning = A shared method is visible to every member of your projects.
 payment-method-share = Share with my projects
@@ -242,7 +242,6 @@ projects-filter-active = Active
 projects-filter-all = All
 projects-count-label = Projects
 projects-empty = No projects
-projects-empty-hint = Create a project with the button below
 projects-offline-banner = Offline data - reconnect to refresh.
 demo-banner = Demo project - read-only.
 demo-start-own = Start your own project
@@ -256,6 +255,67 @@ projects-no-local-data = No local data
 projects-no-local-data-hint = Sign in to load your projects for the first time.
 projects-add = Add a project
 projects-create = Create a project
+projects-personal-expense = Personal expense
+personal-expense-banner = Added to My expenses
+personal-create-title = Create your personal project
+personal-create-hint = Track what you spend on your own
+group-create-title = Create a shared project
+group-create-hint = Split expenses with friends and family
+personal-create-action = Create
+personal-create-signup = Create an account
+personal-sheet-title = Your personal project
+personal-sheet-intro = To note what you spend on your own. It shows with your groups in Statistics.
+personal-sheet-point-alone = One member: you, with your account name. No share link.
+personal-sheet-point-encrypted = Encrypted on your devices, like your other projects.
+personal-sheet-point-stats = Your shares in groups add to these expenses in Statistics.
+personal-default-name = My expenses
+my-spending-prev-month = Previous month
+my-spending-next-month = Next month
+my-spending-spent = You spent
+my-spending-groups = Groups
+my-spending-income = Income
+my-spending-balance = Month balance
+my-spending-unconverted = Shares in another currency are left out until a rate is known.
+my-spending-empty = Nothing this month
+my-spending-empty-hint = Add an expense with +. Your shares in groups will show here automatically.
+my-spending-share-of = of { $amount }
+my-spending-uncounted = not counted
+payer-you = you
+expense-received-by = received by
+counted-switch = Count in My expenses
+counted-switch-on = On: your share adds to My expenses
+counted-switch-off = Off: your share does not show in My expenses
+counted-groups = Counted groups
+counted-groups-intro = Your share in these groups adds to My expenses and the budgets.
+counted-groups-converted = { $from }, converted to { $to }
+counted-groups-encrypted = This choice is encrypted with your account and follows your devices.
+counted-groups-empty = No group on this device yet.
+counted-groups-done = OK
+counted-save-failed = This choice could not be saved. Try again.
+tab-budget = Budget
+budget-title = Budgets
+budget-manage = Manage
+budget-left = { $amount } left
+budget-over = Over by { $amount }
+budget-empty = No budget
+budget-empty-hint = Set a ceiling per category. Your shares in groups count too.
+budget-define = Set a budget
+budget-sheet-title = Monthly budgets
+budget-sheet-intro = On your share: personal and groups. Leave a category empty not to track it.
+budget-average = Avg. last 3 months: { $amount }
+budget-for = Budget for { $category }
+budget-alert = Warn me at 80 %
+budget-alert-hint = Worked out on this device
+budget-invalid = Not an amount for { $category }.
+budget-offline = Budgets can only be saved online. Reconnect and try again.
+budget-alert-near = { $category }: { $percent } % of this month’s budget
+budget-alert-over = { $category }: this month’s budget is exceeded
+personal-card-budget = { $month } · budget { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } result
+       *[other] { $count } results
+    } · { $total } · personal and groups, all months
 projects-join = Join a project
 projects-import-tricount = Import from Tricount
 project-actions = Project actions
@@ -332,6 +392,7 @@ expenses-show-more = Show more ({ $count } left)
 expense-type-expense = Expense
 expense-type-transfer = Transfer
 expense-type-gain = Gain
+expense-type-group = Type
 expense-paid-by = paid by
 expense-sent-by = sent by
 expense-contributed-by = contributed by
@@ -399,6 +460,23 @@ export-failed = Export failed: { $reason }
 history-expense-added = Expense added: { $name }
 history-expense-edited = Expense edited: { $name }
 history-expense-deleted = Expense deleted: { $name }
+move-expense = Move to a project
+move-expense-title = Move to…
+move-current = Current
+move-converted = { $currency }, converted at this month’s rate
+move-note-personal = You’ll choose who paid and for whom in the next step. The expense will leave My expenses.
+move-note-group = The expense will leave { $project } for all its members, and the group’s balance will be recalculated. You’ll choose who paid and for whom in the next step.
+move-banner = From { $from } to { $to }
+move-submit = Move
+move-done = Expense moved to { $project }
+move-delete-failed = The expense was added to the other project but is still in { $project }: delete it there.
+history-expense-moved = Expense moved to another project: { $name }
+personal-badge = Personal
+move-members =
+    { $count ->
+        [one] { $count } member
+       *[other] { $count } members
+    }
 history-project-edited = Project edited: { $name }
 history-name-changed = Name: “{ $from }” → “{ $to }”
 history-description-added = Description added: “{ $value }”
@@ -412,11 +490,23 @@ expense-name-placeholder = Restaurant, groceries…
 expense-actions = Expense actions
 expense-your-share = Your share
 expense-your-share-value = Your share: { $amount } { $currency }
+expense-share-percent = { $percent }%
+expense-added-by = Added by { $name } on { $date }
 expense-inconsistent-detail = Amounts don’t add up: { $paid } paid, { $owed } owed, for an expense of { $total }. Edit the expense to fix it.
 missing-access-key = Access key missing. Open this project through its share link.
 filter-all = All
 filter-my-payments = My payments
 filter-my-debts = What I owe
+expense-filter-group = Filter
+expenses-search = Search expenses
+expenses-no-match = No expense matches.
+expenses-search-open = Search
+expenses-search-clear = Clear search
+expenses-search-summary =
+    { $count ->
+        [one] { $count } result
+       *[other] { $count } results
+    } · { $total } · all months
 participants-shares-for = Shares for { $name }
 participants-amount-for = Amount for { $name }
 reimbursement-add = Add a settlement
@@ -455,8 +545,8 @@ charts-expense-count =
 charts-nothing-to-show = Nothing to show
 charts-my-share-skipped =
     { $count ->
-        [one] 1 project isn’t counted — no participant picked, or its data didn’t load.
-       *[other] { $count } projects aren’t counted — no participant picked, or their data didn’t load.
+        [one] 1 project isn’t counted - no participant picked, or its data didn’t load.
+       *[other] { $count } projects aren’t counted - no participant picked, or their data didn’t load.
     }
 
 ### Categories
@@ -533,6 +623,13 @@ payers-title-contributors = Contributors
 debtors-title-debtors = Owes
 debtors-title-recipients = Recipients
 debtors-title-beneficiaries = Beneficiaries
+debtors-title-for = For
+debtors-title-recipient = Recipient
+expense-people =
+    { $count ->
+        [one] { $count } person
+       *[other] { $count } people
+    }
 
 ### Welcome
 #
@@ -621,7 +718,7 @@ legal-host-address = Industriestr. 25, 91710 Gunzenhausen, Germany
 legal-host-phone = Phone: +49 (0)9831 505-0
 legal-host-email-note = Transactional email is delivered by Scaleway SAS (France). The servers and the database are located in the European Union.
 legal-ip-title = 4. Intellectual property
-legal-ip-body = The structure of the site, its text and its graphics belong to the publisher unless stated otherwise. The data you enter stays yours: it is encrypted on your device, and the publisher can neither read nor use it.
+legal-ip-body = The structure of the site, its text and its graphics belong to the publisher unless stated otherwise. The data you enter stays yours: it is encrypted on your device, and the publisher can neither read nor use it. The privacy policy names the only data that crosses our server in the clear.
 legal-ip-source = The source code of the web and mobile apps is free software, published under the GNU Affero General Public License, version 3 only, at
 legal-ip-brand = The name “Counted”, its logo and the counted.fr domain are not covered by that licence.
 legal-ip-third-party = The apps include third-party software, each under its own licence:
@@ -660,7 +757,7 @@ terms-your-content-body = You remain the owner of the data you enter. It is encr
 terms-availability-title = 7. Availability
 terms-availability-body = The Service is provided “as is”, with no guarantee of availability or of being error-free. It may be interrupted, changed or discontinued at any time, in particular for maintenance. Split and settlement calculations are indicative: they are neither a payment service nor financial or accounting advice, and no money moves through the Service.
 terms-deletion-title = 8. Deletion
-terms-deletion-account = You can delete your account at any time from the “My account” page. Deletion is immediate and permanent.
+terms-deletion-account = You can delete your account at any time from the “Settings” page. Deletion is immediate and permanent.
 terms-deletion-project = A project lives as long as one member keeps it: when the last member leaves, it is deleted automatically, along with the expenses it contains. Expenses you entered in a shared project do remain visible to the other members after you leave - they are part of their books.
 terms-backup-title = 9. Backups
 terms-backup-body = Technical backups are taken for the continuity of the Service, but they are not an archiving service for your benefit. Export your projects (CSV or JSON) if you want to keep a copy.
@@ -693,10 +790,14 @@ privacy-collected-prefs-term = Your encrypted preferences
 privacy-collected-prefs-def = (interface language), so you find them again on your other devices. Encrypted on your device with the same key as the rest: the server cannot read them.
 privacy-collected-keys-term = Your project keys, wrapped
 privacy-collected-keys-def = so that signing in on a new device gives you back projects you can actually read, instead of a list you cannot open. Each one is encrypted on your device with the key derived from your password; the server stores them and cannot unwrap them. The trade-off is real and we would rather state it: someone holding both our database and your password could reach your projects. That is why the password is never transmitted and never stored: what we receive at sign-in is a separate proof it cannot be recovered from, and we keep only a hash of that.
+privacy-collected-payment-term = Your payment details
+privacy-collected-payment-def = (IBAN, payment handles), only if you enter them, so the people you share expenses with know how to pay you back. Encrypted on your device with your account key; a method you choose to share in a project is also encrypted with that project’s key, so that only its members can read it. The server can read neither copy.
+privacy-collected-anon-term = Your memberships without an account
+privacy-collected-anon-def = when you open a project without signing in: a random identifier, drawn anew for each project, recorded against that project so that it is not deleted while someone still uses it. It does not identify you and does not by itself tie your projects together.
 privacy-collected-invite-term = Hash of an invited participant’s email
-privacy-collected-invite-def = (SHA-256), when you invite someone by email. It serves only to attach the invitation to their account should they create one, and disappears with the participant.
+privacy-collected-invite-def = (SHA-256), written by earlier versions of the app when you invited someone by email. It is no longer collected; the hashes already stored disappear with their participant.
 privacy-collected-friends-term = Your friends
-privacy-collected-friends-def = when you use the friends list: which accounts you are friends with, a hash (SHA-256) of an address you sent a request to before it had an account, and which friend you invited into which project, and as which participant of it. The name you give a request and the project key an invitation carries are encrypted on your device - the key with your friend’s public key, which we store in the clear because it is public by nature - and the server cannot read either.
+privacy-collected-friends-def = when you use the friends list: which accounts you are friends with, a hash (SHA-256) of an address you sent a request to before it had an account, and which friend you invited into which project, and as which participant of it. The name you give a request and the project key an invitation carries are encrypted on your device - the key with your friend’s public key, which we store in the clear because it is public by nature - and the server cannot read either. The private half of your own key pair is stored encrypted with your account key.
 privacy-collected-push-term = Notification token
 privacy-collected-push-def = if you allow notifications in the mobile app: the address your phone's push service gives it (on Android, with two public encryption keys), linked to your account, along with your phone's language so the notification is written in it. Deleted when you sign out, when the push service reports it is no longer valid, and with your account.
 privacy-collected-logs-term = Technical logs
@@ -707,11 +808,13 @@ privacy-purpose-2 = Sync your projects between your devices.
 privacy-purpose-3 = Send you a verification email when you sign up.
 privacy-purpose-4 = Detect and prevent abuse (brute force, scraping).
 privacy-purpose-5 = If you allowed notifications, tell your phone about a friend request or its acceptance, a project invitation or a project being closed.
+privacy-purpose-6 = Know how far the service reaches, through daily totals that name no one: sign-ups, and the interface language of sign-ups and logins.
 privacy-legal-basis-title = 4. Legal basis
-privacy-legal-basis-body = Processing rests on performance of the contract between us (creating and providing the service) and on our legitimate interest in securing the platform.
+privacy-legal-basis-body = Processing rests on performance of the contract between us (creating and providing the service), on our legitimate interest in securing the platform, and on our legitimate interest in knowing how far it reaches, through counts that name no one.
 privacy-e2ee-title = 5. End-to-end encryption
 privacy-e2ee-a = Counted applies a
 privacy-e2ee-b = model: your encryption key is derived from your password and never leaves your device. The server stores only encrypted blobs it is unable to read.
+privacy-e2ee-metadata = What the server does see in the clear is what it needs to run the service: your email address, which projects your account belongs to and which participant you are in each, how many expenses a project holds, when each was added and roughly how large it is, and when a project changes. It sees no name, amount, category or note, and not who paid or who owes in an expense. One exception: a project you import from Tricount passes through our server unencrypted on its way to your device, which then encrypts it. It is neither stored nor logged.
 privacy-e2ee-consequence-label = An important consequence:
 privacy-e2ee-consequence-a = if you forget your password,
 privacy-e2ee-consequence-em = nobody
@@ -719,12 +822,13 @@ privacy-e2ee-consequence-b = - not even us - can recover your data. No reset pro
 privacy-processors-title = 6. Processors and hosting
 privacy-processor-hetzner = (Germany, EU) - hosting of the servers and the database.
 privacy-processor-scaleway = (France, EU) - sending transactional email (email verification).
-privacy-processor-tricount = - contacted only if you trigger an import from Tricount yourself, in order to fetch the project you want to import.
+privacy-processor-tricount = - contacted only if you trigger an import from Tricount yourself, in order to fetch the project you want to import. Our server makes the request and hands the project to your device unencrypted, without storing or logging it; your device then encrypts it like any other.
 privacy-processor-grafana = (EU region) - technical monitoring of the server. Only infrastructure metrics (CPU, memory, disk, service state) and daily aggregate usage counts (numbers of accounts, projects, memberships and sign-ups, and how many sign-ups and logins were made in each interface language) are sent there: no content, no identifier, no visitor IP address.
+privacy-processor-proton = (Switzerland) - storage of the off-site copy of our database backups. The copy is encrypted before it leaves our server, with a key Proton does not hold.
 privacy-processor-apple = (Apple Push Notification service) - only if you allow notifications on iPhone: receives your phone's token and a generic sentence such as “New friend request”, never a name, an amount or a project.
 privacy-processor-android-push-term = Your Android phone's push service
 privacy-processor-android-push-def = (Google Firebase Cloud Messaging on most phones, or the UnifiedPush distributor you installed) - only if you allow notifications on Android: receives a message encrypted for your phone alone and padded to a fixed size, so it cannot tell even what kind of notification it is.
-privacy-no-transfer-outside-eu = These two push services may process data outside the European Union. Apart from them, no personal data is transferred outside the European Union.
+privacy-no-transfer-outside-eu = These two push services may process data outside the European Union. The backup copy is kept in Switzerland, which the European Commission recognises as providing adequate protection. Apart from them, no personal data is transferred outside the European Union.
 privacy-retention-title = 7. Retention
 privacy-retention-a = Your data is kept for as long as your account is active. Deleting the account causes an
 privacy-retention-em = immediate and permanent
@@ -736,6 +840,7 @@ privacy-sweep-3 = projects no member belongs to any more, after 24 hours.
 privacy-logs-a = Technical logs are kept for
 privacy-logs-duration = 30 days at most
 privacy-logs-b = and then deleted automatically. They are neither archived, nor exported, nor analysed for any purpose other than security.
+privacy-retention-backups = The database is backed up every day. Backups are kept for 14 days on our server and 30 days in the encrypted off-site copy, so deleted data leaves them at the latest 30 days after its deletion. They are used only to restore the service and to test that restoring works.
 privacy-shared-expenses-survive = Expenses you entered in a shared project do not disappear with your account: they are part of the other members’ books, and they alone can still decrypt them.
 privacy-cookies-title = 8. Cookies and local storage
 privacy-session-cookie-a = A single session cookie
@@ -744,11 +849,11 @@ privacy-lang-cookie-a = A language cookie
 privacy-lang-cookie-b = stores the interface language you picked, so the page is served in it from the first render. It carries a two-letter language code and no identifier.
 privacy-local-storage-a = The app also keeps information in your browser’s (or the mobile app’s)
 privacy-local-storage-em = local storage.
-privacy-local-storage-b = It is never sent to the server:
+privacy-local-storage-b = It stays on your device, apart from what the features described in section 2 send to the server:
 privacy-ls-keys-term = Your decryption keys
 privacy-ls-keys-def = - your account’s and each project’s. Without them, the app can display nothing.
 privacy-ls-projects-term = The list of your projects
-privacy-ls-projects-def = and the random identifier representing you in a project joined without an account.
+privacy-ls-projects-def = and the random identifier representing you in a project joined without an account, which the server holds too (see section 2).
 privacy-ls-cache-term = A cache of the projects
 privacy-ls-cache-def = (expenses, participants) for offline display and to avoid re-downloading what has not changed.
 privacy-ls-queue-term = A queue
@@ -761,14 +866,14 @@ privacy-ls-necessary-b = erasing your keys without knowing your password makes y
 privacy-rights-title = 9. Your rights
 privacy-rights-intro = Under the GDPR, you have the following rights:
 privacy-right-access = right of access and rectification;
-privacy-right-erasure = right to erasure: the “Delete my account” button on the “My account” page removes everything immediately, without going through us;
+privacy-right-erasure = right to erasure: the “Delete my account” button on the “Settings” page removes everything immediately, without going through us;
 privacy-right-portability = right to portability: every project exports to decrypted CSV or JSON from its own menu;
 privacy-right-object = right to object and to restriction;
-privacy-right-withdraw = right to withdraw your consent at any time;
+privacy-right-withdraw = right to withdraw the permission you gave for notifications at any time, from your phone’s settings;
 privacy-right-complaint = right to lodge a complaint with the French data protection authority, the
 privacy-rights-contact = To exercise these rights, write to
 privacy-security-title = 10. Security
-privacy-security-body = TLS 1.2+ communications, passwords stored as argon2id hashes, user data encrypted end to end, rate limiting at the reverse proxy, permanent deletion with no recycle bin.
+privacy-security-body = TLS 1.2+ communications, passwords neither transmitted nor stored (we keep only a hash of an argon2id login proof), user data encrypted end to end, rate limiting at the reverse proxy, permanent deletion with no recycle bin.
 privacy-changes-title = 12. Changes
 privacy-changes-body = This policy may change. Any substantial change will be notified through the app or by email.
 
@@ -843,6 +948,8 @@ invitation-decline = Decline
 participants-you-label = Your name in this project
 participants-you-badge = You
 participants-others = Other participants
+participants-removed = Removed
+participant-restore = Restore
 participants-empty = Add participants below.
 participants-duplicate = “{ $name }” is already in the list.
 participants-input-label = Add a friend or type a name
@@ -987,3 +1094,16 @@ error-recurring-not-found = This recurring expense no longer exists.
 error-recurring-stale = Someone changed this recurring expense meanwhile. It has been reloaded: check it and save again.
 error-too-many-recurring = This project already has 50 recurring expenses. Stop one you no longer need to add another.
 error-user-in-recurring = This participant is part of a recurring expense. Remove them from it or stop it first.
+
+home-owed-to-you = Owed to you
+home-you-owe = You owe
+home-details-show = Show details
+home-details-hide = Hide details
+home-all-settled = All settled up
+home-pay = Pay
+home-remind = Remind
+home-remind-message = Friendly reminder: there are still reimbursements to settle in { $project }.
+home-row-owed = owed to you
+home-row-owe = you owe
+home-row-settled = Settled
+home-totals-partial = Projects without an exchange rate are not included

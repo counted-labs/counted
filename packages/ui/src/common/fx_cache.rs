@@ -1,7 +1,7 @@
 //! The client's 24-hour cache of the InforEuro rate table.
 //!
 //! **A key of its own, not a field on `LocalStorageState`.** That store is rewritten wholesale on
-//! every project sync — serialising every cached row of every project — and a rate table has
+//! every project sync - serialising every cached row of every project - and a rate table has
 //! nothing to do with a project. Keeping it separate means a refresh here does not rewrite the hot
 //! blob, and a project sync does not rewrite the rates.
 //!
@@ -49,7 +49,7 @@ pub fn now_seconds() -> i64 {
 
 /// True when the table is recent enough to use without asking the server.
 ///
-/// A `fetched_at` in the future — a device whose clock was wrong when it wrote, then corrected —
+/// A `fetched_at` in the future - a device whose clock was wrong when it wrote, then corrected -
 /// reads as stale rather than as fresh forever.
 pub fn is_fresh(cached: &CachedFx, now: i64) -> bool {
     let age = now - cached.fetched_at;
@@ -100,7 +100,7 @@ mod tests {
         assert!(cross_rate(&t, "EUR", "JPY").is_none());
     }
 
-    /// An old blob, or one with fields we no longer write, must not take the cache down — the
+    /// An old blob, or one with fields we no longer write, must not take the cache down - the
     /// worst case is a refetch.
     #[test]
     fn deserialises_a_partial_blob() {

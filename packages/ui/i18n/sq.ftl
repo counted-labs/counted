@@ -149,7 +149,7 @@ payment-method-invalid-characters = Hiq ndërprerjet e rreshtave ose karakteret 
 payment-method-limit = Mund të ruash deri në { $max } mënyra pagese.
 payment-methods-saved = Të dhënat e pagesës u ruajtën.
 payment-methods-offline = Duhet të jesh në linjë për të ruajtur të dhënat e pagesës.
-payment-methods-stale = Të dhënat e tua të pagesës u ndryshuan në një pajisje tjetër. U ringarkuan — provo sërish.
+payment-methods-stale = Të dhënat e tua të pagesës u ndryshuan në një pajisje tjetër. U ringarkuan - provo sërish.
 payment-methods-key-missing = Identifikohu sërish për të menaxhuar të dhënat e pagesës.
 settings-payment-methods-share-warning = Një mënyrë e ndarë është e dukshme për të gjithë anëtarët e projekteve të tua.
 payment-method-share = Ndaj me projektet e mia
@@ -231,7 +231,6 @@ projects-filter-active = Aktive
 projects-filter-all = Të gjitha
 projects-count-label = Projektet
 projects-empty = Asnjë projekt
-projects-empty-hint = Krijo një projekt me butonin më poshtë
 projects-offline-banner = Të dhëna jashtë linje - lidhu sërish për të rifreskuar.
 demo-banner = Projekt demonstrues - vetëm për lexim.
 demo-start-own = Krijo projektin tënd
@@ -245,6 +244,67 @@ projects-no-local-data = Asnjë e dhënë lokale
 projects-no-local-data-hint = Identifikohu për të ngarkuar projektet për herë të parë.
 projects-add = Shto një projekt
 projects-create = Krijo një projekt
+projects-personal-expense = Shpenzim personal
+personal-expense-banner = U shtua te Shpenzimet e mia
+personal-create-title = Krijoni projektin tuaj personal
+personal-create-hint = Ndiqni çfarë shpenzoni vetëm
+group-create-title = Krijoni një projekt të përbashkët
+group-create-hint = Ndani shpenzimet me miqtë dhe familjen
+personal-create-action = Krijo
+personal-create-signup = Krijo një llogari
+personal-sheet-title = Projekti juaj personal
+personal-sheet-intro = Për të shënuar çfarë shpenzoni vetëm. Shfaqet me grupet tuaja te Statistikat.
+personal-sheet-point-alone = Një anëtar: ju, me emrin e llogarisë suaj. Pa lidhje ndarjeje.
+personal-sheet-point-encrypted = I enkriptuar në pajisjet tuaja, si projektet e tjera.
+personal-sheet-point-stats = Pjesët tuaja në grupe u shtohen këtyre shpenzimeve te Statistikat.
+personal-default-name = Shpenzimet e mia
+my-spending-prev-month = Muaji i mëparshëm
+my-spending-next-month = Muaji tjetër
+my-spending-spent = Shpenzuat
+my-spending-groups = Grupet
+my-spending-income = Të ardhurat
+my-spending-balance = Bilanci i muajit
+my-spending-unconverted = Pjesët në një monedhë tjetër mbeten jashtë derisa të njihet një kurs.
+my-spending-empty = Asgjë këtë muaj
+my-spending-empty-hint = Shtoni një shpenzim me +. Pjesët tuaja në grupe do të shfaqen këtu automatikisht.
+my-spending-share-of = nga { $amount }
+my-spending-uncounted = nuk llogaritet
+payer-you = ju
+expense-received-by = marrë nga
+counted-switch = Llogarite te Shpenzimet e mia
+counted-switch-on = Aktiv: pjesa juaj i shtohet Shpenzimet e mia
+counted-switch-off = Joaktiv: pjesa juaj nuk shfaqet te Shpenzimet e mia
+counted-groups = Grupet e llogaritura
+counted-groups-intro = Pjesa juaj në këto grupe i shtohet Shpenzimet e mia dhe buxheteve.
+counted-groups-converted = { $from }, konvertuar në { $to }
+counted-groups-encrypted = Kjo zgjedhje është e enkriptuar me llogarinë tuaj dhe ju ndjek në pajisjet tuaja.
+counted-groups-empty = Ende asnjë grup në këtë pajisje.
+counted-groups-done = OK
+counted-save-failed = Kjo zgjedhje nuk mund të ruhej. Provoni përsëri.
+tab-budget = Buxhet
+budget-title = Buxhetet
+budget-manage = Menaxho
+budget-left = Mbeten { $amount }
+budget-over = Tejkaluar me { $amount }
+budget-empty = Asnjë buxhet
+budget-empty-hint = Vendosni një tavan për çdo kategori. Pjesët tuaja në grupe llogariten gjithashtu.
+budget-define = Vendos një buxhet
+budget-sheet-title = Buxhetet mujore
+budget-sheet-intro = Mbi pjesën tuaj: personale dhe grupe. Lëreni bosh për të mos ndjekur një kategori.
+budget-average = Mesatarja 3 muajt e fundit: { $amount }
+budget-for = Buxheti { $category }
+budget-alert = Më njofto në 80 %
+budget-alert-hint = Llogaritet në këtë pajisje
+budget-invalid = Shumë e pavlefshme për { $category }.
+budget-offline = Buxhetet ruhen vetëm në linjë. Rilidhuni dhe provoni përsëri.
+budget-alert-near = { $category }: { $percent } % e buxhetit të muajit
+budget-alert-over = { $category }: buxheti i muajit u tejkalua
+personal-card-budget = { $month } · buxhet { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } rezultat
+       *[other] { $count } rezultate
+    } · { $total } · personale dhe grupe, të gjithë muajt
 projects-join = Bashkohu në një projekt
 projects-import-tricount = Importo nga Tricount
 project-actions = Veprimet e projektit
@@ -321,6 +381,7 @@ expenses-show-more = Shfaq më shumë ({ $count } të tjera)
 expense-type-expense = Shpenzim
 expense-type-transfer = Transfertë
 expense-type-gain = Fitim
+expense-type-group = Lloji
 expense-paid-by = paguar nga
 expense-sent-by = dërguar nga
 expense-contributed-by = kontribuar nga
@@ -386,6 +447,23 @@ export-failed = Eksportimi dështoi: { $reason }
 history-expense-added = Shpenzim i shtuar: { $name }
 history-expense-edited = Shpenzim i ndryshuar: { $name }
 history-expense-deleted = Shpenzim i fshirë: { $name }
+move-expense = Zhvendos në një projekt
+move-expense-title = Zhvendos te…
+move-current = Aktual
+move-converted = { $currency }, i konvertuar me kursin e muajit
+move-note-personal = Në hapin tjetër do të zgjidhni kush pagoi dhe për kë. Shpenzimi do të largohet nga Shpenzimet e mia.
+move-note-group = Shpenzimi do të largohet nga { $project } për të gjithë anëtarët dhe bilanci i grupit do të rillogaritet. Në hapin tjetër do të zgjidhni kush pagoi dhe për kë.
+move-banner = Nga { $from } te { $to }
+move-submit = Zhvendos
+move-done = Shpenzimi u zhvendos te { $project }
+move-delete-failed = Shpenzimi u shtua te projekti tjetër, por është ende te { $project }: fshijeni atje.
+history-expense-moved = Shpenzimi u zhvendos te një projekt tjetër: { $name }
+personal-badge = Personal
+move-members =
+    { $count ->
+        [one] { $count } anëtar
+       *[other] { $count } anëtarë
+    }
 history-project-edited = Projekt i ndryshuar: { $name }
 history-name-changed = Emri: „{ $from }” → „{ $to }”
 history-description-added = Përshkrim i shtuar: „{ $value }”
@@ -399,11 +477,23 @@ expense-name-placeholder = Restorant, ushqime…
 expense-actions = Veprimet e shpenzimit
 expense-your-share = Pjesa jote
 expense-your-share-value = Pjesa jote: { $amount } { $currency }
+expense-share-percent = { $percent }%
+expense-added-by = Shtuar nga { $name } më { $date }
 expense-inconsistent-detail = Shumat nuk përputhen: { $paid } paguar, { $owed } borxh, për një shpenzim prej { $total }. Ndrysho shpenzimin për ta rregulluar.
 missing-access-key = Mungon çelësi i aksesit. Hape këtë projekt përmes lidhjes së ndarjes.
 filter-all = Të gjitha
 filter-my-payments = Pagesat e mia
 filter-my-debts = Borxhet e mia
+expense-filter-group = Filtri
+expenses-search = Kërko shpenzime
+expenses-no-match = Asnjë shpenzim nuk përputhet.
+expenses-search-open = Kërko
+expenses-search-clear = Pastro kërkimin
+expenses-search-summary =
+    { $count ->
+        [one] { $count } rezultat
+       *[other] { $count } rezultate
+    } · { $total } · të gjithë muajt
 participants-shares-for = Pjesët për { $name }
 participants-amount-for = Shuma për { $name }
 reimbursement-add = Shto një shlyerje
@@ -441,8 +531,8 @@ charts-expense-count =
 charts-nothing-to-show = Asgjë për të shfaqur
 charts-my-share-skipped =
     { $count ->
-        [one] 1 projekt nuk llogaritet — asnjë pjesëmarrës i zgjedhur, ose të dhënat e tij nuk u ngarkuan.
-       *[other] { $count } projekte nuk llogariten — asnjë pjesëmarrës i zgjedhur, ose të dhënat e tyre nuk u ngarkuan.
+        [one] 1 projekt nuk llogaritet - asnjë pjesëmarrës i zgjedhur, ose të dhënat e tij nuk u ngarkuan.
+       *[other] { $count } projekte nuk llogariten - asnjë pjesëmarrës i zgjedhur, ose të dhënat e tyre nuk u ngarkuan.
     }
 
 ### Categories
@@ -516,6 +606,13 @@ payers-title-contributors = Kontribuesit
 debtors-title-debtors = Kanë borxh
 debtors-title-recipients = Marrësit
 debtors-title-beneficiaries = Përfituesit
+debtors-title-for = Për
+debtors-title-recipient = Marrësi
+expense-people =
+    { $count ->
+        [one] { $count } person
+       *[other] { $count } persona
+    }
 
 ### Welcome
 
@@ -648,6 +745,8 @@ invitation-decline = Refuzo
 participants-you-label = Emri yt në këtë projekt
 participants-you-badge = Ti
 participants-others = Pjesëmarrës të tjerë
+participants-removed = Të hequr
+participant-restore = Rikthe
 participants-empty = Shto pjesëmarrës më poshtë.
 participants-duplicate = „{ $name }” është tashmë në listë.
 participants-input-label = Shto një mik ose shkruaj një emër
@@ -792,3 +891,16 @@ error-recurring-not-found = Ky shpenzim i përsëritur nuk ekziston më.
 error-recurring-stale = Dikush e ndryshoi ndërkohë këtë shpenzim të përsëritur. U ringarkua: kontrolloje dhe ruaj përsëri.
 error-too-many-recurring = Ky projekt ka tashmë 50 shpenzime të përsëritura. Ndalo një që nuk të duhet më për të shtuar një tjetër.
 error-user-in-recurring = Ky pjesëmarrës është pjesë e një shpenzimi të përsëritur. Hiqe fillimisht prej tij ose ndalo shpenzimin.
+
+home-owed-to-you = Ju detyrohen
+home-you-owe = Ju detyroni
+home-details-show = Shiko detajet
+home-details-hide = Fshih detajet
+home-all-settled = Gjithçka është shlyer
+home-pay = Paguaj
+home-remind = Kujto
+home-remind-message = Kujtesë e vogël: ka ende rimbursime për t’u shlyer te { $project }.
+home-row-owed = ju detyrohen
+home-row-owe = ju detyroni
+home-row-settled = E shlyer
+home-totals-partial = Pa projektet pa kurs këmbimi

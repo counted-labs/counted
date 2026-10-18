@@ -6,14 +6,14 @@ use super::super::helpers::expense_form_helpers::{is_expression, with_operator};
 use super::amount_input::FocusedAmount;
 
 /// The operator keys mobile numeric keyboards lack, as a bar that sits on the keyboard for
-/// whichever amount field has focus — the total or any participant row.
+/// whichever amount field has focus - the total or any participant row.
 ///
 /// Rendered as the last row of `.modal-box`, below the footer: on phones the box's
 /// `padding-bottom: max(--sab, --kb)` is what puts it directly above the keyboard, so nothing here
 /// positions itself. Each key cancels both `pointerdown` and `mousedown` so the field keeps focus
 /// across the tap, which is also what keeps the keyboard up and this bar on screen. `pointerdown`
 /// alone is enough for Chromium, which then suppresses the compatibility `mousedown`; iOS WebKit
-/// does not — a tap's synthetic `mousedown` skips the pointer-event check (`Element.cpp`,
+/// does not - a tap's synthetic `mousedown` skips the pointer-event check (`Element.cpp`,
 /// `dispatchPointerEventIfNeeded`), and unless that `mousedown` is cancelled, it moves the focus
 /// and drops the keyboard.
 #[component]
@@ -102,7 +102,7 @@ pub fn AmountOperatorBar() -> Element {
             }
             // The one key here that must NOT preventDefault its `pointerdown` or `mousedown`:
             // letting the tap's default action run
-            // is what blurs the field, which is what lowers the keyboard — and blurring also
+            // is what blurs the field, which is what lowers the keyboard - and blurring also
             // clears `FocusedAmount`, so this bar goes with it. It exists because suppressing
             // iOS's own accessory view (packages/mobile/src/main.rs) took away the ✓ that was the
             // numeric keypad's only dismiss control; the keypad has no return key of its own.

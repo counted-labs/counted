@@ -59,7 +59,7 @@ input[type="date"] {
 }
 
 /* Failsafe for #counted-splash (packages/ui/src/common/splash.rs). Kept here only to hold the
-   three main.css files in sync — the desktop entry point does not render SplashScreen yet. */
+   three main.css files in sync - the desktop entry point does not render SplashScreen yet. */
 #counted-splash {
   animation: counted-splash-failsafe 0.3s ease 8s forwards;
 }
@@ -75,7 +75,7 @@ input[type="date"] {
   padding: 1rem;
 }
 
-/* Long-pressable card — see packages/web/assets/main.css for why selection is disabled. */
+/* Long-pressable card - see packages/web/assets/main.css for why selection is disabled. */
 .card-clickable {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -86,7 +86,7 @@ input[type="date"] {
     background-color: var(--color-base-300);
   }
   /* Wrapped, unlike every other rule in this file, because this is the one hand-written hover in
-     the app — Tailwind already wraps its own `hover:` utilities the same way. iOS latches :hover
+     the app - Tailwind already wraps its own `hover:` utilities the same way. iOS latches :hover
      on tap and holds it until you tap elsewhere, so unwrapped it left a card highlighted behind
      the page it had just opened. Guarded by stylesheet_guard.rs. */
   @media (hover: hover) {

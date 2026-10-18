@@ -24,7 +24,7 @@ pub fn ProjectHistoryPage(project_id: Uuid) -> Element {
     let key: Option<[u8; 32]> = project_key(project_id);
 
     // History is append-only and unbounded, so it stays its own fetch. The participant names come
-    // from the project store, which is already decrypted — this page used to be the third place to
+    // from the project store, which is already decrypted - this page used to be the third place to
     // fetch and decrypt the same roster.
     let mut history = use_resource(move || async move { get_project_history(project_id).await });
     let store = use_context::<ProjectStore>();
@@ -140,7 +140,7 @@ fn HistoryTimeline(props: HistoryTimelineProps) -> Element {
     rsx! {
         div { class: "pb-6",
             for (date, group_entries) in &groups {
-                div { class: "divider divider-start text-xs text-base-content/70 my-3",
+                h2 { class: "divider divider-start text-xs text-base-content/70 my-3",
                     "{date}"
                 }
                 ul { class: "timeline timeline-vertical timeline-compact",

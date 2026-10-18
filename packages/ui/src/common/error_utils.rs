@@ -3,7 +3,7 @@ use crate::tid;
 
 /// Every error the API can return, mapped to the message shown for it.
 ///
-/// `shared::errors` documents its constants as values the client matches on — they are already
+/// `shared::errors` documents its constants as values the client matches on - they are already
 /// codes in all but name, so translating them needs no wire change and no server change. Anything
 /// not listed here renders `error-generic`, which also means raw server text can never reach the
 /// DOM.
@@ -28,6 +28,7 @@ const KEYS: &[(&str, &str)] = &[
     (shared::errors::UNAUTHENTICATED, "error-unauthenticated"),
     (shared::errors::EMAIL_NOT_VERIFIED, "error-email-not-verified"),
     (shared::errors::CLAIM_PROOF_INVALID, "error-claim-proof-invalid"),
+    (shared::errors::PROJECT_READ_ONLY, "error-generic"),
     (shared::errors::PROJECT_NOT_FOUND, "error-project-not-found"),
     (shared::errors::EXPENSE_NOT_FOUND, "error-expense-not-found"),
     (shared::errors::USER_NOT_FOUND, "error-user-not-found"),
@@ -64,7 +65,7 @@ fn is_network_error(e: &str) -> bool {
 
 /// The translation key for a server function error.
 ///
-/// Pure, so it is unit-testable without a Dioxus runtime — `error_message` is the half that needs
+/// Pure, so it is unit-testable without a Dioxus runtime - `error_message` is the half that needs
 /// one. Never use `e.to_string()` for either: `ServerFnError`'s `Display` wraps the backend message
 /// in `error running server function: {message} (details: {details:#?})`, and the other variants
 /// render English crate internals.
@@ -90,7 +91,7 @@ pub fn error_message(e: &ServerFnError) -> String {
     tid!(error_key(e))
 }
 
-/// True when the server reports the project no longer exists — drives the "retirer de ma liste"
+/// True when the server reports the project no longer exists - drives the "retirer de ma liste"
 /// recovery instead of a dead-end error alert.
 pub fn is_project_gone_error(e: &ServerFnError) -> bool {
     matches!(
@@ -100,7 +101,7 @@ pub fn is_project_gone_error(e: &ServerFnError) -> bool {
     )
 }
 
-/// True when the participant is already gone — for a removal, the outcome it asked for.
+/// True when the participant is already gone - for a removal, the outcome it asked for.
 pub fn is_user_gone_error(e: &ServerFnError) -> bool {
     matches!(
         e,
@@ -109,7 +110,7 @@ pub fn is_user_gone_error(e: &ServerFnError) -> bool {
     )
 }
 
-/// True when another account already claims the participant this device tried to become — drives
+/// True when another account already claims the participant this device tried to become - drives
 /// dropping the local `user_id` and reopening the "who am I?" picker.
 ///
 /// Matches on the message **and** the 409, like `is_project_gone_error`: an internal failure that
@@ -132,8 +133,8 @@ pub fn is_claim_proof_error(e: &ServerFnError) -> bool {
     )
 }
 
-/// True when the server refused a `user_id` because that participant is no longer in the project
-/// — removed by another member since this device picked it. Code and message together, as above.
+/// True when the server refused a `user_id` because that participant is no longer in the project -
+/// removed by another member since this device picked it. Code and message together, as above.
 pub fn is_participant_gone_error(e: &ServerFnError) -> bool {
     matches!(
         e,
@@ -169,7 +170,7 @@ pub fn is_payment_methods_stale_error(e: &ServerFnError) -> bool {
     )
 }
 
-/// True when the server refused this build outright — drives the blocking update screen.
+/// True when the server refused this build outright - drives the blocking update screen.
 ///
 /// Matched on the 426 alone, unlike the pairs above: nothing else in the stack emits that status,
 /// and the gate answers from a layer *in front of* the server functions, so its body is not a
@@ -179,7 +180,7 @@ pub fn is_client_outdated_error(e: &ServerFnError) -> bool {
     matches!(e, ServerFnError::ServerError { code: 426, .. })
 }
 
-/// True when the account exists but has not confirmed its email — drives the "resend the link"
+/// True when the account exists but has not confirmed its email - drives the "resend the link"
 /// affordance on the login page.
 ///
 /// Tests the error rather than the rendered message: that message is translated now, so
@@ -188,7 +189,7 @@ pub fn is_email_not_verified(e: &ServerFnError) -> bool {
     matches!(e, ServerFnError::ServerError { message, .. } if message == shared::EMAIL_NOT_VERIFIED)
 }
 
-/// True when the request never reached the server — drives the offline cache fallbacks.
+/// True when the request never reached the server - drives the offline cache fallbacks.
 ///
 /// Tests the error rather than the rendered message, for the same reason as above.
 pub fn is_offline_error(e: &ServerFnError) -> bool {

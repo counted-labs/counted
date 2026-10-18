@@ -1,5 +1,5 @@
 use crate::common::{
-    is_mobile, replay_queue, use_overscroll, BottomDock, DeepLinkListener, Flash,
+    is_mobile, replay_queue, use_overscroll, use_route_focus, use_sheet_drag, BottomDock, DeepLinkListener, Flash,
     LocalStorageState, NavigationSync, PageTransition, QueuedOp, SyncFailure, Toast,
 };
 use crate::demo::DemoBar;
@@ -22,7 +22,7 @@ pub fn AppLayout() -> Element {
     let replaying = use_signal(|| false);
     let mut replay_blocked = use_signal(|| false);
 
-    // One store for every project route, held here because this layout never remounts — that is
+    // One store for every project route, held here because this layout never remounts - that is
     // what makes expenses -> expense -> back cost no request. Provided, never read: reading
     // `store.data` here would re-render the whole shell on every decryption pass.
     //
@@ -32,9 +32,11 @@ pub fn AppLayout() -> Element {
     use_context_provider(|| store);
 
     let route = use_route::<Route>();
+    use_route_focus(&route);
 
     // Elastic scrolling + pull-to-refresh gesture, one JS install for every page. No-op off mobile.
     use_overscroll();
+    use_sheet_drag();
 
     // Onboarding depends on localStorage + user agent, which SSR can't know. Deciding it on the
     // first render diverges from the served HTML and breaks hydration (dead app, no listeners).
@@ -88,7 +90,7 @@ pub fn AppLayout() -> Element {
 
     rsx! {
         NavigationSync {}
-        // Must live inside the Router — it navigates. Both are no-ops off mobile.
+        // Must live inside the Router - it navigates. Both are no-ops off mobile.
         DeepLinkListener {}
         if !is_online() {
             div {
@@ -119,6 +121,11 @@ pub fn AppLayout() -> Element {
                 msg: f.msg,
                 success: f.success,
                 onclose: move |_| flash.set(None),
+            }
+        }
+        div { class: "sr-only", role: "status", aria_live: "polite", aria_atomic: "true",
+            if let Some(f) = flash().filter(|f| f.success) {
+                "{f.msg}"
             }
         }
         if let Some(failure) = conflict_msg() {

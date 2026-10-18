@@ -43,7 +43,7 @@ pub fn share_link_for(project_id: Uuid, key: &[u8; 32]) -> String {
     share_url(current_origin().as_deref(), project_id, key)
 }
 
-/// `counted://projects/<uuid>#<key>` — the custom-scheme twin of `share_url`, and the web "open in
+/// `counted://projects/<uuid>#<key>` - the custom-scheme twin of `share_url`, and the web "open in
 /// the app" button's only handoff where universal links are unavailable (AltStore-resigned iOS
 /// builds carry no associated-domains entitlement).
 pub fn scheme_link_for(project_id: Uuid, key: &[u8; 32]) -> String {
@@ -98,7 +98,7 @@ fn match_project(path: &str) -> Option<Uuid> {
 
 // Resolves to a bool. `text` goes in via serde_json::to_string, never interpolated raw. The script
 // is the *body* of an async function (dioxus-web PROMISE_WRAPPER / dioxus-desktop AsyncFunction),
-// so it must `return` — an IIFE expression statement evaluates to undefined. execCommand fallback:
+// so it must `return` - an IIFE expression statement evaluates to undefined. execCommand fallback:
 // navigator.clipboard is undefined in a non-secure WebView context.
 pub fn copy_js(text: &str) -> String {
     let literal = serde_json::to_string(text).unwrap_or_else(|_| "\"\"".to_string());
@@ -129,7 +129,7 @@ try {{
 }
 
 /// Reads the clipboard, `null` when the WebView refuses. Same contract as [`copy_js`]: the script
-/// is the *body* of an async function, so it must `return` — wrapped in an IIFE it would evaluate
+/// is the *body* of an async function, so it must `return` - wrapped in an IIFE it would evaluate
 /// to undefined and every paste would silently do nothing. `navigator.clipboard` is undefined in a
 /// non-secure WebView context, hence the guard.
 pub const READ_CLIPBOARD_JS: &str = r#"try {
@@ -258,7 +258,7 @@ mod tests {
     fn copy_js_escapes_quotes_backslashes_and_newlines() {
         let js = copy_js("a\"b\\c\nd</script>");
         assert!(js.contains(r#""a\"b\\c\nd</script>""#), "{js}");
-        // One opening and one closing quote for the literal — it cannot break out.
+        // One opening and one closing quote for the literal - it cannot break out.
         assert_eq!(js.matches("const text = ").count(), 1);
     }
 

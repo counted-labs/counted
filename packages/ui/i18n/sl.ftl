@@ -151,7 +151,7 @@ payment-method-invalid-characters = Odstrani prelome vrstic ali nevidne znake.
 payment-method-limit = Shraniš lahko do { $max } plačilnih načinov.
 payment-methods-saved = Podatki za plačilo shranjeni.
 payment-methods-offline = Za shranjevanje podatkov za plačilo moraš biti povezan.
-payment-methods-stale = Tvoji podatki za plačilo so bili spremenjeni na drugi napravi. Znova so naloženi — poskusi znova.
+payment-methods-stale = Tvoji podatki za plačilo so bili spremenjeni na drugi napravi. Znova so naloženi - poskusi znova.
 payment-methods-key-missing = Za upravljanje podatkov za plačilo se znova prijavi.
 settings-payment-methods-share-warning = Deljen način je viden vsem članom tvojih projektov.
 payment-method-share = Deli z mojimi projekti
@@ -233,7 +233,6 @@ projects-filter-active = Aktivni
 projects-filter-all = Vsi
 projects-count-label = Projekti
 projects-empty = Ni projektov
-projects-empty-hint = Ustvari projekt z gumbom spodaj
 projects-offline-banner = Podatki brez povezave - za osvežitev se znova poveži.
 demo-banner = Predstavitveni projekt - samo za branje.
 demo-start-own = Ustvari svoj projekt
@@ -247,6 +246,69 @@ projects-no-local-data = Ni lokalnih podatkov
 projects-no-local-data-hint = Prijavi se, da prvič naložiš svoje projekte.
 projects-add = Dodaj projekt
 projects-create = Ustvari projekt
+projects-personal-expense = Osebni strošek
+personal-expense-banner = Dodano v Moje stroške
+personal-create-title = Ustvarite osebni projekt
+personal-create-hint = Spremljajte, kaj zapravite sami
+group-create-title = Ustvarite skupni projekt
+group-create-hint = Delite stroške s prijatelji in družino
+personal-create-action = Ustvari
+personal-create-signup = Ustvari račun
+personal-sheet-title = Vaš osebni projekt
+personal-sheet-intro = Za beleženje tega, kar zapravite sami. Prikaže se z vašimi skupinami v Statistiki.
+personal-sheet-point-alone = En sam član: vi, z imenom vašega računa. Brez povezave za deljenje.
+personal-sheet-point-encrypted = Šifriran na vaših napravah, kot drugi projekti.
+personal-sheet-point-stats = Vaši deleži v skupinah se v Statistiki prištejejo tem stroškom.
+personal-default-name = Moji stroški
+my-spending-prev-month = Prejšnji mesec
+my-spending-next-month = Naslednji mesec
+my-spending-spent = Porabili ste
+my-spending-groups = Skupine
+my-spending-income = Prihodki
+my-spending-balance = Saldo meseca
+my-spending-unconverted = Deleži v drugi valuti ostanejo ob strani, dokler tečaj ni znan.
+my-spending-empty = Ta mesec nič
+my-spending-empty-hint = Dodajte strošek s +. Vaši deleži v skupinah se bodo tu prikazali samodejno.
+my-spending-share-of = od { $amount }
+my-spending-uncounted = ni upoštevano
+payer-you = vi
+expense-received-by = prejel(a)
+counted-switch = Upoštevaj v Moji stroški
+counted-switch-on = Vklopljeno: vaš delež se prišteje k Moji stroški
+counted-switch-off = Izklopljeno: vaš delež se v Moji stroški ne prikaže
+counted-groups = Upoštevane skupine
+counted-groups-intro = Vaš delež v teh skupinah se prišteje k Moji stroški in k proračunom.
+counted-groups-converted = { $from }, pretvorjeno v { $to }
+counted-groups-encrypted = Ta izbira je šifrirana z vašim računom in vas spremlja na vaših napravah.
+counted-groups-empty = Na tej napravi še ni skupine.
+counted-groups-done = V redu
+counted-save-failed = Te izbire ni bilo mogoče shraniti. Poskusite znova.
+tab-budget = Proračun
+budget-title = Proračuni
+budget-manage = Upravljaj
+budget-left = Ostane { $amount }
+budget-over = Preseženo za { $amount }
+budget-empty = Ni proračuna
+budget-empty-hint = Določite zgornjo mejo za vsako kategorijo. Vaši deleži v skupinah se tudi štejejo.
+budget-define = Določi proračun
+budget-sheet-title = Mesečni proračuni
+budget-sheet-intro = Na vaš delež: osebno in skupine. Pustite prazno, da kategorije ne spremljate.
+budget-average = Povpr. zadnji 3 meseci: { $amount }
+budget-for = Proračun { $category }
+budget-alert = Opozori me pri 80 %
+budget-alert-hint = Izračunano na tej napravi
+budget-invalid = Neveljaven znesek za { $category }.
+budget-offline = Proračune je mogoče shraniti le s povezavo. Znova se povežite in poskusite še enkrat.
+budget-alert-near = { $category }: { $percent } % mesečnega proračuna
+budget-alert-over = { $category }: mesečni proračun presežen
+personal-card-budget = { $month } · proračun { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } zadetek
+        [two] { $count } zadetka
+        [few] { $count } zadetki
+       *[other] { $count } zadetkov
+    } · { $total } · osebno in skupine, vsi meseci
 projects-join = Pridruži se projektu
 projects-import-tricount = Uvozi iz Tricounta
 project-actions = Dejanja projekta
@@ -323,6 +385,7 @@ expenses-show-more = Prikaži več (še { $count })
 expense-type-expense = Strošek
 expense-type-transfer = Nakazilo
 expense-type-gain = Prejemek
+expense-type-group = Vrsta
 expense-paid-by = plačal(a)
 expense-sent-by = poslal(a)
 expense-contributed-by = prispeval(a)
@@ -388,6 +451,25 @@ export-failed = Izvoz ni uspel: { $reason }
 history-expense-added = Strošek dodan: { $name }
 history-expense-edited = Strošek urejen: { $name }
 history-expense-deleted = Strošek izbrisan: { $name }
+move-expense = Premakni v projekt
+move-expense-title = Premakni v…
+move-current = Trenutni
+move-converted = { $currency }, preračunano po mesečnem tečaju
+move-note-personal = V naslednjem koraku boste izbrali, kdo je plačal in za koga. Strošek bo zapustil Moje stroške.
+move-note-group = Strošek bo zapustil { $project } za vse člane, stanje skupine pa bo preračunano. V naslednjem koraku boste izbrali, kdo je plačal in za koga.
+move-banner = Iz { $from } v { $to }
+move-submit = Premakni
+move-done = Strošek premaknjen v { $project }
+move-delete-failed = Strošek je bil dodan v drugi projekt, a je še vedno v { $project }: izbrišite ga tam.
+history-expense-moved = Strošek premaknjen v drug projekt: { $name }
+personal-badge = Osebno
+move-members =
+    { $count ->
+        [one] { $count } član
+        [two] { $count } člana
+        [few] { $count } člani
+       *[other] { $count } članov
+    }
 history-project-edited = Projekt urejen: { $name }
 history-name-changed = Ime: »{ $from }« → »{ $to }«
 history-description-added = Opis dodan: »{ $value }«
@@ -401,11 +483,25 @@ expense-name-placeholder = Restavracija, nakupi…
 expense-actions = Dejanja stroška
 expense-your-share = Tvoj delež
 expense-your-share-value = Tvoj delež: { $amount } { $currency }
+expense-share-percent = { $percent } %
+expense-added-by = Dodano: { $name }, { $date }
 expense-inconsistent-detail = Zneski se ne ujemajo: { $paid } plačano, { $owed } dolgovano, za strošek { $total }. Uredi strošek, da to popraviš.
 missing-access-key = Manjka dostopni ključ. Odpri ta projekt prek njegove povezave za deljenje.
 filter-all = Vse
 filter-my-payments = Moja plačila
 filter-my-debts = Kaj dolgujem
+expense-filter-group = Filter
+expenses-search = Iskanje stroškov
+expenses-no-match = Noben strošek se ne ujema.
+expenses-search-open = Iskanje
+expenses-search-clear = Počisti iskanje
+expenses-search-summary =
+    { $count ->
+        [one] { $count } zadetek
+        [two] { $count } zadetka
+        [few] { $count } zadetki
+       *[other] { $count } zadetkov
+    } · { $total } · vsi meseci
 participants-shares-for = Deleži za { $name }
 participants-amount-for = Znesek za { $name }
 reimbursement-add = Dodaj poravnavo
@@ -445,10 +541,10 @@ charts-expense-count =
 charts-nothing-to-show = Ničesar za prikaz
 charts-my-share-skipped =
     { $count ->
-        [one] 1 projekt ni upoštevan — udeleženec ni izbran ali se njegovi podatki niso naložili.
-        [two] { $count } projekta nista upoštevana — udeleženec ni izbran ali se njuni podatki niso naložili.
-        [few] { $count } projekti niso upoštevani — udeleženec ni izbran ali se njihovi podatki niso naložili.
-       *[other] { $count } projektov ni upoštevanih — udeleženec ni izbran ali se njihovi podatki niso naložili.
+        [one] 1 projekt ni upoštevan - udeleženec ni izbran ali se njegovi podatki niso naložili.
+        [two] { $count } projekta nista upoštevana - udeleženec ni izbran ali se njuni podatki niso naložili.
+        [few] { $count } projekti niso upoštevani - udeleženec ni izbran ali se njihovi podatki niso naložili.
+       *[other] { $count } projektov ni upoštevanih - udeleženec ni izbran ali se njihovi podatki niso naložili.
     }
 
 ### Categories
@@ -522,6 +618,15 @@ payers-title-contributors = Prispevali
 debtors-title-debtors = Dolguje
 debtors-title-recipients = Prejemniki
 debtors-title-beneficiaries = Upravičenci
+debtors-title-for = Za
+debtors-title-recipient = Prejemnik
+expense-people =
+    { $count ->
+        [one] { $count } oseba
+        [two] { $count } osebi
+        [few] { $count } osebe
+       *[other] { $count } oseb
+    }
 
 ### Welcome
 
@@ -656,6 +761,8 @@ invitation-decline = Zavrni
 participants-you-label = Tvoje ime v tem projektu
 participants-you-badge = Ti
 participants-others = Drugi udeleženci
+participants-removed = Odstranjeni
+participant-restore = Obnovi
 participants-empty = Spodaj dodaj udeležence.
 participants-duplicate = »{ $name }« je že na seznamu.
 participants-input-label = Dodaj prijatelja ali vpiši ime
@@ -800,3 +907,16 @@ error-recurring-not-found = Ta ponavljajoči se strošek ne obstaja več.
 error-recurring-stale = Nekdo je medtem spremenil ta ponavljajoči se strošek. Znova je naložen: preveri ga in znova shrani.
 error-too-many-recurring = Projekt že ima 50 ponavljajočih se stroškov. Ustavi enega, ki ga ne potrebuješ več, da dodaš novega.
 error-user-in-recurring = Ta udeleženec je del ponavljajočega se stroška. Najprej ga odstrani iz njega ali strošek ustavi.
+
+home-owed-to-you = Dolgujejo vam
+home-you-owe = Dolgujete
+home-details-show = Pokaži podrobnosti
+home-details-hide = Skrij podrobnosti
+home-all-settled = Vse je poravnano
+home-pay = Plačaj
+home-remind = Opomni
+home-remind-message = Majhen opomnik: v { $project } so še neporavnana vračila.
+home-row-owed = dolgujejo vam
+home-row-owe = dolgujete
+home-row-settled = Poravnano
+home-totals-partial = Brez projektov brez menjalnega tečaja

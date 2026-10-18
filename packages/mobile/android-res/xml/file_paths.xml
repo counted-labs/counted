@@ -5,7 +5,7 @@
 	captures: the receipt-scan camera capture. The root of `external-files-path` is
 	Context.getExternalFilesDir(null); wry's RustWebChromeClient.createImageFile writes into its
 	Pictures/ subdirectory via getExternalFilesDir(Environment.DIRECTORY_PICTURES), so that is the
-	only subtree exposed — see docs/plans/ocr-receipt-scan.md.
+	only subtree exposed - see docs/plans/ocr-receipt-scan.md.
 
 	exports: JSON/CSV exports handed to the share sheet. `share_file` in packages/mobile/src/main.rs
 	writes them under getCacheDir()/exports/ and nowhere else.

@@ -203,7 +203,10 @@ pub fn ParticipantsEditor(props: ParticipantsEditorProps) -> Element {
                             e.prevent_default();
                             highlight.set(highlight().saturating_sub(1));
                         }
-                        Key::Escape if list_open => dismissed.set(true),
+                        Key::Escape if list_open => {
+                            e.prevent_default();
+                            dismissed.set(true);
+                        }
                         _ => {}
                     },
                 }
@@ -459,7 +462,10 @@ fn RenameRow(props: RenameRowProps) -> Element {
                                 e.prevent_default();
                                 props.on_save.call(());
                             }
-                            Key::Escape => props.on_cancel.call(()),
+                            Key::Escape => {
+                                e.prevent_default();
+                                props.on_cancel.call(());
+                            }
                             _ => {}
                         },
                     }

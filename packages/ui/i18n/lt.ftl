@@ -151,7 +151,7 @@ payment-method-invalid-characters = Pašalink eilučių lūžius ar nematomus si
 payment-method-limit = Gali išsaugoti iki { $max } mokėjimo būdų.
 payment-methods-saved = Mokėjimo duomenys išsaugoti.
 payment-methods-offline = Norint išsaugoti mokėjimo duomenis, reikia interneto ryšio.
-payment-methods-stale = Tavo mokėjimo duomenys buvo pakeisti kitame įrenginyje. Jie įkelti iš naujo — bandyk dar kartą.
+payment-methods-stale = Tavo mokėjimo duomenys buvo pakeisti kitame įrenginyje. Jie įkelti iš naujo - bandyk dar kartą.
 payment-methods-key-missing = Prisijunk iš naujo, kad galėtum tvarkyti mokėjimo duomenis.
 settings-payment-methods-share-warning = Bendrinamą būdą mato visi tavo projektų nariai.
 payment-method-share = Bendrinti su mano projektais
@@ -233,7 +233,6 @@ projects-filter-active = Aktyvūs
 projects-filter-all = Visi
 projects-count-label = Projektai
 projects-empty = Projektų nėra
-projects-empty-hint = Sukurk projektą mygtuku žemiau
 projects-offline-banner = Duomenys neprisijungus - prisijunk iš naujo, kad atnaujintum.
 demo-banner = Demonstracinis projektas - tik skaitymui.
 demo-start-own = Sukurk savo projektą
@@ -247,6 +246,69 @@ projects-no-local-data = Nėra vietinių duomenų
 projects-no-local-data-hint = Prisijunk, kad pirmą kartą įkeltum savo projektus.
 projects-add = Pridėti projektą
 projects-create = Sukurti projektą
+projects-personal-expense = Asmeninė išlaida
+personal-expense-banner = Pridėta prie Mano išlaidų
+personal-create-title = Sukurkite asmeninį projektą
+personal-create-hint = Sekite, ką išleidžiate vieni
+group-create-title = Sukurkite bendrą projektą
+group-create-hint = Dalykitės išlaidomis su draugais ir šeima
+personal-create-action = Sukurti
+personal-create-signup = Sukurti paskyrą
+personal-sheet-title = Jūsų asmeninis projektas
+personal-sheet-intro = Kad užsirašytumėte, ką išleidžiate vieni. Rodomas kartu su jūsų grupėmis Statistikoje.
+personal-sheet-point-alone = Vienas narys: jūs, su paskyros vardu. Be bendrinimo nuorodos.
+personal-sheet-point-encrypted = Šifruojamas jūsų įrenginiuose, kaip ir kiti projektai.
+personal-sheet-point-stats = Jūsų dalys grupėse Statistikoje pridedamos prie šių išlaidų.
+personal-default-name = Mano išlaidos
+my-spending-prev-month = Ankstesnis mėnuo
+my-spending-next-month = Kitas mėnuo
+my-spending-spent = Išleidote
+my-spending-groups = Grupės
+my-spending-income = Pajamos
+my-spending-balance = Mėnesio balansas
+my-spending-unconverted = Dalys kita valiuta neįtraukiamos, kol nežinomas kursas.
+my-spending-empty = Šį mėnesį nieko
+my-spending-empty-hint = Pridėkite išlaidą mygtuku +. Jūsų dalys grupėse čia atsiras automatiškai.
+my-spending-share-of = iš { $amount }
+my-spending-uncounted = neįskaičiuota
+payer-you = jūs
+expense-received-by = gavo
+counted-switch = Įskaičiuoti į Mano išlaidos
+counted-switch-on = Įjungta: jūsų dalis pridedama prie Mano išlaidos
+counted-switch-off = Išjungta: jūsų dalis nerodoma Mano išlaidos
+counted-groups = Įskaičiuojamos grupės
+counted-groups-intro = Jūsų dalis šiose grupėse pridedama prie Mano išlaidos ir biudžetų.
+counted-groups-converted = { $from }, perskaičiuota į { $to }
+counted-groups-encrypted = Šis pasirinkimas užšifruotas jūsų paskyra ir seka jus jūsų įrenginiuose.
+counted-groups-empty = Šiame įrenginyje dar nėra grupių.
+counted-groups-done = Gerai
+counted-save-failed = Nepavyko išsaugoti šio pasirinkimo. Bandykite dar kartą.
+tab-budget = Biudžetas
+budget-title = Biudžetai
+budget-manage = Tvarkyti
+budget-left = Liko { $amount }
+budget-over = Viršyta { $amount }
+budget-empty = Biudžeto nėra
+budget-empty-hint = Nustatykite ribą kiekvienai kategorijai. Jūsų dalys grupėse taip pat skaičiuojamos.
+budget-define = Nustatyti biudžetą
+budget-sheet-title = Mėnesio biudžetai
+budget-sheet-intro = Jūsų daliai: asmeninės ir grupės. Palikite tuščią, kad nesektumėte kategorijos.
+budget-average = Vid. per paskutinius 3 mėn.: { $amount }
+budget-for = Biudžetas { $category }
+budget-alert = Įspėti ties 80 %
+budget-alert-hint = Skaičiuojama šiame įrenginyje
+budget-invalid = Neteisinga suma: { $category }.
+budget-offline = Biudžetus galima išsaugoti tik prisijungus. Prisijunkite ir bandykite dar kartą.
+budget-alert-near = { $category }: { $percent } % mėnesio biudžeto
+budget-alert-over = { $category }: mėnesio biudžetas viršytas
+personal-card-budget = { $month } · biudžetas { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } rezultatas
+        [few] { $count } rezultatai
+        [many] { $count } rezultato
+       *[other] { $count } rezultatų
+    } · { $total } · asmeninės ir grupės, visi mėnesiai
 projects-join = Prisijungti prie projekto
 projects-import-tricount = Importuoti iš Tricount
 project-actions = Projekto veiksmai
@@ -323,6 +385,7 @@ expenses-show-more = Rodyti daugiau (liko { $count })
 expense-type-expense = Išlaida
 expense-type-transfer = Pervedimas
 expense-type-gain = Pajamos
+expense-type-group = Tipas
 expense-paid-by = sumokėjo
 expense-sent-by = išsiuntė
 expense-contributed-by = prisidėjo
@@ -388,6 +451,25 @@ export-failed = Eksportas nepavyko: { $reason }
 history-expense-added = Išlaida pridėta: { $name }
 history-expense-edited = Išlaida redaguota: { $name }
 history-expense-deleted = Išlaida ištrinta: { $name }
+move-expense = Perkelti į projektą
+move-expense-title = Perkelti į…
+move-current = Dabartinis
+move-converted = { $currency }, perskaičiuota mėnesio kursu
+move-note-personal = Kitame žingsnyje pasirinksite, kas mokėjo ir už ką. Išlaida paliks Mano išlaidas.
+move-note-group = Išlaida paliks { $project } visiems nariams, o grupės balansas bus perskaičiuotas. Kitame žingsnyje pasirinksite, kas mokėjo ir už ką.
+move-banner = Iš { $from } į { $to }
+move-submit = Perkelti
+move-done = Išlaida perkelta į { $project }
+move-delete-failed = Išlaida pridėta prie kito projekto, bet vis dar yra { $project }: ištrinkite ją ten.
+history-expense-moved = Išlaida perkelta į kitą projektą: { $name }
+personal-badge = Asmeninė
+move-members =
+    { $count ->
+        [one] { $count } narys
+        [few] { $count } nariai
+        [many] { $count } nario
+       *[other] { $count } narių
+    }
 history-project-edited = Projektas redaguotas: { $name }
 history-name-changed = Pavadinimas: „{ $from }“ → „{ $to }“
 history-description-added = Aprašymas pridėtas: „{ $value }“
@@ -401,11 +483,25 @@ expense-name-placeholder = Restoranas, maisto prekės…
 expense-actions = Išlaidos veiksmai
 expense-your-share = Tavo dalis
 expense-your-share-value = Tavo dalis: { $amount } { $currency }
+expense-share-percent = { $percent } %
+expense-added-by = Pridėjo { $name }, { $date }
 expense-inconsistent-detail = Sumos nesutampa: sumokėta { $paid }, skolinga { $owed }, o išlaida yra { $total }. Redaguok išlaidą, kad ištaisytum.
 missing-access-key = Trūksta prieigos rakto. Atidaryk šį projektą per jo bendrinimo nuorodą.
 filter-all = Visos
 filter-my-payments = Mano mokėjimai
 filter-my-debts = Ką esu skolingas
+expense-filter-group = Filtras
+expenses-search = Ieškoti išlaidų
+expenses-no-match = Nėra atitinkančių išlaidų.
+expenses-search-open = Ieškoti
+expenses-search-clear = Išvalyti paiešką
+expenses-search-summary =
+    { $count ->
+        [one] { $count } rezultatas
+        [few] { $count } rezultatai
+        [many] { $count } rezultato
+       *[other] { $count } rezultatų
+    } · { $total } · visi mėnesiai
 participants-shares-for = { $name } dalys
 participants-amount-for = { $name } suma
 reimbursement-add = Pridėti atsiskaitymą
@@ -445,10 +541,10 @@ charts-expense-count =
 charts-nothing-to-show = Nėra ką rodyti
 charts-my-share-skipped =
     { $count ->
-        [one] { $count } projektas neįskaičiuotas — nepasirinktas dalyvis arba jo duomenys neįkelti.
-        [few] { $count } projektai neįskaičiuoti — nepasirinktas dalyvis arba jų duomenys neįkelti.
-        [many] { $count } projekto neįskaičiuota — nepasirinktas dalyvis arba jų duomenys neįkelti.
-       *[other] { $count } projektų neįskaičiuota — nepasirinktas dalyvis arba jų duomenys neįkelti.
+        [one] { $count } projektas neįskaičiuotas - nepasirinktas dalyvis arba jo duomenys neįkelti.
+        [few] { $count } projektai neįskaičiuoti - nepasirinktas dalyvis arba jų duomenys neįkelti.
+        [many] { $count } projekto neįskaičiuota - nepasirinktas dalyvis arba jų duomenys neįkelti.
+       *[other] { $count } projektų neįskaičiuota - nepasirinktas dalyvis arba jų duomenys neįkelti.
     }
 
 ### Categories
@@ -522,6 +618,15 @@ payers-title-contributors = Prisidėję
 debtors-title-debtors = Skolingi
 debtors-title-recipients = Gavėjai
 debtors-title-beneficiaries = Naudos gavėjai
+debtors-title-for = Kam
+debtors-title-recipient = Gavėjas
+expense-people =
+    { $count ->
+        [one] { $count } asmuo
+        [few] { $count } asmenys
+        [many] { $count } asmens
+       *[other] { $count } asmenų
+    }
 
 ### Welcome
 
@@ -656,6 +761,8 @@ invitation-decline = Atmesti
 participants-you-label = Tavo vardas šiame projekte
 participants-you-badge = Tu
 participants-others = Kiti dalyviai
+participants-removed = Pašalinti
+participant-restore = Atkurti
 participants-empty = Pridėk dalyvius žemiau.
 participants-duplicate = „{ $name }“ jau yra sąraše.
 participants-input-label = Pridėti draugą arba įrašyti vardą
@@ -800,3 +907,16 @@ error-recurring-not-found = Šios pasikartojančios išlaidos nebėra.
 error-recurring-stale = Kažkas tuo metu pakeitė šią pasikartojančią išlaidą. Ji įkelta iš naujo: patikrink ir išsaugok dar kartą.
 error-too-many-recurring = Šiame projekte jau yra 50 pasikartojančių išlaidų. Sustabdyk nereikalingą, kad pridėtum naują.
 error-user-in-recurring = Šis dalyvis įtrauktas į pasikartojančią išlaidą. Pirmiau išimk jį iš jos arba ją sustabdyk.
+
+home-owed-to-you = Jums skolingi
+home-you-owe = Jūs skolingi
+home-details-show = Rodyti išsamiau
+home-details-hide = Slėpti išsamiau
+home-all-settled = Viskas atsiskaityta
+home-pay = Mokėti
+home-remind = Priminti
+home-remind-message = Mažas priminimas: projekte { $project } dar liko neatsiskaitytų grąžinimų.
+home-row-owed = jums skolingi
+home-row-owe = jūs skolingi
+home-row-settled = Atsiskaityta
+home-totals-partial = Be projektų be valiutos kurso

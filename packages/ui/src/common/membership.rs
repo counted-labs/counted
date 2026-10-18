@@ -1,8 +1,8 @@
 //! Who is still in a project, and what leaving one means.
 //!
 //! A project is deleted when its last member leaves, so every holder has to be countable
-//! server-side. Accounts already are, through `account_projects`. A holder without an account —
-//! a share link opened in a browser, a deep link, a project created while logged out — registers
+//! server-side. Accounts already are, through `account_projects`. A holder without an account -
+//! a share link opened in a browser, a deep link, a project created while logged out - registers
 //! a random `member_id` instead, one per project so the server cannot group a person's projects.
 //!
 //! See docs/project-membership.md.
@@ -27,7 +27,7 @@ use crate::decrypted::{decrypt_project, DecryptedUser};
 
 /// Whether `candidate` may become this device's key for a project. A key already held is replaced
 /// only by one proven to decrypt the project, so a mistyped or hostile link cannot overwrite the
-/// only working copy — see `docs/e2ee.md`, "Which key gets escrowed".
+/// only working copy - see `docs/e2ee.md`, "Which key gets escrowed".
 pub fn may_adopt(held: Option<[u8; 32]>, candidate: &[u8; 32], project: Option<&ProjectDto>) -> bool {
     match held {
         None => true,
@@ -62,7 +62,7 @@ pub async fn adopt_project_key(
 /// is what lets this module stay free of an i18n context.
 pub const LEAVE_CONFIRM_TITLE: &str = "leave-project-title";
 
-/// One wording for both outcomes — the client cannot know whether it is the last member without
+/// One wording for both outcomes - the client cannot know whether it is the last member without
 /// asking the server, and that round trip would buy nothing.
 pub const LEAVE_CONFIRM_MESSAGE: &str = "leave-project-message";
 
@@ -73,7 +73,7 @@ pub const LEAVE_CONFIRM_MESSAGE: &str = "leave-project-message";
 /// `ExpensesPage` reopen the picker.
 ///
 /// `ProofRejected`: the server has a verifier for this project and this device's key does not
-/// produce it. The local `user_id` is kept — the identity may be right and the key stale, and a
+/// produce it. The local `user_id` is kept - the identity may be right and the key stale, and a
 /// fresh pick would be refused for the same reason.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ClaimOutcome {
@@ -84,7 +84,7 @@ pub enum ClaimOutcome {
 }
 
 /// Records this device as a member of the project. Idempotent, and called from `ExpensesPage` on
-/// every open — which is every path that could have just acquired the key, so the escrowed key,
+/// every open - which is every path that could have just acquired the key, so the escrowed key,
 /// the claim label and the claim token ride on this write rather than getting calls of their own.
 pub async fn ensure_membership(
     ls_ctx: Signal<LocalStorageState>,
@@ -171,7 +171,7 @@ pub async fn leave_project_and_forget(
 
     match leave_project(Json(LeaveProject { project_id, member_id })).await {
         Ok(()) => {}
-        // Already gone — someone else was the last one out. Nothing to leave, so treat it as a
+        // Already gone - someone else was the last one out. Nothing to leave, so treat it as a
         // success and let the local entry go, otherwise a dangling project would be unremovable.
         Err(e) if is_project_gone_error(&e) => {}
         Err(e) => return Err(error_message(&e)),

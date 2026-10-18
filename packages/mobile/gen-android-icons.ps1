@@ -4,7 +4,7 @@
 # System.Drawing is Windows-only, so this does NOT run in the Linux devcontainer. The output is
 # committed, so it only needs to run when the source artwork changes.
 #
-# The master is assets/counted.svg — the only artwork in the repo, rasterised here at 1024x1024 and
+# The master is assets/counted.svg - the only artwork in the repo, rasterised here at 1024x1024 and
 # scaled down for every output. Nothing is upscaled and nothing is recentred: the mark is drawn
 # centred on its own 512 grid, so every output inherits that.
 #
@@ -34,7 +34,7 @@ $WHITE = [System.Drawing.Color]::White
 $MASTER_SIZE = 1024
 
 # The adaptive foreground is drawn at 78/108 of the canvas. The mark is 416/512 tall on its own
-# grid, so that lands its height at 63/108 — inside the 72dp safe zone the launcher's mask is
+# grid, so that lands its height at 63/108 - inside the 72dp safe zone the launcher's mask is
 # guaranteed not to crop, whatever shape the OEM picked.
 $SAFE_ZONE = 78 / 108
 
@@ -108,7 +108,7 @@ $browser = @(
     "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
     "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe"
 ) | Where-Object { Test-Path $_ } | Select-Object -First 1
-if (-not $browser) { throw "no Edge or Chrome found — one is needed to rasterise assets/counted.svg" }
+if (-not $browser) { throw "no Edge or Chrome found - one is needed to rasterise assets/counted.svg" }
 
 $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("counted-icons-" + [guid]::NewGuid())
 New-Item -ItemType Directory $tmp | Out-Null
@@ -121,7 +121,7 @@ try {
     & $browser --headless=new --disable-gpu --no-sandbox --hide-scrollbars `
         --user-data-dir="$tmp\profile" --default-background-color=00000000 `
         --screenshot="$png" --window-size="$MASTER_SIZE,$MASTER_SIZE" "file:///$($page -replace '\\','/')" | Out-Null
-    if (-not (Test-Path $png)) { throw "the browser produced no screenshot — see $tmp" }
+    if (-not (Test-Path $png)) { throw "the browser produced no screenshot - see $tmp" }
 
     $master = New-Object System.Drawing.Bitmap($png)
     if ($master.Width -ne $MASTER_SIZE) { throw "expected a ${MASTER_SIZE}x${MASTER_SIZE} raster, got $($master.Width)x$($master.Height)" }
@@ -168,7 +168,7 @@ try {
     }
 
     # --- 4. In-app logo: SplashScreen and the landing page render it at 32 CSS px, so 96 is exactly
-    #        3x — the highest DPR that exists in practice. Larger is pure bytes for no visible gain.
+    #        3x - the highest DPR that exists in practice. Larger is pure bytes for no visible gain.
     #        On transparency, not white: this file is also the web favicon, and a white square is
     #        visible around the mark in the Firefox tab strip.
     Write-Host "in-app logo:"
@@ -242,7 +242,7 @@ p{margin:16px 0 0;font-size:22px;line-height:1.35;color:oklch(25% 0.02 165 / 0.6
         & $browser --headless=new --disable-gpu --no-sandbox --hide-scrollbars `
             --user-data-dir="$tmp\profile" `
             --screenshot="$fpng" --window-size="1024,500" "file:///$($fpage -replace '\\','/')" | Out-Null
-        if (-not (Test-Path $fpng)) { throw "the browser produced no feature graphic — see $tmp" }
+        if (-not (Test-Path $fpng)) { throw "the browser produced no feature graphic - see $tmp" }
 
         $shot = New-Object System.Drawing.Bitmap($fpng)
         $feature = New-Object System.Drawing.Bitmap(1024, 500, [System.Drawing.Imaging.PixelFormat]::Format24bppRgb)

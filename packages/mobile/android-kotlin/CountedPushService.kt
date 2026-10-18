@@ -4,7 +4,7 @@
 //
 // The server sends RFC 8030 Web Push (packages/api/src/server/push/webpush.rs): the connector
 // decrypts it with keys that never leave the device, and this class builds every notification from
-// the JSON inside — our channel, our icon, foreground included.
+// the JSON inside - our channel, our icon, foreground included.
 package dev.dioxus.main
 
 import android.Manifest

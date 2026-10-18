@@ -15,7 +15,7 @@ pub async fn select_focused_input() {
 const FIELD_FOCUSED_JS: &str =
     "return ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName);";
 
-/// Whether a form field holds the focus — a button that opened a modal does not count.
+/// Whether a form field holds the focus - a button that opened a modal does not count.
 pub async fn a_field_has_focus() -> bool {
     #[cfg(target_arch = "wasm32")]
     return crate::common::web_dom::a_field_has_focus();

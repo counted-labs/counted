@@ -4,7 +4,7 @@
 //! `X-App-Version` (their `CARGO_PKG_VERSION`, the store-visible version) and the floor is
 //! `MIN_APP_VERSION`, read from the environment on every request so raising it is a `.env` edit
 //! and a restart, not a rebuild. The pre-header 0.2.0 sends neither the header nor a
-//! `User-Agent` — reqwest sets none unless asked, every browser does — which is how it is told
+//! `User-Agent` - reqwest sets none unless asked, every browser does - which is how it is told
 //! apart from a browser and refused too.
 //!
 //! The 426 body is `{"message","code"}`: dioxus-fullstack turns that into
@@ -41,7 +41,7 @@ pub fn outdated_payload() -> String {
 }
 
 /// The decision for one request, from its path and headers. The axum layer that calls this lives
-/// in `packages/web` — the only crate that links `dioxus_server`, whose axum is the router's.
+/// in `packages/web` - the only crate that links `dioxus_server`, whose axum is the router's.
 pub fn refuses(path: &str, app_version: Option<&str>, user_agent: Option<&str>) -> bool {
     path.starts_with("/api/")
         && outdated(app_version, user_agent, std::env::var(MIN_ENV).ok().as_deref())

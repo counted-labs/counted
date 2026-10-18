@@ -4,6 +4,7 @@ pub mod auth;
 pub mod categories;
 pub mod charts;
 pub mod common;
+pub mod conversion;
 pub mod crypto;
 pub mod decrypted;
 pub mod demo;

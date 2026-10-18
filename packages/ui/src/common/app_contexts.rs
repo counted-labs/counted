@@ -48,7 +48,7 @@ pub struct AcceptedInvite {
 /// Whether `me()` has come back yet, whatever it said.
 ///
 /// `Signal<Option<Account>>` is `None` for an anonymous user *and* while the call is in flight, so
-/// a page that renders one thing for each needs this to tell them apart — without it the settings
+/// a page that renders one thing for each needs this to tell them apart - without it the settings
 /// page flashes its sign-in card at someone who is signed in. A newtype rather than a
 /// `Signal<bool>`: contexts are keyed by type and that one is already taken by `is_online`.
 #[derive(Clone, Copy, PartialEq)]
@@ -68,13 +68,13 @@ pub struct ProjectKey(pub Signal<Option<[u8; 32]>>);
 
 /// Reconciles this device's language with the account's, once `me()` has answered.
 ///
-/// **The account wins on load; any pick pushes up.** No timestamps, no merge — the account's value
+/// **The account wins on load; any pick pushes up.** No timestamps, no merge - the account's value
 /// is the one the user last chose *as a user*, and adopting it is what makes a new device speak the
 /// right language after login. When the account has none yet, this device's choice seeds it, which
 /// is how an existing account gets its first blob.
 ///
 /// Compares against the stored choice rather than `current_lang()`: the latter subscribes to the
-/// locale signal, and this runs inside the effect that calls `me()` — which would then re-fetch the
+/// locale signal, and this runs inside the effect that calls `me()` - which would then re-fetch the
 /// account on every language change.
 fn adopt_account_language(account: &Account, key: [u8; 32]) {
     let stored = read_from_ls().language;
@@ -124,9 +124,9 @@ pub fn use_app_contexts() {
     let _ls: Signal<LocalStorageState> = use_context_provider(|| Signal::new(ls_state));
     // No Signal<bool> for is_mobile: it would collide with is_online (contexts are keyed by type).
     // Always true on web; updated by DOM events on mobile native.
-    // Mutation queue gate won't activate on web — offline writes fail with network errors.
+    // Mutation queue gate won't activate on web - offline writes fail with network errors.
     let is_online: Signal<bool> = use_context_provider(|| Signal::new(true));
-    // Offline mutation queue — persisted to localStorage/file; drained on reconnect (mobile only).
+    // Offline mutation queue - persisted to localStorage/file; drained on reconnect (mobile only).
     let _pending_ops: Signal<VecDeque<QueuedOp>> =
         use_context_provider(|| Signal::new(read_queue()));
     // Bumped after successful queue replay so child page resources re-execute.
@@ -136,7 +136,7 @@ pub fn use_app_contexts() {
     // this effect from re-running on its own write.
     use_effect(move || {
         // An explicit choice wins over anything inferred. On web the server already applied it from
-        // the cookie, so this only fires when the cookie was cleared — one repaint, same shape as
+        // the cookie, so this only fires when the cookie was cleared - one repaint, same shape as
         // `onboarding_seen`.
         if let Some(code) = stored_lang.as_deref() {
             if code != initial_lang {
@@ -146,7 +146,7 @@ pub fn use_app_contexts() {
         }
         // Nothing chosen. On web the server inferred from `Accept-Language` and the first render is
         // already right. Mobile and desktop had no request to infer from, so ask the WebView for the
-        // device language — and do not persist it, so it keeps following the device until the user
+        // device language - and do not persist it, so it keeps following the device until the user
         // picks something. `device_lang` returns None for a language we do not ship, which leaves
         // the English fallback in place.
         #[cfg(not(target_arch = "wasm32"))]
@@ -155,7 +155,7 @@ pub fn use_app_contexts() {
             spawn(async move {
                 if let Some(code) = crate::i18n::device_lang().await {
                     // Re-read rather than trusting the check above: `device_lang` awaits the
-                    // WebView, and `me()` can land first and adopt the account's language — which
+                    // WebView, and `me()` can land first and adopt the account's language - which
                     // `set_language` records here. Without this, signing in on a phone whose
                     // system language differs would lose the account's choice to a race.
                     if read_from_ls().language.is_none() && code != already {

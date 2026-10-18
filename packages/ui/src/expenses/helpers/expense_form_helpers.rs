@@ -11,7 +11,7 @@ pub struct UserEntry {
 }
 
 /// `preselected` is checked with `init_amount`, everyone else zero. With no preselection
-/// `check_rest` decides the rest — that is what makes debtors default to everyone, payers nobody.
+/// `check_rest` decides the rest - that is what makes debtors default to everyone, payers nobody.
 pub fn init_entries(
     users: &[User],
     display_names: &[String],
@@ -39,7 +39,7 @@ pub fn init_entries(
 /// `init_entries`, then the same even split the first keystroke in the total field would apply.
 ///
 /// `init_entries` gives the whole amount to the *preselected* participant and 0.00 to everyone
-/// else. That is right for payers — one person paid — and wrong for debtors, where nothing is
+/// else. That is right for payers - one person paid - and wrong for debtors, where nothing is
 /// preselected so every one of them is checked carrying 0.00. Typing the total calls `redistribute`
 /// (see `expense_form.rs`), but an amount prefilled from a scanned receipt fires no `oninput`, so
 /// the modal would open showing "0.00 / 13.90, Reste 13.90" and split nothing.
@@ -87,7 +87,7 @@ pub fn init_entries_from_payments(
 
 /// Accepts the decimal comma (FR mobile keyboards) and a chain of `/`, `*`, `+` and `-` without
 /// parentheses, `*` and `/` binding tighter.
-/// `None` means empty or mid-typing — callers must then touch nothing, or Dioxus rewrites `value`
+/// `None` means empty or mid-typing - callers must then touch nothing, or Dioxus rewrites `value`
 /// and clobbers the keystroke in progress.
 pub fn parse_amount(raw: &str) -> Option<f64> {
     let s = raw.trim().replace(',', ".");
@@ -144,12 +144,12 @@ pub fn with_operator(shown: &str, op: char) -> Option<String> {
 /// What an amount field displays: the keystrokes as typed while they still mean `value`, the
 /// number otherwise. Dioxus rewrites `value` on every render and an `f64` has no trailing "12."
 /// or "12,0", so binding the number directly erases the separator under a mobile keyboard. A
-/// draft that does not parse (empty, mid-typing) is kept too — the number it fails to be is what
+/// draft that does not parse (empty, mid-typing) is kept too - the number it fails to be is what
 /// the field last held, and clobbering it would refuse a clear-and-retype.
-pub fn amount_field_text(draft: Option<&str>, value: f64) -> String {
+pub fn amount_field_text(draft: Option<&str>, value: f64, comma: bool) -> String {
     match draft {
         Some(d) if parse_amount(d).is_none_or(|v| v == value) => d.to_string(),
-        _ => value.to_string(),
+        _ => crate::common::plain_number(value, comma),
     }
 }
 
@@ -161,7 +161,7 @@ pub fn keeps_draft_on_blur(draft: &str) -> bool {
 
 /// The rate the form is actually converting at: what the user typed, else the InforEuro one.
 ///
-/// `None` means "cannot convert right now" — a blank field with no rate table, or a rate that does
+/// `None` means "cannot convert right now" - a blank field with no rate table, or a rate that does
 /// not parse or is out of range. Callers leave the split untouched rather than showing a wrong one;
 /// `resolve_conversion` is what turns the same situation into a message on submit.
 pub fn effective_rate(typed: &str, auto_rate: Option<f64>) -> Option<f64> {
@@ -264,7 +264,7 @@ pub fn participants_summary(entries: &[UserEntry]) -> ParticipantsSummary {
     }
 }
 
-/// Data, not a sentence — see `FormError`. Render it with [`ParticipantsSummary::label`].
+/// Data, not a sentence - see `FormError`. Render it with [`ParticipantsSummary::label`].
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParticipantsSummary {
     None,
@@ -287,7 +287,7 @@ impl ParticipantsSummary {
     }
 }
 
-/// Translation keys, not labels — see `expense_type_label`.
+/// Translation keys, not labels - see `expense_type_label`.
 pub fn payers_label(t: &ExpenseType) -> &'static str {
     match t {
         ExpenseType::Gain => "participants-who-received",
@@ -431,7 +431,7 @@ mod tests {
         let mut e = make_entries(&[true; 7], &[0.0; 7], &[1.0; 7]);
         distribute(99999.99, &mut e);
         let amounts: Vec<f64> = e.iter().map(|x| x.amount).collect();
-        // 9_999_999 cents / 7 = 1_428_571 remainder 2 — the first two rows take the extra cent.
+        // 9_999_999 cents / 7 = 1_428_571 remainder 2 - the first two rows take the extra cent.
         assert_eq!(
             amounts,
             vec![14285.72, 14285.72, 14285.71, 14285.71, 14285.71, 14285.71, 14285.71]
@@ -466,7 +466,7 @@ mod tests {
     fn distribute_by_shares_zero_shares_is_noop() {
         let mut e = make_entries(&[true, true], &[5.0, 5.0], &[0.0, 0.0]);
         distribute_by_shares(10.0, &mut e);
-        // no change — total_shares == 0
+        // no change - total_shares == 0
         assert!((e[0].amount - 5.0).abs() < 0.001);
     }
 
@@ -481,7 +481,7 @@ mod tests {
 
     #[test]
     fn distribute_by_shares_fractional_rounding_invariant() {
-        // [1.5, 1.0, 0.5] on 10.0 — the total must survive
+        // [1.5, 1.0, 0.5] on 10.0 - the total must survive
         let mut e = make_entries(&[true, true, true], &[0.0; 3], &[1.5, 1.0, 0.5]);
         distribute_by_shares(10.0, &mut e);
         assert!((total_amounts(&e) - 10.0).abs() < 0.001);
@@ -498,7 +498,7 @@ mod tests {
 
     #[test]
     fn parse_amount_rejects_empty_and_garbage() {
-        // None means "leave everything untouched" — a mid-typing value must not
+        // None means "leave everything untouched" - a mid-typing value must not
         // rewrite the field and clobber the keystroke.
         assert_eq!(parse_amount(""), None);
         assert_eq!(parse_amount("   "), None);
@@ -508,7 +508,7 @@ mod tests {
 
     #[test]
     fn parse_amount_accepts_decimal_comma() {
-        // FR mobile keyboards emit a comma — this is what type="number" silently dropped.
+        // FR mobile keyboards emit a comma - this is what type="number" silently dropped.
         assert_eq!(parse_amount("10,5"), Some(10.5));
         assert_eq!(parse_amount("12,50"), Some(12.50));
     }
@@ -594,35 +594,36 @@ mod tests {
 
     #[test]
     fn amount_field_text_keeps_an_expression_that_evaluates_to_the_value() {
-        assert_eq!(amount_field_text(Some("250/3"), 83.33), "250/3");
-        assert_eq!(amount_field_text(Some("250/"), 83.33), "250/");
-        assert_eq!(amount_field_text(None, 83.33), "83.33");
+        assert_eq!(amount_field_text(Some("250/3"), 83.33, false), "250/3");
+        assert_eq!(amount_field_text(Some("250/"), 83.33, false), "250/");
+        assert_eq!(amount_field_text(None, 83.33, false), "83.33");
     }
 
     #[test]
     fn amount_field_text_keeps_a_draft_that_still_means_the_value() {
-        assert_eq!(amount_field_text(Some("12."), 12.0), "12.");
-        assert_eq!(amount_field_text(Some("12,"), 12.0), "12,");
-        assert_eq!(amount_field_text(Some("12,0"), 12.0), "12,0");
-        assert_eq!(amount_field_text(Some("12,50"), 12.5), "12,50");
+        assert_eq!(amount_field_text(Some("12."), 12.0, false), "12.");
+        assert_eq!(amount_field_text(Some("12,"), 12.0, false), "12,");
+        assert_eq!(amount_field_text(Some("12,0"), 12.0, false), "12,0");
+        assert_eq!(amount_field_text(Some("12,50"), 12.5, false), "12,50");
     }
 
     #[test]
     fn amount_field_text_keeps_a_draft_that_does_not_parse() {
-        assert_eq!(amount_field_text(Some(""), 12.0), "");
-        assert_eq!(amount_field_text(Some("-"), 12.0), "-");
+        assert_eq!(amount_field_text(Some(""), 12.0, false), "");
+        assert_eq!(amount_field_text(Some("-"), 12.0, false), "-");
     }
 
     #[test]
     fn amount_field_text_shows_a_value_changed_from_outside() {
-        assert_eq!(amount_field_text(None, 12.5), "12.5");
-        assert_eq!(amount_field_text(Some("7."), 15.0), "15");
+        assert_eq!(amount_field_text(None, 12.5, false), "12.5");
+        assert_eq!(amount_field_text(Some("7."), 15.0, false), "15");
+        assert_eq!(amount_field_text(None, 12.5, true), "12,5");
     }
 
     #[test]
     fn amount_field_text_shows_an_untouched_zero() {
-        assert_eq!(amount_field_text(None, 0.0), "0");
-        assert_eq!(amount_field_text(Some(""), 0.0), "");
+        assert_eq!(amount_field_text(None, 0.0, false), "0");
+        assert_eq!(amount_field_text(Some(""), 0.0, false), "");
     }
 
     #[test]
@@ -694,7 +695,7 @@ mod tests {
             })
             .collect();
         assert_eq!(states[0], (0.0, false));
-        assert_eq!(states[1], (0.0, false), "\"0.\" parses to 0.0 — same as \"0\"");
+        assert_eq!(states[1], (0.0, false), "\"0.\" parses to 0.0 - same as \"0\"");
         assert_eq!(states[2], (0.5, true));
     }
 
@@ -742,7 +743,7 @@ mod tests {
             participants_summary(&named(&["Alice", "Bob"], &[false, false])),
             ParticipantsSummary::None
         );
-        // A single participant, checked, is "them" — not "Everyone (1)".
+        // A single participant, checked, is "them" - not "Everyone (1)".
         assert_eq!(
             participants_summary(&named(&["Alice"], &[true])),
             ParticipantsSummary::One("Alice".into())
@@ -816,7 +817,7 @@ mod tests {
     }
 
     /// The scanned-receipt bug: two participants, no preselected debtor, amount prefilled. Both are
-    /// checked, and `init_entries` alone leaves both owing 0.00 — the form opened on
+    /// checked, and `init_entries` alone leaves both owing 0.00 - the form opened on
     /// "0.00 / 13.90, Reste 13.90" and split nothing, because no `oninput` ever fired.
     #[test]
     fn a_prefilled_amount_is_split_across_debtors() {
@@ -837,7 +838,7 @@ mod tests {
         assert_eq!(entries.iter().map(|e| e.amount).collect::<Vec<_>>(), vec![13.90, 0.0]);
     }
 
-    /// An odd total must still reconcile to the cent — `distribute` hands the remainder out rather
+    /// An odd total must still reconcile to the cent - `distribute` hands the remainder out rather
     /// than leaving "Reste 0.01" on a scanned receipt.
     #[test]
     fn a_prefilled_odd_amount_loses_no_cent() {

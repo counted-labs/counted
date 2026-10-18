@@ -135,7 +135,7 @@ payment-method-invalid-characters = Entferne Zeilenumbrüche oder unsichtbare Ze
 payment-method-limit = Du kannst bis zu { $max } Zahlungsmethoden speichern.
 payment-methods-saved = Zahlungsdaten gespeichert.
 payment-methods-offline = Du musst online sein, um deine Zahlungsdaten zu speichern.
-payment-methods-stale = Deine Zahlungsdaten wurden auf einem anderen Gerät geändert. Sie wurden neu geladen — bitte versuche es erneut.
+payment-methods-stale = Deine Zahlungsdaten wurden auf einem anderen Gerät geändert. Sie wurden neu geladen - bitte versuche es erneut.
 payment-methods-key-missing = Melde dich erneut an, um deine Zahlungsdaten zu verwalten.
 
 verify-email-checking = E-Mail-Adresse wird bestätigt…
@@ -208,7 +208,6 @@ projects-filter-active = Aktiv
 projects-filter-all = Alle
 projects-count-label = Projekte
 projects-empty = Keine Projekte
-projects-empty-hint = Erstelle ein Projekt über den Button unten
 projects-offline-banner = Offline-Daten - verbinde dich neu, um zu aktualisieren.
 demo-banner = Demo-Projekt - nur lesen.
 demo-start-own = Eigenes Projekt starten
@@ -222,6 +221,67 @@ projects-no-local-data = Keine lokalen Daten
 projects-no-local-data-hint = Melde dich an, um deine Projekte zum ersten Mal zu laden.
 projects-add = Projekt hinzufügen
 projects-create = Projekt erstellen
+projects-personal-expense = Eigene Ausgabe
+personal-expense-banner = Zu Meine Ausgaben hinzugefügt
+personal-create-title = Dein eigenes Projekt anlegen
+personal-create-hint = Behalte im Blick, was du allein ausgibst
+group-create-title = Gemeinsames Projekt erstellen
+group-create-hint = Teile Ausgaben mit Freunden und Familie
+personal-create-action = Anlegen
+personal-create-signup = Konto erstellen
+personal-sheet-title = Dein eigenes Projekt
+personal-sheet-intro = Für das, was du allein ausgibst. Es erscheint mit deinen Gruppen in der Statistik.
+personal-sheet-point-alone = Ein Mitglied: du, mit deinem Kontonamen. Kein Teilen-Link.
+personal-sheet-point-encrypted = Auf deinen Geräten verschlüsselt, wie deine anderen Projekte.
+personal-sheet-point-stats = Deine Anteile in Gruppen kommen in der Statistik zu diesen Ausgaben hinzu.
+personal-default-name = Meine Ausgaben
+my-spending-prev-month = Vorheriger Monat
+my-spending-next-month = Nächster Monat
+my-spending-spent = Du hast ausgegeben
+my-spending-groups = Gruppen
+my-spending-income = Einnahmen
+my-spending-balance = Monatssaldo
+my-spending-unconverted = Anteile in einer anderen Währung bleiben außen vor, bis ein Kurs bekannt ist.
+my-spending-empty = Nichts in diesem Monat
+my-spending-empty-hint = Füge mit + eine Ausgabe hinzu. Deine Anteile in Gruppen erscheinen hier automatisch.
+my-spending-share-of = von { $amount }
+my-spending-uncounted = nicht gezählt
+payer-you = dir
+expense-received-by = erhalten von
+counted-switch = In Meine Ausgaben zählen
+counted-switch-on = An: dein Anteil zählt zu Meine Ausgaben
+counted-switch-off = Aus: dein Anteil erscheint nicht in Meine Ausgaben
+counted-groups = Gezählte Gruppen
+counted-groups-intro = Dein Anteil in diesen Gruppen zählt zu Meine Ausgaben und zu den Budgets.
+counted-groups-converted = { $from }, umgerechnet in { $to }
+counted-groups-encrypted = Diese Wahl ist mit deinem Konto verschlüsselt und folgt deinen Geräten.
+counted-groups-empty = Noch keine Gruppe auf diesem Gerät.
+counted-groups-done = OK
+counted-save-failed = Diese Wahl konnte nicht gespeichert werden. Versuche es erneut.
+tab-budget = Budget
+budget-title = Budgets
+budget-manage = Verwalten
+budget-left = Noch { $amount }
+budget-over = Überschritten um { $amount }
+budget-empty = Kein Budget
+budget-empty-hint = Lege eine Obergrenze pro Kategorie fest. Deine Anteile in Gruppen zählen mit.
+budget-define = Budget festlegen
+budget-sheet-title = Monatsbudgets
+budget-sheet-intro = Auf deinen Anteil: eigene und Gruppen. Leer lassen, um eine Kategorie nicht zu verfolgen.
+budget-average = Ø letzte 3 Monate: { $amount }
+budget-for = Budget { $category }
+budget-alert = Bei 80 % warnen
+budget-alert-hint = Auf diesem Gerät berechnet
+budget-invalid = Kein gültiger Betrag für { $category }.
+budget-offline = Budgets lassen sich nur online speichern. Verbinde dich und versuche es erneut.
+budget-alert-near = { $category }: { $percent } % des Monatsbudgets
+budget-alert-over = { $category }: Monatsbudget überschritten
+personal-card-budget = { $month } · Budget { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } Ergebnis
+       *[other] { $count } Ergebnisse
+    } · { $total } · eigene und Gruppen, alle Monate
 projects-join = Projekt beitreten
 projects-import-tricount = Aus Tricount importieren
 project-actions = Projektaktionen
@@ -284,6 +344,7 @@ expenses-empty-hint = Füge über den Button unten die erste Ausgabe hinzu
 expense-type-expense = Ausgabe
 expense-type-transfer = Überweisung
 expense-type-gain = Einnahme
+expense-type-group = Typ
 expense-paid-by = bezahlt von
 expense-sent-by = gesendet von
 expense-contributed-by = beigetragen von
@@ -333,6 +394,23 @@ export-failed = Export fehlgeschlagen: { $reason }
 history-expense-added = Ausgabe hinzugefügt: { $name }
 history-expense-edited = Ausgabe bearbeitet: { $name }
 history-expense-deleted = Ausgabe gelöscht: { $name }
+move-expense = In ein Projekt verschieben
+move-expense-title = Verschieben nach…
+move-current = Aktuell
+move-converted = { $currency }, umgerechnet zum Monatskurs
+move-note-personal = Wer bezahlt hat und für wen, wählst du im nächsten Schritt. Die Ausgabe verlässt Meine Ausgaben.
+move-note-group = Die Ausgabe verlässt { $project } für alle Mitglieder, und der Saldo der Gruppe wird neu berechnet. Wer bezahlt hat und für wen, wählst du im nächsten Schritt.
+move-banner = Von { $from } nach { $to }
+move-submit = Verschieben
+move-done = Ausgabe nach { $project } verschoben
+move-delete-failed = Die Ausgabe wurde zum anderen Projekt hinzugefügt, ist aber noch in { $project }: lösche sie dort.
+history-expense-moved = Ausgabe in ein anderes Projekt verschoben: { $name }
+personal-badge = Privat
+move-members =
+    { $count ->
+        [one] { $count } Mitglied
+       *[other] { $count } Mitglieder
+    }
 history-project-edited = Projekt bearbeitet: { $name }
 history-name-changed = Name: „{ $from }“ → „{ $to }“
 history-description-added = Beschreibung hinzugefügt: „{ $value }“
@@ -346,11 +424,23 @@ expense-name-placeholder = Restaurant, Einkauf…
 expense-actions = Aktionen für die Ausgabe
 expense-your-share = Dein Anteil
 expense-your-share-value = Dein Anteil: { $amount } { $currency }
+expense-share-percent = { $percent } %
+expense-added-by = Hinzugefügt von { $name } am { $date }
 expense-inconsistent-detail = Beträge passen nicht zusammen: { $paid } bezahlt, { $owed } geschuldet, bei einer Ausgabe von { $total }. Bearbeite die Ausgabe, um das zu korrigieren.
 missing-access-key = Zugriffsschlüssel fehlt. Öffne dieses Projekt über seinen Freigabelink.
 filter-all = Alle
 filter-my-payments = Meine Zahlungen
 filter-my-debts = Was ich schulde
+expense-filter-group = Filter
+expenses-search = Ausgaben suchen
+expenses-no-match = Keine passende Ausgabe.
+expenses-search-open = Suchen
+expenses-search-clear = Suche löschen
+expenses-search-summary =
+    { $count ->
+        [one] { $count } Ergebnis
+       *[other] { $count } Ergebnisse
+    } · { $total } · alle Monate
 participants-shares-for = Anteile von { $name }
 participants-amount-for = Betrag für { $name }
 reimbursement-add = Ausgleich hinzufügen
@@ -388,8 +478,8 @@ charts-expense-count =
 charts-nothing-to-show = Nichts anzuzeigen
 charts-my-share-skipped =
     { $count ->
-        [one] 1 Projekt zählt nicht mit — keine Person ausgewählt, oder die Daten konnten nicht geladen werden.
-       *[other] { $count } Projekte zählen nicht mit — keine Person ausgewählt, oder die Daten konnten nicht geladen werden.
+        [one] 1 Projekt zählt nicht mit - keine Person ausgewählt, oder die Daten konnten nicht geladen werden.
+       *[other] { $count } Projekte zählen nicht mit - keine Person ausgewählt, oder die Daten konnten nicht geladen werden.
     }
 
 ### Categories
@@ -410,6 +500,13 @@ payers-title-contributors = Beitragende
 debtors-title-debtors = Schuldet
 debtors-title-recipients = Empfänger
 debtors-title-beneficiaries = Begünstigte
+debtors-title-for = Für
+debtors-title-recipient = Empfänger
+expense-people =
+    { $count ->
+        [one] { $count } Person
+       *[other] { $count } Personen
+    }
 
 ### Welcome
 
@@ -676,6 +773,8 @@ invitation-decline = Ablehnen
 participants-you-label = Dein Name in diesem Projekt
 participants-you-badge = Du
 participants-others = Weitere Teilnehmende
+participants-removed = Entfernt
+participant-restore = Wiederherstellen
 participants-empty = Füge unten Teilnehmer hinzu.
 participants-duplicate = „{ $name }“ ist bereits in der Liste.
 participants-input-label = Freund hinzufügen oder Namen eingeben
@@ -820,3 +919,16 @@ error-recurring-not-found = Diese wiederkehrende Ausgabe existiert nicht mehr.
 error-recurring-stale = Jemand hat diese wiederkehrende Ausgabe inzwischen geändert. Sie wurde neu geladen: prüfen und erneut speichern.
 error-too-many-recurring = Dieses Projekt hat bereits 50 wiederkehrende Ausgaben. Beende eine nicht mehr benötigte, um eine neue hinzuzufügen.
 error-user-in-recurring = Diese Person ist Teil einer wiederkehrenden Ausgabe. Zuerst dort entfernen oder die Ausgabe beenden.
+
+home-owed-to-you = Dir geschuldet
+home-you-owe = Du schuldest
+home-details-show = Details anzeigen
+home-details-hide = Details ausblenden
+home-all-settled = Alles ausgeglichen
+home-pay = Bezahlen
+home-remind = Erinnern
+home-remind-message = Kleine Erinnerung: In { $project } sind noch Rückzahlungen offen.
+home-row-owed = dir geschuldet
+home-row-owe = du schuldest
+home-row-settled = Ausgeglichen
+home-totals-partial = Ohne Projekte ohne Wechselkurs

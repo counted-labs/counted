@@ -18,7 +18,7 @@ pub async fn get_payments_by_project_id(project_id: Uuid) -> Result<Vec<Payment>
 /// The project page's only request. Clients with nothing cached send `NO_CACHED_VERSION`.
 ///
 /// One `REPEATABLE READ` transaction for all four reads, so a write landing mid-request lands
-/// before every read or after every one — that is what keeps the version consistent with the rows
+/// before every read or after every one - that is what keeps the version consistent with the rows
 /// it answers about. Under the default `READ COMMITTED` each statement takes its own snapshot,
 /// and the code was only correct because the version happened to be read first: reordering the
 /// reads would have let a client cache version N+1 against N's rows and be told "unchanged"

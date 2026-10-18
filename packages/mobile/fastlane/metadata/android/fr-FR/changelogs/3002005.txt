@@ -1,0 +1,8 @@
+• Mes dépenses : suivez ce que vous dépensez seul, avec vos parts dans les groupes, mois par mois
+• Budgets par catégorie, alerte à 80 %
+• Rechercher une dépense par nom, note ou catégorie
+• Déplacer une dépense vers un autre projet
+• Page dépense repensée : montant, participants et parts
+• Export enrichi : catégorie, devise d'origine et description
+• Modifications hors ligne plus fiables
+• Qui participe à quelle dépense est désormais chiffré aussi ; un participant retiré peut être rétabli

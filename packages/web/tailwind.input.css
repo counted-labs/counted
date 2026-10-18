@@ -40,4 +40,17 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-tile-green: #DDF1E8;
+  --color-tile-green-content: #0B7A57;
+  --color-tile-blue: #E2EEF9;
+  --color-tile-blue-content: #1F5F8F;
+  --color-tile-amber: #FBEEDD;
+  --color-tile-amber-content: #8A4B0C;
+  --color-tile-violet: #ECE8F7;
+  --color-tile-violet-content: #5B4A9B;
+  --color-tile-red: #FBE5E1;
+  --color-tile-red-content: #A63A28;
+  --color-owed: #0B7A57;
+  --color-owe: #B4530F;
+  --color-well: #FAFCFB;
 }

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A static launcher shortcut (long-press the icon). It opens counted://add, which DeepLinkListener
+     turns into the personal expense form; without a personal project it lands on the projects page,
+     whose card offers to create one. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="personal_expense"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_personal_expense"
+        android:shortcutShortLabel="@string/shortcut_personal_expense"
+        android:shortcutLongLabel="@string/shortcut_personal_expense">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="counted://add"
+            android:targetPackage="fr.counted.app"
+            android:targetClass="dev.dioxus.main.MainActivity" />
+    </shortcut>
+</shortcuts>

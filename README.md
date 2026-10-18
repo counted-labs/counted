@@ -1,4 +1,4 @@
-# Counted — client source
+# Counted - client source
 
 The web and mobile clients of [counted.fr](https://counted.fr), a zero-knowledge expense-splitting
 app: every name, amount and project is encrypted on your device, and the server stores ciphertext
@@ -17,14 +17,14 @@ counted.fr serves is built from exactly these files, reproducibly, and its hashe
 | Crate | Role |
 | --- | --- |
 | `packages/shared` | DTOs, the wire format, the encryption helpers, limits |
-| `packages/ui` | Every screen, component and hook — Dioxus, compiled to WASM and into the phone apps |
+| `packages/ui` | Every screen, component and hook - Dioxus, compiled to WASM and into the phone apps |
 | `packages/api` | The API contract: each endpoint's route, method, request and response types. Bodies delegate to `api::server`, which is **not published** |
 | `packages/web` | The browser entry point |
 | `packages/mobile`, `packages/ocr` | The Android/iOS apps and the on-device receipt OCR |
 | `vendor/tao` | tao 0.34.8 with one upstream fix backported (see its README) |
 | `vendor/jni-macros` | jni-macros 0.22.4 with its generated code made deterministic, for reproducible APKs |
 
-The backend — `packages/api/src/server/`, the database, the deployment — stays private. The
+The backend - `packages/api/src/server/`, the database, the deployment - stays private. The
 client is what handles your keys and your plaintext, and it is the part you can audit and rebuild.
 
 ## Rebuilding what counted.fr serves
@@ -37,11 +37,22 @@ docker buildx build --platform linux/amd64 -f Dockerfile.client --target sums --
 curl -s https://counted.fr/SHA256SUMS.txt | grep -v '  server$' | diff - out/SHA256SUMS.txt && echo identical
 ```
 
-An empty diff means every file the site serves — the `.wasm`, the JS glue, the fonts, the CSS,
-their brotli siblings — is byte for byte what these sources produce. The `server` line is the
+An empty diff means every file the site serves - the `.wasm`, the JS glue, the fonts, the CSS,
+their brotli siblings - is byte for byte what these sources produce. The `server` line is the
 native binary, built from the private module; it is skipped because you cannot rebuild it, and it
 never touches your plaintext. The pins that make this deterministic (compiler digest, `dx`
 version, `Cargo.lock`) are in `Dockerfile.client` and `rust-toolchain.toml`.
+
+You do not have to take the first rebuild on trust either: every tag is rebuilt the same way on a
+GitHub-hosted machine by [`.github/workflows/rebuild.yml`](.github/workflows/rebuild.yml), which
+also checks the signature below. Its runs are public in this repository's
+[Actions tab](https://github.com/counted-labs/counted/actions/workflows/rebuild.yml).
+
+A rebuild says what a release contains, not that counted.fr serves it. Every six hours
+[`.github/workflows/monitor.yml`](.github/workflows/monitor.yml) checks that too: the list
+counted.fr serves must be a signed release's, every file in it must match, and its pages may run
+no code outside it. It cannot see a swap aimed at one visitor. Runs:
+[Actions tab](https://github.com/counted-labs/counted/actions/workflows/monitor.yml).
 
 ## Checking the signature
 

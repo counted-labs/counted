@@ -1,7 +1,7 @@
 //! Supplies the InforEuro rate table to the expense form, from the local cache when it can.
 //!
 //! Lazy on purpose: `enabled` is false until the form is actually on a currency other than the
-//! project's, so a single-currency project never fetches — no request to the server, and therefore
+//! project's, so a single-currency project never fetches - no request to the server, and therefore
 //! none from the server to InforEuro either.
 
 use api::fx::fx_controller::get_fx_rates;

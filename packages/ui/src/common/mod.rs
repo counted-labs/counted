@@ -2,7 +2,7 @@
 ///
 /// It must be shared across modules: `local_storage`, `offline_queue` and `expenses::helpers::export`
 /// all resolve their paths from those same two vars, so a mutex private to each module lets their
-/// tests run concurrently and clobber each other's value — which showed up as a test reading
+/// tests run concurrently and clobber each other's value - which showed up as a test reading
 /// another test's file after the var was cleared and the path fell back to `$HOME`.
 #[cfg(all(test, not(target_arch = "wasm32")))]
 pub(crate) fn env_lock() -> std::sync::MutexGuard<'static, ()> {
@@ -37,11 +37,17 @@ pub fn resource_err<T: 'static>(
         .and_then(|r| r.as_ref().err().map(|e| (error_message(e), is_offline_error(e))))
 }
 
+mod amount;
+pub use amount::{amount, comma_language, number, plain_number, round_amount, signed_amount, whole_amount};
+
 mod avatar;
 pub use avatar::{Avatar, SizeClass};
 
 mod date_format;
-pub use date_format::{format_date, format_date_str, format_month_str, month_abbrev, month_name};
+pub use date_format::{format_date, format_date_str, format_month_str, month_abbrev, month_name, month_title};
+
+mod project_tile;
+pub use project_tile::ProjectTile;
 
 mod avatar_group;
 pub use avatar_group::AvatarGroup;
@@ -92,7 +98,7 @@ pub use account_sync::{apply_pull, copy_missing, left_elsewhere, to_push};
 
 pub mod local_storage;
 pub use local_storage::{
-    clear_user_id, initials, is_mobile, key_of, mark_synced, project_key, read_from_ls, remove_project,
+    clear_user_id, initials, is_mobile, key_of, mark_converted, mark_synced, project_key, read_from_ls, remove_project, remove_quarantined_ls,
     set_anon_member_id, set_cached_projects_list, set_project_cache, update_ls,
     update_ls_if_changed, upsert_project, upsert_project_key, user_color_class, write_to_ls,
     LocalStorageProject, LocalStorageState,
@@ -133,6 +139,9 @@ pub use page_transition::{nav_direction, route_depth, NavDirection, PageTransiti
 mod overscroll;
 pub use overscroll::use_overscroll;
 
+mod sheet_drag;
+pub use sheet_drag::use_sheet_drag;
+
 mod pull_to_refresh;
 pub use pull_to_refresh::{pending, PullToRefresh};
 
@@ -140,7 +149,7 @@ mod enter_next;
 pub use enter_next::use_enter_advances_focus;
 
 mod deep_link;
-pub use deep_link::{DeepLinkListener, NativeDeepLinkReader};
+pub use deep_link::{DeepLinkListener, NativeDeepLinkReader, QUICK_ADD};
 #[cfg(any(target_os = "android", target_os = "ios"))]
 pub use deep_link::{deep_link_listener_active, push_deep_link};
 
@@ -154,7 +163,8 @@ mod error_utils;
 pub use error_utils::{
     error_key, error_message, is_claim_proof_error, is_client_outdated_error,
     is_email_not_verified, is_identity_taken_error, is_offline_error, is_participant_gone_error,
-    is_payment_methods_stale_error, is_project_gone_error, is_recurring_stale_error,
+    is_payment_methods_stale_error, is_project_gone_error, is_project_stale_error,
+    is_recurring_stale_error,
     is_user_gone_error,
 };
 
@@ -167,6 +177,12 @@ pub use membership::{
 mod confirm_modal;
 pub use confirm_modal::ConfirmModal;
 
+mod modal_focus;
+pub use modal_focus::use_modal_focus;
+
+mod route_focus;
+pub use route_focus::use_route_focus;
+
 mod language_picker;
 pub use language_picker::LanguagePicker;
 
@@ -174,7 +190,7 @@ mod currency_picker;
 pub use currency_picker::CurrencyPicker;
 
 pub mod offline_queue;
-pub use offline_queue::{read_queue, write_queue, OpKind, QueuedOp};
+pub use offline_queue::{read_queue, write_queue, OpKind, ProjectEdit, QueuedOp};
 
 mod queue_replay;
 pub use queue_replay::{replay_queue, SyncFailure};
@@ -203,7 +219,7 @@ pub use share_link::{
 };
 
 // Test-only guards over files no compiler checks: the hand-written stylesheets and the iOS
-// plist. Not `mod` outside tests — they contain assertions, not runtime code.
+// plist. Not `mod` outside tests - they contain assertions, not runtime code.
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod stylesheet_guard;
 

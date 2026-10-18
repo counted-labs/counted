@@ -13,7 +13,7 @@ use crate::common::{
     error_message, update_ls, CurrencyPicker, upsert_project, upsert_project_key, InviteRetry, LocalStorageState,
 };
 use crate::crypto::{
-    claim_token, claim_verifier, decrypt_json, encrypt_json, generate_key, key_to_fragment,
+    claim_token, claim_verifier, decrypt_json, encrypt_json, encrypt_padded_json, generate_key, key_to_fragment,
     wrap_key,
 };
 use crate::friends::friends_service::{invite_each, my_private_key, Invitee};
@@ -32,9 +32,10 @@ pub struct AddProjectModalProps {
 
 #[component]
 pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
+    crate::common::use_modal_focus("add-project-modal");
     let mut project_name = use_signal(String::new);
     let mut description = use_signal(String::new);
-    // The project's currency is fixed at creation — every amount in it is stored converted into
+    // The project's currency is fixed at creation - every amount in it is stored converted into
     // this one, and there is no migration that could re-price an existing ledger, so
     // `EditProjectModal` shows it read-only.
     let mut currency = use_signal(|| "EUR".to_string());
@@ -102,18 +103,18 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
 
         spawn(async move {
             // Encrypt all project fields as a single JSON blob
-            let payload = match encrypt_json(&key, &ProjectPayload {
+            let payload = match encrypt_padded_json(&key, &ProjectPayload {
                 name: name_val.clone(),
                 currency: currency_val.clone(),
                 description: if desc_val.is_empty() { None } else { Some(desc_val.clone()) },
-                status: None,
+                status: Some(shared::ProjectStatus::Ongoing),
                 extra: Default::default(),
             }) {
                 Ok(v) => v,
                 Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
             };
 
-            // Step A — create project
+            // Step A - create project
             // Born with its verifier, so no one holding only the UUID can ever seed one.
             let project_id = match resumed {
                 Some((id, _)) => id,
@@ -139,7 +140,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 }
             };
 
-            // Step B — create encrypted users, you first
+            // Step B - create encrypted users, you first
             let names: Vec<String> =
                 std::iter::once(me_val.clone()).chain(others.iter().map(|d| d.name.clone())).collect();
             let mut creatables: Vec<CreatableUser> = Vec::new();
@@ -161,7 +162,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 }
             };
 
-            // Step C — the returned order is not guaranteed, so ids are matched back by name; the
+            // Step C - the returned order is not guaranteed, so ids are matched back by name; the
             // names were refused unless unique.
             let id_of = |name: &str| {
                 created_users
@@ -175,10 +176,10 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
             };
             let user_id = id_of(&me_val);
 
-            // Step D — persist which participant this device is
+            // Step D - persist which participant this device is
             update_ls(ls_ctx, |state| upsert_project(state, project_id, user_id));
 
-            // Step E — if authenticated, also save to DB, escrowing the key we just generated so
+            // Step E - if authenticated, also save to DB, escrowing the key we just generated so
             // the account's other devices can open this project without the share link.
             if let Some(account) = account.as_ref() {
                 // No claim label: these participants were created by this very request, so nobody
@@ -193,7 +194,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 }))
                 .await;
 
-                // Step F — invitations need the project and its participants to exist. The modal
+                // Step F - invitations need the project and its participants to exist. The modal
                 // closes whatever they return: what failed is offered again on the project page.
                 let invitees: Vec<Invitee> = others
                     .iter()
@@ -210,7 +211,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 }
             }
 
-            // Step G — close modal and navigate
+            // Step G - close modal and navigate
             props.on_close.call(());
             nav.push(Route::ExpensesPage { project_id });
         });
@@ -222,13 +223,19 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
     let ready = can_create(&me_name(), &drafts.read());
 
     rsx! {
-        div { class: "modal modal-open modal-bottom sm:modal-middle", role: "dialog",
+        div {
+            id: "add-project-modal",
+            class: "modal modal-open modal-bottom sm:modal-middle",
+            role: "dialog",
+            aria_modal: "true",
+            aria_labelledby: "add-project-modal-title",
+            tabindex: "-1",
             div { class: "modal-box max-w-sm p-0 flex flex-col",
                 div { class: "flex items-center justify-between px-6 pt-5 pb-4 border-b border-base-200 flex-shrink-0",
-                    h3 { class: "font-bold text-lg font-display", {tid!("add-project-title")} }
+                    h2 { id: "add-project-modal-title", class: "font-bold text-lg font-display", {tid!("add-project-title")} }
                     button {
                         r#type: "button",
-                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11",
+                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
                         aria_label: tid!("close"),
                         onclick: move |_| on_close.call(()),
                         CloseIcon { size: ICON_HEADER }
@@ -238,7 +245,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 form { class: "flex flex-col flex-1 overflow-hidden", onsubmit: on_submit,
                 div { class: "flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-5",
                 if let Some(err) = error_msg() {
-                    div { role: "alert", class: "alert alert-error text-sm", "{err}" }
+                    div { id: "add-project-error", role: "alert", class: "alert alert-error text-sm", "{err}" }
                 }
 
                     div { class: "flex flex-col gap-3",
@@ -250,6 +257,8 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                                 r#type: "text",
                                 enterkeyhint: "next",
                                 aria_required: "true",
+                                aria_invalid: if error_msg().is_some() && project_name().trim().is_empty() { "true" },
+                                aria_describedby: if error_msg().is_some() { "add-project-error" },
                                 placeholder: tid!("add-project-name-placeholder"),
                                 value: "{project_name}",
                                 oninput: move |e| project_name.set(e.value()),

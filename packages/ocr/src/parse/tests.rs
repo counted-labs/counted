@@ -79,6 +79,23 @@ fn the_lowest_total_anchor_wins() {
     assert_eq!(find_amount(&lines), Some((31.45, true)));
 }
 
+/// The tail of a restaurant bill: the per-head split is printed below the grand total.
+#[test]
+fn a_per_head_total_is_never_the_total() {
+    for per_head in [
+        "Total par couvert 30,50 €",
+        "TOTAL PAR PERSONNE 30,50",
+        "Total per person 30.50",
+        "Summe pro Person 30,50",
+        "Totale a persona 30,50",
+        "Total por persona 30,50",
+        "Totaal per persoon 30,50",
+    ] {
+        let lines = vec![l("Total 122,00 €", 0.66), l(per_head, 0.70)];
+        assert_eq!(find_amount(&lines), Some((122.0, true)), "{per_head}");
+    }
+}
+
 #[test]
 fn summe_gesamt_totale_importe_totaal_are_anchors() {
     for (text, expected) in [
@@ -114,7 +131,7 @@ fn the_fallback_never_returns_a_year_or_a_clock_time() {
 }
 
 /// The tail of the Hyper U fixture, as the recogniser hands it over: the amount paid sits under
-/// "RESTE A PAYER" (misread "PAVER"), and three other "TOTAL" lines compete with it — the article
+/// "RESTE A PAYER" (misread "PAVER"), and three other "TOTAL" lines compete with it - the article
 /// total before discount, the discount line, and the VAT table's last row printed *below* it.
 fn hyper_u_tail() -> Vec<TextLine> {
     vec![
@@ -361,8 +378,8 @@ fn a_line_below_the_header_zone_is_never_the_title() {
 }
 
 /// The bug this whole change exists for, measured in `tests/framing.rs`: pad the fixture with 30%
-/// background above the receipt and the header is still detected and recognised perfectly — at
-/// confidence 1.00 — but lands at y=0.280 and was discarded for sitting 0.03 outside a window
+/// background above the receipt and the header is still detected and recognised perfectly - at
+/// confidence 1.00 - but lands at y=0.280 and was discarded for sitting 0.03 outside a window
 /// measured against the *image*. Every y here is past the old 0.25 cutoff; the header is still the
 /// top of the receipt's own text, which is the only thing that should matter.
 #[test]
@@ -377,7 +394,7 @@ fn a_header_pushed_down_by_background_is_still_the_title() {
     assert_eq!(find_title(&lines).as_deref(), Some("Carrefour Market"));
 }
 
-/// The widened second pass must not let a priced line outrank the header — the reason
+/// The widened second pass must not let a priced line outrank the header - the reason
 /// `is_title_candidate` rejects anything carrying a decimal amount.
 #[test]
 fn an_item_line_never_outranks_the_header() {
@@ -389,7 +406,7 @@ fn an_item_line_never_outranks_the_header() {
     assert_eq!(find_title(&lines).as_deref(), Some("Spar"));
 }
 
-/// Both zones empty — a logo block, then the name far down the receipt. Reading order is the SROIE
+/// Both zones empty - a logo block, then the name far down the receipt. Reading order is the SROIE
 /// baseline for the company field, and a plausible title beats the blank the user saw before.
 #[test]
 fn a_name_below_both_zones_is_still_preferred_to_nothing() {

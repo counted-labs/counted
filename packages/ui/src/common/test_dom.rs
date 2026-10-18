@@ -13,7 +13,7 @@ use std::sync::Once;
 /// a handler for `event`, in creation order. Callers assert the count so a template change trips
 /// the test instead of silently retargeting the dispatch.
 ///
-/// Creation order is not document order — a dynamic node (an `if`, a child component) is created
+/// Creation order is not document order - a dynamic node (an `if`, a child component) is created
 /// after the static siblings around it, so index within a single template only.
 pub fn listener_ids(m: &Mutations, event: &str) -> Vec<ElementId> {
     m.edits
@@ -26,7 +26,7 @@ pub fn listener_ids(m: &Mutations, event: &str) -> Vec<ElementId> {
 }
 
 /// Every text a render created or patched, in edit order. Enough to assert what a component put on
-/// screen without standing up a real renderer — `CreateTextNode` covers the first render, `SetText`
+/// screen without standing up a real renderer - `CreateTextNode` covers the first render, `SetText`
 /// the updates a re-render patches in.
 pub fn texts(m: &Mutations) -> Vec<String> {
     m.edits
@@ -57,7 +57,7 @@ pub fn value_writes(m: &Mutations, id: ElementId) -> Vec<String> {
 }
 
 /// Renderers hand listeners an `Rc<PlatformEventData>` and dioxus-html converts it to the typed
-/// data through the globally installed converter, so a test has to install one — hence the
+/// data through the globally installed converter, so a test has to install one - hence the
 /// `serialize` dev-dependency on dioxus-html.
 pub fn form_input(value: &str) -> Event<dyn Any> {
     static CONVERTER: Once = Once::new();
@@ -66,7 +66,7 @@ pub fn form_input(value: &str) -> Event<dyn Any> {
     Event::new(Rc::new(data) as Rc<dyn Any>, true)
 }
 
-/// A click carries MouseData, not FormData — dispatching the wrong one panics inside the converter.
+/// A click carries MouseData, not FormData - dispatching the wrong one panics inside the converter.
 pub fn click() -> Event<dyn Any> {
     static CONVERTER: Once = Once::new();
     CONVERTER.call_once(|| set_event_converter(Box::new(SerializedHtmlEventConverter)));
@@ -83,7 +83,7 @@ pub fn focus() -> Event<dyn Any> {
 }
 
 /// A touch event, built through serde for the same reason `pointer` is: private fields, no
-/// constructor, but a `Deserialize` derive. The touch lists are empty — the handlers that guard
+/// constructor, but a `Deserialize` derive. The touch lists are empty - the handlers that guard
 /// against a long press read no point data, only which element the event reached.
 pub fn touch() -> Event<dyn Any> {
     static CONVERTER: Once = Once::new();
@@ -101,12 +101,12 @@ pub fn touch() -> Event<dyn Any> {
     Event::new(Rc::new(PlatformEventData::new(Box::new(data))) as Rc<dyn Any>, true)
 }
 
-/// A pointer at `(x, y)` in client coordinates. `kind` is the `pointerType` — `"touch"` for a
-/// finger, `"mouse"` for a cursor — which is what gesture code uses to tell them apart.
+/// A pointer at `(x, y)` in client coordinates. `kind` is the `pointerType` - `"touch"` for a
+/// finger, `"mouse"` for a cursor - which is what gesture code uses to tell them apart.
 ///
 /// Built through serde because `SerializedPointerData`'s fields are private and it exposes no
 /// constructor; it does derive `Deserialize`, and the converter downcasts to exactly this type.
-/// Every field has to be present — there are no serde defaults on it.
+/// Every field has to be present - there are no serde defaults on it.
 pub fn pointer(x: f64, y: f64, kind: &str, pointer_id: i32) -> Event<dyn Any> {
     static CONVERTER: Once = Once::new();
     CONVERTER.call_once(|| set_event_converter(Box::new(SerializedHtmlEventConverter)));

@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::common::{format_date_str, haptic, ConfirmModal, Haptic};
+use crate::common::{format_date_str, haptic, use_modal_focus, ConfirmModal, Haptic};
 use crate::tid;
 
 /// Deleting an expense. An occurrence of a live rule also offers to stop the rule, and says the
@@ -64,11 +64,19 @@ pub fn ChoiceDialog(
     actions: Vec<DialogAction>,
     on_cancel: EventHandler<()>,
 ) -> Element {
+    use_modal_focus("choice-dialog");
     rsx! {
-        div { class: "modal modal-open", role: "dialog", aria_labelledby: "choice-dialog-title",
+        div {
+            id: "choice-dialog",
+            class: "modal modal-open",
+            role: "dialog",
+            aria_modal: "true",
+            aria_labelledby: "choice-dialog-title",
+            aria_describedby: "choice-dialog-message",
+            tabindex: "-1",
             div { class: "modal-box max-w-sm flex flex-col gap-3",
-                h3 { id: "choice-dialog-title", class: "font-bold text-lg font-display", "{title}" }
-                p { class: "text-sm text-base-content/70", "{message}" }
+                h2 { id: "choice-dialog-title", class: "font-bold text-lg font-display", "{title}" }
+                p { id: "choice-dialog-message", class: "text-sm text-base-content/70", "{message}" }
                 div { class: "flex flex-col gap-2 pt-1",
                     for action in actions {
                         button {

@@ -19,7 +19,7 @@ panic = "unwind"
 incremental = false
 
 # Without this profile dx builds Android under an ad-hoc `android-release` and takes `strip` from
-# `release` above, running `--strip-all` on libmain.so before Gradle sees it — so the AAB shipped no
+# `release` above, running `--strip-all` on libmain.so before Gradle sees it - so the AAB shipped no
 # native symbols. AGP strips the .so it packages instead (patch_release_strip in the Makefile) and
 # extracts the symbol table into BUNDLE-METADATA. See docs/android.md, "Native debug symbols".
 [profile.android-release]
@@ -28,7 +28,7 @@ strip = false
 
 # `opt-level = "z"` above is chosen for the wasm bundle, where every byte is downloaded. It is the
 # wrong trade for OCR: this is dense numeric code with hand-written SIMD, and size-optimising it
-# costs several times the inference latency — on the phone's UI thread budget, not the network's.
+# costs several times the inference latency - on the phone's UI thread budget, not the network's.
 # These add a few hundred KB to a binary that already carries 31 MB of model weights, and none of
 # them is reachable from the web or server build, so the bundle is untouched. Same reasoning as
 # CARGO_PROFILE_SERVER_RELEASE_OPT_LEVEL=2 in the Dockerfile.
@@ -36,7 +36,7 @@ strip = false
 # **The list must cover every rten-* crate, not just `rten`.** The hot path is `rten-gemm`; missing
 # it leaves the matrix multiply size-optimised while everything around it is fast, which measured
 # as a 3x penalty and looks exactly like a slow model. `cargo tree -p ocr` is the check when
-# upgrading rten — it has split into more crates before.
+# upgrading rten - it has split into more crates before.
 [profile.release.package.ocr]
 opt-level = 3
 [profile.release.package.rten]
@@ -71,7 +71,7 @@ opt-level = 3
 # The same list again for `dev`, and it is not redundant: `make android`/`make android-build` both
 # bundle the debug profile (dx writes to `dx/mobile/debug/`, and neither passes --release), so a
 # phone build gets `opt-level = 0` for every crate here unless this block exists. Measured on the
-# `receipts` fixture on an x86_64 desktop: 0.52 s built as release, 29.6 s built as dev — 57x, and
+# `receipts` fixture on an x86_64 desktop: 0.52 s built as release, 29.6 s built as dev - 57x, and
 # a phone is several times slower again. That reads as a hung spinner, not as a slow scan, which
 # is how it was found. Debug info and overflow checks for our own code are unaffected.
 [profile.dev.package.ocr]

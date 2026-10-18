@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
-use shared::{CreatableExpense, DeleteExpenseRequest, EditableExpense, EditableProject};
+use shared::{
+    CreatableExpense, DeleteExpenseRequest, EditableExpense, EditableProject, EncryptedPair,
+    HistoryContext, ProjectDto, ProjectPayload, ProjectStatus,
+};
+
+use crate::crypto::{decrypt_json, encrypt_padded_json};
 use std::collections::VecDeque;
 use uuid::Uuid;
 
@@ -20,7 +25,54 @@ pub enum OpKind {
     AddExpense(CreatableExpense),
     EditExpense(EditableExpense),
     DeleteExpense(DeleteExpenseRequest),
+    /// A whole payload built when queued. Only replayed from queues an older build wrote: it
+    /// overwrites anything written to the project in the meantime.
     UpdateProject(EditableProject),
+    EditProject(ProjectEdit),
+}
+
+/// A project edit queued offline, kept as what the user changed rather than as a payload, so the
+/// replay applies it to whatever the project holds by then instead of overwriting it.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProjectEdit {
+    pub project_id: Uuid,
+    /// Name and description travel together: the form edits both, and an `Option<Option<_>>`
+    /// would lose "description cleared" through JSON. Sealed under the project key, since the queue
+    /// is a plain file or localStorage entry that outlives logout.
+    #[serde(default)]
+    pub name_description: Option<EncryptedPair>,
+    #[serde(default)]
+    pub status: Option<ProjectStatus>,
+    #[serde(default)]
+    pub history: Option<HistoryContext>,
+}
+
+impl ProjectEdit {
+    /// The write that applies this edit to `stored`, as the online paths build it: a status goes
+    /// in the payload - see `status_edit`.
+    pub fn apply(&self, key: &[u8; 32], stored: &ProjectDto) -> Result<EditableProject, String> {
+        let mut payload: ProjectPayload = decrypt_json(key, &stored.payload)?;
+        let mut changed = false;
+        if let Some(sealed) = &self.name_description {
+            let (name, description): (String, Option<String>) = decrypt_json(key, sealed)?;
+            payload.name = name;
+            payload.description = description;
+            changed = true;
+        }
+        if let Some(status) = &self.status {
+            payload.status = Some(status.clone());
+            changed = true;
+        }
+        Ok(EditableProject {
+            id: self.project_id,
+            payload: if changed { Some(encrypt_padded_json(key, &payload)?) } else { None },
+            status: (self.status.is_some() && stored.status != ProjectStatus::Ongoing)
+                .then_some(ProjectStatus::Ongoing),
+            history: self.history.clone(),
+            expected_iv: None,
+            notify_closed: self.status == Some(ProjectStatus::Closed),
+        })
+    }
 }
 
 /// Only the tests need the resolved path; the read/write pair goes through `persist` by key.
@@ -53,7 +105,7 @@ mod tests {
             label: label.to_string(),
             op: OpKind::AddExpense(shared::CreatableExpense {
                 project_id: Uuid::nil(),
-                author_id: 1,
+                author_id: Some(1),
                 payload: ep(),
                 payers: vec![],
                 debtors: vec![],
@@ -115,6 +167,7 @@ mod tests {
                 status: Some(ProjectStatus::Closed),
                 history: None,
                 expected_iv: None,
+                notify_closed: false,
             }),
         }
     }
@@ -123,7 +176,7 @@ mod tests {
     mod native {
         use super::*;
 
-        // with_data_dir takes the process-wide env_lock — local_storage's and export's tests set
+        // with_data_dir takes the process-wide env_lock - local_storage's and export's tests set
         // the same COUNTED_DATA_DIR, so a module-local lock would not keep them apart. It also
         // starts from an empty dir, so no leftover queue file from a previous run can leak in.
         use crate::common::env_lock;
@@ -336,5 +389,93 @@ mod tests {
             assert_eq!(op.id, back.id);
             assert_eq!(op.label, back.label);
         }
+    }
+}
+
+#[cfg(test)]
+mod project_edit_tests {
+    use super::*;
+    use crate::common::test_fixtures::{make_project, test_key};
+    use crate::crypto::encrypt_json;
+
+    fn stored_with(key: &[u8; 32], f: impl FnOnce(&mut ProjectPayload)) -> ProjectDto {
+        let mut p = make_project(key, Uuid::nil(), "Corsica", "EUR");
+        let mut payload: ProjectPayload = decrypt_json(key, &p.payload).unwrap();
+        f(&mut payload);
+        p.payload = encrypt_json(key, &payload).unwrap();
+        p
+    }
+
+    fn payload_of(key: &[u8; 32], e: &EditableProject) -> ProjectPayload {
+        decrypt_json(key, e.payload.as_ref().unwrap()).unwrap()
+    }
+
+    fn rename(name: &str, description: Option<&str>) -> ProjectEdit {
+        let sealed = encrypt_json(&test_key(), &(name, description)).unwrap();
+        ProjectEdit {
+            project_id: Uuid::nil(),
+            name_description: Some(sealed),
+            status: None,
+            history: None,
+        }
+    }
+
+    /// The point of queueing the intent: a field another device wrote while this one was offline
+    /// is still there after the replay.
+    #[test]
+    fn a_replayed_rename_keeps_what_was_written_meanwhile() {
+        let k = test_key();
+        let stored = stored_with(&k, |p| {
+            p.extra.insert("kind".into(), "personal".into());
+            p.extra.insert("finance".into(), serde_json::json!({ "budgets": [1] }));
+        });
+        let written = rename("Corse", Some("été")).apply(&k, &stored).unwrap();
+        let after = payload_of(&k, &written);
+        assert_eq!(after.name, "Corse");
+        assert_eq!(after.description.as_deref(), Some("été"));
+        assert!(after.is_personal());
+        assert_eq!(after.extra["finance"], serde_json::json!({ "budgets": [1] }));
+        assert_eq!(after.currency, "EUR");
+    }
+
+    #[test]
+    fn a_cleared_description_survives_the_queue_on_disk() {
+        let edit = rename("Corse", None);
+        let back: ProjectEdit = serde_json::from_str(&serde_json::to_string(&edit).unwrap()).unwrap();
+        assert_eq!(back, edit);
+        let k = test_key();
+        let stored = stored_with(&k, |p| p.description = Some("old".into()));
+        assert_eq!(payload_of(&k, &back.apply(&k, &stored).unwrap()).description, None);
+    }
+
+    #[test]
+    fn a_replayed_status_goes_in_the_payload_and_clears_the_column() {
+        let k = test_key();
+        let close = ProjectEdit {
+            project_id: Uuid::nil(),
+            name_description: None,
+            status: Some(ProjectStatus::Closed),
+            history: None,
+        };
+        let mut legacy = stored_with(&k, |p| p.status = None);
+        legacy.status = ProjectStatus::Archived;
+        let written = close.apply(&k, &legacy).unwrap();
+        assert_eq!(payload_of(&k, &written).status, Some(ProjectStatus::Closed));
+        assert_eq!(written.status, Some(ProjectStatus::Ongoing));
+        assert!(written.notify_closed);
+
+        let renamed = rename("Corse", None).apply(&k, &legacy).unwrap();
+        assert_eq!(renamed.status, None, "an edit without a status leaves the column to conversion");
+        assert!(!renamed.notify_closed);
+    }
+
+    #[test]
+    fn a_queued_intent_round_trips_as_an_op() {
+        let edit = rename("Corse", Some("Sous la tente"));
+        let op = QueuedOp { id: Uuid::new_v4(), label: "Corse".into(), op: OpKind::EditProject(edit.clone()) };
+        let stored = serde_json::to_string(&op).unwrap();
+        let back: QueuedOp = serde_json::from_str(&stored).unwrap();
+        assert!(matches!(back.op, OpKind::EditProject(e) if e == edit));
+        assert!(!stored.contains("Sous la tente"), "the queue holds no plaintext description");
     }
 }

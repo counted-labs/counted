@@ -3,7 +3,7 @@ use crate::tid;
 
 /// True once the client is live: after hydration on web, after the first render on mobile.
 ///
-/// `use_effect` is client-only — it never runs during SSR, because its callback lands in
+/// `use_effect` is client-only - it never runs during SSR, because its callback lands in
 /// `pending_effects`, which is drained only from `wait_for_work()`, and the SSR path never calls
 /// that. So the server render and the first WASM render both observe `false` and emit identical
 /// markup. Diverging here is what produces the "root is undefined" hydration crash; the same gate
@@ -19,11 +19,11 @@ pub fn use_client_ready() -> Signal<bool> {
 /// Full-screen brand splash, overlaid until the client is live.
 ///
 /// Takes the logo instead of declaring its own: `packages/ui` has no `assets/` dir, and each
-/// platform crate already declares — and references — its own icon, so the asset is guaranteed to
+/// platform crate already declares - and references - its own icon, so the asset is guaranteed to
 /// survive linking. manganis 0.7.10 compiles `#[used]` out of the link section, so an `Asset` that
 /// no reachable code reads can be dropped by the linker and silently not bundled.
 ///
-/// `id` is not decoration — `assets/main.css` hangs the no-JS failsafe off it.
+/// `id` is not decoration - `assets/main.css` hangs the no-JS failsafe off it.
 #[component]
 pub fn SplashScreen(logo: Asset) -> Element {
     rsx! {

@@ -10,7 +10,7 @@ pub struct ToastProps {
     onclose: EventHandler<()>,
 }
 
-/// How long a toast stays on screen. Errors linger longer than successes — a failure needs more
+/// How long a toast stays on screen. Errors linger longer than successes - a failure needs more
 /// reading time.
 const SUCCESS_MS: u32 = 4000;
 const ERROR_MS: u32 = 7000;
@@ -18,8 +18,6 @@ const ERROR_MS: u32 = 7000;
 #[component]
 pub fn Toast(props: ToastProps) -> Element {
     let alert_class = if props.success { "alert-success" } else { "alert-error" };
-    // Successes are informational; failures need to interrupt whatever is being read.
-    let (role, live) = if props.success { ("status", "polite") } else { ("alert", "assertive") };
     let ms = if props.success { SUCCESS_MS } else { ERROR_MS };
     let onclose = props.onclose;
 
@@ -40,11 +38,13 @@ pub fn Toast(props: ToastProps) -> Element {
         div {
             // `bottom-42` (10.5rem) clears the dock (`safe-bottom-dock`, 1.5rem + 3.75rem tall) and
             // the FAB above it (`safe-bottom-fab`, 6rem + 3.5rem tall) with a 1rem gap; `z-[60]`
-            // beats the dock's `z-50` — daisyUI's `.toast` sets no z-index. Mobile's `.safe-toast`
+            // beats the dock's `z-50` - daisyUI's `.toast` sets no z-index. Mobile's `.safe-toast`
             // restates the offset with the safe-area inset added.
             class: "toast toast-end safe-toast bottom-42 z-[60]",
-            role,
-            aria_live: live,
+            // A success is spoken by the layout's permanent live region: a region inserted
+            // together with its text is often not announced. `alert` is, on insertion.
+            role: if !props.success { "alert" },
+            aria_hidden: if props.success { "true" },
             onclick: move |event| {
                 event.stop_propagation();
                 onclose.call(())

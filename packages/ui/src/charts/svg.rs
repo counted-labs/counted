@@ -88,9 +88,11 @@ pub fn area_path(points: &[(f64, f64)], base: f64) -> String {
     }
 }
 
+type Stretches = Vec<Vec<(f64, f64)>>;
+
 /// The line split where it crosses `base`, into the stretches above and below it (screen y grows
 /// downward, so "above" is `y < base`). Each stretch is closed on the baseline by [`area_path`].
-pub fn split_at(points: &[(f64, f64)], base: f64) -> (Vec<Vec<(f64, f64)>>, Vec<Vec<(f64, f64)>>) {
+pub fn split_at(points: &[(f64, f64)], base: f64) -> (Stretches, Stretches) {
     let mut above: Vec<Vec<(f64, f64)>> = vec![];
     let mut below: Vec<Vec<(f64, f64)>> = vec![];
     let mut current: Vec<(f64, f64)> = vec![];

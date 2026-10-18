@@ -1,13 +1,13 @@
 //! Deep links from the OS (App/Universal Links and `counted://`). See docs/deep-links.md.
 //!
-//! The platform half — Android intent over JNI, tao events before the UI exists — is in
+//! The platform half - Android intent over JNI, tao events before the UI exists - is in
 //! `packages/mobile/src/main.rs`. [`DeepLinkListener`] is the navigation half, and must render
 //! *inside* the `Router`: `use_navigator` walks ancestors, so the Router's own parent cannot see
 //! it. `AppLayout` renders it, like `NavigationSync`.
 
 use dioxus::prelude::*;
 
-/// Consumes the URL the OS started the activity with. Android only — iOS gets URLs from tao
+/// Consumes the URL the OS started the activity with. Android only - iOS gets URLs from tao
 /// directly. Provided per entry point like `NativeClipboardReader`, since the JNI call lives in
 /// the platform crate.
 ///
@@ -16,6 +16,15 @@ use dioxus::prelude::*;
 /// and whichever was provided second would silently win.
 #[derive(Clone)]
 pub struct NativeDeepLinkReader(pub std::sync::Arc<dyn Fn() -> Option<String> + Send + Sync>);
+
+/// Set by `counted://add` (the Android launcher shortcut, or an iOS Shortcuts action): the projects
+/// page opens the personal expense form once it knows whether there is a personal project.
+pub static QUICK_ADD: GlobalSignal<bool> = Signal::global(|| false);
+
+#[cfg_attr(not(any(target_os = "android", target_os = "ios")), allow(dead_code))]
+fn is_quick_add(url: &str) -> bool {
+    url.split(['?', '#']).next().is_some_and(|u| u.trim_end_matches('/') == "counted://add")
+}
 
 #[cfg(any(target_os = "android", target_os = "ios"))]
 static PENDING_DEEP_LINKS: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
@@ -86,9 +95,14 @@ pub fn DeepLinkListener() -> Element {
                 nav.push(Route::VerifyEmailPage { token });
                 continue;
             }
+            if is_quick_add(&url) {
+                *QUICK_ADD.write() = true;
+                nav.push(Route::ProjectsPage {});
+                continue;
+            }
             let Some((project_id, key)) = parse_share_link(&url) else {
                 // The Android app-link filter claims every path on counted.fr, so any other URL is
-                // expected — leave the user put. Still stripped: a rejected URL can carry a
+                // expected - leave the user put. Still stripped: a rejected URL can carry a
                 // fragment anyway.
                 tracing::info!("ignoring a deep link the app does not handle: {}", loggable(&url));
                 continue;
@@ -112,7 +126,7 @@ pub fn DeepLinkListener() -> Element {
         use dioxus::mobile::tao::event::Event;
         match event {
             // iOS delivers both counted:// (application:openURL:) and universal links
-            // (application:continueUserActivity:) here — see tao's ios/view.rs.
+            // (application:continueUserActivity:) here - see tao's ios/view.rs.
             Event::Opened { urls } => {
                 for url in urls {
                     push_deep_link(url.to_string());
@@ -135,7 +149,7 @@ pub fn DeepLinkListener() -> Element {
     rsx! {}
 }
 
-/// No-op on web and desktop — links there are just navigations.
+/// No-op on web and desktop - links there are just navigations.
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
 #[component]
 pub fn DeepLinkListener() -> Element {
@@ -144,7 +158,17 @@ pub fn DeepLinkListener() -> Element {
 
 #[cfg(test)]
 mod tests {
-    use super::loggable;
+    use super::{is_quick_add, loggable};
+
+    #[test]
+    fn only_counted_add_is_a_quick_add() {
+        assert!(is_quick_add("counted://add"));
+        assert!(is_quick_add("counted://add/"));
+        assert!(is_quick_add("counted://add?from=shortcut"));
+        assert!(!is_quick_add("https://counted.fr/add"));
+        assert!(!is_quick_add("counted://projects/add"));
+        assert!(!is_quick_add("counted://address"));
+    }
 
     #[test]
     fn a_share_link_loses_its_key() {

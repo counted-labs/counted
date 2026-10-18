@@ -149,7 +149,7 @@ payment-method-invalid-characters = Eemalda reavahetused või nähtamatud märgi
 payment-method-limit = Salvestada saab kuni { $max } makseviisi.
 payment-methods-saved = Makseandmed salvestatud.
 payment-methods-offline = Makseandmete salvestamiseks pead olema võrgus.
-payment-methods-stale = Sinu makseandmeid muudeti teises seadmes. Need laaditi uuesti — proovi uuesti.
+payment-methods-stale = Sinu makseandmeid muudeti teises seadmes. Need laaditi uuesti - proovi uuesti.
 payment-methods-key-missing = Makseandmete haldamiseks logi uuesti sisse.
 settings-payment-methods-share-warning = Jagatud makseviis on nähtav kõigile sinu projektide liikmetele.
 payment-method-share = Jaga minu projektidega
@@ -231,7 +231,6 @@ projects-filter-active = Aktiivsed
 projects-filter-all = Kõik
 projects-count-label = Projektid
 projects-empty = Projekte pole
-projects-empty-hint = Loo projekt allolevast nupust
 projects-offline-banner = Võrguühenduseta andmed - värskendamiseks loo ühendus uuesti.
 demo-banner = Näidisprojekt - ainult lugemiseks.
 demo-start-own = Loo oma projekt
@@ -245,6 +244,67 @@ projects-no-local-data = Kohalikke andmeid pole
 projects-no-local-data-hint = Projektide esmakordseks laadimiseks logi sisse.
 projects-add = Lisa projekt
 projects-create = Loo projekt
+projects-personal-expense = Isiklik kulu
+personal-expense-banner = Lisatud jaotisse Minu kulud
+personal-create-title = Loo oma isiklik projekt
+personal-create-hint = Jälgi, mida üksi kulutad
+group-create-title = Loo jagatud projekt
+group-create-hint = Jaga kulusid sõprade ja perega
+personal-create-action = Loo
+personal-create-signup = Loo konto
+personal-sheet-title = Sinu isiklik projekt
+personal-sheet-intro = Selle kirja panemiseks, mida üksi kulutad. See kuvatakse koos gruppidega Statistikas.
+personal-sheet-point-alone = Üks liige: sina, oma konto nimega. Jagamislinki pole.
+personal-sheet-point-encrypted = Krüpteeritud sinu seadmetes, nagu teised projektid.
+personal-sheet-point-stats = Sinu osad gruppides liituvad Statistikas nende kuludega.
+personal-default-name = Minu kulud
+my-spending-prev-month = Eelmine kuu
+my-spending-next-month = Järgmine kuu
+my-spending-spent = Kulutasid
+my-spending-groups = Grupid
+my-spending-income = Tulud
+my-spending-balance = Kuu saldo
+my-spending-unconverted = Teise valuuta osad jäetakse kõrvale, kuni kurss on teada.
+my-spending-empty = Sel kuul ei midagi
+my-spending-empty-hint = Lisa kulu nupuga +. Sinu osad gruppides ilmuvad siia automaatselt.
+my-spending-share-of = summast { $amount }
+my-spending-uncounted = ei arvestata
+payer-you = sina
+expense-received-by = sai
+counted-switch = Arvesta: Minu kulud
+counted-switch-on = Sees: sinu osa liidetakse kohta Minu kulud
+counted-switch-off = Väljas: sinu osa ei ilmu kohta Minu kulud
+counted-groups = Arvestatavad grupid
+counted-groups-intro = Sinu osa nendes gruppides liidetakse kohta Minu kulud ja eelarvetesse.
+counted-groups-converted = { $from }, teisendatud valuutasse { $to }
+counted-groups-encrypted = See valik on krüpteeritud sinu kontoga ja järgib sind sinu seadmetes.
+counted-groups-empty = Selles seadmes pole veel ühtegi gruppi.
+counted-groups-done = OK
+counted-save-failed = Valikut ei õnnestunud salvestada. Proovi uuesti.
+tab-budget = Eelarve
+budget-title = Eelarved
+budget-manage = Halda
+budget-left = Jääk { $amount }
+budget-over = Ületatud { $amount } võrra
+budget-empty = Eelarvet pole
+budget-empty-hint = Määra igale kategooriale ülempiir. Sinu osad gruppides lähevad ka arvesse.
+budget-define = Määra eelarve
+budget-sheet-title = Kuueelarved
+budget-sheet-intro = Sinu osale: isiklikud ja grupid. Jäta tühjaks, et kategooriat mitte jälgida.
+budget-average = Kesk. viimased 3 kuud: { $amount }
+budget-for = Eelarve { $category }
+budget-alert = Hoiata mind 80 % juures
+budget-alert-hint = Arvutatakse selles seadmes
+budget-invalid = Vigane summa: { $category }.
+budget-offline = Eelarveid saab salvestada ainult võrgus. Ühenda uuesti ja proovi uuesti.
+budget-alert-near = { $category }: { $percent } % kuu eelarvest
+budget-alert-over = { $category }: kuu eelarve ületatud
+personal-card-budget = { $month } · eelarve { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } tulemus
+       *[other] { $count } tulemust
+    } · { $total } · isiklikud ja grupid, kõik kuud
 projects-join = Liitu projektiga
 projects-import-tricount = Impordi Tricountist
 project-actions = Projekti toimingud
@@ -321,6 +381,7 @@ expenses-show-more = Näita rohkem ({ $count } veel)
 expense-type-expense = Kulu
 expense-type-transfer = Ülekanne
 expense-type-gain = Tulu
+expense-type-group = Tüüp
 expense-paid-by = maksis
 expense-sent-by = saatis
 expense-contributed-by = panustas
@@ -386,6 +447,23 @@ export-failed = Eksport ebaõnnestus: { $reason }
 history-expense-added = Kulu lisatud: { $name }
 history-expense-edited = Kulu muudetud: { $name }
 history-expense-deleted = Kulu kustutatud: { $name }
+move-expense = Teisalda projekti
+move-expense-title = Teisalda…
+move-current = Praegune
+move-converted = { $currency }, kuu kursiga arvestatud
+move-note-personal = Järgmises etapis valid, kes maksis ja kelle eest. Kulu lahkub jaotisest Minu kulud.
+move-note-group = Kulu lahkub projektist { $project } kõigi liikmete jaoks ja grupi saldo arvutatakse ümber. Järgmises etapis valid, kes maksis ja kelle eest.
+move-banner = { $from } → { $to }
+move-submit = Teisalda
+move-done = Kulu teisaldati projekti { $project }
+move-delete-failed = Kulu lisati teise projekti, kuid on endiselt projektis { $project }: kustuta see seal.
+history-expense-moved = Kulu teisaldati teise projekti: { $name }
+personal-badge = Isiklik
+move-members =
+    { $count ->
+        [one] { $count } liige
+       *[other] { $count } liiget
+    }
 history-project-edited = Projekt muudetud: { $name }
 history-name-changed = Nimi: „{ $from }“ → „{ $to }“
 history-description-added = Kirjeldus lisatud: „{ $value }“
@@ -399,11 +477,23 @@ expense-name-placeholder = Restoran, toidupood…
 expense-actions = Kulu toimingud
 expense-your-share = Sinu osa
 expense-your-share-value = Sinu osa: { $amount } { $currency }
+expense-share-percent = { $percent }%
+expense-added-by = Lisas { $name }, { $date }
 expense-inconsistent-detail = Summad ei klapi: makstud { $paid }, võlgu { $owed }, kulu suurus { $total }. Parandamiseks muuda kulu.
 missing-access-key = Juurdepääsuvõti puudub. Ava see projekt selle jagamislingi kaudu.
 filter-all = Kõik
 filter-my-payments = Minu maksed
 filter-my-debts = Minu võlad
+expense-filter-group = Filter
+expenses-search = Otsi kulusid
+expenses-no-match = Ükski kulu ei sobi.
+expenses-search-open = Otsi
+expenses-search-clear = Tühjenda otsing
+expenses-search-summary =
+    { $count ->
+        [one] { $count } tulemus
+       *[other] { $count } tulemust
+    } · { $total } · kõik kuud
 participants-shares-for = { $name } osad
 participants-amount-for = { $name } summa
 reimbursement-add = Lisa tasaarveldus
@@ -441,8 +531,8 @@ charts-expense-count =
 charts-nothing-to-show = Pole midagi näidata
 charts-my-share-skipped =
     { $count ->
-        [one] 1 projekti ei arvestata — osalejat pole valitud või selle andmed ei laadinud.
-       *[other] { $count } projekti ei arvestata — osalejat pole valitud või nende andmed ei laadinud.
+        [one] 1 projekti ei arvestata - osalejat pole valitud või selle andmed ei laadinud.
+       *[other] { $count } projekti ei arvestata - osalejat pole valitud või nende andmed ei laadinud.
     }
 
 ### Categories
@@ -516,6 +606,13 @@ payers-title-contributors = Panustajad
 debtors-title-debtors = Võlgneb
 debtors-title-recipients = Saajad
 debtors-title-beneficiaries = Kasusaajad
+debtors-title-for = Kellele
+debtors-title-recipient = Saaja
+expense-people =
+    { $count ->
+        [one] { $count } inimene
+       *[other] { $count } inimest
+    }
 
 ### Welcome
 
@@ -648,6 +745,8 @@ invitation-decline = Keeldu
 participants-you-label = Sinu nimi selles projektis
 participants-you-badge = Sina
 participants-others = Teised osalejad
+participants-removed = Eemaldatud
+participant-restore = Taasta
 participants-empty = Lisa osalejad allpool.
 participants-duplicate = „{ $name }“ on juba loendis.
 participants-input-label = Lisa sõber või kirjuta nimi
@@ -792,3 +891,16 @@ error-recurring-not-found = Seda korduvat kulu enam ei ole.
 error-recurring-stale = Keegi muutis vahepeal seda korduvat kulu. See laaditi uuesti: kontrolli ja salvesta uuesti.
 error-too-many-recurring = Projektil on juba 50 korduvat kulu. Lõpeta üks mittevajalik, et uus lisada.
 error-user-in-recurring = See osaleja kuulub korduvasse kulusse. Eemalda ta sealt või lõpeta kulu kõigepealt.
+
+home-owed-to-you = Sulle võlgu
+home-you-owe = Sina oled võlgu
+home-details-show = Näita üksikasju
+home-details-hide = Peida üksikasjad
+home-all-settled = Kõik on tasutud
+home-pay = Maksa
+home-remind = Meenuta
+home-remind-message = Väike meeldetuletus: projektis { $project } on veel tagasimakseid tegemata.
+home-row-owed = sulle võlgu
+home-row-owe = oled võlgu
+home-row-settled = Tasutud
+home-totals-partial = Ilma vahetuskursita projektideta

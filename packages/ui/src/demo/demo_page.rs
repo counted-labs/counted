@@ -9,8 +9,8 @@ use crate::i18n::{apply_inferred_language, current_lang};
 use crate::route::Route;
 use crate::tid;
 
-/// Opens the tab's demo project, seeding one first if the tab has none. Outside the sandbox —
-/// native, or a stale history entry — it goes to the real project list instead.
+/// Opens the tab's demo project, seeding one first if the tab has none. Outside the sandbox -
+/// native, or a stale history entry - it goes to the real project list instead.
 fn use_open_demo(lang: String) -> (Signal<Option<String>>, Callback<()>) {
     let nav = use_navigator();
     let ls_ctx = use_context::<Signal<LocalStorageState>>();

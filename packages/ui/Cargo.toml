@@ -10,7 +10,7 @@ default = []
 [dependencies]
 dioxus = { workspace = true, features = ["router", "fullstack"] }
 tracing = "0.1.41"
-# No `default-features = false`: `api` declares no `default` feature, so it was a no-op — and cargo
+# No `default-features = false`: `api` declares no `default` feature, so it was a no-op - and cargo
 # warns that ignoring it here may become a hard error, because the workspace dependency does not set
 # it either.
 api = { workspace = true }
@@ -18,10 +18,10 @@ shared = { workspace = true }
 uuid = { version = "1.17.0", features = ["v4", "serde"] }
 chrono = "0.4.41"
 # Fluent-based i18n. The Dioxus glue (context, `tid!`, per-locale lazy loading) is our own, in
-# src/i18n.rs — see DOCUMENTATION.md §11.
+# src/i18n.rs - see DOCUMENTATION.md §11.
 fluent = "0.17"
 unic-langid = { version = "0.9", features = ["macros"] }
-web-sys = { version = "0.3.77", features = ["Window", "Storage", "Location", "History", "Element", "Navigator", "Document", "HtmlDocument", "HtmlElement", "HtmlAnchorElement", "HtmlInputElement", "Blob", "BlobPropertyBag", "Url", "Clipboard", "ShareData", "KeyboardEvent", "NodeList", "Response"] }
+web-sys = { version = "0.3.77", features = ["Window", "Storage", "Location", "History", "Element", "Navigator", "Document", "HtmlDocument", "HtmlElement", "HtmlAnchorElement", "HtmlInputElement", "Blob", "BlobPropertyBag", "Url", "Clipboard", "ShareData", "KeyboardEvent", "NodeList", "Response", "FocusOptions"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 chacha20poly1305 = "0.10"
@@ -32,17 +32,17 @@ sha2 = "0.10"
 crypto_box = { version = "0.9", default-features = false, features = ["alloc", "chacha20"] }
 
 # Web only. dioxus-web implements document::eval with `new Function(...)`, which the app's CSP
-# forbids (script-src has 'wasm-unsafe-eval', not 'unsafe-eval' — see nginx/nginx.conf), and the
+# forbids (script-src has 'wasm-unsafe-eval', not 'unsafe-eval' - see nginx/nginx.conf), and the
 # resulting JS exception unwinds the wasm stack and kills the whole app. Everything the web build
 # used to do through eval is done through these bindings instead. Native targets (server, mobile
-# WebView) keep using eval — no CSP applies there.
+# WebView) keep using eval - no CSP applies there.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
 gloo-timers = { version = "0.3", features = ["futures"] }
 
-# dioxus-desktop (aliased as dioxus::mobile) — DeepLinkListener subscribes to tao events through it.
+# dioxus-desktop (aliased as dioxus::mobile) - DeepLinkListener subscribes to tao events through it.
 # Must stay target-scoped, not a cargo feature: `dx bundle --platform android` also builds a server
 # binary for the host, and a feature would drag wry/GTK (glib-sys) into that x86_64-linux pass.
 [target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]

@@ -2,8 +2,8 @@ use dioxus::{fullstack::Json, prelude::*};
 use shared::{CreatableProjectInvitation, ProjectInvitation, SentInvitation};
 use uuid::Uuid;
 
-/// The project key, boxed by the caller to a friend. The server stores bytes it cannot open —
-/// nothing here holds a private key — and the friend joins through the ordinary key-in-local-store
+/// The project key, boxed by the caller to a friend. The server stores bytes it cannot open -
+/// nothing here holds a private key - and the friend joins through the ordinary key-in-local-store
 /// path once they accept, or deletes the row to decline.
 #[post("/api/v1/projects/{project_id}/invitations")]
 pub async fn invite(

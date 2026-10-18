@@ -58,7 +58,7 @@ fn side_balances(entries: &[UserEntry], total: f64) -> bool {
 
 /// Recomputes the project-currency total and re-splits both sides.
 ///
-/// The single place the three inputs that can change it — the amount, the currency and the rate —
+/// The single place the three inputs that can change it - the amount, the currency and the rate -
 /// converge, so they cannot drift apart. A `None` total means the form cannot convert yet (a blank
 /// rate with no rate table, or one still being typed); the split is left alone rather than shown
 /// wrong, exactly as the amount field already behaves mid-keystroke.
@@ -107,7 +107,7 @@ pub struct ExpenseFormProps {
     /// The rate field's raw contents. Blank means "use the InforEuro rate".
     pub rate_input: Signal<String>,
     /// The InforEuro rate from `expense_currency` into `currency`, and the first day of the month
-    /// it is valid for. `None` when the table could not be obtained — the user must then type a
+    /// it is valid for. `None` when the table could not be obtained - the user must then type a
     /// rate.
     /// Resolved by the parent so this component stays free of fetching and caching.
     pub auto_rate: Option<f64>,
@@ -115,7 +115,7 @@ pub struct ExpenseFormProps {
     pub on_submit: EventHandler<FormEvent>,
     pub on_close: EventHandler<()>,
     /// A message key rendered above the amount field, or `None`. A receipt scan sets it when the
-    /// total came from the fallback rather than a keyword anchor — the one place a low-confidence
+    /// total came from the fallback rather than a keyword anchor - the one place a low-confidence
     /// read is surfaced.
     pub amount_hint: Option<&'static str>,
     /// The Repeat row, shown only when set.
@@ -126,6 +126,11 @@ pub struct ExpenseFormProps {
     pub date_chips: bool,
     #[props(default)]
     pub banner: Option<String>,
+    #[props(default)]
+    pub banner_icon: Option<Element>,
+    /// "Mes dépenses": one participant, so no payer or beneficiary sections, and no transfer.
+    #[props(default)]
+    pub personal: bool,
     /// On an occurrence of a rule: whether saving also changes the next ones, and the hint naming
     /// the date that change applies from.
     #[props(default)]
@@ -164,7 +169,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
     // The rate table arrives asynchronously, so `auto_rate` can flip from `None` to `Some` *after* the
     // user picked the currency and typed the amount. Without this the handlers below would have
     // bailed out (no rate yet), leaving `total_amount` on the pre-conversion figure while the
-    // preview showed the converted one — and submit would then write that stale total next to
+    // preview showed the converted one - and submit would then write that stale total next to
     // correct conversion metadata, which is precisely the inconsistency the payload must never
     // carry. Reconciles only on a real change, so editing one participant's share is left alone.
     let auto_rate = props.auto_rate;
@@ -197,7 +202,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
     let on_close_x = props.on_close;
     let on_close_cancel = props.on_close;
     let on_close_backdrop = props.on_close;
-    let on_close_esc = props.on_close;
+    crate::common::use_modal_focus("expense-form");
 
     // Debtors is the side that actually gets edited; payers is almost always right as seeded.
     let mut payers_open = use_signal(|| false);
@@ -206,7 +211,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
     // Every `AmountInput` below publishes its draft here while focused; `AmountOperatorBar` reads it.
     use_context_provider::<FocusedAmount>(|| Signal::new(None));
 
-    // A side that stops adding up forces itself open — collapsing must never hide the shortfall.
+    // A side that stops adding up forces itself open - collapsing must never hide the shortfall.
     let payers_expanded = payers_open() || !side_balances(&payers(), total_amount());
     let debtors_expanded = debtors_open() || !side_balances(&debtors(), total_amount());
 
@@ -214,7 +219,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
     // automatic minimum size of zero (CSS flexbox §4.5). Without it these shrink away inside the
     // bounded scroll body instead of making it scroll, clipping their own rows.
     let collapse_class = |expanded: bool| {
-        // `w-auto`: daisyUI's `.collapse` is `width: 100%`, which a margin does not reduce — with
+        // `w-auto`: daisyUI's `.collapse` is `width: 100%`, which a margin does not reduce - with
         // `mx-5` the box became a 100%-wide element with 2.5rem of margin around it and pushed
         // everything inside it off the right edge of the sheet. The utility is layered above
         // daisyUI's component rule, and the box then stretches to the scroller minus its margins.
@@ -227,27 +232,22 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
 
     rsx! {
         div {
+            id: "expense-form",
             class: "modal modal-open modal-bottom sm:modal-middle",
             role: "dialog",
             aria_modal: "true",
             aria_labelledby: "expense-form-title",
             tabindex: "-1",
-            onkeydown: move |e| {
-                if e.key() == Key::Escape {
-                    e.prevent_default();
-                    on_close_esc.call(());
-                }
-            },
             div { class: "modal-box max-w-md p-0 flex flex-col",
                 div { class: "flex items-center gap-2 px-4 pt-3 pb-2 flex-shrink-0",
-                    h3 { id: "expense-form-title", class: "sr-only", "{props.title}" }
-                    // The type is a mode switch — it renames both participant sections and decides
-                    // whether the category field exists at all — so it leads, above everything it
+                    h2 { id: "expense-form-title", class: "sr-only", "{props.title}" }
+                    // The type is a mode switch - it renames both participant sections and decides
+                    // whether the category field exists at all - so it leads, above everything it
                     // governs. Styled as the app's other tab bars rather than as buttons: the
                     // loudest control on the sheet should not be the one that is changed least.
                     if props.show_type_selector {
-                        div { role: "tablist", class: "tabs tabs-box shadow-soft flex-1 flex-nowrap",
-                            for (value , label) in TYPES {
+                        div { role: "radiogroup", aria_label: tid!("expense-type-group"), class: "tabs tabs-box bg-base-300 shadow-none grid grid-flow-col auto-cols-fr flex-1",
+                            for (value , label) in TYPES.into_iter().filter(|(v, _)| !props.personal || *v != "Transfer") {
                                 // `min-w-0`: overrides daisyUI's `min-width: fit-content` on radio
                                 // tabs, so the three share the row beside the ✕.
                                 //
@@ -279,7 +279,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                     button {
                         id: "expense-form-close",
                         r#type: "button",
-                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11",
+                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
                         aria_label: tid!("close"),
                         onclick: move |_| on_close_x.call(()),
                         CloseIcon { size: ICON_HEADER }
@@ -293,7 +293,12 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                 }
 
                     if let Some(banner) = props.banner.clone() {
-                        div { id: "expense-form-banner", class: "alert alert-info alert-soft text-sm py-2 mx-5 mb-2", "{banner}" }
+                        div { id: "expense-form-banner", role: "status", class: "alert alert-info alert-soft text-sm py-2 mx-5 mb-2",
+                            if let Some(icon) = props.banner_icon.clone() {
+                                {icon}
+                            }
+                            "{banner}"
+                        }
                     }
 
                     if let Some(hint) = props.amount_hint {
@@ -307,16 +312,18 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
 
                     // The amount leads and takes the focus: it is the one figure the user always
                     // knows, and its `inputmode="decimal"` makes the numeric keyboard the only one
-                    // the common case needs — the name, still being decided, follows it. No `input`
+                    // the common case needs - the name, still being decided, follows it. No `input`
                     // box: the rule below is the field's whole edge, so the currency picker stops
                     // reading as a second field sharing a frame.
-                    label { class: "relative flex items-baseline gap-2 px-5 pt-3 pb-4 border-b border-base-200",
-                            span { class: "sr-only", {tid!("field-amount")} }
+                    label { class: "relative flex items-baseline justify-between gap-2 px-5 pt-3 pb-4 border-b border-base-200",
                             AmountInput {
                                 id: "expense-amount",
                                 class: "min-w-0 text-4xl leading-tight font-bold tracking-tight font-display tabular-nums caret-primary",
                                 fit: true,
+                                aria_label: tid!("field-amount"),
                                 aria_required: "true",
+                                aria_invalid: if error_msg().is_some() && source_amount() <= 0.0 { "true" } else { "false" },
+                                aria_describedby: if error_msg().is_some() { "expense-form-error" } else { "" },
                                 enterkeyhint: "next",
                                 focus_on_mount: true,
                                 value: source_amount(),
@@ -335,7 +342,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                                     let now_foreign = picked != project_currency;
                                     expense_currency.set(picked);
                                     // The rate that applied to the old currency means nothing for
-                                    // the new one — clearing it falls back to the InforEuro rate.
+                                    // the new one - clearing it falls back to the InforEuro rate.
                                     rate_input.set(String::new());
                                     resplit(source_amount(), now_foreign, props.auto_rate);
                                 },
@@ -387,6 +394,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                             r#type: "text",
                             enterkeyhint: "next",
                             aria_required: "true",
+                            aria_invalid: if error_msg().is_some() && expense_name().trim().is_empty() { "true" },
                             aria_describedby: if error_msg().is_some() { "expense-form-error" },
                             placeholder: tid!("expense-name-placeholder"),
                             value: "{expense_name}",
@@ -396,7 +404,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                     }
 
                     // Nearly every expense is entered the day it happened or the day after, and
-                    // both used to cost opening the native calendar. The field itself stays — it is
+                    // both used to cost opening the native calendar. The field itself stays - it is
                     // the third chip, visible rather than hidden behind the other two.
                     div { class: "flex items-center gap-2 px-5 py-2 border-b border-base-200",
                         if props.date_chips {
@@ -475,12 +483,13 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                                 p {
                                     id: "expense-rate-preview",
                                     class: "label text-xs font-semibold tabular-nums",
-                                    "≈ {total:.2} {props.currency}"
+                                    "≈ {crate::common::amount(total, &props.currency)}"
                                 }
                             }
                         }
                     }
 
+                    if !props.personal {
                     div { class: collapse_class(payers_expanded),
                         button {
                             r#type: "button",
@@ -527,6 +536,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                                 share_mode: debtors_share_mode,
                             }
                         }
+                    }
                     }
 
                     if let Some((mut apply_next, hint)) = props.apply_to_next.clone() {
@@ -621,7 +631,7 @@ mod tests {
         auto_rate: Option<f64>,
     }
 
-    /// Owns the signals `ExpenseForm` mutates, mirroring them into `spy` per render — reading them
+    /// Owns the signals `ExpenseForm` mutates, mirroring them into `spy` per render - reading them
     /// here subscribes the harness. Both sides start checked so assertions never depend on which
     /// fieldset the VirtualDom creates first.
     #[component]
@@ -677,10 +687,80 @@ mod tests {
         }
     }
 
+    #[derive(Props, Clone, PartialEq)]
+    struct ModeProps {
+        personal: bool,
+    }
+
+    #[component]
+    fn Mode(props: ModeProps) -> Element {
+        crate::i18n::use_test_i18n();
+        let me = || {
+            let users = vec![User { id: 1, payload: EncryptedPair::default(), ..Default::default() }];
+            init_entries(&users, &["Moi".to_string()], Some(1), 0.0, true)
+        };
+        rsx! {
+            ExpenseForm {
+                title: "t",
+                submit_label: "s",
+                loading_label: "l",
+                currency: "EUR".to_string(),
+                show_type_selector: true,
+                expense_name: use_signal(String::new),
+                date_str: use_signal(String::new),
+                total_amount: use_signal(|| 0.0),
+                expense_type: use_signal(|| ExpenseType::Expense),
+                payers: use_signal(me),
+                debtors: use_signal(me),
+                category: use_signal(|| None),
+                payers_share_mode: use_signal(|| false),
+                debtors_share_mode: use_signal(|| false),
+                error_msg: use_signal(|| None),
+                loading: use_signal(|| false),
+                expense_currency: use_signal(|| "EUR".to_string()),
+                source_amount: use_signal(|| 0.0),
+                rate_input: use_signal(String::new),
+                auto_rate: None,
+                rate_day: None,
+                on_submit: move |_| {},
+                on_close: move |_| {},
+                personal: props.personal,
+                banner: props.personal.then(|| "Added to My expenses".to_string()),
+            }
+        }
+    }
+
+    /// Every text node and `aria-label` the first render wrote.
+    fn rendered(personal: bool) -> Vec<String> {
+        use dioxus::dioxus_core::{AttributeValue, Mutation};
+        let mut dom = VirtualDom::new_with_props(Mode, ModeProps { personal });
+        let m = dom.rebuild_to_vec();
+        let mut out = texts(&m);
+        for e in &m.edits {
+            if let Mutation::SetAttribute { name: "aria-label", value: AttributeValue::Text(v), .. } = e {
+                out.push(v.clone());
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn a_personal_expense_has_no_participants_and_no_transfer() {
+        let shared = rendered(false);
+        assert!(shared.iter().any(|t| t == "Transfer"), "control: the shared form offers a transfer: {shared:?}");
+        assert!(shared.iter().any(|t| t == "Who paid?"), "control: the shared form names the payers: {shared:?}");
+
+        let personal = rendered(true);
+        assert!(!personal.iter().any(|t| t == "Transfer"), "{personal:?}");
+        assert!(!personal.iter().any(|t| t == "Who paid?"), "{personal:?}");
+        assert!(personal.iter().any(|t| t == "Gain"), "income still goes in: {personal:?}");
+        assert!(personal.iter().any(|t| t == "Added to My expenses"), "{personal:?}");
+    }
+
     /// The amount field is an `AmountInput` child component, whose listener is registered after
-    /// everything in the form's own template — last in both the default and the foreign template.
+    /// everything in the form's own template - last in both the default and the foreign template.
     /// These indices are mutation order, not template order; reading the source and counting
-    /// downwards gives the wrong answer here — measure it. The count assertion in `harness_with`
+    /// downwards gives the wrong answer here - measure it. The count assertion in `harness_with`
     /// is what catches it moving.
     fn total(ids: &[ElementId]) -> ElementId {
         *ids.last().unwrap()
@@ -704,7 +784,7 @@ mod tests {
         let mut dom = VirtualDom::new_with_props(Harness, props);
         let ids = listener_ids(&dom.rebuild_to_vec(), "input");
         let expected = if foreign { 15 } else { 14 };
-        assert_eq!(ids.len(), expected, "form template changed — re-index RATE above");
+        assert_eq!(ids.len(), expected, "form template changed - re-index RATE above");
         (dom, spy, ids)
     }
 
@@ -726,7 +806,7 @@ mod tests {
         assert_eq!(debtors, vec![(true, 7.5), (true, 7.5)]);
     }
 
-    /// A typed rate overrides the InforEuro one and re-splits immediately — no blur, same as the amount.
+    /// A typed rate overrides the InforEuro one and re-splits immediately - no blur, same as the amount.
     #[test]
     fn typing_a_rate_resplits_the_existing_amount() {
         let (mut dom, spy, ids) = harness_with(HarnessProps {
@@ -820,7 +900,7 @@ mod tests {
         assert_eq!(spy.borrow().0, vec![(true, 6.25), (true, 6.25)]);
     }
 
-    /// `value` is volatile in Dioxus — rewritten on every render — and an `f64` formats "12." as
+    /// `value` is volatile in Dioxus - rewritten on every render - and an `f64` formats "12." as
     /// "12", which is how a mobile keyboard's decimal key got erased under the user's finger.
     #[test]
     fn a_trailing_separator_survives_the_render() {
@@ -881,7 +961,7 @@ mod tests {
         assert_eq!(value_writes(&m, field), vec!["83.33".to_string()]);
     }
 
-    /// The bar is below the footer and targets whatever amount field has focus — here, the total.
+    /// The bar is below the footer and targets whatever amount field has focus - here, the total.
     /// Which row it targets when a participant is focused is covered in `participants_fieldset`.
     #[test]
     fn the_operator_bar_appears_on_focus_and_drives_the_total() {
@@ -897,7 +977,7 @@ mod tests {
         let keys = listener_ids(&m, "click");
         assert_eq!(keys.len(), 5, "the bar carries +, −, ×, ÷ and =");
 
-        // "−", then the keystroke the user types after it — the browser sends the whole value.
+        // "−", then the keystroke the user types after it - the browser sends the whole value.
         dom.runtime().handle_event("click", click(), keys[1]);
         let m = dom.render_immediate_to_vec();
         assert_eq!(value_writes(&m, field).last().map(String::as_str), Some("320-"));

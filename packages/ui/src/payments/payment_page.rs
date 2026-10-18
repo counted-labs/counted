@@ -15,15 +15,17 @@ use crate::expenses::helpers::delete_expense_action::{
 use crate::expenses::helpers::expenses_page_helpers::sync_error;
 use crate::expenses::hooks::use_project_store::ProjectStore;
 use crate::expenses::tabs::expenses_tab::ExpenseMutation;
+use crate::expenses::move_expense::{can_move, destinations, typed_amount, MoveDraft, MoveExpenseSheet};
 use crate::expenses::EditExpenseModal;
-use crate::icons::{RepeatIcon, ICON_INLINE};
+use crate::categories::category_label;
+use crate::icons::{MoreIcon, PencilIcon, RepeatIcon, RightArrowIcon, TransferIcon, TrashIcon, ICON_HEADER, ICON_INLINE};
 use crate::recurring::actions::stop_rule;
 use crate::recurring::dialog::DeleteExpenseDialog;
 use crate::recurring::store::live_rule_of;
 use crate::recurring::view::next_date;
 use crate::route::Route;
 
-/// Translation keys, not labels — the render site translates.
+/// Translation keys, not labels - the render site translates.
 fn payers_title(t: &ExpenseType) -> &'static str {
     match t {
         ExpenseType::Gain => "payers-title-contributors",
@@ -32,25 +34,64 @@ fn payers_title(t: &ExpenseType) -> &'static str {
     }
 }
 
-fn debtors_title(t: &ExpenseType) -> &'static str {
+fn debtors_title(t: &ExpenseType, count: usize) -> &'static str {
     match t {
         ExpenseType::Gain => "debtors-title-beneficiaries",
+        ExpenseType::Transfer if count == 1 => "debtors-title-recipient",
         ExpenseType::Transfer => "debtors-title-recipients",
-        _ => "debtors-title-debtors",
+        _ => "debtors-title-for",
     }
 }
 
-/// One participant's line in the payers or debtors card.
+fn share_percent(amount: f64, total: f64) -> u32 {
+    if total <= 0.0 {
+        return 0;
+    }
+    (amount / total * 100.0).round().clamp(0.0, 100.0) as u32
+}
+
+fn summary_subtitle(kind: String, people: Option<String>, description: Option<&str>) -> String {
+    let description = description.map(str::trim).filter(|d| !d.is_empty()).map(str::to_string);
+    [Some(kind), people, description].into_iter().flatten().collect::<Vec<_>>().join(" · ")
+}
+
+/// One participant's line in the payers or debtors card. `share` adds the proportional bar.
 #[component]
-fn ParticipantRow(name: String, user_id: i32, amount: f64, currency: String) -> Element {
+fn ParticipantRow(
+    name: String,
+    user_id: i32,
+    amount: f64,
+    currency: String,
+    share: Option<u32>,
+    is_me: bool,
+    highlight: bool,
+) -> Element {
+    let color = user_color_class(user_id);
     rsx! {
-        div { class: "flex items-center gap-3",
-            Avatar {
-                initials: initials(&name),
-                color_class: user_color_class(user_id).to_string(),
+        div { class: if highlight { "flex items-center gap-3 -mx-2 px-2 py-2 rounded-xl bg-primary/10" } else { "flex items-center gap-3 py-2" },
+            Avatar { initials: initials(&name), color_class: color.to_string() }
+            div { class: "flex-1 min-w-0 flex flex-col gap-1.5",
+                div { class: "flex items-baseline gap-2",
+                    span { class: if is_me { "flex-1 min-w-0 truncate font-semibold text-sm" } else { "flex-1 min-w-0 truncate font-medium text-sm" },
+                        if is_me {
+                            {tid!("participants-you-badge")}
+                        } else {
+                            "{name}"
+                        }
+                    }
+                    if let Some(percent) = share {
+                        span { class: "shrink-0 text-xs text-base-content/70",
+                            {tid!("expense-share-percent", percent: percent as i64)}
+                        }
+                    }
+                    span { class: "shrink-0 font-bold text-sm", {crate::common::amount(amount, &currency)} }
+                }
+                if let Some(percent) = share {
+                    div { class: "h-1.5 rounded-full bg-base-content/10",
+                        div { class: "h-1.5 rounded-full {color}", width: "{percent}%" }
+                    }
+                }
             }
-            span { class: "flex-1 min-w-0 truncate font-medium text-sm", "{name}" }
-            span { class: "shrink-0 font-bold text-sm", "{amount:.2} {currency}" }
         }
     }
 }
@@ -65,6 +106,7 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
     let nav = use_navigator();
     let mut show_edit = use_signal(|| false);
     let mut show_delete_confirm = use_signal(|| false);
+    let mut show_move = use_signal(|| false);
 
     let stored_user_id = read_from_ls()
         .projects
@@ -123,7 +165,7 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                             let of_expense = |dp: &&DecryptedPayment| dp.expense_id == expense_id;
                             let payers: Vec<_> =
                                 d.payments.iter().filter(of_expense).filter(|dp| !dp.is_debt).collect();
-                            let debtors: Vec<_> =
+                            let mut debtors: Vec<_> =
                                 d.payments.iter().filter(of_expense).filter(|dp| dp.is_debt).collect();
                             let payers_sum: f64 = payers.iter().map(|dp| dp.amount).sum();
                             let debtors_sum: f64 = debtors.iter().map(|dp| dp.amount).sum();
@@ -143,21 +185,58 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                 .map(|r| next_date(&r.payload));
                             let live_rule = live_rule_of(&d, expense_id, rules.as_ref());
                             let expense_date = expense.date.clone();
+                            let is_transfer = expense_type == ExpenseType::Transfer;
+                            let kind = match expense_type {
+                                ExpenseType::Transfer => tid!("expense-type-transfer"),
+                                ExpenseType::Gain => tid!("expense-type-gain"),
+                                ExpenseType::Expense => category_label(row.category),
+                            };
+                            let people = (!is_transfer && !d.personal)
+                                .then(|| tid!("expense-people", count: debtors.len() as i64));
+                            let subtitle = summary_subtitle(kind, people, expense.description.as_deref());
+                            let emoji = row.emoji;
+                            let total = expense.amount;
+                            let added_by = expense
+                                .author_id
+                                .filter(|_| is_transfer)
+                                .map(|id| (name_of(id), format_date(expense.created_at.date())));
+                            let is_me = |id: i32| !is_transfer && stored_user_id == Some(id);
+                            debtors.sort_by_key(|dp| !is_me(dp.user_id));
+                            let debtors_heading = debtors_title(&expense_type, debtors.len());
+                            let state = read_from_ls();
+                            let targets = destinations(state.cached_projects_list.as_deref().unwrap_or_default(), &state, project_id);
+                            let movable = can_delete && can_move(&expense_type) && targets.iter().any(|t| !t.current);
+                            let source_name = targets.iter().find(|t| t.current).map(|t| t.name.clone()).unwrap_or_default();
+                            let source_personal = targets.iter().any(|t| t.current && t.personal);
                             rsx! {
                                 AppHeader {
                                     title: "{exp_name}",
+                                    private_title: true,
                                     back_button_route: Route::ExpensesPage { project_id },
                                     sub_title: format_date_str(&expense.date),
-                                    if can_edit || can_delete {
+                                    if can_edit || can_delete || movable {
                                         DropdownButton {
                                             id: "expense-actions",
                                             label: tid!("expense-actions"),
+                                            button_class: "btn btn-circle size-11 min-h-11 border-0 bg-base-300 relative z-50",
+                                            menu_class: "menu bg-base-100 rounded-xl w-64 px-0 py-1.5 shadow-lg absolute right-0 top-full mt-2 z-50 [&_button]:min-h-11 [&_button]:gap-2.5 [&_button]:text-[15px] [&_button]:font-medium",
+                                            trigger: rsx! { MoreIcon { size: 24 } },
                                             if can_edit {
                                                 DropdownItem {
                                                     id: "edit-expense-item",
                                                     variant: "primary",
                                                     label: tid!("edit"),
+                                                    icon: rsx! { PencilIcon { size: ICON_INLINE } },
                                                     onclick: move |_| show_edit.set(true),
+                                                }
+                                            }
+                                            if movable {
+                                                DropdownItem {
+                                                    id: "move-expense-item",
+                                                    variant: "ghost",
+                                                    label: tid!("move-expense"),
+                                                    icon: rsx! { RightArrowIcon { size: ICON_INLINE } },
+                                                    onclick: move |_| show_move.set(true),
                                                 }
                                             }
                                             if can_delete {
@@ -165,9 +244,26 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                                     id: "delete-expense-item",
                                                     variant: "error",
                                                     label: tid!("delete"),
+                                                    icon: rsx! { TrashIcon { size: ICON_INLINE } },
                                                     onclick: move |_| show_delete_confirm.set(true),
                                                 }
                                             }
+                                        }
+                                    }
+                                }
+
+                                div { id: "expense-summary", class: "card bg-base-100 shadow-soft",
+                                    div { class: "card-body p-4 flex-row items-center gap-3",
+                                        if is_transfer {
+                                            span { class: "size-11 shrink-0 rounded-2xl bg-primary/10 text-primary flex items-center justify-center",
+                                                TransferIcon { size: ICON_HEADER }
+                                            }
+                                        } else {
+                                            span { class: "shrink-0 text-3xl", aria_hidden: "true", "{emoji}" }
+                                        }
+                                        div { class: "flex-1 min-w-0",
+                                            p { class: "font-display font-bold text-2xl", {crate::common::amount(total, &currency)} }
+                                            p { class: "text-sm text-base-content/70 truncate", "{subtitle}" }
                                         }
                                     }
                                 }
@@ -181,7 +277,7 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                         class: "text-sm text-base-content/70",
                                         {tid!(
                                             "expense-converted-from",
-                                            amount: format!("{source_amount:.2}"),
+                                            amount: crate::common::number(source_amount),
                                             from: source_currency.to_string(),
                                             rate: format!("{rate}"),
                                             to: currency.clone()
@@ -236,13 +332,13 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                 // amounts it cannot read, so the mismatch surfaces here instead.
                                 if d.inconsistent.contains(&expense_id) {
                                     div { role: "alert", class: "alert alert-warning text-sm",
-                                        {tid!("expense-inconsistent-detail", paid: format!("{payers_sum:.2}"), owed: format!("{debtors_sum:.2}"), total: format!("{:.2}", expense.amount))}
+                                        {tid!("expense-inconsistent-detail", paid: crate::common::number(payers_sum), owed: crate::common::number(debtors_sum), total: crate::common::number(expense.amount))}
                                     }
                                 }
 
                                 div { class: "card bg-base-100 shadow-soft",
-                                    div { class: "card-body p-4 gap-3",
-                                        h2 { class: "font-semibold text-sm text-base-content/70 uppercase",
+                                    div { class: "card-body p-4 gap-0",
+                                        h2 { class: "font-semibold text-xs tracking-wide text-base-content/70 uppercase",
                                             {tid!(payers_title(&expense_type))}
                                         }
                                         for dp in payers {
@@ -251,24 +347,34 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                                 user_id: dp.user_id,
                                                 amount: dp.amount,
                                                 currency: currency.clone(),
+                                                share: None,
+                                                is_me: is_me(dp.user_id),
+                                                highlight: is_me(dp.user_id) && !d.personal,
+                                            }
+                                        }
+                                        div { class: "h-px bg-base-content/10 my-2" }
+                                        h2 { id: "expense-debtors-title", class: "font-semibold text-xs tracking-wide text-base-content/70 uppercase mb-1",
+                                            {tid!(debtors_heading)}
+                                        }
+                                        div { id: "expense-debtors", class: "flex flex-col",
+                                            for dp in debtors {
+                                                ParticipantRow {
+                                                    name: name_of(dp.user_id),
+                                                    user_id: dp.user_id,
+                                                    amount: dp.amount,
+                                                    currency: currency.clone(),
+                                                    share: (!is_transfer && !d.personal).then(|| share_percent(dp.amount, total)),
+                                                    is_me: is_me(dp.user_id),
+                                                    highlight: is_me(dp.user_id) && !d.personal,
+                                                }
                                             }
                                         }
                                     }
                                 }
 
-                                div { class: "card bg-base-100 shadow-soft",
-                                    div { class: "card-body p-4 gap-3",
-                                        h2 { class: "font-semibold text-sm text-base-content/70 uppercase",
-                                            {tid!(debtors_title(&expense_type))}
-                                        }
-                                        for dp in debtors {
-                                            ParticipantRow {
-                                                name: name_of(dp.user_id),
-                                                user_id: dp.user_id,
-                                                amount: dp.amount,
-                                                currency: currency.clone(),
-                                            }
-                                        }
+                                if let Some((author, created)) = added_by {
+                                    p { id: "expense-added-by", class: "px-1 text-xs text-base-content/70",
+                                        {tid!("expense-added-by", name: author, date: created)}
                                     }
                                 }
 
@@ -288,6 +394,47 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                         project_id,
                                         stored_user_id,
                                         currency: currency.clone(),
+                                    }
+                                }
+
+                                if show_move() {
+                                    MoveExpenseSheet {
+                                        destinations: targets.clone(),
+                                        from_group: (!source_personal).then(|| source_name.clone()),
+                                        on_close: move |_| show_move.set(false),
+                                        on_pick: {
+                                            let targets = targets.clone();
+                                            let source_name = source_name.clone();
+                                            let currency = currency.clone();
+                                            move |to: Uuid| {
+                                                show_move.set(false);
+                                                let Some(target) = targets.iter().find(|t| t.project_id == to) else { return };
+                                                // The ciphertext, not the decrypted row: it carries
+                                                // the fields this build does not know.
+                                                let payload = store.live.read().as_ref()
+                                                    .filter(|l| l.project_id == project_id)
+                                                    .and_then(|l| l.expenses.iter().find(|e| e.id == expense_id).cloned())
+                                                    .and_then(|e| crate::crypto::decrypt_json::<shared::ExpensePayload>(&k, &e.payload).ok());
+                                                let Some(payload) = payload else { return };
+                                                let (amount, typed_currency) = typed_amount(&payload, &currency);
+                                                let mut pending_move = store.pending_move;
+                                                pending_move.set(Some(MoveDraft {
+                                                    from_project: project_id,
+                                                    from_name: source_name.clone(),
+                                                    from_key: k,
+                                                    from_user_id: stored_user_id,
+                                                    expense_id,
+                                                    to_project: to,
+                                                    to_name: target.name.clone(),
+                                                    to_personal: target.personal,
+                                                    payload,
+                                                    amount,
+                                                    currency: typed_currency,
+                                                }));
+                                                // Replace, not push: the expense page left behind is about to stop existing.
+                                                nav.replace(Route::ExpensesPage { project_id: to });
+                                            }
+                                        },
                                     }
                                 }
 
@@ -352,5 +499,44 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                 },
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn share_percent_rounds_to_the_nearest_point() {
+        assert_eq!(share_percent(30.0, 86.4), 35);
+        assert_eq!(share_percent(16.4, 86.4), 19);
+        assert_eq!(share_percent(12.5, 12.5), 100);
+    }
+
+    #[test]
+    fn share_percent_survives_a_zero_or_inconsistent_total() {
+        assert_eq!(share_percent(10.0, 0.0), 0);
+        assert_eq!(share_percent(10.0, -5.0), 0);
+        assert_eq!(share_percent(20.0, 10.0), 100);
+    }
+
+    #[test]
+    fn summary_subtitle_appends_a_non_blank_description() {
+        assert_eq!(summary_subtitle("Transfer".into(), None, Some(" Lydia ")), "Transfer · Lydia");
+        assert_eq!(summary_subtitle("Food".into(), None, Some("  ")), "Food");
+        assert_eq!(summary_subtitle("Food".into(), None, None), "Food");
+    }
+
+    #[test]
+    fn summary_subtitle_counts_the_people_before_the_description() {
+        assert_eq!(summary_subtitle("Food".into(), Some("4 people".into()), None), "Food · 4 people");
+        assert_eq!(summary_subtitle("Food".into(), Some("4 people".into()), Some("Lidl")), "Food · 4 people · Lidl");
+    }
+
+    #[test]
+    fn one_recipient_is_named_in_the_singular() {
+        assert_eq!(debtors_title(&ExpenseType::Transfer, 1), "debtors-title-recipient");
+        assert_eq!(debtors_title(&ExpenseType::Transfer, 2), "debtors-title-recipients");
+        assert_eq!(debtors_title(&ExpenseType::Expense, 4), "debtors-title-for");
     }
 }

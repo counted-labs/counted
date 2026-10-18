@@ -3,12 +3,9 @@
 
 use chrono::NaiveDate;
 use crate::tid;
-use shared::{
-    sums_to_total, EncryptedPair, EncryptedUserAmount, ExpensePayload, ExpenseType, PaymentPayload,
-};
+use shared::{sums_to_total, ExpensePayload, ExpenseShare, ExpenseType};
 
 use super::expense_form_helpers::UserEntry;
-use crate::crypto::encrypt_json;
 
 /// A submitted form that passed validation.
 #[derive(Debug)]
@@ -37,7 +34,7 @@ pub enum FormError {
     /// A hand-typed exchange rate that is not a number, not positive, or large enough that
     /// `amount * rate` would stop being finite.
     RateInvalid,
-    /// A foreign currency with the rate field left blank and no rate table to fall back on —
+    /// A foreign currency with the rate field left blank and no rate table to fall back on -
     /// offline, or the server could not reach InforEuro. The user can still type one.
     RateUnavailable,
 }
@@ -56,10 +53,10 @@ impl FormError {
             Self::NoDebtor => tid!("expense-no-debtor"),
             Self::InvalidDate => tid!("expense-invalid-date"),
             Self::PayersMismatch { sum, total } => {
-                tid!("expense-payers-mismatch", sum: format!("{sum:.2}"), total: format!("{total:.2}"))
+                tid!("expense-payers-mismatch", sum: crate::common::number(sum), total: crate::common::number(total))
             }
             Self::DebtorsMismatch { sum, total } => {
-                tid!("expense-debtors-mismatch", sum: format!("{sum:.2}"), total: format!("{total:.2}"))
+                tid!("expense-debtors-mismatch", sum: crate::common::number(sum), total: crate::common::number(total))
             }
             Self::RateInvalid => tid!("expense-rate-invalid"),
             Self::RateUnavailable => tid!("expense-rate-unavailable"),
@@ -95,7 +92,7 @@ pub fn resolve_conversion(
 ///
 /// `validated_total` is the figure the participant split was checked against; `conversion` is what
 /// the payload will carry. If those two ever disagree the expense is self-contradictory the moment
-/// it is written, and under E2EE nobody downstream can catch it — the server sees ciphertext, and
+/// it is written, and under E2EE nobody downstream can catch it - the server sees ciphertext, and
 /// every reader trusts `amount`. Cheap to check, so it is checked.
 pub fn conversion_matches_total(
     validated_total: f64,
@@ -135,8 +132,8 @@ pub fn validate_expense_form(
         return Err(FormError::InvalidDate);
     }
     // Both sides must add up to the total, or the balances they produce never net to zero and the
-    // reimbursement suggestions can't settle. The server cannot check this — the amounts reach it
-    // encrypted — so this is the only place it is enforced at write time.
+    // reimbursement suggestions can't settle. The server cannot check this - the amounts reach it
+    // encrypted - so this is the only place it is enforced at write time.
     if let Some(sum) = side_mismatch(total, &payers) {
         return Err(FormError::PayersMismatch { sum, total });
     }
@@ -162,20 +159,25 @@ fn active_amounts(entries: &[UserEntry]) -> Vec<(i32, f64)> {
         .collect()
 }
 
-pub fn encrypt_user_amounts(
-    key: &[u8; 32],
-    entries: &[(i32, f64)],
-    is_debt: bool,
-) -> Result<Vec<EncryptedUserAmount>, String> {
-    entries
-        .iter()
-        .map(|(user_id, amount)| {
-            Ok(EncryptedUserAmount {
-                user_id: *user_id,
-                payload: encrypt_json(key, &PaymentPayload { amount: *amount, is_debt })?,
-            })
-        })
-        .collect()
+/// The payload with its author and its payers and debtors inside, where the server cannot link
+/// them - docs/plans/participant-links-encryption.md. Encrypt it with `encrypt_padded_json`.
+pub fn with_shares(
+    payload: ExpensePayload,
+    author_id: Option<i32>,
+    payers: &[(i32, f64)],
+    debtors: &[(i32, f64)],
+) -> ExpensePayload {
+    let side = |entries: &[(i32, f64)], is_debt: bool| {
+        entries
+            .iter()
+            .map(move |&(user_id, amount)| ExpenseShare { user_id, amount, is_debt })
+            .collect::<Vec<_>>()
+    };
+    ExpensePayload {
+        author_id,
+        shares: Some([side(payers, false), side(debtors, true)].concat()),
+        ..payload
+    }
 }
 
 /// What an expense entered in another currency records alongside the converted amount.
@@ -221,20 +223,8 @@ impl Conversion {
     }
 }
 
-/// `amount` is the total **in the project's currency** — already converted when `conversion` is
+/// `amount` is the total **in the project's currency** - already converted when `conversion` is
 /// `Some`. Never the amount as typed: every reader of an expense sums one currency.
-pub fn encrypt_expense_payload(
-    key: &[u8; 32],
-    name: &str,
-    amount: f64,
-    date_str: &str,
-    expense_type: &ExpenseType,
-    category: Option<String>,
-    conversion: Option<&Conversion>,
-) -> Result<EncryptedPair, String> {
-    encrypt_json(key, &expense_payload(name, amount, date_str, expense_type, category, conversion))
-}
-
 pub fn expense_payload(
     name: &str,
     amount: f64,
@@ -264,8 +254,20 @@ pub fn expense_payload(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::crypto::decrypt_json;
+    use crate::crypto::{decrypt_json, encrypt_json};
     use shared::{EncryptedPair, User};
+
+    fn encrypt_expense_payload(
+        key: &[u8; 32],
+        name: &str,
+        amount: f64,
+        date_str: &str,
+        expense_type: &ExpenseType,
+        category: Option<String>,
+        conversion: Option<&Conversion>,
+    ) -> Result<EncryptedPair, String> {
+        encrypt_json(key, &expense_payload(name, amount, date_str, expense_type, category, conversion))
+    }
 
     use crate::common::test_fixtures::test_key;
 
@@ -281,45 +283,46 @@ mod tests {
 
     // ---- encrypt_user_amounts ----
 
-    #[test]
-    fn payer_is_debt_false() {
-        let key = test_key();
-        let result = encrypt_user_amounts(&key, &[(1, 30.0)], false).unwrap();
-        assert_eq!(result[0].user_id, 1);
-        let pp: PaymentPayload = decrypt_json(&key, &result[0].payload).unwrap();
-        assert!(!pp.is_debt);
-        assert!((pp.amount - 30.0).abs() < 1e-9);
+    fn plain() -> ExpensePayload {
+        expense_payload("Pizza", 30.0, "2025-01-01", &ExpenseType::Expense, None, None)
     }
 
     #[test]
-    fn debtor_is_debt_true() {
-        let key = test_key();
-        let result = encrypt_user_amounts(&key, &[(2, 15.0)], true).unwrap();
-        let pp: PaymentPayload = decrypt_json(&key, &result[0].payload).unwrap();
-        assert!(pp.is_debt);
-        assert!((pp.amount - 15.0).abs() < 1e-9);
+    fn payers_owe_nothing_and_debtors_owe() {
+        let p = with_shares(plain(), Some(7), &[(1, 30.0)], &[(1, 15.0), (2, 15.0)]);
+        assert_eq!(p.author_id, Some(7));
+        assert_eq!(
+            p.shares.unwrap(),
+            vec![
+                ExpenseShare { user_id: 1, amount: 30.0, is_debt: false },
+                ExpenseShare { user_id: 1, amount: 15.0, is_debt: true },
+                ExpenseShare { user_id: 2, amount: 15.0, is_debt: true },
+            ]
+        );
     }
 
     #[test]
-    fn multiple_entries_all_encrypted() {
-        let key = test_key();
-        let entries = [(1, 10.0), (2, 20.0), (3, 30.0)];
-        let result = encrypt_user_amounts(&key, &entries, false).unwrap();
-        assert_eq!(result.len(), 3);
-        for (i, (user_id, amount)) in entries.iter().enumerate() {
-            assert_eq!(result[i].user_id, *user_id);
-            let pp: PaymentPayload = decrypt_json(&key, &result[i].payload).unwrap();
-            assert!((pp.amount - amount).abs() < 1e-9);
-        }
+    fn the_rest_of_the_payload_is_kept() {
+        let p = with_shares(plain(), None, &[(1, 30.0)], &[(2, 30.0)]);
+        assert_eq!(p.name, "Pizza");
+        assert_eq!(p.amount, 30.0);
+        assert_eq!(p.author_id, None);
     }
 
     #[test]
-    fn wrong_key_fails_decrypt() {
+    fn padded_shares_hide_the_participant_count() {
         let key = test_key();
-        let result = encrypt_user_amounts(&key, &[(1, 50.0)], false).unwrap();
-        let mut bad = key;
-        bad[0] ^= 0xFF;
-        assert!(decrypt_json::<PaymentPayload>(&bad, &result[0].payload).is_err());
+        let sealed = |debtors: &[(i32, f64)]| {
+            crate::crypto::encrypt_padded_json(&key, &with_shares(plain(), Some(1), &[(1, 30.0)], debtors)).unwrap()
+        };
+        let one = sealed(&[(2, 30.0)]);
+        let two = sealed(&[(2, 15.0), (3, 15.0)]);
+        let five = sealed(&[(1, 6.0), (2, 6.0), (3, 6.0), (4, 6.0), (5, 6.0)]);
+        assert_eq!(one.ct.len(), two.ct.len(), "one more participant, same length");
+        let plain_len = |p| crate::crypto::decrypt(&key, p).unwrap().len();
+        assert_eq!((plain_len(&one), plain_len(&five)), (256, 512), "past the bucket, the next power of two");
+        let back: ExpensePayload = decrypt_json(&key, &five).unwrap();
+        assert_eq!(back.shares.unwrap().len(), 6);
     }
 
     // ---- validate_expense_form ----
@@ -472,7 +475,7 @@ mod tests {
 
     #[test]
     fn validate_accepts_what_the_splitter_produced_for_a_sub_cent_total() {
-        // 100.005 quantises to 10000 cents, so `distribute` hands back 100.00 — the validator must
+        // 100.005 quantises to 10000 cents, so `distribute` hands back 100.00 - the validator must
         // agree with the splitter instead of rejecting its own output.
         use super::super::expense_form_helpers::distribute;
         let total = 100.005;
@@ -486,7 +489,7 @@ mod tests {
     #[test]
     fn validate_ignores_unchecked_rows_carrying_stale_amounts() {
         // `redistribute` leaves an unchecked row's amount alone when nothing is checked, so a stale
-        // 50 can survive there — it must not count against the total.
+        // 50 can survive there - it must not count against the total.
         let v = validate_expense_form(
             "x",
             100.0,
@@ -655,7 +658,7 @@ mod tests {
     #[test]
     fn resolve_returns_none_in_the_project_currency() {
         assert_eq!(resolve_conversion("EUR", "EUR", 10.0, "", None), Ok(None));
-        // Even with a rate typed in — the field is not shown, so it cannot mean anything.
+        // Even with a rate typed in - the field is not shown, so it cannot mean anything.
         assert_eq!(resolve_conversion("EUR", "EUR", 10.0, "2.0", None), Ok(None));
     }
 

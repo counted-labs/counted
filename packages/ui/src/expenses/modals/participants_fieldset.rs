@@ -12,7 +12,7 @@ fn checked_amounts(entries: &[UserEntry]) -> Vec<f64> {
     entries.iter().filter(|e| e.checked).map(|e| e.amount).collect()
 }
 
-/// One participants block — payers or debtors. Both were copy-pasted in `ExpenseForm` before,
+/// One participants block - payers or debtors. Both were copy-pasted in `ExpenseForm` before,
 /// which is why every handler existed twice.
 #[derive(Props, Clone, PartialEq)]
 pub struct ParticipantsFieldsetProps {
@@ -31,7 +31,7 @@ pub fn ParticipantsFieldset(props: ParticipantsFieldsetProps) -> Element {
     let mut share_mode = props.share_mode;
 
     rsx! {
-        // No border — the collapse in `ExpenseForm` draws the box and repeats the legend in its
+        // No border - the collapse in `ExpenseForm` draws the box and repeats the legend in its
         // title. Still a fieldset/legend pair so the grouping stays in the accessibility tree.
         fieldset { id: props.id, class: "min-w-0",
             legend { class: "sr-only", "{props.legend}" }
@@ -103,7 +103,7 @@ pub fn ParticipantsFieldset(props: ParticipantsFieldsetProps) -> Element {
                         let sm = share_mode();
                         rsx! {
                             div { class: "flex items-center gap-3 min-h-11",
-                                // The label wraps the checkbox, the avatar and the name — the whole
+                                // The label wraps the checkbox, the avatar and the name - the whole
                                 // left of the row is one target instead of a 20px box with inert
                                 // text beside it. The amount field stays outside it: inside, a tap
                                 // meant for the field would toggle the row.
@@ -138,7 +138,7 @@ pub fn ParticipantsFieldset(props: ParticipantsFieldsetProps) -> Element {
                                     span { class: "flex-1 text-sm truncate", "{name}" }
                                 }
                                 if sm {
-                                    span { class: "text-xs text-base-content/70 w-16 text-right tabular-nums", "{amount_val:.2}" }
+                                    span { class: "text-xs text-base-content/70 w-16 text-right tabular-nums", {crate::common::number(amount_val)} }
                                     AmountInput {
                                         class: "input input-sm w-16 text-right tabular-nums",
                                         aria_label: tid!("participants-shares-for", name: name.clone()),
@@ -174,7 +174,7 @@ pub fn ParticipantsFieldset(props: ParticipantsFieldsetProps) -> Element {
                     }
                 }
             }
-            // Every path but a hand-typed amount goes through `redistribute`, which is exact — so
+            // Every path but a hand-typed amount goes through `redistribute`, which is exact - so
             // this only lights up when a row is edited by hand.
             {
                 let amounts = checked_amounts(&entries());
@@ -184,12 +184,12 @@ pub fn ParticipantsFieldset(props: ParticipantsFieldsetProps) -> Element {
                 rsx! {
                     div {
                         class: if balanced { "flex justify-between text-xs mt-2 tabular-nums text-base-content/70" } else { "flex justify-between text-xs mt-2 tabular-nums text-error font-medium" },
-                        span { "{sum:.2} / {total():.2} {props.currency}" }
+                        span { "{crate::common::number(sum)} / {crate::common::amount(total(), &props.currency)}" }
                         if !balanced {
                             if diff < 0.0 {
-                                span { {tid!("participants-remaining", amount: format!("{:.2}", -diff))} }
+                                span { {tid!("participants-remaining", amount: crate::common::number(-diff))} }
                             } else {
-                                span { {tid!("participants-over-by", amount: format!("{diff:.2}"))} }
+                                span { {tid!("participants-over-by", amount: crate::common::number(diff))} }
                             }
                         }
                     }
@@ -280,7 +280,7 @@ mod tests {
         let m = dom.rebuild_to_vec();
         let ids = listener_ids(&m, "input");
         let clicks = listener_ids(&m, "click");
-        assert_eq!(ids.len(), 5, "template changed — re-index the constants above");
+        assert_eq!(ids.len(), 5, "template changed - re-index the constants above");
         assert_eq!(clicks.len(), 2, "the two mode segments");
         (dom, spy, ids, clicks)
     }
@@ -310,7 +310,7 @@ mod tests {
         assert_eq!(spy.borrow()[0], (true, 12.50, 0.0));
     }
 
-    /// `value` is volatile in Dioxus — rewritten on every render — and an `f64` formats "12." as
+    /// `value` is volatile in Dioxus - rewritten on every render - and an `f64` formats "12." as
     /// "12", which erased the decimal key under a mobile keyboard.
     #[test]
     fn a_trailing_separator_survives_the_render() {
@@ -376,7 +376,7 @@ mod tests {
         dom.runtime().handle_event("input", form_input("1"), ids[FIELD_1]);
         dom.render_immediate_to_vec();
 
-        // 30 split 2:1 — recomputed on the keystroke, not on the blur.
+        // 30 split 2:1 - recomputed on the keystroke, not on the blur.
         assert_eq!(spy.borrow()[0], (true, 20.0, 2.0));
         assert_eq!(spy.borrow()[1], (true, 10.0, 1.0));
     }
@@ -404,7 +404,7 @@ mod tests {
         assert_eq!(spy.borrow()[0], (true, 30.0, 1.0));
     }
 
-    /// Tapping the segment already in force must not re-run the split — hand-typed amounts would
+    /// Tapping the segment already in force must not re-run the split - hand-typed amounts would
     /// be wiped by a tap that changes nothing.
     #[test]
     fn tapping_the_current_mode_changes_nothing() {
@@ -532,7 +532,7 @@ mod tests {
         );
         let m = dom.rebuild_to_vec();
         let ids = listener_ids(&m, "input");
-        assert_eq!(ids.len(), 5, "template changed — re-index the constants above");
+        assert_eq!(ids.len(), 5, "template changed - re-index the constants above");
         assert_eq!(
             listener_ids(&m, "click").len(),
             2,
@@ -583,7 +583,7 @@ mod tests {
         dom.runtime().handle_event("focus", focus(), ids[FIELD_0]);
         let keys = keys(&dom.render_immediate_to_vec());
 
-        // Moving to the other row blurs before it focuses — the bar stays on screen (so its keys
+        // Moving to the other row blurs before it focuses - the bar stays on screen (so its keys
         // keep their ids) and must end up pointed at the new field.
         dom.runtime().handle_event("input", form_input("10"), ids[FIELD_1]);
         dom.render_immediate_to_vec();
@@ -598,7 +598,7 @@ mod tests {
         assert!(value_writes(&m, ids[FIELD_0]).is_empty(), "the row left behind is untouched");
     }
 
-    /// Focusing again has to build the keys from scratch — which is only true if the blur took the
+    /// Focusing again has to build the keys from scratch - which is only true if the blur took the
     /// bar off screen.
     #[test]
     fn blurring_the_last_field_takes_the_bar_away() {

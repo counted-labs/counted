@@ -5,7 +5,9 @@ use dioxus::prelude::*;
 use std::collections::VecDeque;
 
 use super::error_utils::error_message;
+use super::local_storage::project_key;
 use super::offline_queue::{write_queue, OpKind, QueuedOp};
+use super::project_write::update_project_fresh;
 
 /// Why a replay could not finish, as data rather than a sentence.
 ///
@@ -18,7 +20,7 @@ pub enum SyncFailure {
     ConflictEdit(String),
     ConflictDelete(String),
     ConflictOther(String),
-    /// Anything else — the op is preserved and the drain stops. Carries the server's message.
+    /// Anything else - the op is preserved and the drain stops. Carries the server's message.
     Error(String),
 }
 
@@ -39,6 +41,18 @@ pub async fn replay_queue(
             OpKind::EditExpense(p) => edit_expense(Json(p)).await.map(|_| ()),
             OpKind::DeleteExpense(p) => delete_expense(Json(p)).await.map(|_| ()),
             OpKind::UpdateProject(p) => update_project_by_id(Json(p)).await.map(|_| ()),
+            // Rebuilt on the payload the server holds now, so a field written meanwhile - by
+            // another device or a newer build - survives the replay.
+            OpKind::EditProject(edit) => match project_key(edit.project_id) {
+                Some(key) => update_project_fresh(edit.project_id, |stored| edit.apply(&key, stored))
+                    .await
+                    .map(|_| ()),
+                None => Err(ServerFnError::ServerError {
+                    message: shared::PROJECT_NOT_FOUND.to_string(),
+                    code: 404,
+                    details: None,
+                }),
+            },
         };
 
         match result {

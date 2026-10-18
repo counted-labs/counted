@@ -3,7 +3,7 @@
 //! Every routed page scrolls inside its own `.app-container`, and a box whose content fits is not a
 //! scroll node on either platform: iOS backs an overflow scroller with a `UIScrollView` whose
 //! `alwaysBounceVertical` is never set, and Chromium sends the unused delta to the viewport. So a
-//! one-item list does not move under the finger at all. The gesture below fills that gap — and on
+//! one-item list does not move under the finger at all. The gesture below fills that gap - and on
 //! Android replaces the WebView's own stretch, which only some versions draw for a non-root
 //! scroller (`features::kOverscrollEffectOnNonRootScrollers`), so `main.css` switches it off there.
 //!
@@ -20,7 +20,7 @@ pub const REFRESH_HOOK: &str = "_countedRefresh";
 /// Set by the gesture; `PullToRefresh` calls it when the page's refresh has finished.
 pub const DONE_HOOK: &str = "_countedPtrDone";
 
-/// Damping applied to the finger's travel — 0.45 is close to UIScrollView's rubber band.
+/// Damping applied to the finger's travel - 0.45 is close to UIScrollView's rubber band.
 const DAMPING: &str = "0.45";
 /// Pixels of damped travel that arm the refresh; `--ptr-pull` is the ratio to this.
 const ARM_PX: &str = "64";
@@ -48,14 +48,14 @@ fn overscroll_js() -> String {
 
 /// Passive capture-phase listeners on `main`: capture because the scroller is a descendant and the
 /// touch may be stopped at its target (`DropdownButton` does), passive because nothing here prevents
-/// a default — at an edge the box cannot scroll further anyway.
+/// a default - at an edge the box cannot scroll further anyway.
 ///
 /// State written to the DOM, all of it removed at rest:
-/// - `.app-container[data-overscroll]` + `--overscroll` — `pulling` while the finger is down,
+/// - `.app-container[data-overscroll]` + `--overscroll` - `pulling` while the finger is down,
 ///   `settling` for the spring back. `main.css` transforms the container's children off it; nothing
 ///   may stay transformed once settled, or the FAB and the dropdown scrims lose their viewport anchor
 ///   (`page_transition.rs`).
-/// - `.ptr[data-state]` + `--ptr-pull` — `pulling` → `armed` → `refreshing` → `done`.
+/// - `.ptr[data-state]` + `--ptr-pull` - `pulling` → `armed` → `refreshing` → `done`.
 ///
 /// iOS keeps its native rubber band wherever the box is scrollable (`nativeBounce`): the JS bounce
 /// on top of it would move the content twice.

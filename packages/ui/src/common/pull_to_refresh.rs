@@ -2,7 +2,7 @@
 //!
 //! The gesture lives in JS and owns every visual state; this component only receives the one
 //! "refresh" trigger, runs the page's refresh, and reports back when `busy` drops so the JS can
-//! retract the indicator. Rendered as the first child of a page's `.app-container` — the gesture
+//! retract the indicator. Rendered as the first child of a page's `.app-container` - the gesture
 //! looks for `:scope > .ptr`, and a page without one gets the bounce but no refresh.
 
 use dioxus::prelude::*;
@@ -12,7 +12,7 @@ use crate::common::overscroll::{DONE_HOOK, REFRESH_HOOK};
 #[cfg(any(target_os = "android", target_os = "ios"))]
 use crate::common::{haptic, Haptic};
 
-/// Whether the resource's future is running. Reads `state()`, which subscribes — that is the point:
+/// Whether the resource's future is running. Reads `state()`, which subscribes - that is the point:
 /// the page re-renders when the refresh lands, and `busy` drops with it.
 pub fn pending<T: 'static>(r: &Resource<T>) -> bool {
     matches!(*r.state().read(), UseResourceState::Pending)

@@ -13,8 +13,21 @@ use crate::decrypted::{payments_are_inconsistent, pickable_users, DecryptedExpen
 use crate::expenses::helpers::delete_expense_action::{
     can_delete_expense, can_edit_expense, delete_expense_request, run_delete_expense,
 };
+use crate::categories::category_label;
+use crate::expenses::expense_search::{ExpenseSearchField, SearchToggle};
+use crate::expenses::move_expense::finish_move;
+use crate::expenses::helpers::expense_query::{mark_segments_hit, ExpenseFilter, ExpenseQuery};
+use crate::expenses::budget_panel::{sheet_categories, BudgetPanel, BudgetSheet};
+use crate::expenses::helpers::budgets::{average_by_category, budget_lines, crossed, spent_by_category, Meter};
+use crate::expenses::helpers::my_spending::{
+    first_of_month, in_month, month_totals, results_total, share_rows, GroupLedger, ShareRow,
+};
 use crate::expenses::helpers::project_data::{LiveData, ProjectData, RowExpense};
+use crate::expenses::hooks::use_fx_rates::use_fx_rates;
 use crate::expenses::hooks::use_receipt_scan::use_receipt_scan;
+use crate::expenses::my_spending::{MonthSummary, SearchPill};
+use crate::expenses::project_states::ExpenseRowsSkeleton;
+use crate::preferences::uncounted_projects;
 use crate::expenses::{AddExpenseModal, EditExpenseModal, ExpenseRow};
 use crate::icons::{CameraIcon, CloseIcon, PhotoIcon, PlusIcon, ICON_INLINE};
 use crate::expenses::hooks::use_project_store::ProjectStore;
@@ -104,7 +117,7 @@ mod tests {
 
     #[test]
     fn an_expense_without_payments_is_not_flagged() {
-        // Nothing decrypted for it — a missing key, not a broken expense.
+        // Nothing decrypted for it - a missing key, not a broken expense.
         let expenses = [de(1, 100.0)];
         assert!(inconsistent_expense_ids(&expenses, &[]).is_empty());
     }
@@ -138,21 +151,6 @@ mod tests {
         assert_eq!(expense_filter_label(ExpenseFilter::MyDebts), "filter-my-debts");
     }
 
-    #[test]
-    fn wants_debt_all_does_not_filter() {
-        assert_eq!(wants_debt(ExpenseFilter::All), None);
-    }
-
-    #[test]
-    fn wants_debt_my_payments_keeps_credits() {
-        assert_eq!(wants_debt(ExpenseFilter::MyPayments), Some(false));
-    }
-
-    #[test]
-    fn wants_debt_my_debts_keeps_debts() {
-        assert_eq!(wants_debt(ExpenseFilter::MyDebts), Some(true));
-    }
-
     fn dpu(expense_id: i32, user_id: i32, is_debt: bool, amount: f64) -> DecryptedPayment {
         DecryptedPayment { user_id, ..dp(expense_id, is_debt, amount) }
     }
@@ -171,7 +169,7 @@ mod tests {
 
     #[test]
     fn what_i_paid_is_not_what_i_owe() {
-        // The credit row is mine and sits on the same expense — it must not be counted.
+        // The credit row is mine and sits on the same expense - it must not be counted.
         let payments = [dpu(1, 7, false, 100.0), dpu(1, 7, true, 25.0)];
         assert_eq!(my_debt_by_expense(&payments, 7), HashMap::from([(1, 25.0)]));
     }
@@ -192,7 +190,7 @@ mod tests {
 
     #[test]
     fn an_expense_i_owe_nothing_on_is_absent() {
-        // Absent, not zero — the row then renders no second line at all.
+        // Absent, not zero - the row then renders no second line at all.
         let payments = [dpu(1, 7, false, 100.0)];
         assert!(!my_debt_by_expense(&payments, 7).contains_key(&1));
     }
@@ -230,9 +228,13 @@ mod tests {
         )
     }
 
+    fn scope(scope: ExpenseFilter) -> ExpenseQuery {
+        ExpenseQuery { scope, ..Default::default() }
+    }
+
     /// Everything the body does below the decryption pass, as the component does it.
     fn render(data: &ProjectData, filter: ExpenseFilter, uid: Option<i32>) -> usize {
-        let groups = group_expenses(data, filter, uid);
+        let groups = group_expenses(data, &scope(filter), uid);
         let (page, rendered) = take_rows(&groups, PAGE);
         if let (ExpenseFilter::MyDebts, Some(u)) = (filter, uid) {
             let _ = my_debt_by_expense(&data.payments, u);
@@ -247,7 +249,7 @@ mod tests {
         rendered
     }
 
-    /// A filter tap re-runs the whole body and must open no ciphertext — it used to cost a full
+    /// A filter tap re-runs the whole body and must open no ciphertext - it used to cost a full
     /// 6 010-op pass every time.
     #[test]
     fn a_filter_tap_decrypts_nothing() {
@@ -256,7 +258,7 @@ mod tests {
             let (_, n) = count_decrypts(|| render(&data, filter, Some(1)));
             assert_eq!(
                 n, 0,
-                "filter {:?} re-decrypted — the pass belongs above the body, not in it",
+                "filter {:?} re-decrypted - the pass belongs above the body, not in it",
                 expense_filter_label(filter)
             );
         }
@@ -266,7 +268,7 @@ mod tests {
     #[test]
     fn growing_the_window_decrypts_nothing() {
         let data = built();
-        let groups = group_expenses(&data, ExpenseFilter::All, Some(1));
+        let groups = group_expenses(&data, &ExpenseQuery::default(), Some(1));
         let (_, n) = count_decrypts(|| {
             for page in 1..=5 {
                 let _ = take_rows(&groups, PAGE * page);
@@ -278,7 +280,7 @@ mod tests {
     #[test]
     fn the_list_starts_at_one_page_not_the_whole_project() {
         let data = built();
-        let groups = group_expenses(&data, ExpenseFilter::All, Some(1));
+        let groups = group_expenses(&data, &ExpenseQuery::default(), Some(1));
         let total: usize = groups.iter().map(|(_, g)| g.len()).sum();
         assert_eq!(total, 1_000, "the fixture is 1 000 expenses");
 
@@ -287,12 +289,12 @@ mod tests {
         assert!(rendered < total, "and it must not be the whole project");
     }
 
-    /// A day is never split across the boundary — a divider with half its rows under it would read
+    /// A day is never split across the boundary - a divider with half its rows under it would read
     /// as data loss.
     #[test]
     fn a_day_is_never_split_across_the_window_edge() {
         let data = built();
-        let groups = group_expenses(&data, ExpenseFilter::All, Some(1));
+        let groups = group_expenses(&data, &ExpenseQuery::default(), Some(1));
         let (page, rendered) = take_rows(&groups, PAGE);
         let counted: usize = page.iter().map(|(_, g)| g.len()).sum();
         assert_eq!(counted, rendered);
@@ -305,7 +307,7 @@ mod tests {
     #[test]
     fn a_big_enough_window_shows_everything() {
         let data = built();
-        let groups = group_expenses(&data, ExpenseFilter::All, Some(1));
+        let groups = group_expenses(&data, &ExpenseQuery::default(), Some(1));
         let (page, rendered) = take_rows(&groups, 10_000);
         assert_eq!(rendered, 1_000);
         assert_eq!(page.len(), groups.len());
@@ -314,7 +316,7 @@ mod tests {
     #[test]
     fn an_empty_list_yields_no_groups_and_no_rows() {
         let data = ProjectData::default();
-        let groups = group_expenses(&data, ExpenseFilter::All, Some(1));
+        let groups = group_expenses(&data, &ExpenseQuery::default(), Some(1));
         let (page, rendered) = take_rows(&groups, PAGE);
         assert!(page.is_empty());
         assert_eq!(rendered, 0);
@@ -448,7 +450,7 @@ mod tests {
     #[test]
     fn days_run_newest_first_and_rows_newest_first_within_a_day() {
         let data = built();
-        let groups = group_expenses(&data, ExpenseFilter::All, Some(1));
+        let groups = group_expenses(&data, &ExpenseQuery::default(), Some(1));
         for w in groups.windows(2) {
             assert!(w[0].0 > w[1].0, "days must run newest first");
         }
@@ -478,29 +480,12 @@ fn payor_connector(t: &ExpenseType) -> &'static str {
     }
 }
 
-#[derive(Clone, Copy, PartialEq)]
-enum ExpenseFilter {
-    All,
-    MyPayments,
-    MyDebts,
-}
-
-/// Translation keys, not labels — the render site translates.
+/// Translation keys, not labels - the render site translates.
 fn expense_filter_label(f: ExpenseFilter) -> &'static str {
     match f {
         ExpenseFilter::All => "filter-all",
         ExpenseFilter::MyPayments => "filter-my-payments",
         ExpenseFilter::MyDebts => "filter-my-debts",
-    }
-}
-
-/// `None` = no user filtering. `Some(is_debt)` = keep expenses where the stored user has a
-/// payment row with that `is_debt` value.
-fn wants_debt(f: ExpenseFilter) -> Option<bool> {
-    match f {
-        ExpenseFilter::All => None,
-        ExpenseFilter::MyPayments => Some(false),
-        ExpenseFilter::MyDebts => Some(true),
     }
 }
 
@@ -526,7 +511,7 @@ pub(crate) fn inconsistent_expense_ids(
 /// What `user_id` owes per expense; expenses they owe nothing on are absent.
 ///
 /// Summed, not first-taken: an inconsistent expense can carry several debt rows, and the row must
-/// show the whole claim — the ⚠ badge says the numbers are wrong, this must not hide half of one.
+/// show the whole claim - the ⚠ badge says the numbers are wrong, this must not hide half of one.
 pub(crate) fn my_debt_by_expense(
     payments: &[DecryptedPayment],
     user_id: i32,
@@ -538,32 +523,21 @@ pub(crate) fn my_debt_by_expense(
     by_expense
 }
 
+type Groups = Vec<(chrono::NaiveDate, Vec<RowExpense>)>;
+
 /// Date descending, each day by id descending. Reads the page's single decryption pass and the
 /// date already parsed on [`RowExpense`], so a filter tap costs no crypto and no parsing.
-fn group_expenses(
-    data: &ProjectData,
-    filter: ExpenseFilter,
-    stored_user_id: Option<i32>,
-) -> Vec<(chrono::NaiveDate, Vec<RowExpense>)> {
-    let filtered: Vec<&RowExpense> = match (wants_debt(filter), stored_user_id) {
-        (Some(want_debt), Some(uid)) => {
-            let ids: HashSet<i32> = data
-                .payments
-                .iter()
-                .filter(|p| p.user_id == uid && p.is_debt == want_debt)
-                .map(|p| p.expense_id)
-                .collect();
-            data.expenses.iter().filter(|r| ids.contains(&r.expense.id)).collect()
-        }
-        _ => data.expenses.iter().collect(),
-    };
+#[cfg(test)]
+fn group_expenses(data: &ProjectData, query: &ExpenseQuery, stored_user_id: Option<i32>) -> Groups {
+    group_rows(query.select(data, stored_user_id, category_label))
+}
 
+fn group_rows(rows: Vec<&RowExpense>) -> Groups {
     let mut map: BTreeMap<chrono::NaiveDate, Vec<RowExpense>> = BTreeMap::new();
-    for r in filtered {
+    for r in rows {
         map.entry(r.date).or_default().push(r.clone());
     }
-    let mut groups: Vec<_> = map.into_iter().collect();
-    groups.sort_by_key(|(date, _)| std::cmp::Reverse(*date));
+    let mut groups: Groups = map.into_iter().rev().collect();
     for (_, group) in &mut groups {
         group.sort_by_key(|r| std::cmp::Reverse(r.expense.id));
     }
@@ -572,10 +546,7 @@ fn group_expenses(
 
 /// The day-groups covering the first `limit` rows, plus how many rows that came to. A day is never
 /// split across the boundary: the divider and its rows arrive together or not at all.
-fn take_rows(
-    groups: &[(chrono::NaiveDate, Vec<RowExpense>)],
-    limit: usize,
-) -> (Vec<(chrono::NaiveDate, Vec<RowExpense>)>, usize) {
+fn take_rows(groups: &[(chrono::NaiveDate, Vec<RowExpense>)], limit: usize) -> (Groups, usize) {
     let mut out = Vec::new();
     let mut taken = 0;
     for (date, group) in groups {
@@ -589,7 +560,7 @@ fn take_rows(
 }
 
 /// Initial rows, and rows added per scroll to the bottom. At ~22 DOM nodes and 6 listeners per
-/// row, rendering 2000 at once is the whole cost of opening the tab — see
+/// row, rendering 2000 at once is the whole cost of opening the tab - see
 /// `docs/plans/expenses-tab-performance.md`.
 const PAGE: usize = 100;
 
@@ -619,7 +590,7 @@ impl ExpenseMutation {
 }
 
 /// False when the caller must refetch instead. A queued delete still applies: the row is gone for
-/// this device and the op replays on reconnect — refetching offline falls back to the pre-delete
+/// this device and the op replays on reconnect - refetching offline falls back to the pre-delete
 /// cache and used to make the row come *back*.
 pub(crate) fn apply_mutation(
     expenses: &mut Vec<Expense>,
@@ -656,6 +627,34 @@ pub(crate) fn apply_mutation(
     true
 }
 
+/// What an expense added on this page is measured against, as the page showed it.
+#[derive(Clone)]
+struct BudgetWatch {
+    on: bool,
+    month: chrono::NaiveDate,
+    lines: Vec<crate::expenses::helpers::budgets::BudgetLine>,
+}
+
+/// "Me prévenir à 80 %": a personal expense that takes its category past 80 % or past the ceiling
+/// says so at once, on this device.
+fn warn_on_budget(key: &[u8; 32], created: &ExpenseWithPayments, watch: &BudgetWatch, mut flash: Signal<Option<Flash>>) {
+    if !watch.on {
+        return;
+    }
+    let Ok(expense) = crate::decrypted::decrypt_expense(key, &created.expense) else { return };
+    let row = RowExpense::from(expense);
+    if row.expense.expense_type != ExpenseType::Expense || !in_month(row.date, watch.month) {
+        return;
+    }
+    let Some(line) = watch.lines.iter().find(|l| l.category == row.category) else { return };
+    let label = category_label(line.category);
+    match crossed(line.spent, row.expense.amount, line.limit) {
+        Some(Meter::Near(pct)) => flash.set(Some(Flash::ok(tid!("budget-alert-near", category: label, percent: pct as i64)))),
+        Some(Meter::Over(_)) => flash.set(Some(Flash::err(tid!("budget-alert-over", category: label)))),
+        _ => {}
+    }
+}
+
 #[derive(PartialEq, Props, Clone)]
 pub struct ExpensesTabProps {
     /// The page's single decryption pass. A signal, so passing it costs an id comparison, not a
@@ -668,6 +667,10 @@ pub struct ExpensesTabProps {
     pub project_id: Uuid,
     /// Fired after any create, edit or delete, carrying the rows the server wrote.
     pub on_expenses_changed: EventHandler<ExpenseMutation>,
+    /// The groups whose shares "Mes dépenses" lists; empty on any other project.
+    pub ledgers: ReadSignal<Arc<Vec<GroupLedger>>>,
+    /// The first `ledgers` load: an empty list then is not an empty month yet.
+    pub ledgers_loading: bool,
 }
 
 #[component]
@@ -677,11 +680,14 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
     let is_online = use_context::<Signal<bool>>();
     let pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
     let flash = use_context::<Signal<Option<Flash>>>();
-    let mut filter = use_signal(|| ExpenseFilter::All);
+    let store = use_context::<ProjectStore>();
+    let mut query = store.query;
+    // Set by the toggle only, so the field is not focused again when the tab remounts.
+    let mut focus_search = use_signal(|| false);
     let mut show_add_expense = use_signal(|| false);
     let mut scan = use_receipt_scan(show_add_expense);
     let mut scan_menu = use_signal(|| false);
-    // Delete carries the name so the confirmation can quote it — the expense may be gone by then.
+    // Delete carries the name so the confirmation can quote it - the expense may be gone by then.
     let mut confirming_delete: Signal<Option<(i32, String)>> = use_signal(|| None);
     let mut editing: Signal<Option<i32>> = use_signal(|| None);
     // How many rows are currently rendered. Grows as the sentinel scrolls into view.
@@ -692,32 +698,149 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
     let currency = data.currency.clone();
     let project_status = data.project_status.clone();
     let read_only = data.read_only;
+    let personal = data.personal;
+    let month = use_signal(|| first_of_month(chrono::Local::now().date_naive()));
+    let account = use_context::<Signal<Option<shared::Account>>>();
+    let account_key = use_context::<Signal<Option<[u8; 32]>>>();
+    let needs_fx = use_memo(move || {
+        let d = props.data.read();
+        d.personal && props.ledgers.read().iter().any(|l| l.data.currency != d.currency)
+    });
+    let fx = use_fx_rates(needs_fx);
+    let uncounted = match (account.read().as_ref(), account_key()) {
+        (Some(a), Some(k)) => uncounted_projects(a, &k),
+        _ => Default::default(),
+    };
+    let shares: Vec<ShareRow> = if personal {
+        share_rows(&props.ledgers.read(), &uncounted, &currency, fx.read().as_ref())
+    } else {
+        Vec::new()
+    };
+    let share_by_id: HashMap<i32, &ShareRow> = shares.iter().map(|s| (s.row.expense.id, s)).collect();
+    let mut budget_tab = use_signal(|| false);
+    let mut show_budget_sheet = use_signal(|| false);
+    let budget_open = personal && budget_tab();
+    let spent_by_cat = if personal { spent_by_category(&data.expenses, &shares, month()) } else { HashMap::new() };
+    let lines = if personal { budget_lines(&data.budgets, &spent_by_cat) } else { Vec::new() };
+    let budget_watch = BudgetWatch {
+        on: personal && data.budgets.alert,
+        month: month(),
+        lines: lines.clone(),
+    };
 
     // Only the debt filter shows the second amount.
-    let my_debts: HashMap<i32, f64> = match (filter(), props.stored_user_id) {
+    let scope = query.read().scope;
+    let my_debts: HashMap<i32, f64> = match (scope, props.stored_user_id) {
         (ExpenseFilter::MyDebts, Some(uid)) => my_debt_by_expense(&data.payments, uid),
         _ => HashMap::new(),
     };
 
-    let all_groups = group_expenses(&data, filter(), props.stored_user_id);
+    let searching = query.read().searching;
+    let words = query.read().words();
+    let q: ExpenseQuery = query.read().clone();
+    // "Mes dépenses" shows one month, its own rows and the counted shares; a search runs over every
+    // month and every group, counted or not.
+    let selected: Vec<&RowExpense> = if personal {
+        let shown_month = month();
+        let everywhere = !words.is_empty();
+        q.search(data.expenses.iter().filter(|r| everywhere || in_month(r.date, shown_month)), category_label)
+            .into_iter()
+            .chain(q.search(
+                shares
+                    .iter()
+                    .filter(|s| everywhere || (s.counted && in_month(s.row.date, shown_month)))
+                    .map(|s| &s.row),
+                category_label,
+            ))
+            .collect()
+    } else {
+        q.select(&data, props.stored_user_id, category_label)
+    };
+    let search_summary = (!words.is_empty()).then(|| {
+        let count = selected.len() as i64;
+        if personal {
+            let spent = results_total(&selected, &share_by_id);
+            tid!("my-spending-search-summary", count: count, total: crate::common::amount(spent, &currency))
+        } else {
+            let spent: f64 = selected
+                .iter()
+                .filter(|r| r.expense.expense_type == ExpenseType::Expense)
+                .map(|r| r.expense.amount)
+                .sum();
+            tid!("expenses-search-summary", count: count, total: crate::common::amount(spent, &currency))
+        }
+    });
+    let totals = month_totals(&data.expenses, &shares, month());
+    let all_groups = group_rows(selected);
     let total: usize = all_groups.iter().map(|(_, g)| g.len()).sum();
     let (groups, rendered) = take_rows(&all_groups, shown());
 
     let is_empty = all_groups.is_empty();
     let project_id = props.project_id;
-    let store = use_context::<ProjectStore>();
     let rules = store.recurring_for(project_id);
 
-    // Every filter chip resets the window — carrying a scrolled offset into a different list
+    // Every query change resets the window - carrying a scrolled offset into a different list
     // would open it part-way down.
     let mut set_filter = move |f: ExpenseFilter| {
-        filter.set(f);
+        query.write().scope = f;
         shown.set(PAGE);
     };
 
     rsx! {
         div { class: "flex flex-col gap-2",
-            RecurringStrip { project_id: props.project_id }
+            if personal && words.is_empty() {
+                MonthSummary {
+                    month,
+                    totals: totals.clone(),
+                    currency: currency.clone(),
+                }
+            }
+            if personal {
+                div { role: "tablist", class: "tabs tabs-box bg-base-300 shadow-none grid grid-flow-col auto-cols-fr",
+                    button {
+                        id: "tab-expenses",
+                        role: "tab",
+                        aria_selected: !budget_open,
+                        class: if budget_open { "tab text-[13px] font-semibold text-base-content/70" } else { "tab tab-active text-[13px] font-semibold" },
+                        onclick: move |_| budget_tab.set(false),
+                        {tid!("tab-expenses")}
+                    }
+                    button {
+                        id: "tab-budget",
+                        role: "tab",
+                        aria_selected: budget_open,
+                        class: if budget_open { "tab tab-active text-[13px] font-semibold" } else { "tab text-[13px] font-semibold text-base-content/70" },
+                        onclick: move |_| {
+                            {
+                                let mut q = query.write();
+                                q.searching = false;
+                                q.text.clear();
+                            }
+                            budget_tab.set(true);
+                        },
+                        {tid!("tab-budget")}
+                    }
+                }
+            }
+            if budget_open {
+                BudgetPanel {
+                    lines: lines.clone(),
+                    currency: currency.clone(),
+                    on_manage: move |_| show_budget_sheet.set(true),
+                }
+            }
+            if (!personal || words.is_empty()) && !budget_open {
+                RecurringStrip { project_id: props.project_id }
+            }
+            if personal && !searching && !budget_open {
+                SearchPill {
+                    onclick: move |_| {
+                        query.write().searching = true;
+                        focus_search.set(true);
+                        shown.set(PAGE);
+                    },
+                }
+            }
             // Chips stay on one row; longer locales scroll, never wrap.
             //
             // `text-sm!`: these are radios, so `main.css`'s unlayered iOS-zoom guard
@@ -727,47 +850,99 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
             //
             // The padding/negative-margin pair stops the chips looking sliced off: `overflow-x-auto`
             // computes `overflow-y` to `auto` too, so the scroller clips `main.css`'s three-stop
-            // `.filter .btn` elevation (~18px below a chip, ~6px to the sides). The padding gives
+            // `shadow-soft` elevation (~18px below a chip, ~6px to the sides). The padding gives
             // that room back, the negative margins take it out of the layout again.
-            div { class: "filter flex-nowrap overflow-x-auto px-2 -mx-2 pb-5 -mb-4",
+            if !personal {
+            div { class: "flex items-start gap-2",
+            SearchToggle {
+                open: searching,
+                onclick: move |_| {
+                    let open = !query.read().searching;
+                    {
+                        let mut q = query.write();
+                        q.searching = open;
+                        q.text.clear();
+                    }
+                    focus_search.set(open);
+                    shown.set(PAGE);
+                },
+            }
+            div { role: "radiogroup", aria_label: tid!("expense-filter-group"), class: "flex flex-nowrap gap-2 overflow-x-auto grow min-w-0 px-2 -mx-2 pb-5 -mb-4",
                 input {
-                    class: "btn btn-sm whitespace-nowrap text-sm! filter-reset",
+                    class: "btn btn-sm whitespace-nowrap text-sm! font-medium border-0 shadow-soft bg-base-100 checked:bg-secondary checked:text-secondary-content",
                     r#type: "radio",
                     name: "expense-filter",
                     aria_label: tid!(expense_filter_label(ExpenseFilter::All)),
-                    checked: filter() == ExpenseFilter::All,
+                    checked: scope == ExpenseFilter::All,
                     onchange: move |_| set_filter(ExpenseFilter::All),
                 }
                 input {
-                    class: "btn btn-sm whitespace-nowrap text-sm!",
+                    class: "btn btn-sm whitespace-nowrap text-sm! font-medium border-0 shadow-soft bg-base-100 checked:bg-secondary checked:text-secondary-content",
                     r#type: "radio",
                     name: "expense-filter",
                     aria_label: tid!(expense_filter_label(ExpenseFilter::MyPayments)),
-                    checked: filter() == ExpenseFilter::MyPayments,
+                    checked: scope == ExpenseFilter::MyPayments,
                     onchange: move |_| set_filter(ExpenseFilter::MyPayments),
                 }
                 input {
-                    class: "btn btn-sm whitespace-nowrap text-sm!",
+                    class: "btn btn-sm whitespace-nowrap text-sm! font-medium border-0 shadow-soft bg-base-100 checked:bg-secondary checked:text-secondary-content",
                     r#type: "radio",
                     name: "expense-filter",
                     aria_label: tid!(expense_filter_label(ExpenseFilter::MyDebts)),
-                    checked: filter() == ExpenseFilter::MyDebts,
+                    checked: scope == ExpenseFilter::MyDebts,
                     onchange: move |_| set_filter(ExpenseFilter::MyDebts),
                 }
             }
+            }
+            }
 
-            if is_empty {
+            if searching && !budget_open {
+                ExpenseSearchField {
+                    query,
+                    autofocus: focus_search(),
+                    on_change: move |_| shown.set(PAGE),
+                    closes: personal,
+                }
+            }
+
+            if let Some(summary) = search_summary.filter(|_| !is_empty) {
+                p { id: "expense-search-summary", role: "status", class: "text-[13px] text-base-content/70 px-1", "{summary}" }
+            }
+
+            if budget_open {
+            } else if is_empty && !words.is_empty() {
+                div { class: "flex flex-col items-center gap-3 py-12 text-base-content/70",
+                    Mascot { pose: MascotPose::Searching }
+                    span { class: "font-semibold", {tid!("expenses-no-match")} }
+                    button {
+                        id: "expense-no-match-reset",
+                        class: "btn btn-sm",
+                        onclick: move |_| {
+                            query.write().text.clear();
+                            shown.set(PAGE);
+                        },
+                        {tid!("expenses-search-clear")}
+                    }
+                }
+            } else if is_empty && personal && props.ledgers_loading {
+                ExpenseRowsSkeleton {}
+            } else if is_empty {
                 div { class: "flex flex-col items-center gap-2 py-12 text-base-content/70",
                     Mascot { pose: MascotPose::Empty }
-                    span { class: "font-semibold", {tid!("expenses-empty")} }
-                    span { class: "text-sm text-center",
-                        {tid!("expenses-empty-hint")}
+                    if personal {
+                        span { id: "my-spending-empty", class: "font-semibold", {tid!("my-spending-empty")} }
+                        span { class: "text-sm text-center", {tid!("my-spending-empty-hint")} }
+                    } else {
+                        span { class: "font-semibold", {tid!("expenses-empty")} }
+                        span { class: "text-sm text-center",
+                            {tid!("expenses-empty-hint")}
+                        }
                     }
                 }
             } else {
                 for (date , group) in groups {
                     div { key: "{date}", class: "flex flex-col",
-                        div { class: "divider divider-start text-xs text-base-content/70 font-medium my-1",
+                        h2 { class: "divider divider-start text-xs text-base-content/70 font-medium my-1",
                             "{format_date(date)}"
                         }
                         ul { class: "flex flex-col gap-1",
@@ -776,12 +951,59 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                                     let expense_id = row.expense.id;
                                     let name = row.expense.name.clone();
                                     let etype = row.expense.expense_type.clone();
-                                    let payor = data.payor_label(expense_id);
-                                    let subtitle = format!(
-                                        "{} {} {payor}",
-                                        tid!(expense_type_label(&etype)),
-                                        tid!(payor_connector(&etype)),
-                                    );
+                                    // Shown only when the name says nothing of why the row matched.
+                                    let matched_category = (!words.is_empty() && !mark_segments_hit(&name, &words))
+                                        .then(|| category_label(row.category))
+                                        .filter(|label| mark_segments_hit(label, &words));
+                                    if let Some(share) = share_by_id.get(&expense_id) {
+                                        let group_project = share.project_id;
+                                        let payer = share.payer.clone().unwrap_or_else(|| tid!("payer-you"));
+                                        let (amount, row_currency) = match share.converted {
+                                            Some(converted) => (converted, currency.clone()),
+                                            None => (share.share, share.currency.clone()),
+                                        };
+                                        let note = if share.counted {
+                                            tid!("my-spending-share-of", amount: crate::common::amount(row.expense.amount, &share.currency))
+                                        } else {
+                                            tid!("my-spending-uncounted")
+                                        };
+                                        rsx! {
+                                            ExpenseRow {
+                                                key: "{expense_id}",
+                                                expense_id,
+                                                name: name.clone(),
+                                                subtitle: format!("{} {payer}", tid!("expense-paid-by")),
+                                                group: Some(share.group.clone()),
+                                                note: Some(note),
+                                                highlight: words.clone(),
+                                                matched_category,
+                                                emoji: row.emoji.to_string(),
+                                                amount,
+                                                currency: row_currency,
+                                                source: None,
+                                                inconsistent: false,
+                                                my_debt: None,
+                                                estimate: row.expense.estimate,
+                                                can_edit: false,
+                                                can_delete: false,
+                                                on_open: move |_| {
+                                                    nav.push(Route::PaymentPage {
+                                                        project_id: group_project,
+                                                        expense_id,
+                                                    });
+                                                },
+                                                on_edit: move |_| {},
+                                                on_delete: move |_| {},
+                                            }
+                                        }
+                                    } else {
+                                    let (connector, payor) = if personal {
+                                        let connector = if etype == ExpenseType::Gain { tid!("expense-received-by") } else { tid!(payor_connector(&etype)) };
+                                        (connector, tid!("payer-you"))
+                                    } else {
+                                        (tid!(payor_connector(&etype)), data.payor_label(expense_id))
+                                    };
+                                    let subtitle = format!("{} {connector} {payor}", tid!(expense_type_label(&etype)));
                                     let delete_name = name.clone();
                                     let my_debt = my_debts.get(&expense_id).copied();
                                     rsx! {
@@ -790,6 +1012,8 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                                             expense_id,
                                             name: name.clone(),
                                             subtitle,
+                                            highlight: words.clone(),
+                                            matched_category,
                                             emoji: row.emoji.to_string(),
                                             amount: row.expense.amount,
                                             currency: currency.clone(),
@@ -798,6 +1022,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                                             my_debt,
                                             recurring: row.expense.recurring_id.is_some(),
                                             estimate: row.expense.estimate,
+                                            income: row.expense.expense_type == ExpenseType::Gain,
                                             can_edit: can_edit_expense(&project_status, read_only, &etype),
                                             can_delete: can_delete_expense(&project_status, read_only),
                                             on_open: move |_| {
@@ -811,6 +1036,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                                                 confirming_delete.set(Some((expense_id, delete_name.clone())));
                                             },
                                         }
+                                    }
                                     }
                                 }
                             }
@@ -844,17 +1070,17 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
             }
 
             if !read_only && project_status != ProjectStatus::Archived {
-                // Same offsets as `SpeedDialFab` — `safe-bottom-fab` is what clears the bottom dock
+                // Same offsets as `SpeedDialFab` - `safe-bottom-fab` is what clears the bottom dock
                 // (and the OS navigation bar on mobile, where the class adds `var(--sab)`).
                 // One FAB shell, not two buttons in a row: the gradient, the shadow and the pill
                 // live here, and each action is a transparent target inside it. With no scanner
                 // the shell collapses back to a single circle, so web and desktop keep exactly
-                // the FAB they had — no second branch to hold in sync.
+                // the FAB they had - no second branch to hold in sync.
                 //
                 // The scan half opens a two-action dial, same shape as `SpeedDialFab`: wry offers
                 // no single file input that reaches both the camera and the gallery on Android
                 // (`ScanSource`), so the choice is made here. The scrim sits *outside* the
-                // translated shell — `fixed` inside a `transform` is positioned against the
+                // translated shell - `fixed` inside a `transform` is positioned against the
                 // shell, not the viewport.
                 if scan_menu() {
                     div {
@@ -895,7 +1121,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                                 id: "scan-expense-btn",
                                 r#type: "button",
                                 // `bg-transparent` over daisyUI's `--btn-bg` so the shell's gradient
-                                // shows through, and a white wash for press feedback — `brightness-*`
+                                // shows through, and a white wash for press feedback - `brightness-*`
                                 // would tint the whole shell, not the half being touched.
                                 class: "btn btn-circle btn-lg border-0 bg-transparent shadow-none text-primary-content [&>svg]:size-6 hover:bg-white/15 active:bg-white/25 disabled:bg-transparent disabled:text-primary-content",
                                 "aria-label": if scan.busy() { tid!("scan-in-progress") } else { tid!("expense-scan") },
@@ -938,6 +1164,21 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                 }
             }
 
+            if show_budget_sheet() {
+                BudgetSheet {
+                    project_id: props.project_id,
+                    budgets: data.budgets.clone(),
+                    averages: sheet_categories(&average_by_category(&data.expenses, &shares, month())),
+                    currency: currency.clone(),
+                    on_close: move |_| show_budget_sheet.set(false),
+                    on_saved: move |_| {
+                        show_budget_sheet.set(false);
+                        let mut sync = store.sync;
+                        sync.restart();
+                    },
+                }
+            }
+
             if show_add_expense() {
                 // Cleared on both exits, so the next plain-FAB open starts empty.
                 AddExpenseModal {
@@ -948,6 +1189,9 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                     on_created: move |created: Option<ExpenseWithPayments>| {
                         show_add_expense.set(false);
                         scan.prefill.set(None);
+                        if let (Some(c), Some(k)) = (created.as_ref(), key_ctx()) {
+                            warn_on_budget(&k, c, &budget_watch, flash);
+                        }
                         props.on_expenses_changed.call(match created {
                             Some(c) => ExpenseMutation::Added(c),
                             None => ExpenseMutation::Queued,
@@ -962,6 +1206,45 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                     initial_date: scan.prefill.read().as_ref().and_then(|p| p.date.clone()),
                     initial_category: scan.prefill.read().as_ref().and_then(|p| p.category.clone()),
                     amount_hint: scan.prefill.read().as_ref().and_then(|p| p.hint),
+                    personal: data.personal,
+                }
+            }
+
+            // A move started on the source's page lands here, once this project is the one loaded:
+            // its own key, participants and currency are what the form needs.
+            if let Some(draft) = store.pending_move.read().clone().filter(|d| {
+                d.to_project == props.project_id && data.project_id == Some(props.project_id)
+            }) {
+                AddExpenseModal {
+                    on_close: move |_| {
+                        let mut pending_move = store.pending_move;
+                        pending_move.set(None);
+                    },
+                    on_created: {
+                        let draft = draft.clone();
+                        move |created: Option<ExpenseWithPayments>| {
+                            props.on_expenses_changed.call(match created {
+                                Some(c) => ExpenseMutation::Added(c),
+                                None => ExpenseMutation::Queued,
+                            });
+                            finish_move(&draft, is_online(), pending_ops, flash);
+                            let mut pending_move = store.pending_move;
+                            pending_move.set(None);
+                        }
+                    },
+                    project_id: props.project_id,
+                    users: pickable_users(key_ctx().as_ref(), &data.users, &[]),
+                    stored_user_id: props.stored_user_id,
+                    currency: currency.clone(),
+                    initial_name: Some(draft.payload.name.clone()),
+                    initial_amount: Some(draft.amount),
+                    initial_currency: Some(draft.currency.clone()),
+                    initial_date: Some(draft.payload.date.clone()),
+                    initial_category: draft.category(),
+                    initial_expense_type: Some(draft.expense_type()),
+                    carried: Some(draft.payload.clone()),
+                    personal: draft.to_personal,
+                    move_banner: Some(tid!("move-banner", from: draft.from_name.clone(), to: draft.to_name.clone())),
                 }
             }
 
@@ -970,7 +1253,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
             if let Some(edit_id) = editing() {
                 // Ciphertext read here and nowhere else: cloning both lists per render, for a
                 // usually-closed modal, was ~5.6 MB of string copying on a large project. The
-                // project filter is the usual guard — this component is reused across projects.
+                // project filter is the usual guard - this component is reused across projects.
                 if let Some((exp, pays)) = props.live.read().as_ref()
                     .filter(|l| l.project_id == props.project_id)
                     .and_then(|l| {

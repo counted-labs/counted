@@ -1,7 +1,7 @@
 //! Visual-viewport arithmetic, kept out of JavaScript so it can be tested.
 //!
 //! The listener that feeds these lives in `packages/mobile/src/main.rs`, next to the safe-area
-//! bridge it is modelled on. Only the maths is here — in `ui` rather than beside that listener,
+//! bridge it is modelled on. Only the maths is here - in `ui` rather than beside that listener,
 //! because `cargo test --package ui` is the one a CI job actually runs.
 
 /// Below this, an obscured strip is not a keyboard.
@@ -17,13 +17,13 @@ pub const KEYBOARD_MIN_PX: f64 = 80.0;
 
 /// How much of the layout viewport the on-screen keyboard is covering, in CSS px.
 ///
-/// `layout_h` is the height of the box `position: fixed` lays out in, measured off a probe — never
+/// `layout_h` is the height of the box `position: fixed` lays out in, measured off a probe - never
 /// `innerHeight`, which iOS 26 reports net of the scroll (see the listener in the mobile entry point).
 ///
 /// `offset_top` is the visual viewport's own scroll within the layout viewport: when WKWebView
 /// scrolls the page to reveal a focused input, the visible band moves down, and the part hidden at
 /// the *bottom* shrinks by exactly that much. Leaving it out over-reports the keyboard on any page
-/// that scrolled to focus something — which is every page with a form.
+/// that scrolled to focus something - which is every page with a form.
 ///
 /// Returns 0 rather than a negative or a NaN for anything incoherent, so a viewport that reports
 /// nonsense degrades to "no keyboard" instead of to a broken layout.
@@ -43,10 +43,10 @@ pub fn keyboard_inset(layout_h: f64, visual_h: f64, offset_top: f64) -> f64 {
 /// One decimal, like the safe-area vars: the values feed a `max()` on a sheet's padding and a
 /// `calc()` on its max-height, and more precision than that is noise in a layout measured in rem.
 ///
-/// `--vvo` is the visual viewport's scroll within the layout viewport — the same `offset_top`
+/// `--vvo` is the visual viewport's scroll within the layout viewport - the same `offset_top`
 /// `keyboard_inset` subtracts. A sheet is `position: fixed`, so it is pinned to the *layout*
 /// viewport while the visible band is the visual one; on a platform that does not resize its layout
-/// viewport for the keyboard (Android is `adjustNothing`), scrolling to reveal a focused field moves
+/// viewport for the keyboard (an edge-to-edge Android window), scrolling to reveal a focused field moves
 /// the band down and leaves the sheet's top edge that far above it. `keyboard_inset` already keeps
 /// the *bottom* edge honest; `--vvo` is what a sheet's max-height subtracts to keep the top edge
 /// honest too.
@@ -136,7 +136,7 @@ mod tests {
     }
 
     /// A window resized for the keyboard (an `adjustResize` Android build) shrinks both heights
-    /// together, so the sheet owes nothing — the layout viewport already ends at the keyboard.
+    /// together, so the sheet owes nothing - the layout viewport already ends at the keyboard.
     #[test]
     fn a_platform_that_resizes_its_layout_viewport_owes_nothing() {
         assert_eq!(keyboard_inset(508.0, 508.0, 0.0), 0.0);
@@ -187,7 +187,7 @@ mod tests {
 
     /// The sheet body shrinks by the padding this writes, so the field focused a moment ago can
     /// now sit under the footer; the scroll runs after the write, in the same script, and only
-    /// while a keyboard is up — a closing keyboard has nothing to reveal.
+    /// while a keyboard is up - a closing keyboard has nothing to reveal.
     #[test]
     fn an_open_keyboard_rescrolls_the_focused_field_after_the_write() {
         let js = css_viewport_vars(336.0, 0.0);

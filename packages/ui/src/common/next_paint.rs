@@ -1,6 +1,6 @@
 /// Dioxus runs the script as the *body* of an async function, so the top-level `await` is what
-/// suspends it — same contract as `sleep_js`. rAF fires before paint; the `setTimeout` hop is what
-/// lands after it. Web uses web-sys instead — eval is CSP-blocked there (see `common::web_dom`).
+/// suspends it - same contract as `sleep_js`. rAF fires before paint; the `setTimeout` hop is what
+/// lands after it. Web uses web-sys instead - eval is CSP-blocked there (see `common::web_dom`).
 #[cfg(not(target_arch = "wasm32"))]
 fn next_paint_js() -> &'static str {
     "await (document.hidden ? Promise.resolve() : new Promise(r => requestAnimationFrame(() => setTimeout(r, 0))));"

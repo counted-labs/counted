@@ -7,7 +7,7 @@ pub async fn get_account_projects() -> Result<Vec<AccountProject>, ServerFnError
     crate::server::account_projects::get_account_projects().await
 }
 
-/// Membership is open to any holder of the project id — that is the sharing model. What is not
+/// Membership is open to any holder of the project id - that is the sharing model. What is not
 /// open is the identity: a `user_id` must name a participant of *this* project and, once the
 /// project has a verifier, must come with the token only the project key produces. See
 /// `account_projects_repository::check_claim`.

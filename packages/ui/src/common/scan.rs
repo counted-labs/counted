@@ -1,7 +1,7 @@
 //! Receipt scanning: the camera, the transport, and the platform hooks the OCR crate is reached
 //! through. See `docs/plans/ocr-receipt-scan.md`.
 //!
-//! Nothing here decodes an image or runs a model — `packages/ocr` does that, and `ui` must not
+//! Nothing here decodes an image or runs a model - `packages/ocr` does that, and `ui` must not
 //! depend on it (31 MB of weights would land in the wasm bundle and the server binary). The
 //! platform half is installed by `packages/mobile/src/main.rs`.
 
@@ -20,7 +20,7 @@ pub struct ScanFields {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScanError {
-    /// No scanner installed — web, desktop, the server binary.
+    /// No scanner installed - web, desktop, the server binary.
     Unsupported,
     /// The user backed out of the camera or the picker. Not a failure, and never shown.
     Cancelled,
@@ -40,7 +40,7 @@ pub enum ScanSource {
     Library,
 }
 
-/// A key, not a sentence — DOCUMENTATION §11.1. `Cancelled` and `Unsupported` have no key because
+/// A key, not a sentence - DOCUMENTATION §11.1. `Cancelled` and `Unsupported` have no key because
 /// neither is ever surfaced: backing out of the camera is not an error, and a platform with no
 /// scanner never renders the button.
 pub fn scan_error_key(error: ScanError) -> &'static str {
@@ -55,7 +55,7 @@ pub fn scan_error_key(error: ScanError) -> &'static str {
 /// Three functions rather than one because the temp-file purge is asymmetric. On Android the
 /// capture directory is the app's alone and `purge` can empty it; on iOS WKWebView drops its copy
 /// into a shared `NSTemporaryDirectory()`, so only entries that appeared *during* the pick may be
-/// removed — `arm` is where iOS takes that snapshot and where Android does nothing.
+/// removed - `arm` is where iOS takes that snapshot and where Android does nothing.
 #[derive(Clone)]
 pub struct NativeScan {
     /// Blocking and CPU-bound. Called on a worker thread, never on the event loop.
@@ -69,8 +69,8 @@ static NATIVE: OnceLock<NativeScan> = OnceLock::new();
 /// Installed before `launch`, exactly like `set_haptics_player`. Later calls are ignored.
 ///
 /// A process-global rather than a Dioxus context: `packages/desktop/src/main.rs` provides no
-/// native-capability contexts at all, so a `use_context` in `ExpensesTab` — a main-path component,
-/// not a rarely-opened modal — would panic at render there. The only value stored is a function
+/// native-capability contexts at all, so a `use_context` in `ExpensesTab` - a main-path component,
+/// not a rarely-opened modal - would panic at render there. The only value stored is a function
 /// the entry point owns for the life of the process.
 pub fn set_native_scan(scan: NativeScan) {
     let _ = NATIVE.set(scan);
@@ -83,7 +83,7 @@ pub fn scanner_available() -> bool {
 }
 
 /// Base64 sent per message. The bridge is `window.ipc.postMessage`, and a whole 1600px JPEG is
-/// ~340-540 KB of base64 — a few messages rather than one very large one.
+/// ~340-540 KB of base64 - a few messages rather than one very large one.
 const CHUNK_BYTES: usize = 262_144;
 /// Ceiling on a reassembled capture. A bound, not a threat model: the page that produces these is
 /// ours, and the phone would run out of memory long before anything interesting happened.
@@ -101,7 +101,7 @@ const JPEG_QUALITY: f32 = 0.92;
 /// **The input is created in JS and appended to `document.body`, outside the Dioxus root, and that
 /// is load-bearing.** dioxus-interpreter's `native.js` installs a window click listener that
 /// intercepts every `input[type=file]`, calls `preventDefault()` and routes to `__file_dialog`
-/// (dioxus-desktop `protocol.rs` -> `file_upload.rs`), which calls `rfd::FileDialog` — and `rfd`
+/// (dioxus-desktop `protocol.rs` -> `file_upload.rs`), which calls `rfd::FileDialog` - and `rfd`
 /// has no Android or iOS backend, so a file input written in RSX does nothing at all on a phone.
 /// That listener only fires when `getTargetId(target)` is non-null, and `getTargetId` walks
 /// `parentNode` looking for `data-dioxus-id`; an element with no such ancestor is skipped and the
@@ -111,8 +111,8 @@ const JPEG_QUALITY: f32 = 0.92;
 /// intercepts through `RustWebViewClient.shouldInterceptRequest`, and Android's
 /// `WebResourceRequest` carries no request body, so a POST would arrive empty.
 ///
-/// Dioxus runs this as the body of an async function, so the top-level `await` is what suspends it
-/// — same contract as `sleep_js` and `copy_js`.
+/// Dioxus runs this as the body of an async function, so the top-level `await` is what suspends it -
+/// same contract as `sleep_js` and `copy_js`.
 fn capture_js(source: ScanSource) -> String {
     let capture = match source {
         ScanSource::Camera => "input.capture = 'environment';",
@@ -250,7 +250,7 @@ async fn capture_jpeg(source: ScanSource) -> Result<Vec<u8>, ScanError> {
     Err(ScanError::Capture)
 }
 
-/// Web installs no scanner, so this is unreachable — but `ui` is compiled for wasm and the eval
+/// Web installs no scanner, so this is unreachable - but `ui` is compiled for wasm and the eval
 /// path above is CSP-blocked there (DOCUMENTATION §8).
 #[cfg(target_arch = "wasm32")]
 async fn capture_jpeg(_source: ScanSource) -> Result<Vec<u8>, ScanError> {
@@ -258,7 +258,7 @@ async fn capture_jpeg(_source: ScanSource) -> Result<Vec<u8>, ScanError> {
 }
 
 /// Inference takes one to three seconds, and on both phones the Dioxus event loop **is** the
-/// platform UI thread — running it inline is an ANR on Android and a watchdog kill on iOS.
+/// platform UI thread - running it inline is an ANR on Android and a watchdog kill on iOS.
 ///
 /// Polling rather than a channel: a oneshot would cost two new dependencies for a wait that is
 /// invisible next to the inference itself.
@@ -275,7 +275,7 @@ async fn recognise_off_thread(
     std::thread::spawn(move || {
         // The slot is this thread's only way to report back, so a panic must still fill it. An
         // index out of bounds anywhere in the model would otherwise leave it `None` and spin the
-        // loop below forever — the user sees a spinner that never stops instead of an error, and
+        // loop below forever - the user sees a spinner that never stops instead of an error, and
         // the button stays disabled for the life of the process.
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| recognise(jpeg)))
             .unwrap_or(Err(ScanError::Unreadable));

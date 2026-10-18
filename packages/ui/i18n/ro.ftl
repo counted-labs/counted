@@ -150,7 +150,7 @@ payment-method-invalid-characters = Elimină rândurile noi sau caracterele invi
 payment-method-limit = Poți salva până la { $max } metode de plată.
 payment-methods-saved = Detalii de plată salvate.
 payment-methods-offline = Trebuie să fii online pentru a-ți salva detaliile de plată.
-payment-methods-stale = Detaliile tale de plată au fost modificate pe alt dispozitiv. Au fost reîncărcate — te rugăm să încerci din nou.
+payment-methods-stale = Detaliile tale de plată au fost modificate pe alt dispozitiv. Au fost reîncărcate - te rugăm să încerci din nou.
 payment-methods-key-missing = Conectează-te din nou pentru a-ți gestiona detaliile de plată.
 settings-payment-methods-share-warning = O metodă partajată este vizibilă tuturor membrilor proiectelor tale.
 payment-method-share = Partajează cu proiectele mele
@@ -232,7 +232,6 @@ projects-filter-active = Active
 projects-filter-all = Toate
 projects-count-label = Proiecte
 projects-empty = Niciun proiect
-projects-empty-hint = Creează un proiect cu butonul de mai jos
 projects-offline-banner = Date offline - reconectează-te pentru a actualiza.
 demo-banner = Proiect demonstrativ - doar citire.
 demo-start-own = Creează-ți propriul proiect
@@ -246,6 +245,68 @@ projects-no-local-data = Nu există date locale
 projects-no-local-data-hint = Conectează-te pentru a-ți încărca proiectele pentru prima dată.
 projects-add = Adaugă un proiect
 projects-create = Creează un proiect
+projects-personal-expense = Cheltuială personală
+personal-expense-banner = Adăugată la Cheltuielile mele
+personal-create-title = Creează-ți proiectul personal
+personal-create-hint = Urmărește ce cheltuiești singur
+group-create-title = Creează un proiect comun
+group-create-hint = Împarte cheltuielile cu prietenii și familia
+personal-create-action = Creează
+personal-create-signup = Creează un cont
+personal-sheet-title = Proiectul tău personal
+personal-sheet-intro = Pentru a nota ce cheltuiești singur. Apare cu grupurile tale în Statistici.
+personal-sheet-point-alone = Un singur membru: tu, cu numele contului tău. Fără link de partajare.
+personal-sheet-point-encrypted = Criptat pe dispozitivele tale, ca celelalte proiecte.
+personal-sheet-point-stats = Părțile tale din grupuri se adaugă la aceste cheltuieli în Statistici.
+personal-default-name = Cheltuielile mele
+my-spending-prev-month = Luna anterioară
+my-spending-next-month = Luna următoare
+my-spending-spent = Ați cheltuit
+my-spending-groups = Grupuri
+my-spending-income = Venituri
+my-spending-balance = Soldul lunii
+my-spending-unconverted = Părțile în altă monedă rămân deoparte până când se cunoaște un curs.
+my-spending-empty = Nimic luna aceasta
+my-spending-empty-hint = Adăugați o cheltuială cu +. Părțile dvs. din grupuri vor apărea aici automat.
+my-spending-share-of = din { $amount }
+my-spending-uncounted = nu se socotește
+payer-you = dvs.
+expense-received-by = primit de
+counted-switch = Socotește în Cheltuielile mele
+counted-switch-on = Activat: partea dvs. se adaugă la Cheltuielile mele
+counted-switch-off = Dezactivat: partea dvs. nu apare în Cheltuielile mele
+counted-groups = Grupuri socotite
+counted-groups-intro = Partea dvs. din aceste grupuri se adaugă la Cheltuielile mele și la bugete.
+counted-groups-converted = { $from }, convertit în { $to }
+counted-groups-encrypted = Această alegere este criptată cu contul dvs. și vă urmează pe dispozitive.
+counted-groups-empty = Încă niciun grup pe acest dispozitiv.
+counted-groups-done = OK
+counted-save-failed = Această alegere nu a putut fi salvată. Încercați din nou.
+tab-budget = Buget
+budget-title = Bugete
+budget-manage = Gestionează
+budget-left = Rămân { $amount }
+budget-over = Depășit cu { $amount }
+budget-empty = Niciun buget
+budget-empty-hint = Stabiliți un plafon pe categorie. Părțile dvs. din grupuri contează și ele.
+budget-define = Stabilește un buget
+budget-sheet-title = Bugete lunare
+budget-sheet-intro = Pe partea dvs.: personale și grupuri. Lăsați gol pentru a nu urmări o categorie.
+budget-average = Medie ultimele 3 luni: { $amount }
+budget-for = Buget { $category }
+budget-alert = Avertizează-mă la 80 %
+budget-alert-hint = Calculat pe acest dispozitiv
+budget-invalid = Sumă nevalidă pentru { $category }.
+budget-offline = Bugetele se salvează doar online. Reconectați-vă și încercați din nou.
+budget-alert-near = { $category }: { $percent } % din bugetul lunii
+budget-alert-over = { $category }: bugetul lunii depășit
+personal-card-budget = { $month } · buget { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } rezultat
+        [few] { $count } rezultate
+       *[other] { $count } de rezultate
+    } · { $total } · personale și grupuri, toate lunile
 projects-join = Alătură-te unui proiect
 projects-import-tricount = Importă din Tricount
 project-actions = Acțiuni proiect
@@ -322,6 +383,7 @@ expenses-show-more = Arată mai multe ({ $count } rămase)
 expense-type-expense = Cheltuială
 expense-type-transfer = Transfer
 expense-type-gain = Încasare
+expense-type-group = Tip
 expense-paid-by = plătită de
 expense-sent-by = trimis de
 expense-contributed-by = contribuit de
@@ -387,6 +449,24 @@ export-failed = Exportul a eșuat: { $reason }
 history-expense-added = Cheltuială adăugată: { $name }
 history-expense-edited = Cheltuială editată: { $name }
 history-expense-deleted = Cheltuială ștearsă: { $name }
+move-expense = Mută într-un proiect
+move-expense-title = Mută în…
+move-current = Actual
+move-converted = { $currency }, convertit la cursul lunii
+move-note-personal = Vei alege cine a plătit și pentru cine la pasul următor. Cheltuiala va părăsi Cheltuielile mele.
+move-note-group = Cheltuiala va părăsi { $project } pentru toți membrii, iar soldul grupului va fi recalculat. Vei alege cine a plătit și pentru cine la pasul următor.
+move-banner = Din { $from } în { $to }
+move-submit = Mută
+move-done = Cheltuială mutată în { $project }
+move-delete-failed = Cheltuiala a fost adăugată în celălalt proiect, dar este încă în { $project }: șterge-o acolo.
+history-expense-moved = Cheltuială mutată în alt proiect: { $name }
+personal-badge = Personal
+move-members =
+    { $count ->
+        [one] { $count } membru
+        [few] { $count } membri
+       *[other] { $count } de membri
+    }
 history-project-edited = Proiect editat: { $name }
 history-name-changed = Nume: „{ $from }” → „{ $to }”
 history-description-added = Descriere adăugată: „{ $value }”
@@ -400,11 +480,24 @@ expense-name-placeholder = Restaurant, cumpărături…
 expense-actions = Acțiuni cheltuială
 expense-your-share = Partea ta
 expense-your-share-value = Partea ta: { $amount } { $currency }
+expense-share-percent = { $percent } %
+expense-added-by = Adăugat de { $name } pe { $date }
 expense-inconsistent-detail = Sumele nu se potrivesc: { $paid } plătit, { $owed } datorat, pentru o cheltuială de { $total }. Editează cheltuiala pentru a corecta.
 missing-access-key = Lipsește cheia de acces. Deschide acest proiect prin linkul său de partajare.
 filter-all = Toate
 filter-my-payments = Plățile mele
 filter-my-debts = Ce datorez
+expense-filter-group = Filtru
+expenses-search = Caută cheltuieli
+expenses-no-match = Nicio cheltuială nu corespunde.
+expenses-search-open = Caută
+expenses-search-clear = Șterge căutarea
+expenses-search-summary =
+    { $count ->
+        [one] { $count } rezultat
+        [few] { $count } rezultate
+       *[other] { $count } de rezultate
+    } · { $total } · toate lunile
 participants-shares-for = Cote pentru { $name }
 participants-amount-for = Suma pentru { $name }
 reimbursement-add = Adaugă o regularizare
@@ -443,9 +536,9 @@ charts-expense-count =
 charts-nothing-to-show = Nimic de afișat
 charts-my-share-skipped =
     { $count ->
-        [one] 1 proiect nu este luat în calcul — niciun participant ales sau datele sale nu s-au încărcat.
-        [few] { $count } proiecte nu sunt luate în calcul — niciun participant ales sau datele lor nu s-au încărcat.
-       *[other] { $count } de proiecte nu sunt luate în calcul — niciun participant ales sau datele lor nu s-au încărcat.
+        [one] 1 proiect nu este luat în calcul - niciun participant ales sau datele sale nu s-au încărcat.
+        [few] { $count } proiecte nu sunt luate în calcul - niciun participant ales sau datele lor nu s-au încărcat.
+       *[other] { $count } de proiecte nu sunt luate în calcul - niciun participant ales sau datele lor nu s-au încărcat.
     }
 
 ### Categories
@@ -519,6 +612,14 @@ payers-title-contributors = Contribuitori
 debtors-title-debtors = Datorează
 debtors-title-recipients = Destinatari
 debtors-title-beneficiaries = Beneficiari
+debtors-title-for = Pentru
+debtors-title-recipient = Destinatar
+expense-people =
+    { $count ->
+        [one] { $count } persoană
+        [few] { $count } persoane
+       *[other] { $count } de persoane
+    }
 
 ### Welcome
 
@@ -652,6 +753,8 @@ invitation-decline = Refuză
 participants-you-label = Numele tău în acest proiect
 participants-you-badge = Tu
 participants-others = Alți participanți
+participants-removed = Eliminați
+participant-restore = Restabilește
 participants-empty = Adaugă participanți mai jos.
 participants-duplicate = „{ $name }” este deja în listă.
 participants-input-label = Adaugă un prieten sau scrie un nume
@@ -796,3 +899,16 @@ error-recurring-not-found = Această cheltuială recurentă nu mai există.
 error-recurring-stale = Cineva a modificat între timp această cheltuială recurentă. A fost reîncărcată: verific-o și salvează din nou.
 error-too-many-recurring = Acest proiect are deja 50 de cheltuieli recurente. Oprește una de care nu mai ai nevoie ca să adaugi alta.
 error-user-in-recurring = Acest participant face parte dintr-o cheltuială recurentă. Scoate-l mai întâi din ea sau oprește-o.
+
+home-owed-to-you = Vi se datorează
+home-you-owe = Datorați
+home-details-show = Vezi detaliile
+home-details-hide = Ascunde detaliile
+home-all-settled = Totul este decontat
+home-pay = Plătește
+home-remind = Amintește
+home-remind-message = Mic memento: mai sunt rambursări de făcut în { $project }.
+home-row-owed = vi se datorează
+home-row-owe = datorați
+home-row-settled = La zi
+home-totals-partial = Fără proiectele fără curs de schimb

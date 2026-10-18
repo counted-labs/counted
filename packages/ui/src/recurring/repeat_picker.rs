@@ -67,7 +67,7 @@ pub fn RepeatRow(
                         p { class: "text-xs text-base-content/70 truncate", {ends_label(&r.rule(anchor))} }
                         if let Some((amount, currency)) = foreign.clone() {
                             p { class: "text-xs text-base-content/70",
-                                {tid!("repeat-foreign", amount: format!("{amount:.2}"), currency: currency)}
+                                {tid!("repeat-foreign", amount: crate::common::number(amount), currency: currency)}
                             }
                         }
                     },
@@ -108,6 +108,7 @@ pub fn RepeatPicker(
     on_done: EventHandler<Option<Repeat>>,
     on_close: EventHandler<()>,
 ) -> Element {
+    crate::common::use_modal_focus("repeat-picker");
     let start = initial.unwrap_or_else(Repeat::monthly);
     let initial_choice = match initial {
         None => Choice::None,
@@ -139,13 +140,19 @@ pub fn RepeatPicker(
     let preview = picked();
 
     rsx! {
-        div { class: "modal modal-open modal-bottom sm:modal-middle", role: "dialog", aria_labelledby: "repeat-title",
+        div {
+            id: "repeat-picker",
+            class: "modal modal-open modal-bottom sm:modal-middle",
+            role: "dialog",
+            aria_modal: "true",
+            aria_labelledby: "repeat-title",
+            tabindex: "-1",
             div { class: "modal-box max-w-md p-0 flex flex-col",
                 div { class: "flex items-center gap-2 px-5 pt-4 pb-2",
-                    h3 { id: "repeat-title", class: "flex-1 font-bold text-lg font-display", {tid!("repeat-label")} }
+                    h2 { id: "repeat-title", class: "flex-1 font-bold text-lg font-display", {tid!("repeat-label")} }
                     button {
                         r#type: "button",
-                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11",
+                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
                         aria_label: tid!("close"),
                         onclick: move |_| on_close.call(()),
                         CloseIcon { size: ICON_HEADER }

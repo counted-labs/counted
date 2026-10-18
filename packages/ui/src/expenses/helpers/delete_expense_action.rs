@@ -1,6 +1,6 @@
 //! Deleting an expense, shared by the detail page's `⋯` menu and the swipe shortcut on the list.
-//! Both need the same three things — an encrypted history entry, an offline fallback, and the
-//! server call — and keeping them here is what stops the two paths drifting apart.
+//! Both need the same three things - an encrypted history entry, an offline fallback, and the
+//! server call - and keeping them here is what stops the two paths drifting apart.
 
 use api::expenses::expenses_controller::delete_expense;
 use dioxus::fullstack::Json;
@@ -10,15 +10,15 @@ use std::collections::VecDeque;
 use uuid::Uuid;
 
 use crate::common::{error_message, write_queue, Flash, OpKind, QueuedOp};
-use crate::crypto::encrypt_json;
+use crate::crypto::encrypt_padded_json;
 
 /// An archived project is frozen: nothing may be removed from it. Neither may the read-only demo.
 pub(crate) fn can_delete_expense(status: &ProjectStatus, read_only: bool) -> bool {
     !read_only && *status != ProjectStatus::Archived
 }
 
-/// A closed project keeps its transfers editable — that is how a settlement is corrected after the
-/// fact — but nothing else.
+/// A closed project keeps its transfers editable - that is how a settlement is corrected after the
+/// fact - but nothing else.
 pub(crate) fn can_edit_expense(
     status: &ProjectStatus,
     read_only: bool,
@@ -38,10 +38,12 @@ pub(crate) fn delete_expense_request(
     history_summary: String,
     actor_user_id: i32,
 ) -> DeleteExpenseRequest {
-    let history =
-        encrypt_json(key, &HistoryPayload { summary: history_summary, actor_user_id: None })
-            .ok()
-            .map(|payload| HistoryContext { actor_user_id, payload });
+    let history = encrypt_padded_json(
+        key,
+        &HistoryPayload { summary: history_summary, actor_user_id: Some(actor_user_id) },
+    )
+    .ok()
+    .map(|payload| HistoryContext { actor_user_id: None, payload });
     DeleteExpenseRequest { id: expense_id, project_id, history }
 }
 
@@ -49,7 +51,7 @@ pub(crate) fn delete_expense_request(
 ///
 /// `on_done` navigates away or refetches the list, so it runs only once the row is really gone: a
 /// rejected delete raises the failure on `flash` and leaves the caller where it was. Queuing while
-/// offline *is* a success — the op replays on reconnect.
+/// offline *is* a success - the op replays on reconnect.
 ///
 /// `is_online`, `pending_ops` and `flash` are passed in rather than read here: this runs from an
 /// event handler, and `use_context` is a hook.
@@ -124,9 +126,9 @@ mod tests {
         assert_eq!(req.id, 7);
         assert_eq!(req.project_id, project_id);
         let history = req.history.expect("a summary is always attached");
-        assert_eq!(history.actor_user_id, 3);
-        let summary =
-            crate::crypto::decrypt_json::<HistoryPayload>(&key, &history.payload).unwrap().summary;
-        assert_eq!(summary, "deleted: Pizza");
+        assert_eq!(history.actor_user_id, None, "the actor travels in the payload");
+        let payload = crate::crypto::decrypt_json::<HistoryPayload>(&key, &history.payload).unwrap();
+        assert_eq!(payload.summary, "deleted: Pizza");
+        assert_eq!(payload.actor_user_id, Some(3));
     }
 }

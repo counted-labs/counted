@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 // Icon sizes, named after where they are used. Every icon takes an optional
 // `size` prop that defaults to `ICON_ACTION`.
 
-/// Bottom navigation dock — large touch targets.
+/// Bottom navigation dock - large touch targets.
 pub const ICON_NAV: u32 = 26;
 /// Page header / navbar actions (back, settings, history).
 pub const ICON_HEADER: u32 = 22;
@@ -27,6 +27,25 @@ pub fn BackArrowIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
             stroke_linecap: "round",
             stroke_linejoin: "round",
             polyline { points: "15 18 9 12 15 6" }
+        }
+    }
+}
+
+#[component]
+pub fn ChevronRightIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            polyline { points: "9 18 15 12 9 6" }
         }
     }
 }
@@ -172,7 +191,7 @@ pub fn PlusIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
     }
 }
 
-/// The open state of a control whose closed state is `PlusIcon` — same stroke weight on purpose,
+/// The open state of a control whose closed state is `PlusIcon` - same stroke weight on purpose,
 /// so the two do not appear to change thickness when a FAB toggles between them.
 #[component]
 pub fn CloseIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
@@ -189,6 +208,47 @@ pub fn CloseIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M18 6 6 18M6 6l12 12" }
+        }
+    }
+}
+
+#[component]
+pub fn SearchIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            circle { cx: "11", cy: "11", r: "7" }
+            path { d: "m20 20-3.5-3.5" }
+        }
+    }
+}
+
+#[component]
+pub fn WalletIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.8",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M3 7a2 2 0 0 1 2-2h13v4" }
+            path { d: "M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2" }
+            circle { cx: "16", cy: "14.5", r: "1" }
         }
     }
 }
@@ -526,6 +586,28 @@ pub fn RepeatIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
             path { d: "M3 11v-1a4 4 0 0 1 4-4h14" }
             path { d: "m7 22-4-4 4-4" }
             path { d: "M21 13v1a4 4 0 0 1-4 4H3" }
+        }
+    }
+}
+
+#[component]
+pub fn TransferIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M4 8h14" }
+            path { d: "m14 4 4 4-4 4" }
+            path { d: "M20 16H6" }
+            path { d: "m10 20-4-4 4-4" }
         }
     }
 }

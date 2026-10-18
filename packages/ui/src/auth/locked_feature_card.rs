@@ -4,7 +4,7 @@ use crate::tid;
 use crate::icons::{LockIcon, ICON_INLINE};
 
 /// An account-only feature shown to an anonymous user in the slot it would occupy once signed in.
-/// Nothing in it is interactive — the one call to action is the account card above it.
+/// Nothing in it is interactive - the one call to action is the account card above it.
 #[component]
 pub fn LockedFeatureCard(icon: Element, title: String, body: String) -> Element {
     rsx! {

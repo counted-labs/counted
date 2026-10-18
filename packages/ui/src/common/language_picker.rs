@@ -5,12 +5,12 @@ use shared::Account;
 use crate::i18n::{current_lang, set_language, SUPPORTED};
 use crate::preferences::push_language;
 
-/// Language selector — a bare labelled `<select>`, with no card or menu chrome of its own, so the
+/// Language selector - a bare labelled `<select>`, with no card or menu chrome of its own, so the
 /// settings page can put it inside a `fieldset` without fighting a second container.
 ///
 /// A plain `<select>`, not a `DropdownButton`: the list is long enough that the OS picker is the
 /// better control on a phone, and it sidesteps the iOS `:focus-within` dropdown problem entirely.
-/// Each option is labelled in its own language — someone looking for German scans for "Deutsch".
+/// Each option is labelled in its own language - someone looking for German scans for "Deutsch".
 /// The daisyUI class goes on the wrapping `<label>`, which is what joins the caption to the control.
 #[component]
 pub fn LanguagePicker() -> Element {
@@ -21,7 +21,7 @@ pub fn LanguagePicker() -> Element {
     let on_change = move |e: FormEvent| {
         let code = e.value();
         set_language(&code);
-        // Only a deliberate pick syncs, and only with a key to encrypt it — without one (local store
+        // Only a deliberate pick syncs, and only with a key to encrypt it - without one (local store
         // cleared) the choice stays on this device like an anonymous one.
         if let Some(account) = auth_ctx() {
             if let Some(key) = account_enc_key_ctx() {

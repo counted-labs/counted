@@ -41,7 +41,7 @@ pub struct TricountAlias {
     pub display_name: String,
 }
 
-/// Raw entry wrapper — captures RegistryEntry as an untyped Value so we can
+/// Raw entry wrapper - captures RegistryEntry as an untyped Value so we can
 /// inspect every field name without guessing.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TricountEntryWrapper {

@@ -9,15 +9,17 @@ use dioxus::prelude::*;
 use crate::tid;
 use shared::{
     round_currency, sums_to_total, Account as AccountData, CreatableExpense, CreatableProject,
-    CreatableUser, CreatableUserBatch, EncryptedUserAmount, ExpensePayload, ExpenseType,
-    PaymentPayload, ProjectPayload, UpsertAccountProject, UserPayload,
+    CreatableUser, CreatableUserBatch, ExpensePayload, ExpenseType, ProjectPayload,
+    UpsertAccountProject, UserPayload,
 };
 use std::collections::{HashMap, HashSet};
 
 use crate::common::{error_message, update_ls, upsert_project, upsert_project_key, LocalStorageState, NativeClipboardReader};
 use crate::crypto::{
-    claim_token, claim_verifier, encrypt_json, generate_key, key_to_fragment, wrap_key,
+    claim_token, claim_verifier, encrypt_json, encrypt_padded_json, generate_key, key_to_fragment,
+    wrap_key,
 };
+use crate::expenses::helpers::expense_modal_helpers::with_shares;
 use crate::icons::{CloseIcon, ICON_HEADER};
 use crate::route::Route;
 
@@ -28,12 +30,13 @@ pub struct ImportTricountModalProps {
 
 #[component]
 pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
+    crate::common::use_modal_focus("import-tricount-modal");
     let mut tricount_key = use_signal(String::new);
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
     let mut loading = use_signal(|| false);
 
     // WebView only: a native paste (long-press → Coller) never reaches oninput there. On web
-    // oninput already fires on paste, and this listener would need eval — CSP-blocked
+    // oninput already fires on paste, and this listener would need eval - CSP-blocked
     // (`common::web_dom`).
     #[cfg(not(target_arch = "wasm32"))]
     use_effect(move || {
@@ -105,11 +108,11 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
             let enc_key = generate_key();
             let key_fragment = key_to_fragment(&enc_key);
 
-            let project_payload = match encrypt_json(&enc_key, &ProjectPayload {
+            let project_payload = match encrypt_padded_json(&enc_key, &ProjectPayload {
                 name: registry.title.clone(),
                 currency: registry.currency.clone(),
                 description: None,
-                status: None,
+                status: Some(shared::ProjectStatus::Ongoing),
                 extra: Default::default(),
             }) {
                 Ok(p) => p,
@@ -199,7 +202,7 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
 
                 // No conversion: the imported project adopts the Tricount registry's own currency,
                 // so every amount is already in the project currency.
-                let expense_payload = match encrypt_json(&enc_key, &ExpensePayload {
+                let expense_payload = ExpensePayload {
                     name: entry.name.to_string(),
                     amount: entry.total,
                     expense_type: expense_type.as_str().to_string(),
@@ -214,36 +217,21 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                     author_id: None,
                     shares: None,
                     extra: Default::default(),
-                }) {
-                    Ok(p) => p,
-                    Err(_) => continue,
                 };
-
-                let payers = match encrypt_json(&enc_key, &PaymentPayload { amount: entry.total, is_debt: false })
-                    .map(|payload| vec![EncryptedUserAmount { user_id: payer_id, payload }])
-                {
-                    Ok(v) => v,
-                    Err(_) => continue,
-                };
-
-                let debtors: Vec<EncryptedUserAmount> = match debtor_ids
-                    .iter()
-                    .map(|(uid, amt)| {
-                        encrypt_json(&enc_key, &PaymentPayload { amount: *amt, is_debt: true })
-                            .map(|payload| EncryptedUserAmount { user_id: *uid, payload })
-                    })
-                    .collect::<Result<Vec<_>, String>>()
-                {
-                    Ok(v) => v,
-                    Err(_) => continue,
-                };
+                let expense_payload = with_shares(
+                    expense_payload,
+                    Some(payer_id),
+                    &[(payer_id, entry.total)],
+                    &debtor_ids,
+                );
+                let Ok(payload) = encrypt_padded_json(&enc_key, &expense_payload) else { continue };
 
                 expenses_batch.push(CreatableExpense {
-                    payload: expense_payload,
+                    payload,
                     project_id: project.id,
-                    author_id: payer_id,
-                    payers,
-                    debtors,
+                    author_id: None,
+                    payers: Vec::new(),
+                    debtors: Vec::new(),
                     history: None,
                     client_op_id: None,
                 });
@@ -257,7 +245,7 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                 }
             }
 
-            // user_id is None — the user identifies themselves later via UserSelectionModal, which
+            // user_id is None - the user identifies themselves later via UserSelectionModal, which
             // is also what attaches the claim label. Nothing to claim here yet.
             if is_auth {
                 let _ = upsert_account_project(Json(UpsertAccountProject {
@@ -278,13 +266,19 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
     let on_close = props.on_close;
 
     rsx! {
-        div { class: "modal modal-open modal-bottom sm:modal-middle", role: "dialog",
+        div {
+            id: "import-tricount-modal",
+            class: "modal modal-open modal-bottom sm:modal-middle",
+            role: "dialog",
+            aria_modal: "true",
+            aria_labelledby: "import-tricount-modal-title",
+            tabindex: "-1",
             div { class: "modal-box max-w-sm p-0 flex flex-col",
                 div { class: "flex items-center justify-between px-6 pt-5 pb-4 border-b border-base-200 flex-shrink-0",
-                    h3 { class: "font-bold text-lg font-display", {tid!("projects-import-tricount")} }
+                    h2 { id: "import-tricount-modal-title", class: "font-bold text-lg font-display", {tid!("projects-import-tricount")} }
                     button {
                         r#type: "button",
-                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11",
+                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
                         aria_label: tid!("close"),
                         onclick: move |_| on_close.call(()),
                         CloseIcon { size: ICON_HEADER }
@@ -385,7 +379,7 @@ struct PlannedEntry<'a> {
 /// is created, so a refusal leaves nothing behind.
 ///
 /// Only plain members (`RegistryMembershipNonUser`) become participants. An entry paid by, or
-/// owed by, anyone else used to be imported without them — its debts landed on the last remaining
+/// owed by, anyone else used to be imported without them - its debts landed on the last remaining
 /// debtor, a wrong balance from day one with no warning. Entries without a description or an
 /// amount are not expenses and are skipped, as before.
 fn plan_entries<'a>(
@@ -406,7 +400,7 @@ fn plan_entries<'a>(
         let total = round_currency(total.abs());
         // `s.get(..10)`, not `&s[..10]`: this is a field of a third-party API response, and
         // byte-slicing panics when index 10 is not a UTF-8 char boundary. `len() >= 10` does not
-        // rule that out — it counts bytes.
+        // rule that out - it counts bytes.
         let date = entry["created"].as_str().and_then(|s| s.get(..10)).unwrap_or("2000-01-01");
 
         let Some(payer) = member(&entry["membership_owned"]) else {
@@ -426,8 +420,8 @@ fn plan_entries<'a>(
                 None => mapped = false,
             }
         }
-        // Tricount's allocations can round off against its own total, and imports bypass the form
-        // — nothing else would catch it before the expense lands permanently flagged inconsistent.
+        // Tricount's allocations can round off against its own total, and imports bypass the form -
+        // nothing else would catch it before the expense lands permanently flagged inconsistent.
         if !mapped || !balance_allocations(total, &mut debtors) {
             unimportable += 1;
             continue;
@@ -587,7 +581,7 @@ mod tests {
 
     #[test]
     fn a_lone_allocation_is_never_driven_negative() {
-        // The only allocation always takes the whole total — it can't come out below zero.
+        // The only allocation always takes the whole total - it can't come out below zero.
         let mut allocations = vec![(1, 50.0)];
         assert!(balance_allocations(1.0, &mut allocations));
         assert_eq!(allocations[0].1, 1.0);

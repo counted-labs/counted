@@ -17,7 +17,7 @@ fn active_tab(route: &Route) -> Option<DockTab> {
     match route {
         Route::ProjectsPage {} | Route::ExpensesPage { .. } => Some(DockTab::Projects),
         Route::ChartsPage {} => Some(DockTab::Charts),
-        Route::SettingsPage {} => Some(DockTab::Settings),
+        Route::SettingsPage {} | Route::LoginPage {} | Route::RegisterPage {} => Some(DockTab::Settings),
         _ => None,
     }
 }
@@ -61,11 +61,11 @@ pub fn BottomDock() -> Element {
     // A column, not a centred icon: HIG tab bars label every tab, and an icon-only bar is the
     // single loudest "this is a web app" tell in the whole shell. The icon drops from ICON_NAV to
     // ICON_ACTION and the button from `h-11` to `py-1.5` so that icon + gap + label lands back on
-    // the same 2.75rem — the dock's height is unchanged, which is what lets `.safe-bottom-fab` and
+    // the same 2.75rem - the dock's height is unchanged, which is what lets `.safe-bottom-fab` and
     // every page's `pb-24`/`pb-36` stay as they are.
     //
     // The active item is a gradient, so a `hover:bg-*` would be painted over by its
-    // `background-image` — brightness is the one thing the gradient can't occlude. `transition`
+    // `background-image` - brightness is the one thing the gradient can't occlude. `transition`
     // rather than `transition-colors` so the filter animates too. Tailwind wraps `hover:` in
     // `@media (hover: hover)`, so touch devices are unaffected.
     let btn_class = |active: bool| -> &'static str {
@@ -78,9 +78,9 @@ pub fn BottomDock() -> Element {
     let label_class = "text-[10px] leading-none font-medium";
 
     let lit = active_tab(&route);
-    let inside_project = matches!(route, Route::ExpensesPage { .. });
-    // "true", not "page", on a project: the tab is the current section, not the current page.
-    let aria_current = move |tab: DockTab| (lit == Some(tab)).then_some(if inside_project { "true" } else { "page" });
+    let below_a_tab = matches!(route, Route::ExpensesPage { .. } | Route::LoginPage {} | Route::RegisterPage {});
+    // "true", not "page", below a tab: the tab is the current section, not the current page.
+    let aria_current = move |tab: DockTab| (lit == Some(tab)).then_some(if below_a_tab { "true" } else { "page" });
 
     // The route is read at tap time: three `move` closures cannot each capture `route`, which is
     // not `Copy`. A remembered project left or forgotten since falls back to the list.
@@ -103,7 +103,7 @@ pub fn BottomDock() -> Element {
             aria_label: tid!("nav-main"),
             // `chrome-material` replaces the solid fill: bars over content are translucent on iOS.
             // It is defined only in the mobile stylesheet, so web and desktop keep `bg-base-100`
-            // from the class below it — the two compose, material simply wins where it exists.
+            // from the class below it - the two compose, material simply wins where it exists.
             div { class: "bg-base-100 chrome-material rounded-full px-4 py-2 grid grid-cols-3 items-center w-full max-w-xs shadow-soft border border-base-200 pointer-events-auto",
                 button {
                     id: "nav-projects",
@@ -112,7 +112,7 @@ pub fn BottomDock() -> Element {
                     aria_label: tid!("nav-projects"),
                     aria_current: aria_current(DockTab::Projects),
                     // Dock entries are tabs, not steps: a push would make back re-enter the page
-                    // just left — the project detail page above all, which the dock now shows on —
+                    // just left - the project detail page above all, which the dock now shows on -
                     // and grow the stack on every tab cycle.
                     onclick: move |_| go(DockTab::Projects),
                     HomeIcon { size: ICON_ACTION }
@@ -160,9 +160,14 @@ mod tests {
     }
 
     #[test]
-    fn no_tab_is_lit_off_the_dock_destinations() {
-        assert_eq!(active_tab(&Route::LoginPage {}), None);
-        assert_eq!(active_tab(&Route::RegisterPage {}), None);
+    fn settings_tab_stays_lit_on_login_and_register() {
+        assert_eq!(active_tab(&Route::LoginPage {}), Some(DockTab::Settings));
+        assert_eq!(active_tab(&Route::RegisterPage {}), Some(DockTab::Settings));
+    }
+
+    #[test]
+    fn settings_from_login_goes_to_settings() {
+        assert_eq!(dock_nav(&Route::LoginPage {}, DockTab::Settings, None), (Some(Route::SettingsPage {}), None));
     }
 
     #[test]

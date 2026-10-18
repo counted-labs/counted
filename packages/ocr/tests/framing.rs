@@ -8,7 +8,7 @@
 //!
 //! So this deliberately breaks a fixture that currently works, one axis at a time, and prints every
 //! `TextLine` the parser was handed. Whichever transform first turns the title to `None` names the
-//! mechanism. It is `#[ignore]`d because it is an experiment, not a regression gate — and because
+//! mechanism. It is `#[ignore]`d because it is an experiment, not a regression gate - and because
 //! it runs the full pipeline a dozen times.
 //!
 //! `cargo test -p ocr --test framing -- --ignored --nocapture`
@@ -16,7 +16,7 @@
 //! # What it found
 //!
 //! **Framing was the whole bug, and it was in the parser.** At 30% background above the receipt the
-//! header was still detected and recognised perfectly — "CARREFOUR MARKET" at confidence 1.00 — and
+//! header was still detected and recognised perfectly - "CARREFOUR MARKET" at confidence 1.00 - and
 //! then discarded for landing at y=0.280 against a 0.25 cutoff measured against the *image* rather
 //! than the receipt. 20% padding passed, so the fault was invisible on any tightly-shot fixture.
 //! Fixed by measuring the zone against the detected text span; `background_above_the_receipt_does_
@@ -24,17 +24,17 @@
 //!
 //! **Resolution and compression were not involved.** The title survives a 50% downscale and JPEG
 //! quality 50. Worth knowing, because "the photo isn't sharp enough" is the intuitive explanation
-//! and it is wrong — recognition crops are cut from the full-size source, so only detection recall
+//! and it is wrong - recognition crops are cut from the full-size source, so only detection recall
 //! is ever at stake.
 //!
-//! **Rotation had a sharp threshold — 2 degrees perfect, 3 degrees lost the top third of the
-//! receipt — and it was the box scorer.** At 3 degrees the header was not among the detections,
+//! **Rotation had a sharp threshold - 2 degrees perfect, 3 degrees lost the top third of the
+//! receipt - and it was the box scorer.** At 3 degrees the header was not among the detections,
 //! while "PAIN COMPLET 2,40" a few lines below still grouped correctly, so the fault was inside
 //! detection; two attempts elsewhere failed and were reverted (grouping in a frame deskewed from the
 //! boxes' own `up_axis`: byte-identical output; Otsu-based rectification: erratic). The Le Refuge
 //! fixture named it: `box_score` averaged the probability map over the box's *axis-aligned bounds*
 //! where PaddleOCR averages *inside the polygon*, and the empty corner triangles of a tilted box
-//! grow with `width × sin θ` — so the widest lines, the header, were the first to drop under
+//! grow with `width × sin θ` - so the widest lines, the header, were the first to drop under
 //! `box_thresh`. Scored inside the polygon, 10 degrees keeps the title;
 //! `a_tilted_receipt_does_not_lose_the_title` is the gate.
 
@@ -48,7 +48,7 @@ const FIXTURE: &str = "synthetic-carrefour";
 /// Well above the capture path's own quality, so compression is not a hidden variable in the other rows.
 const QUALITY: u8 = 92;
 /// Surface the receipt sits on. Paper is ~255, so this sets the paper-to-background contrast, which
-/// matters for any outline-finding approach — an Otsu-based one was tried and failed on it.
+/// matters for any outline-finding approach - an Otsu-based one was tried and failed on it.
 const BACKGROUND: u8 = 140;
 
 fn fixture() -> RgbImage {
@@ -66,7 +66,7 @@ fn to_jpeg(img: &RgbImage, quality: u8) -> Vec<u8> {
     buf
 }
 
-/// Background above the receipt — what every hand-held photo has and the fixture does not.
+/// Background above the receipt - what every hand-held photo has and the fixture does not.
 /// `TextLine.y` is a fraction of *image* height, so this is the one transform that directly probes
 /// whether `TITLE_ZONE_Y` is measured against the wrong thing.
 fn pad_top(img: &RgbImage, fraction: f32) -> RgbImage {
@@ -156,7 +156,7 @@ fn a_tilted_receipt_does_not_lose_the_title() {
 }
 
 #[test]
-#[ignore = "experiment, not a gate — runs the whole pipeline a dozen times"]
+#[ignore = "experiment, not a gate - runs the whole pipeline a dozen times"]
 fn which_transform_loses_the_title() {
     let base = fixture();
     println!("fixture {FIXTURE}: {}x{}", base.width(), base.height());

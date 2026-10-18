@@ -1,13 +1,13 @@
 [package]
 name = "mobile"
-version = "3.2.4"
+version = "3.2.5"
 edition = "2021"
 publish = false
 
 # F-Droid's versionCode: major*1000000 + minor*1000 + patch of `version` above, bumped with it.
 # Checked by `android-fdroid-apk` in android.mk. The Play build asks the Play API instead.
 [package.metadata.android]
-version_code = 3002004
+version_code = 3002005
 
 [dependencies]
 dioxus = { workspace = true, features = ["router"] }
@@ -78,6 +78,10 @@ objc2-ui-kit = { version = "0.3", features = [
 	"UIViewController",
 	"UIPopoverPresentationController",
 	"UIPresentationController",
+	# Launch background: the system appearance, read off the main screen before any window exists.
+	"UIScreen",
+	"UITraitCollection",
+	"UIInterface",
 	# openURL:options:completionHandler:, the only openURL iOS 18 still honours, is gated on it.
 	"block2",
 ] }

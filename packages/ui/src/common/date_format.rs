@@ -3,7 +3,7 @@ use crate::tid;
 
 /// A date as a reader of the active language expects it: `24 août 2026`, `August 24, 2026`.
 ///
-/// The field *order* lives in the `.ftl` (`date-long`), not here — only the locale file knows
+/// The field *order* lives in the `.ftl` (`date-long`), not here - only the locale file knows
 /// whether the month comes first. `chrono`'s `%B` is English-only, and `fluent-rs` ships no CLDR
 /// data, so its `DATETIME` builtin cannot do this either; the month names are ordinary messages.
 pub fn format_date(date: chrono::NaiveDate) -> String {
@@ -24,7 +24,7 @@ pub fn format_date_str(date: &str) -> String {
         .unwrap_or_else(|_| date.to_string())
 }
 
-/// `septembre 2026` / `September 2026`, from any `%Y-%m-%d` date in that month — what the rate
+/// `septembre 2026` / `September 2026`, from any `%Y-%m-%d` date in that month - what the rate
 /// hint shows for a table valid for a calendar month. Same raw-string fallback as above.
 pub fn format_month_str(date: &str) -> String {
     chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
@@ -37,7 +37,14 @@ pub fn month_name(month0: usize) -> String {
     MONTH_KEYS[month0 % 12].translate()
 }
 
-/// Abbreviated month name for chart axes, `month0` indexed. Same table, shorter labels — before
+/// [`month_name`] to start a line: "Octobre", where a date keeps "octobre".
+pub fn month_title(month0: usize) -> String {
+    let name = month_name(month0);
+    let mut chars = name.chars();
+    chars.next().map(|c| c.to_uppercase().chain(chars).collect()).unwrap_or_default()
+}
+
+/// Abbreviated month name for chart axes, `month0` indexed. Same table, shorter labels - before
 /// this there were two independent month lists to keep in sync.
 pub fn month_abbrev(month0: usize) -> String {
     MONTH_SHORT_KEYS[month0 % 12].translate()
@@ -90,7 +97,7 @@ mod tests {
     use super::*;
 
     /// Rendering needs an i18n context, which a plain unit test has no runtime for. What is
-    /// testable without one is the parsing half — and that every locale defines all 24 month
+    /// testable without one is the parsing half - and that every locale defines all 24 month
     /// messages, which is what would actually break a date.
     #[test]
     fn unparseable_dates_are_shown_verbatim() {

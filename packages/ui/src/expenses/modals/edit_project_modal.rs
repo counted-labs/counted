@@ -1,18 +1,18 @@
 use api::friends::invitations_controller::get_sent_invitations;
-use api::users::users_controller::{add_user, delete_user};
+use api::users::users_controller::{add_user, edit_user};
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use crate::tid;
-use shared::{Account, CreatableUser, CreatableUserBatch, EditableProject, HistoryContext, HistoryPayload, ProjectDto, ProjectPayload, User, UserPayload};
+use shared::{Account, CreatableUser, CreatableUserBatch, EditableProject, EditableUser, HistoryContext, HistoryPayload, ProjectDto, ProjectPayload, User, UserPayload};
 use std::collections::VecDeque;
 use uuid::Uuid;
 
 use crate::common::{
     error_message, identity_locked, is_user_gone_error, update_project_fresh, write_queue, Flash,
-    InviteRetry, LocalStorageState, OpKind, ProjectKey, QueuedOp,
+    InviteRetry, LocalStorageState, OpKind, ProjectEdit, ProjectKey, QueuedOp,
 };
 use std::collections::HashSet;
-use crate::crypto::{decrypt_json, encrypt_json};
+use crate::crypto::{decrypt_json, encrypt_json, encrypt_padded_json};
 use crate::decrypted::{decrypt_user, DecryptedUser};
 use crate::friends::friends_service::{invite_each, my_private_key, Invitee};
 use crate::icons::{CloseIcon, LockIcon, ICON_HEADER, ICON_INLINE};
@@ -34,6 +34,7 @@ pub struct EditProjectModalProps {
 
 #[component]
 pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
+    crate::common::use_modal_focus("edit-project-modal");
     let project_id = props.project.id;
     let ls_ctx = use_context::<Signal<LocalStorageState>>();
     let key_ctx = use_context::<ProjectKey>().0;
@@ -67,12 +68,17 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     let mut name = use_signal(|| initial_name.clone());
     let mut description = use_signal(|| initial_description.clone());
     // Existing users stored as decrypted so display and comparison work directly
-    let mut existing_users: Signal<Vec<DecryptedUser>> = use_signal(|| initial_users.clone());
+    let mut existing_users: Signal<Vec<DecryptedUser>> =
+        use_signal(|| initial_users.iter().filter(|u| !u.removed).cloned().collect());
+    // Participants are never deleted: a removed one keeps its name on past expenses, and can come back.
+    let mut removed_users: Signal<Vec<DecryptedUser>> =
+        use_signal(|| initial_users.iter().filter(|u| u.removed).cloned().collect());
     let mut drafts: Signal<Vec<DraftParticipant>> = use_signal(Vec::new);
     let mut loading = use_signal(|| false);
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
 
-    let original_user_ids: Vec<i32> = props.users.iter().map(|u| u.id).collect();
+    let original_user_ids: Vec<i32> =
+        initial_users.iter().filter(|u| !u.removed).map(|u| u.id).collect();
     let rules = use_context::<ProjectStore>()
         .recurring_for(project_id)
         .map(|r| r.rules)
@@ -108,7 +114,6 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     let on_saved = props.on_saved;
     let on_switch = props.on_switch;
 
-    let snapshot = props.project.clone();
     let on_submit = move |_| {
         let key = match key_snap {
             Some(k) => k,
@@ -128,6 +133,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             if desc_val.trim().is_empty() { None } else { Some(desc_val.trim().to_string()) };
 
         let current_existing = existing_users();
+        let current_removed = removed_users();
         let current_new = drafts();
         let orig_ids = original_user_ids.clone();
 
@@ -149,11 +155,10 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             .projects
             .iter()
             .find(|p| p.project_id == project_id)
-            .and_then(|p| p.user_id)
-            .unwrap_or(0);
+            .and_then(|p| p.user_id);
 
         // History summaries are encrypted and stored, so they keep the language of whoever wrote
-        // them. That is the honest record — the entry says what this person did — and it avoids a
+        // them. That is the honest record - the entry says what this person did - and it avoids a
         // payload migration for every summary already written.
         let mut diff: Vec<String> = Vec::new();
         if name_val != initial_name {
@@ -179,24 +184,23 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             diff.join(" • ")
         };
 
-        let history = encrypt_json(&key, &HistoryPayload { summary, actor_user_id: None })
+        let history = encrypt_padded_json(&key, &HistoryPayload { summary, actor_user_id })
             .ok()
-            .map(|p| HistoryContext { actor_user_id, payload: p });
+            .map(|p| HistoryContext { actor_user_id: None, payload: p });
 
         if !is_online() {
-            let payload = match edited_project_payload(&key, &snapshot, &name_val, desc) {
+            let sealed = match encrypt_json(&key, &(&name_val, &desc)) {
                 Ok(v) => v,
-                Err(e) => { error_msg.set(Some(e)); return; }
+                Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
             };
             pending_ops.write().push_back(QueuedOp {
                 id: Uuid::new_v4(),
-                label: name_val,
-                op: OpKind::UpdateProject(EditableProject {
-                    id: project_id,
-                    payload: Some(payload),
+                label: name_val.clone(),
+                op: OpKind::EditProject(ProjectEdit {
+                    project_id,
+                    name_description: Some(sealed),
                     status: None,
                     history,
-                    expected_iv: None,
                 }),
             });
             write_queue(&pending_ops.read());
@@ -228,6 +232,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                     status: None,
                     history: history.clone(),
                     expected_iv: None,
+                    notify_closed: false,
                 })
             };
             if let Err(e) = update_project_fresh(project_id, edit).await
@@ -294,19 +299,24 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                 }
             }
 
-            let kept_ids: std::collections::HashSet<i32> =
-                current_existing.iter().map(|u| u.id).collect();
-            for uid in &orig_ids {
-                if !kept_ids.contains(uid) {
-                    // Already gone is done: a re-submit after a failed removal re-sends the ones
-                    // that succeeded, since `orig_ids` comes from the props.
-                    if let Err(e) = delete_user(project_id, *uid).await.or_else(|e| {
-                        if is_user_gone_error(&e) { Ok(()) } else { Err(e) }
-                    }) {
-                        error_msg.set(Some(error_message(&e)));
-                        loading.set(false);
-                        return;
-                    }
+            // Removing and restoring both rewrite the payload's `removed`. Re-sending one that already
+            // took is harmless, which is what makes a re-submit after a failure safe.
+            // `u.removed` is what the server holds, the list each one sits in is what it should.
+            let changes = current_removed
+                .iter()
+                .map(|u| (u, true))
+                .chain(current_existing.iter().map(|u| (u, false)))
+                .filter(|(u, removed)| u.removed != *removed);
+            for (u, removed) in changes {
+                let payload = match encrypt_json(&key, &UserPayload { name: u.name.clone(), removed }) {
+                    Ok(p) => p,
+                    Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
+                };
+                let write = edit_user(Json(EditableUser { id: u.id, project_id, payload })).await;
+                if let Err(e) = write.or_else(|e| if is_user_gone_error(&e) { Ok(()) } else { Err(e) }) {
+                    error_msg.set(Some(error_message(&e)));
+                    loading.set(false);
+                    return;
                 }
             }
 
@@ -337,13 +347,19 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     let other_count = others.len() + drafts.read().len();
 
     rsx! {
-        div { class: "modal modal-open modal-bottom sm:modal-middle", role: "dialog",
+        div {
+            id: "edit-project-modal",
+            class: "modal modal-open modal-bottom sm:modal-middle",
+            role: "dialog",
+            aria_modal: "true",
+            aria_labelledby: "edit-project-modal-title",
+            tabindex: "-1",
             div { class: "modal-box max-w-md p-0 flex flex-col",
                 div { class: "flex items-center justify-between px-6 pt-5 pb-4 border-b border-base-200 flex-shrink-0",
-                    h3 { class: "font-bold text-lg font-display", {tid!("edit-project-title")} }
+                    h2 { id: "edit-project-modal-title", class: "font-bold text-lg font-display", {tid!("edit-project-title")} }
                     button {
                         r#type: "button",
-                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11",
+                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
                         aria_label: tid!("close"),
                         onclick: move |_| on_close_x.call(()),
                         CloseIcon { size: ICON_HEADER }
@@ -359,6 +375,8 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                                 class: "input w-full",
                                 r#type: "text",
                                 enterkeyhint: "next",
+                                aria_invalid: if error_msg().is_some() && name().trim().is_empty() { "true" },
+                                aria_describedby: if error_msg().is_some() { "edit-project-error" },
                                 value: "{name}",
                                 oninput: move |e| name.set(e.value()),
                             }
@@ -454,11 +472,46 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                                                 claim_name: user.claim_name.clone(),
                                                 invited,
                                                 on_remove: move |_| {
+                                                    let gone = existing_users.read().iter().find(|u| u.id == user_id).cloned();
                                                     existing_users.write().retain(|u| u.id != user_id);
+                                                    if let Some(u) = gone {
+                                                        removed_users.write().push(u);
+                                                    }
                                                 },
                                                 on_add_friend: (can_add_friend && locked).then(|| {
                                                     EventHandler::new(move |_| add_friend((user_id, friend_name.clone())))
                                                 }),
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if !removed_users().is_empty() {
+                            h4 { class: "text-xs font-bold uppercase tracking-wide text-base-content/70 mt-2", {tid!("participants-removed")} }
+                            ul { class: "flex flex-col",
+                                for user in removed_users() {
+                                    {
+                                        let user_id = user.id;
+                                        rsx! {
+                                            li {
+                                                key: "{user_id}",
+                                                id: "edit-project-removed-{user_id}",
+                                                class: "flex items-center gap-2.5 min-h-13",
+                                                Avatar { name: user.name.clone(), guest: true }
+                                                span { class: "flex-1 min-w-0 truncate text-base-content/70", "{user.name}" }
+                                                button {
+                                                    r#type: "button",
+                                                    class: "btn btn-ghost btn-sm text-primary",
+                                                    onclick: move |_| {
+                                                        let back = removed_users.read().iter().find(|u| u.id == user_id).cloned();
+                                                        if let Some(u) = back {
+                                                            removed_users.write().retain(|u| u.id != user_id);
+                                                            existing_users.write().push(u);
+                                                        }
+                                                    },
+                                                    {tid!("participant-restore")}
+                                                }
                                             }
                                         }
                                     }
@@ -477,7 +530,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                     }
 
                     if let Some(msg) = error_msg() {
-                        div { role: "alert", class: "alert alert-error text-sm", "{msg}" }
+                        div { id: "edit-project-error", role: "alert", class: "alert alert-error text-sm", "{msg}" }
                     }
                 } // end flex flex-col gap-5
                 } // end scrollable body
@@ -548,7 +601,7 @@ fn SavedRow(props: SavedRowProps) -> Element {
                     }
                 }
                 if props.locked {
-                    // Inline rather than a hover tooltip — no hover on touch. `title` is the desktop
+                    // Inline rather than a hover tooltip - no hover on touch. `title` is the desktop
                     // affordance only.
                     span { class: "text-sm text-base-content/70 flex items-center gap-1 min-w-0", title: "{claimed_by}",
                         LockIcon { size: 13 }
@@ -585,8 +638,8 @@ fn SavedRow(props: SavedRowProps) -> Element {
     }
 }
 
-/// `stored` with the name and description the form owns. Everything else — currency, status and
-/// fields from newer builds — is kept as stored.
+/// `stored` with the name and description the form owns. Everything else - currency, status and
+/// fields from newer builds - is kept as stored.
 fn edited_project_payload(
     key: &[u8; 32],
     stored: &ProjectDto,
@@ -596,7 +649,7 @@ fn edited_project_payload(
     let mut payload: ProjectPayload = decrypt_json(key, &stored.payload)?;
     payload.name = name.to_string();
     payload.description = description;
-    encrypt_json(key, &payload)
+    encrypt_padded_json(key, &payload)
 }
 
 #[cfg(test)]
@@ -626,6 +679,7 @@ mod tests {
             status: None,
             history: None,
             expected_iv: None,
+            notify_closed: false,
         })
     }
 

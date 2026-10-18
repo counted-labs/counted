@@ -27,7 +27,7 @@ pub struct UserSelectionModalProps {
 }
 
 /// Every key `error_key` can hold. They reach `tid!` as a value, not a literal, so the crate-wide
-/// scanner in `i18n` cannot see them — this is the guard that replaces it.
+/// scanner in `i18n` cannot see them - this is the guard that replaces it.
 #[cfg(all(test, not(target_arch = "wasm32")))]
 const ERROR_KEYS: &[&str] =
     &["user-selection-required", "error-identity-taken", "error-claim-proof-invalid", "error-generic"];
@@ -45,6 +45,7 @@ mod key_guard {
 
 #[component]
 pub fn UserSelectionModal(props: UserSelectionModalProps) -> Element {
+    crate::common::use_modal_focus("user-selection-modal");
     let ls_ctx = use_context::<Signal<LocalStorageState>>();
     let key_ctx = use_context::<ProjectKey>().0;
     let account_key_ctx = use_context::<Signal<Option<[u8; 32]>>>();
@@ -100,7 +101,7 @@ pub fn UserSelectionModal(props: UserSelectionModalProps) -> Element {
             return;
         };
 
-        // Offline, the claim cannot be checked — and this modal is the only way past itself, so
+        // Offline, the claim cannot be checked - and this modal is the only way past itself, so
         // refusing to record anything would lock a signed-in user out of their own project until
         // they get signal. Record it locally; `ensure_membership` pushes it on the next open and
         // clears it there if the server refuses.
@@ -120,7 +121,7 @@ pub fn UserSelectionModal(props: UserSelectionModalProps) -> Element {
         let mut finish = finish;
         spawn(async move {
             // The server writes first, and localStorage only on success. The other order left a
-            // device convinced it was a participant the account had been refused — invisibly, since
+            // device convinced it was a participant the account had been refused - invisibly, since
             // the call was fire-and-forget.
             //
             // No key: `ensure_membership` escrows it on every project open, and this modal only ever
@@ -140,7 +141,7 @@ pub fn UserSelectionModal(props: UserSelectionModalProps) -> Element {
                     update_ls(ls_ctx, |state| upsert_project(state, project_id, Some(user_id)));
                     finish();
                     // The shared payment methods follow the identity, from a fresh `me()` rather
-                    // than the `account` this session booted with — see `refill_project_copies`.
+                    // than the `account` this session booted with - see `refill_project_copies`.
                     if let Some(ak) = account_key_ctx() {
                         if let Ok(Some(fresh)) = me().await {
                             let _ = refill_project_copies(&fresh, &ak).await;
@@ -148,7 +149,7 @@ pub fn UserSelectionModal(props: UserSelectionModalProps) -> Element {
                     }
                 }
                 Err(e) if is_identity_taken_error(&e) => {
-                    // Raced against another account between the render and the click — the list is
+                    // Raced against another account between the render and the click - the list is
                     // a snapshot, the index is the truth.
                     selected_user_id.set(None);
                     error_key.set(Some("error-identity-taken"));
@@ -156,7 +157,7 @@ pub fn UserSelectionModal(props: UserSelectionModalProps) -> Element {
                 // This device's key does not match the project's verifier: nothing to pick, the
                 // fix is the share link.
                 Err(e) if is_claim_proof_error(&e) => error_key.set(Some("error-claim-proof-invalid")),
-                // The request never reached the server, so nothing was refused — same situation as
+                // The request never reached the server, so nothing was refused - same situation as
                 // the offline branch above, and the same answer. `is_online` can still be true here:
                 // it only flips on native connectivity events, and on web it is always true.
                 Err(e) if is_offline_error(&e) => {
@@ -178,11 +179,18 @@ pub fn UserSelectionModal(props: UserSelectionModalProps) -> Element {
         .map(|u| u.name.clone());
 
     rsx! {
-        dialog { open: true, class: "modal modal-open modal-bottom sm:modal-middle",
+        div {
+            id: "user-selection-modal",
+            class: "modal modal-open modal-bottom sm:modal-middle",
+            role: "dialog",
+            aria_modal: "true",
+            aria_labelledby: "user-selection-title",
+            aria_describedby: "user-selection-hint",
+            tabindex: "-1",
             div { class: "modal-box p-0 flex flex-col",
                 div { class: "flex items-start justify-between gap-2 px-6 pt-5 pb-4 border-b border-base-200 flex-shrink-0",
                     div { class: "flex flex-col gap-0.5",
-                        h1 { class: "text-lg font-bold font-display", {tid!("user-selection-title")} }
+                        h2 { id: "user-selection-title", class: "text-lg font-bold font-display", {tid!("user-selection-title")} }
                         p { id: "user-selection-hint", class: "text-sm text-base-content/70",
                             match invited_hint {
                                 Some((email, project)) => rsx! { {tid!("user-selection-invited-hint", email: email, project: project)} },
@@ -193,7 +201,7 @@ pub fn UserSelectionModal(props: UserSelectionModalProps) -> Element {
                     if let Some(close) = on_close {
                         button {
                             r#type: "button",
-                            class: "btn btn-ghost btn-circle h-11 w-11 min-h-11 -mr-3 -mt-1",
+                            class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80 -mr-3 -mt-1",
                             aria_label: tid!("close"),
                             onclick: move |_| close.call(()),
                             CloseIcon { size: ICON_HEADER }

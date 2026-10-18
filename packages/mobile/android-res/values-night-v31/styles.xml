@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ in dark mode. Night outranks the API level in resource matching, so without this
+         file values-night/styles.xml would win on API 31+ and drop the splash items below. See
+         values-v31/styles.xml for what each one does. -->
+    <style name="AppTheme" parent="@style/Theme.AppCompat.NoActionBar">
+        <item name="windowActionModeOverlay">true</item>
+        <item name="android:windowSoftInputMode">adjustResize</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowBackground">#1B221F</item>
+        <item name="android:windowSplashScreenBackground">#1B221F</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">#FFFFFF</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+    </style>
+</resources>

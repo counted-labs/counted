@@ -7,7 +7,7 @@ use shared::{Account, ResendVerificationPayload};
 use crate::{
     auth::credentials::sign_in,
     common::{
-        error_message, is_email_not_verified, next_paint, read_from_ls, write_to_ls, AppHeader,
+        error_key, error_message, is_email_not_verified, next_paint, read_from_ls, write_to_ls, AppHeader,
         LocalStorageState,
     },
     crypto::key_to_fragment,
@@ -32,6 +32,7 @@ fn LoginForm() -> Element {
     let mut email = use_signal(String::new);
     let mut password = use_signal(String::new);
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
+    let mut rejected = use_signal(|| false);
     let mut loading = use_signal(|| false);
     let mut unverified = use_signal(|| false);
     let mut resend_loading = use_signal(|| false);
@@ -51,6 +52,7 @@ fn LoginForm() -> Element {
         async move {
             loading.set(true);
             error_msg.set(None);
+            rejected.set(false);
             unverified.set(false);
             resend_done.set(false);
             // Two Argon2id derivations run before the request now; without a paint in between
@@ -59,7 +61,7 @@ fn LoginForm() -> Element {
 
             match sign_in(email_val, &password_val, lang).await {
                 Ok((account, account_key)) => {
-                    // Persist so the key survives a reload — the password is gone once the
+                    // Persist so the key survives a reload - the password is gone once the
                     // session is restored from the cookie.
                     let mut state = read_from_ls();
                     state.account_key = Some(key_to_fragment(&account_key));
@@ -77,6 +79,7 @@ fn LoginForm() -> Element {
                         unverified.set(true);
                         error_msg.set(None);
                     } else {
+                        rejected.set(error_key(&e) == "error-invalid-credentials");
                         error_msg.set(Some(error_message(&e)));
                     }
                     loading.set(false);
@@ -103,7 +106,7 @@ fn LoginForm() -> Element {
             AppHeader { title: tid!("login-title"), back_button_route: Route::ProjectsPage {} }
 
             if let Some(err) = error_msg() {
-                div { role: "alert", class: "alert alert-error", "{err}" }
+                div { id: "login-error", role: "alert", class: "alert alert-error", "{err}" }
             }
 
             if unverified() {
@@ -139,6 +142,8 @@ fn LoginForm() -> Element {
                         required: true,
                         placeholder: tid!("field-email-placeholder"),
                         autocomplete: "email",
+                        aria_invalid: if rejected() { "true" },
+                        aria_describedby: if error_msg().is_some() { "login-error" },
                         value: "{email}",
                         oninput: move |e| email.set(e.value()),
                     }
@@ -151,6 +156,8 @@ fn LoginForm() -> Element {
                         required: true,
                         placeholder: tid!("login-password-placeholder"),
                         autocomplete: "current-password",
+                        aria_invalid: if rejected() { "true" },
+                        aria_describedby: if error_msg().is_some() { "login-error" },
                         value: "{password}",
                         oninput: move |e| password.set(e.value()),
                     }

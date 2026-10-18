@@ -105,10 +105,6 @@ const KEYWORD_FILES: &[(&str, &str)] = &[
     ("uk", include_str!("../categories/uk.txt")),
 ];
 
-/// The `_stop` line of a keyword file. Never stripped at runtime — stripping every language's
-/// articles would eat other languages' keywords — only held against the keywords by the tests.
-const STOP_KEY: &str = "_stop";
-
 /// Below this a truncation is a real word of its own: "super" would be groceries, "inter" internet.
 const MIN_TRUNCATION_CHARS: usize = 6;
 
@@ -189,11 +185,11 @@ pub const CHART_CATEGORIES: &[&str] = &[
     "Autres",
 ];
 
-/// Text into whole words — lowercase, diacritics folded for every shipped script, split on
+/// Text into whole words - lowercase, diacritics folded for every shipped script, split on
 /// non-alphanumerics ("l'eau", "taxi-moto", "Uber (aéroport)"). Whole words, not `contains`, or
 /// "cadeau" is a glass of water ("eau"). Plurals belong to `word_matches`: stripping the "s" here
 /// would turn "repas" into "repa".
-fn normalize(text: &str) -> Vec<String> {
+pub(crate) fn normalize(text: &str) -> Vec<String> {
     let folded: String = text
         .to_lowercase()
         .replace('œ', "oe")
@@ -253,7 +249,7 @@ fn word_matches(token: &str, keyword: &str) -> bool {
     })
 }
 
-/// Phrases, then whole words, then truncations — each level only when the previous found nothing,
+/// Phrases, then whole words, then truncations - each level only when the previous found nothing,
 /// so "food shopping" is groceries although "food" alone is a restaurant. Within a level the leaf
 /// declared first wins.
 pub fn find_category(name: &str) -> &'static Category {
@@ -315,6 +311,10 @@ mod tests {
     use super::*;
     use std::collections::{BTreeSet, HashMap};
 
+    /// The `_stop` line of a keyword file. Never stripped at runtime - stripping every language's
+    /// articles would eat other languages' keywords - only held against the keywords by the tests.
+    const STOP_KEY: &str = "_stop";
+
     fn keywords(file: &str) -> impl Iterator<Item = (&str, String)> {
         entries(file).filter(|(key, _)| *key != STOP_KEY).map(|(key, k)| (key, normalize(k).join(" ")))
     }
@@ -335,7 +335,7 @@ mod tests {
         }
         assert_eq!(parent_emoji("Nourriture"), "🍽️");
         assert_eq!(parent_emoji("Transport"), "🚕");
-        // "Autres" has no CATEGORIES entry — it falls back to the default.
+        // "Autres" has no CATEGORIES entry - it falls back to the default.
         assert_eq!(parent_emoji("Autres"), DEFAULT_CATEGORY.emoji);
     }
 
@@ -385,7 +385,7 @@ mod tests {
     }
 
     /// The table is the union of every language, so a word two languages file under different
-    /// leaves would categorise by declaration order — silently wrong for one of them.
+    /// leaves would categorise by declaration order - silently wrong for one of them.
     #[test]
     fn a_keyword_belongs_to_one_leaf_across_every_language() {
         let mut owner: HashMap<String, (&str, &str)> = HashMap::new();

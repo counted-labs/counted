@@ -4,7 +4,8 @@ use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use crate::tid;
 use shared::{
-    CreatableExpense, ExpenseType, ExpenseWithPayments, HistoryContext, HistoryPayload, User,
+    CreatableExpense, ExpensePayload, ExpenseType, ExpenseWithPayments, HistoryContext,
+    HistoryPayload, User,
 };
 use std::collections::VecDeque;
 use uuid::Uuid;
@@ -18,17 +19,18 @@ use crate::recurring::split::side_from_entries;
 use crate::recurring::view::{new_payload, template_from_form, Repeat};
 use super::super::helpers::expense_form_helpers::{seed_entries, UserEntry};
 use super::super::helpers::expense_modal_helpers::{
-    conversion_matches_total, encrypt_expense_payload, encrypt_user_amounts, resolve_conversion,
-    validate_expense_form, Conversion, ValidatedExpense,
+    conversion_matches_total, expense_payload, resolve_conversion, validate_expense_form,
+    with_shares, Conversion, ValidatedExpense,
 };
+use crate::icons::{RightArrowIcon, WalletIcon};
 use super::super::hooks::use_fx_rates::use_fx_rates;
-use crate::crypto::encrypt_json;
+use crate::crypto::encrypt_padded_json;
 use crate::decrypted::user_names;
 
 #[derive(Props, Clone, PartialEq)]
 pub struct AddExpenseModalProps {
     pub on_close: EventHandler<()>,
-    /// `None` when the op was queued offline — there is no server row to report yet.
+    /// `None` when the op was queued offline - there is no server row to report yet.
     pub on_created: EventHandler<Option<ExpenseWithPayments>>,
     pub project_id: Uuid,
     pub users: Vec<User>,
@@ -50,6 +52,22 @@ pub struct AddExpenseModalProps {
     /// A message key shown above the amount, or `None`. A scan sets it when the total was not
     /// clearly printed.
     pub amount_hint: Option<&'static str>,
+    /// The key to encrypt with, when the modal is opened outside the project's own page: the
+    /// `ProjectKey` context holds whichever project the store last followed.
+    #[props(default)]
+    pub project_key: Option<[u8; 32]>,
+    /// "Mes dépenses": no payer or beneficiary sections, and no transfer.
+    #[props(default)]
+    pub personal: bool,
+    /// The currency `initial_amount` is in, when not the project's: the form converts it.
+    #[props(default)]
+    pub initial_currency: Option<String>,
+    /// Fields the form does not show, kept from the expense this one replaces (a move).
+    #[props(default)]
+    pub carried: Option<ExpensePayload>,
+    /// "From A to B": the form is moving an expense here, so it says so and offers no repeat.
+    #[props(default)]
+    pub move_banner: Option<String>,
 }
 
 /// Today, in the shape `date_str` holds. Extracted so the default stays one expression now that
@@ -60,7 +78,9 @@ fn today_iso() -> String {
 
 #[component]
 pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
-    let key_ctx = use_context::<ProjectKey>().0;
+    let followed_key = use_context::<ProjectKey>().0;
+    let own_key = props.project_key;
+    let key_ctx = move || own_key.or_else(&*followed_key);
 
     let init_name = props.initial_name.clone().unwrap_or_default();
     let init_amount = props.initial_amount.unwrap_or(0.0);
@@ -73,9 +93,9 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
     let date_str = use_signal(move || init_date);
     let total_amount = use_signal(move || init_amount);
     let expense_type = use_signal(move || init_type);
-    // Starts as the project's currency, so a single-currency project behaves exactly as before —
+    // Starts as the project's currency, so a single-currency project behaves exactly as before -
     // no rate field, and `use_fx_rates` stays disabled, so nothing is fetched.
-    let init_currency = props.currency.clone();
+    let init_currency = props.initial_currency.clone().unwrap_or_else(|| props.currency.clone());
     let expense_currency = use_signal(move || init_currency);
     let source_amount = use_signal(move || init_amount);
     let rate_input: Signal<String> = use_signal(String::new);
@@ -84,7 +104,7 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
     let payers_share_mode = use_signal(|| false);
     let debtors_share_mode = use_signal(|| false);
 
-    // Names for display — blank when the key is unavailable.
+    // Names for display - blank when the key is unavailable.
     let names = user_names(key_ctx().as_ref(), &props.users);
 
     let init_payers = props.users.clone();
@@ -129,6 +149,7 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
     let currency_for_submit = props.currency.clone();
     let on_created = props.on_created;
     let on_close_submit = props.on_close;
+    let carried = props.carried.clone();
 
     let on_submit = move |e: FormEvent| {
         e.prevent_default();
@@ -229,6 +250,7 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
             author_id,
             tid!("history-expense-added", name: name_val.clone()),
             conversion.as_ref(),
+            carried.as_ref(),
         ) {
             Ok(p) => p,
             Err(e) => {
@@ -273,16 +295,31 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
 
     let title =
         if props.restrict_to_transfer { tid!("transfer-add") } else { tid!("expense-add") };
-    let submit_label = if repeat().is_some() { tid!("add-and-repeat") } else { tid!("add") };
+    let moving = props.move_banner.is_some();
+    let submit_label = if moving {
+        tid!("move-submit")
+    } else if repeat().is_some() {
+        tid!("add-and-repeat")
+    } else {
+        tid!("add")
+    };
+    let (banner, banner_icon) = match props.move_banner.clone() {
+        Some(b) => (Some(b), Some(rsx! { RightArrowIcon { size: 18 } })),
+        None if props.personal => (Some(tid!("personal-expense-banner")), Some(rsx! { WalletIcon { size: 18 } })),
+        None => (None, None),
+    };
 
     rsx! {
         ExpenseForm {
             title,
             submit_label,
-            repeat: (!props.restrict_to_transfer).then_some(RepeatSlot { value: repeat, today, backfill: true }),
+            repeat: (!props.restrict_to_transfer && !moving).then_some(RepeatSlot { value: repeat, today, backfill: true }),
             loading_label: tid!("adding"),
             currency: props.currency.clone(),
             show_type_selector: !props.restrict_to_transfer,
+            personal: props.personal,
+            banner,
+            banner_icon,
             expense_name,
             date_str,
             total_amount,
@@ -319,28 +356,28 @@ fn build_creatable_expense(
     // Already translated by the caller: this stays pure so it is testable without a runtime.
     history_summary: String,
     conversion: Option<&Conversion>,
+    carried: Option<&ExpensePayload>,
 ) -> Result<CreatableExpense, String> {
+    // `form.total` is already in the project currency - the form converts before validating, so
+    // the payers and debtors below split the same number the payload records.
+    let mut payload = expense_payload(&form.name, form.total, &form.date, expense_type, category, conversion);
+    if let Some(c) = carried {
+        payload.description = c.description.clone();
+        payload.estimate = c.estimate;
+        payload.extra = c.extra.clone();
+    }
+    let payload = with_shares(payload, Some(author_id), &form.payers, &form.debtors);
     Ok(CreatableExpense {
-        // `form.total` is already in the project currency — the form converts before validating, so
-        // the payers and debtors below split the same number the payload records.
-        payload: encrypt_expense_payload(
-            key,
-            &form.name,
-            form.total,
-            &form.date,
-            expense_type,
-            category,
-            conversion,
-        )?,
+        payload: encrypt_padded_json(key, &payload)?,
         project_id,
-        author_id,
-        payers: encrypt_user_amounts(key, &form.payers, false)?,
-        debtors: encrypt_user_amounts(key, &form.debtors, true)?,
+        author_id: None,
+        payers: Vec::new(),
+        debtors: Vec::new(),
         history: Some(HistoryContext {
-            actor_user_id: author_id,
-            payload: encrypt_json(
+            actor_user_id: None,
+            payload: encrypt_padded_json(
                 key,
-                &HistoryPayload { summary: history_summary, actor_user_id: None },
+                &HistoryPayload { summary: history_summary, actor_user_id: Some(author_id) },
             )?,
         }),
         client_op_id: None,
@@ -350,7 +387,7 @@ fn build_creatable_expense(
 mod tests {
     use super::*;
     use crate::crypto::decrypt_json;
-    use shared::{ExpensePayload, PaymentPayload};
+    use shared::ExpensePayload;
 
     // Payload-level assertions (amount, date, type, description, wrong key) live in
     // expense_modal_helpers; these cover what building a CreatableExpense adds on top.
@@ -397,8 +434,37 @@ mod tests {
             1,
             format!("added: {name}"),
             conversion,
+            None,
         )
         .unwrap()
+    }
+
+    #[test]
+    fn a_moved_expense_keeps_what_the_form_does_not_show() {
+        let mut carried: ExpensePayload = decrypt_json(&test_key(), &build("x", 1.0, &[(1, 1.0)], &[(1, 1.0)]).payload).unwrap();
+        carried.description = Some("two nights".into());
+        carried.estimate = true;
+        carried.recurring_id = Some(Uuid::new_v4());
+        carried.extra.insert("tags".into(), serde_json::json!(["work"]));
+        let ce = build_creatable_expense(
+            &test_key(),
+            &validated("Hotel", 92.0, &[(1, 92.0)], &[(1, 92.0)]),
+            &ExpenseType::Expense,
+            None,
+            Uuid::nil(),
+            1,
+            "added".into(),
+            None,
+            Some(&carried),
+        )
+        .unwrap();
+        let ep: ExpensePayload = decrypt_json(&test_key(), &ce.payload).unwrap();
+        assert_eq!(ep.name, "Hotel");
+        assert_eq!(ep.amount, 92.0);
+        assert_eq!(ep.description.as_deref(), Some("two nights"));
+        assert!(ep.estimate);
+        assert_eq!(ep.extra["tags"], serde_json::json!(["work"]));
+        assert_eq!(ep.recurring_id, None, "a moved occurrence leaves its rule behind");
     }
 
     #[test]
@@ -408,24 +474,26 @@ mod tests {
         assert_eq!(ep.name, "Dîner");
     }
 
+    /// Who paid, who owes and who entered it travel inside the payload; nothing names a
+    /// participant in clear.
     #[test]
-    fn expense_payers_are_not_debt() {
+    fn participants_and_author_are_only_in_the_ciphertext() {
         let ce = build("x", 30.0, &[(1, 20.0), (2, 10.0)], &[(3, 30.0)]);
-        assert_eq!(ce.payers.len(), 2);
-        for p in &ce.payers {
-            let pp: PaymentPayload = decrypt_json(&test_key(), &p.payload).unwrap();
-            assert!(!pp.is_debt);
-        }
+        assert!(ce.payers.is_empty() && ce.debtors.is_empty());
+        assert_eq!(ce.author_id, None);
+        let ep: ExpensePayload = decrypt_json(&test_key(), &ce.payload).unwrap();
+        assert_eq!(ep.author_id, Some(1));
+        let shares = ep.shares.unwrap();
+        assert_eq!(shares.iter().filter(|s| !s.is_debt).count(), 2);
+        assert_eq!(shares.iter().filter(|s| s.is_debt).map(|s| s.user_id).collect::<Vec<_>>(), vec![3]);
     }
 
     #[test]
-    fn expense_debtors_are_debt() {
-        let ce = build("x", 30.0, &[(1, 30.0)], &[(2, 15.0), (3, 15.0)]);
-        assert_eq!(ce.debtors.len(), 2);
-        for d in &ce.debtors {
-            let pp: PaymentPayload = decrypt_json(&test_key(), &d.payload).unwrap();
-            assert!(pp.is_debt);
-        }
+    fn the_history_actor_is_only_in_the_ciphertext() {
+        let ctx = build("x", 30.0, &[(1, 30.0)], &[(2, 30.0)]).history.unwrap();
+        assert_eq!(ctx.actor_user_id, None);
+        let hp: HistoryPayload = decrypt_json(&test_key(), &ctx.payload).unwrap();
+        assert_eq!(hp.actor_user_id, Some(1));
     }
 
     #[test]
@@ -439,6 +507,7 @@ mod tests {
             pid,
             1,
             "added: x".into(),
+            None,
             None,
         )
         .unwrap();

@@ -1,13 +1,13 @@
 //! Translations. Every user-facing string goes through `tid!`, never a literal in `rsx!`.
 //!
 //! `tid!` renders the message id itself when a key is missing: visible, but the app keeps running.
-//! A panic on the wasm render path would unwind through the renderer and freeze the app — the
+//! A panic on the wasm render path would unwind through the renderer and freeze the app - the
 //! same failure mode `web_dom` exists to avoid.
 //!
 //! The Dioxus glue is ours (context, `tid!`, bundle rebuild on switch) rather than a crate's:
 //! the wasm bundle embeds only `en.ftl` and fetches the other locales as hashed, immutable assets
 //! when they are needed, and that needs a context a locale can be added to after it was created.
-//! Native targets (server, mobile) embed every locale — the server renders any of them, and the
+//! Native targets (server, mobile) embed every locale - the server renders any of them, and the
 //! phone must work offline.
 //!
 //! Adding a language is one line in `locales!` plus the `.ftl` file. Every file must be complete:
@@ -26,7 +26,7 @@ use crate::common::{read_from_ls, write_to_ls, LocalStorageState};
 /// One list, three tables: the picker's `(code, endonym)` pairs, the hashed asset the web build
 /// fetches, and the embedded text native builds carry. A missing file is a compile error.
 ///
-/// The label is the language's name *in that language* — a French speaker looking for German scans
+/// The label is the language's name *in that language* - a French speaker looking for German scans
 /// for "Deutsch", not "Allemand". Never translate this column. Ordered by endonym, Latin script
 /// first, so the `<select>` reads as one alphabet then the other.
 macro_rules! locales {
@@ -89,7 +89,7 @@ pub const FALLBACK: &str = "en";
 const FALLBACK_FTL: &str = include_str!("../i18n/en.ftl");
 
 /// The cookie that lets the *server* pick the right locale before the client has said anything.
-/// Functional only — no identifier, no tracking. See docs/rgpd-compliance.md.
+/// Functional only - no identifier, no tracking. See docs/rgpd-compliance.md.
 pub const LANG_COOKIE: &str = "counted_lang";
 
 /// The `<meta>` the server writes so the wasm knows which locale to fetch before it renders.
@@ -101,7 +101,7 @@ fn langid_of(code: &str) -> LanguageIdentifier {
     code.parse().unwrap_or(langid!("en"))
 }
 
-/// The hashed, immutable URL of a locale file — `/assets/de-dxh….ftl`. Content change, new hash.
+/// The hashed, immutable URL of a locale file - `/assets/de-dxh….ftl`. Content change, new hash.
 pub fn locale_asset(code: &str) -> Option<Asset> {
     ASSETS.iter().find(|(c, _)| *c == code).map(|(_, a)| *a)
 }
@@ -132,7 +132,7 @@ pub fn translate_or_id(id: &str, args: Option<&FluentArgs>) -> String {
     translate(id, args).unwrap_or_else(|| id.to_string())
 }
 
-/// `tid!("id")` / `tid!("id", name: value, …)` — the only way copy reaches the UI.
+/// `tid!("id")` / `tid!("id", name: value, …)` - the only way copy reaches the UI.
 #[macro_export]
 macro_rules! tid {
     ($id:expr $(, $name:ident : $value:expr)+ $(,)?) => {{
@@ -227,7 +227,7 @@ pub fn i18n() -> I18n {
 ///
 /// The initial locale is resolved **on the server** and carried into hydration by
 /// `use_server_cached`, so the SSR markup and the first wasm render agree. Deciding it client-side
-/// from localStorage would diverge from the served HTML and break hydration — the same trap
+/// from localStorage would diverge from the served HTML and break hydration - the same trap
 /// `onboarding_seen` and `show_archived` are documented against.
 /// Returns the code it resolved, so the caller can tell whether a stored preference differs from
 /// it without subscribing to the locale signal (which would make the reconciling effect re-run).
@@ -268,7 +268,7 @@ thread_local! {
 /// Fetch the locale the server rendered in, **before** `dioxus::launch`, so the first wasm render
 /// speaks the same language as the SSR markup it hydrates. The server names it in a `<meta>`, and
 /// `LocaleHead` also emits a `<link rel="preload">` for it, so by the time the wasm runs this the
-/// browser usually has it already — a cache hit, no round trip.
+/// browser usually has it already - a cache hit, no round trip.
 ///
 /// English needs no fetch (embedded). On failure the app launches anyway, in English: the asset
 /// server that just delivered the wasm failing one request later is not worth a blank page.
@@ -302,7 +302,7 @@ pub fn LocaleHead() -> Element {
     }
 }
 
-/// The active language code. Reactive — reading it re-runs the caller on a language change.
+/// The active language code. Reactive - reading it re-runs the caller on a language change.
 pub fn current_lang() -> String {
     i18n().language().language.to_string()
 }
@@ -310,7 +310,7 @@ pub fn current_lang() -> String {
 /// Switch language: the signal (repaints everything), localStorage (survives a reload) and the
 /// cookie (lets the *next* SSR render get it right, so there is no flash of the wrong language).
 ///
-/// Must be called from a component scope — `i18n()` consumes context.
+/// Must be called from a component scope - `i18n()` consumes context.
 pub fn set_language(code: &str) {
     let Some(code) = supported(code) else {
         return;
@@ -371,7 +371,7 @@ pub fn apply_inferred_language(code: &str) {
 /// The device's preferred language, for the targets that have no HTTP request to read it from.
 ///
 /// Mobile and desktop run in a WebView, so `navigator.language` is the system locale as the OS
-/// reports it — one mechanism for android, ios and desktop. Off-web `document::eval` is the
+/// reports it - one mechanism for android, ios and desktop. Off-web `document::eval` is the
 /// sanctioned way to reach the DOM (the CSP that forbids it applies to the browser build only, and
 /// `use_app_contexts` already evals for connectivity events).
 ///
@@ -442,7 +442,7 @@ fn lang_from_accept(header: &str) -> Option<&'static str> {
 
 /// Provides an i18n context for a component test.
 ///
-/// `tid!` resolves through `consume_context` and **panics without a provider** — in the app that
+/// `tid!` resolves through `consume_context` and **panics without a provider** - in the app that
 /// cannot happen (every entry point's root calls `use_app_contexts`), but a bare `VirtualDom` in a
 /// test has nothing above it. This skips `use_server_cached`, which needs a fullstack render
 /// context that a bare `VirtualDom` also lacks.
@@ -455,7 +455,7 @@ pub(crate) fn use_test_i18n() {
 ///
 /// Test-only, and `pub(crate)` on purpose: the scanner guard below only sees `tid!("literal")`
 /// call sites, so any module that keys `tid!` off a table or an enum must assert its own keys
-/// against this — see `project_status_menu::tests`.
+/// against this - see `project_status_menu::tests`.
 #[cfg(all(test, not(target_arch = "wasm32")))]
 pub(crate) fn locale_ids(code: &str) -> std::collections::BTreeSet<String> {
     let text = locale_text(code);
@@ -539,7 +539,7 @@ mod tests {
     }
 
     /// `device_lang` reuses the header parser on a `navigator.language` value, which is a single
-    /// tag rather than a comma-separated list. Same parser, different input shape — worth pinning,
+    /// tag rather than a comma-separated list. Same parser, different input shape - worth pinning,
     /// because the WebView is the only place mobile and desktop can infer a language from.
     #[test]
     fn a_navigator_language_tag_resolves_like_a_header() {
@@ -601,7 +601,7 @@ mod tests {
         assert_eq!(bundle.format_pattern(msg.value().unwrap(), None, &mut vec![]), "Hallo");
     }
 
-    /// `tid!` on a missing id renders the id, and a resolved one renders the copy — through a
+    /// `tid!` on a missing id renders the id, and a resolved one renders the copy - through a
     /// real component, since `translate` consumes context.
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
@@ -623,7 +623,7 @@ mod tests {
     }
 
     /// A locale added after the context exists renders once selected, and a key it lacks still
-    /// falls back — the web build relies on this to switch to a locale it just fetched.
+    /// falls back - the web build relies on this to switch to a locale it just fetched.
     #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn a_locale_added_at_runtime_renders_once_selected() {
@@ -676,7 +676,7 @@ mod tests {
             }
         }
 
-        /// Every `tid!("…")` literal in the crate. A key built at runtime would slip past this —
+        /// Every `tid!("…")` literal in the crate. A key built at runtime would slip past this -
         /// don't build keys at runtime.
         fn used_keys() -> BTreeSet<String> {
             let mut files = Vec::new();
@@ -767,7 +767,7 @@ mod tests {
             !head.ends_with("else") && !head.split_whitespace().any(|w| w == "if")
         }
 
-        /// What remains of a literal once `{ … }` interpolations are removed — copy is what has
+        /// What remains of a literal once `{ … }` interpolations are removed - copy is what has
         /// letters left, `"{amount:.0}"` and `"{percent:.0}%"` have none.
         fn without_interpolations(literal: &str) -> String {
             let mut out = String::new();
@@ -794,6 +794,7 @@ mod tests {
             "Scaleway TEM ",
             "Bunq / Tricount ",
             "Grafana Labs ",
+            "Proton AG ",
             "Apple ",
             "Jonathan Bosi.",
             "CNIL",
@@ -883,7 +884,7 @@ mod tests {
         #[test]
         fn plural_messages_cover_the_language_cardinal_categories() {
             use intl_pluralrules::{PluralCategory, PluralRuleType, PluralRules};
-            let plural_ids = ["offline-pending", "charts-expense-count", "charts-my-share-skipped", "invite-sent"];
+            let plural_ids = ["offline-pending", "charts-expense-count", "charts-my-share-skipped", "invite-sent", "expenses-search-summary", "move-members", "my-spending-search-summary", "expense-people"];
             for (code, _) in SUPPORTED {
                 let rules = PluralRules::create(langid_of(code), PluralRuleType::CARDINAL)
                     .unwrap_or_else(|e| panic!("no plural rules for {code}: {e}"));

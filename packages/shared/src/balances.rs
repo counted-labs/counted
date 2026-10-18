@@ -233,7 +233,7 @@ fn resolve_equally_opposed_balances(
 ) -> Vec<ReimbursementSuggestion> {
     let mut resolved_users: Vec<(i32, i32)> = Vec::new();
     // Mirrors the debtor ids in `resolved_users`. The membership test below sits two loops deep,
-    // so scanning a Vec there made this O(n³) — and it runs in WASM on every balance render.
+    // so scanning a Vec there made this O(n³) - and it runs in WASM on every balance render.
     let mut resolved_debtors: std::collections::HashSet<i32> = std::collections::HashSet::new();
     let mut result: Vec<ReimbursementSuggestion> = Vec::new();
 

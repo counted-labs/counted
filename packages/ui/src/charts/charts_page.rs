@@ -25,18 +25,19 @@ use crate::common::{
     AppHeader, DropdownButton, DropdownItem, LocalStorageProject, PullToRefresh,
 };
 use crate::crypto::decrypt_json;
+use crate::icons::{DownloadIcon, MoreIcon, ICON_INLINE};
 use crate::decrypted::{
     decrypt_ledger, decrypt_user, DecryptedExpense, DecryptedPayment,
     DecryptedUser,
 };
-use crate::expenses::helpers::export::csv_field;
+use crate::expenses::helpers::export::{csv_field, CSV_BOM};
 use crate::route::Route;
 use crate::tid;
 
 pub fn export_csv_string(expenses: &[DecryptedExpense], users: &[DecryptedUser]) -> String {
     // Machine-readable header and type values, deliberately not translated: a CSV whose columns
     // rename themselves per UI language cannot be reimported or diffed against an older export.
-    let mut out = "date,name,category,amount,author,type,description\n".to_string();
+    let mut out = format!("{CSV_BOM}date,name,category,amount,author,type,description\n");
     for e in expenses {
         let author = e
             .author_id
@@ -181,14 +182,14 @@ async fn load_projects() -> Vec<ProjectInfo> {
 }
 
 /// The version the cached rows were stored at, claimed only when both halves are still there.
-fn known_version(p: &LocalStorageProject) -> i64 {
+pub(crate) fn known_version(p: &LocalStorageProject) -> i64 {
     p.cached_data_version
         .filter(|_| p.cached_expenses.is_some() && p.cached_payments.is_some())
         .unwrap_or(NO_CACHED_VERSION)
 }
 
 /// The sync's rows, or the cached ones when the server answered "unchanged".
-fn synced_rows(sync: ProjectSync, cached: &LocalStorageProject) -> Option<(Vec<Expense>, Vec<Payment>)> {
+pub(crate) fn synced_rows(sync: ProjectSync, cached: &LocalStorageProject) -> Option<(Vec<Expense>, Vec<Payment>)> {
     match (sync.expenses, sync.payments) {
         (Some(expenses), Some(payments)) => Some((expenses, payments)),
         _ => cached.cached_expenses.clone().zip(cached.cached_payments.clone()),
@@ -308,8 +309,17 @@ pub fn ChartsPage() -> Element {
             AppHeader {
                 title: tid!("nav-charts"),
                 back_button_route: Route::ProjectsPage {},
-                DropdownButton { label: tid!("export"),
-                    DropdownItem { variant: "ghost", label: tid!("export-csv"), onclick: on_export }
+                DropdownButton {
+                    label: tid!("export"),
+                    button_class: "btn btn-circle size-11 min-h-11 border-0 bg-base-300 relative z-50",
+                    menu_class: "menu bg-base-100 rounded-xl w-64 px-0 py-1.5 shadow-lg absolute right-0 top-full mt-2 z-50 [&_button]:min-h-11 [&_button]:gap-2.5 [&_button]:text-[15px] [&_button]:font-medium",
+                    trigger: rsx! { MoreIcon { size: 24 } },
+                    DropdownItem {
+                        variant: "ghost",
+                        label: tid!("export-csv"),
+                        icon: rsx! { DownloadIcon { size: ICON_INLINE } },
+                        onclick: on_export,
+                    }
                 }
             }
 
@@ -425,7 +435,7 @@ pub fn ChartsPage() -> Element {
                             p { class: "text-xs text-base-content/70 px-1", {tid!("charts-my-share-skipped", count: d.left_out as i64)} }
                         }
 
-                        div { role: "tablist", class: "tabs tabs-box shadow-soft",
+                        div { role: "tablist", class: "tabs tabs-box bg-base-300 shadow-none grid grid-flow-col auto-cols-fr",
                             for (tab , id , label) in [
                                 (Tab::Categories, "charts-tab-categories", tid!("charts-tab-categories")),
                                 (Tab::People, "charts-tab-people", if all_mode { tid!("charts-tab-projects") } else { tid!("charts-tab-people") }),
@@ -701,7 +711,7 @@ mod tests {
 
     #[test]
     fn export_csv_has_header() {
-        assert!(export_csv_string(&[], &[]).starts_with("date,name,category,amount,author,type,description\n"));
+        assert!(export_csv_string(&[], &[]).starts_with("\u{feff}date,name,category,amount,author,type,description\n"));
     }
 
     #[test]

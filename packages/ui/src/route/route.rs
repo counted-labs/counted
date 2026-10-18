@@ -20,7 +20,7 @@ use uuid::Uuid;
 pub enum Route {
     // The root is served by the static site (nginx `location = /`), so the app home lives at
     // /projects. This redirect is not cosmetic: MemoryHistory::default() starts at "/" and panics
-    // with "index route does not exist" if nothing matches — mobile and desktop would die on launch.
+    // with "index route does not exist" if nothing matches - mobile and desktop would die on launch.
     #[redirect("/", || Route::ProjectsPage {})]
     #[layout(AppLayout)]
         #[route("/projects")]
@@ -64,8 +64,8 @@ pub enum Route {
         #[route("/demo?:lang")]
         DemoPage { lang: String },
         // A security control, not a nicety. Without a catch-all, Route::from_str fails, the router
-        // throws ParseRouteError, and dioxus-fullstack writes the parse error — which quotes the
-        // raw request path — into the 404 body with no Content-Type at all. Only `nosniff` kept
+        // throws ParseRouteError, and dioxus-fullstack writes the parse error - which quotes the
+        // raw request path - into the 404 body with no Content-Type at all. Only `nosniff` kept
         // that from being reflected XSS, and script-src has to keep 'unsafe-inline', so an XSS
         // reads the E2EE key straight out of localStorage. Catch-alls sort last, so every route
         // above still wins.
@@ -76,7 +76,7 @@ pub enum Route {
 /// The project a route is about, if any. Drives the one project store held by `AppLayout`: it is
 /// what decides whether a navigation is "same project" (fetch nothing) or not.
 ///
-/// Exhaustively matched on purpose, like `route_depth` — a new route must fail to compile rather
+/// Exhaustively matched on purpose, like `route_depth` - a new route must fail to compile rather
 /// than silently default to fetching nothing.
 pub fn project_id_of(route: &Route) -> Option<Uuid> {
     match route {
@@ -245,7 +245,7 @@ mod tests {
         assert_eq!(project_id_of(&Route::ProjectHistoryPage { project_id: id }), Some(id));
     }
 
-    // Off a project the store must fetch nothing at all — /login and /help cost no request.
+    // Off a project the store must fetch nothing at all - /login and /help cost no request.
     #[test]
     fn project_id_of_is_none_off_a_project() {
         for route in [
@@ -266,7 +266,7 @@ mod tests {
         }
     }
 
-    // The catch-all must never swallow a real route — that would silently 404 the whole app.
+    // The catch-all must never swallow a real route - that would silently 404 the whole app.
     #[test]
     fn catch_all_does_not_shadow_real_routes() {
         assert_eq!(Route::from_str("/projects").unwrap(), Route::ProjectsPage {});

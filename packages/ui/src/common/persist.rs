@@ -4,7 +4,7 @@
 use serde::{de::DeserializeOwned, Serialize};
 
 /// `COUNTED_DATA_DIR`, else `HOME`, else the working directory. Also used by the export
-/// helper — every native path in the app resolves from here.
+/// helper - every native path in the app resolves from here.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn data_dir() -> std::path::PathBuf {
     let dir = std::env::var("COUNTED_DATA_DIR")
@@ -66,7 +66,7 @@ fn web_storage() -> Option<web_sys::Storage> {
 /// Reads a store, falling back to `T::default()` when there is nothing to read.
 ///
 /// **A parse failure is not the same as an empty store, and used to be indistinguishable from one.**
-/// The default was returned silently, and the next `write_json` — which happens constantly — made
+/// The default was returned silently, and the next `write_json` - which happens constantly - made
 /// that loss permanent. Since the E2EE keys share this blob with the cached DTOs, any non-additive
 /// change to `ProjectDto`/`User`/`Expense`/`Payment` could take key material with it, with no log
 /// and nothing to recover from. So: log it, and on native keep the bytes.
@@ -117,11 +117,22 @@ pub fn read_json<T: DeserializeOwned + Default>(key: &str) -> T {
     }
 }
 
+/// Deletes the copy [`read_json`] set aside. It can hold every project key and the account key in
+/// clear, so it goes with the session instead of staying for good.
+pub fn remove_quarantine(key: &str) {
+    #[cfg(target_arch = "wasm32")]
+    if let Some(s) = web_storage() {
+        let _ = s.remove_item(&format!("{key}.corrupt"));
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = std::fs::remove_file(file_for(key).with_extension("json.corrupt"));
+}
+
 /// `label` names the store in the serialization error log ("local storage" / "offline queue").
 ///
 /// A failed write is reported on every target. On web that matters more than it looks: localStorage
 /// is a hard ~5 MB per origin and `set_item` throws `QuotaExceededError` when it is full, which this
-/// used to swallow — leaving a full store indistinguishable from a healthy one, and the offline
+/// used to swallow - leaving a full store indistinguishable from a healthy one, and the offline
 /// cache silently frozen at whatever it last managed to save. True when the value reached storage.
 pub fn write_json<T: Serialize>(key: &str, label: &str, value: &T) -> bool {
     #[cfg(target_arch = "wasm32")]

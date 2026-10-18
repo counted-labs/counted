@@ -1,13 +1,14 @@
 use dioxus::prelude::*;
 
 use crate::common::{haptic, Haptic};
+use crate::tid;
 use crate::icons::{CloseIcon, PlusIcon, ICON_INLINE};
 
 /// A FAB expanding into labelled actions, rebuilt on a signal.
 ///
 /// Not `class="fab"`: daisyUI 5.0.43 ships no `fab` at all, and upstream's opens through
 /// `.fab:focus-within`. iOS only focuses form controls and links on tap, so a focus-driven FAB
-/// never opens in WKWebView — the bug `DropdownButton` exists to avoid. The toggle is a
+/// never opens in WKWebView - the bug `DropdownButton` exists to avoid. The toggle is a
 /// `use_signal` on a real `<button>`; the scrim is lifted from `dropdown_button.rs`.
 #[derive(PartialEq, Props, Clone)]
 pub struct SpeedDialFabProps {
@@ -18,13 +19,14 @@ pub struct SpeedDialFabProps {
     /// Accessible name for the closed trigger.
     #[props(default = "Actions".to_string())]
     label: String,
-    /// DOM id for the trigger. E2E selects on it — `aria-label` is French copy and changes freely.
+    /// DOM id for the trigger. E2E selects on it - `aria-label` is French copy and changes freely.
     id: Option<String>,
 }
 
 #[component]
 pub fn SpeedDialFab(props: SpeedDialFabProps) -> Element {
     let mut is_open = use_signal(|| false);
+    let mut trigger: Signal<Option<std::rc::Rc<MountedData>>> = use_signal(|| None);
 
     rsx! {
         // Below the scrim's z-30 when closed is fine: nothing overlaps it, and the z-50 dock sits
@@ -38,9 +40,21 @@ pub fn SpeedDialFab(props: SpeedDialFabProps) -> Element {
                 },
             }
         }
-        div { class: "fixed safe-bottom-fab left-1/2 -translate-x-1/2 z-40 flex flex-col items-end gap-3",
+        div {
+            class: "fixed safe-bottom-fab left-1/2 -translate-x-1/2 z-40 flex flex-col items-end gap-3",
+            onkeydown: move |e| {
+                if e.key() == Key::Escape && is_open() {
+                    e.prevent_default();
+                    is_open.set(false);
+                    if let Some(trigger) = trigger() {
+                        spawn(async move {
+                            let _ = trigger.set_focus(true).await;
+                        });
+                    }
+                }
+            },
             if is_open() {
-                // One handler for the whole stack — the single place that closes the dial.
+                // One handler for the whole stack - the single place that closes the dial.
                 div {
                     class: "flex flex-col items-end gap-3",
                     onclick: move |e| {
@@ -51,7 +65,7 @@ pub fn SpeedDialFab(props: SpeedDialFabProps) -> Element {
                 }
             }
             // Icons, not "+"/"✕" text: flex centring centres the *line box*, but a glyph's ink
-            // sits on baseline metrics — "+" measured 1.3px low in a 48px button, "✕" 1.0px. An
+            // sits on baseline metrics - "+" measured 1.3px low in a 48px button, "✕" 1.0px. An
             // inline SVG has no baseline to fight. `size-6` matches `SpeedDialAction`, so trigger
             // and actions carry identically sized icons.
             button {
@@ -62,8 +76,9 @@ pub fn SpeedDialFab(props: SpeedDialFabProps) -> Element {
                 // paints over. A filter is the one thing the gradient can't occlude, and
                 // Tailwind's `@media (hover: hover)` spares touch.
                 class: "btn btn-circle btn-lg border-0 text-primary-content bg-gradient-brand shadow-soft self-center [&>svg]:size-6 hover:brightness-110 active:brightness-95 transition-[filter]",
-                "aria-label": if is_open() { "Fermer".to_string() } else { props.label.clone() },
+                "aria-label": if is_open() { tid!("close") } else { props.label.clone() },
                 "aria-expanded": is_open(),
+                onmounted: move |e| trigger.set(Some(e.data())),
                 onclick: move |e| {
                     e.stop_propagation();
                     haptic(Haptic::Light);
@@ -86,8 +101,11 @@ pub struct SpeedDialActionProps {
     pub label: String,
     pub icon: Element,
     pub onclick: EventHandler<()>,
-    /// DOM id for the action button — see `SpeedDialFabProps::id`.
+    /// DOM id for the action button - see `SpeedDialFabProps::id`.
     pub id: Option<String>,
+    /// The one action the dial is mostly opened for: brand-filled and bold.
+    #[props(default)]
+    pub primary: bool,
 }
 
 #[component]
@@ -99,12 +117,14 @@ pub fn SpeedDialAction(props: SpeedDialActionProps) -> Element {
             class: "flex items-center gap-3 cursor-pointer",
             "aria-label": "{props.label}",
             onclick: move |_| props.onclick.call(()),
-            span { class: "bg-base-100 shadow-soft rounded-box px-3 py-1 text-sm font-medium whitespace-nowrap",
+            span {
+                class: if props.primary { "bg-base-100 shadow-soft rounded-box px-3 py-1 text-sm font-semibold whitespace-nowrap" } else { "bg-base-100 shadow-soft rounded-box px-3 py-1 text-sm font-medium whitespace-nowrap" },
                 "{props.label}"
             }
             // Icons come from callers at whatever intrinsic size they were drawn at
             // (PlusIcon is 16, LinkIcon 22); normalise here so the row reads as one set.
-            span { class: "btn btn-circle btn-lg bg-base-100 border-0 shadow-soft [&>svg]:size-6",
+            span {
+                class: if props.primary { "btn btn-circle btn-lg bg-gradient-brand text-primary-content border-0 shadow-soft [&>svg]:size-6" } else { "btn btn-circle btn-lg bg-base-100 border-0 shadow-soft [&>svg]:size-6" },
                 {props.icon.clone()}
             }
         }
@@ -132,6 +152,7 @@ mod tests {
 
     #[component]
     fn Harness(props: HarnessProps) -> Element {
+        crate::i18n::use_test_i18n();
         let fired = props.fired.clone();
         rsx! {
             SpeedDialFab { label: "Ajouter",
@@ -146,7 +167,7 @@ mod tests {
         }
     }
 
-    /// See dropdown_button.rs — the globally installed converter is what turns the platform data
+    /// See dropdown_button.rs - the globally installed converter is what turns the platform data
     /// back into typed MouseData.
     fn click() -> Event<dyn Any> {
         static CONVERTER: Once = Once::new();
@@ -173,7 +194,7 @@ mod tests {
     #[test]
     fn opens_on_a_real_button_click_not_focus() {
         let (mut dom, _fired) = harness();
-        // scrim, action-stack wrapper, action button — the trigger keeps its existing listener.
+        // scrim, action-stack wrapper, action button - the trigger keeps its existing listener.
         assert_eq!(open(&mut dom).len(), 3, "the trigger click must reveal the action stack");
     }
 

@@ -23,6 +23,12 @@ No ads, no trackers, no subscription, no paid version, no cap on expenses or par
 • Over 150 currencies, converted at the European Commission's monthly rate
 • Statistics by category, by person and month by month
 • History of who added, edited or deleted what
+• Search by name, note or category, run on your device
+• With an account, a personal “My expenses” project: what you spend alone plus your share of your groups, month by month
+• Move an expense from one project to another
+• Monthly budgets per category on your real share, with an 80 % warning worked out on your device
+• On the home screen, what you are owed and what you owe across every project, worked out on your device
+• A “Personal expense” shortcut on a long press of the app icon
 • Offline: browse and enter with no network
 • CSV and JSON export in one tap
 • Payment details (IBAN, PayPal, Wero, Lydia, Revolut…) encrypted like everything else

@@ -150,7 +150,7 @@ payment-method-invalid-characters = Noņem rindu pārtraukumus vai neredzamas ra
 payment-method-limit = Vari saglabāt līdz { $max } maksājumu veidiem.
 payment-methods-saved = Maksājumu dati saglabāti.
 payment-methods-offline = Lai saglabātu maksājumu datus, jābūt tiešsaistē.
-payment-methods-stale = Tavi maksājumu dati tika mainīti citā ierīcē. Tie ir pārlādēti — mēģini vēlreiz.
+payment-methods-stale = Tavi maksājumu dati tika mainīti citā ierīcē. Tie ir pārlādēti - mēģini vēlreiz.
 payment-methods-key-missing = Piesakies vēlreiz, lai pārvaldītu maksājumu datus.
 settings-payment-methods-share-warning = Kopīgots veids ir redzams visiem tavu projektu dalībniekiem.
 payment-method-share = Kopīgot ar maniem projektiem
@@ -232,7 +232,6 @@ projects-filter-active = Aktīvie
 projects-filter-all = Visi
 projects-count-label = Projekti
 projects-empty = Nav projektu
-projects-empty-hint = Izveido projektu ar pogu zemāk
 projects-offline-banner = Bezsaistes dati - pieslēdzies vēlreiz, lai atjauninātu.
 demo-banner = Demonstrācijas projekts - tikai lasīšanai.
 demo-start-own = Izveido savu projektu
@@ -246,6 +245,68 @@ projects-no-local-data = Nav lokālu datu
 projects-no-local-data-hint = Piesakies, lai pirmo reizi ielādētu savus projektus.
 projects-add = Pievienot projektu
 projects-create = Izveidot projektu
+projects-personal-expense = Personīgs izdevums
+personal-expense-banner = Pievienots sadaļai Mani izdevumi
+personal-create-title = Izveidojiet savu personīgo projektu
+personal-create-hint = Sekojiet, ko tērējat viens
+group-create-title = Izveidojiet kopīgu projektu
+group-create-hint = Daliet izdevumus ar draugiem un ģimeni
+personal-create-action = Izveidot
+personal-create-signup = Izveidot kontu
+personal-sheet-title = Jūsu personīgais projekts
+personal-sheet-intro = Lai pierakstītu, ko tērējat viens. Tas parādās kopā ar jūsu grupām Statistikā.
+personal-sheet-point-alone = Viens dalībnieks: jūs, ar jūsu konta vārdu. Bez kopīgošanas saites.
+personal-sheet-point-encrypted = Šifrēts jūsu ierīcēs, tāpat kā citi projekti.
+personal-sheet-point-stats = Jūsu daļas grupās Statistikā pieskaitās šiem izdevumiem.
+personal-default-name = Mani izdevumi
+my-spending-prev-month = Iepriekšējais mēnesis
+my-spending-next-month = Nākamais mēnesis
+my-spending-spent = Jūs iztērējāt
+my-spending-groups = Grupas
+my-spending-income = Ienākumi
+my-spending-balance = Mēneša bilance
+my-spending-unconverted = Daļas citā valūtā netiek ieskaitītas, kamēr kurss nav zināms.
+my-spending-empty = Šomēnes nekā
+my-spending-empty-hint = Pievienojiet izdevumu ar +. Jūsu daļas grupās šeit parādīsies automātiski.
+my-spending-share-of = no { $amount }
+my-spending-uncounted = netiek ieskaitīts
+payer-you = jūs
+expense-received-by = saņēma
+counted-switch = Ieskaitīt: Mani izdevumi
+counted-switch-on = Ieslēgts: jūsu daļa tiek pieskaitīta Mani izdevumi
+counted-switch-off = Izslēgts: jūsu daļa netiek rādīta Mani izdevumi
+counted-groups = Ieskaitītās grupas
+counted-groups-intro = Jūsu daļa šajās grupās tiek pieskaitīta Mani izdevumi un budžetiem.
+counted-groups-converted = { $from }, konvertēts uz { $to }
+counted-groups-encrypted = Šī izvēle ir šifrēta ar jūsu kontu un seko jums jūsu ierīcēs.
+counted-groups-empty = Šajā ierīcē vēl nav nevienas grupas.
+counted-groups-done = Labi
+counted-save-failed = Šo izvēli neizdevās saglabāt. Mēģiniet vēlreiz.
+tab-budget = Budžets
+budget-title = Budžeti
+budget-manage = Pārvaldīt
+budget-left = Atlikums { $amount }
+budget-over = Pārsniegts par { $amount }
+budget-empty = Nav budžeta
+budget-empty-hint = Nosakiet griestus katrai kategorijai. Jūsu daļas grupās arī tiek skaitītas.
+budget-define = Noteikt budžetu
+budget-sheet-title = Mēneša budžeti
+budget-sheet-intro = Jūsu daļai: personīgie un grupas. Atstājiet tukšu, lai kategoriju nesekotu.
+budget-average = Vid. pēdējie 3 mēneši: { $amount }
+budget-for = Budžets { $category }
+budget-alert = Brīdināt mani pie 80 %
+budget-alert-hint = Aprēķināts šajā ierīcē
+budget-invalid = Nederīga summa: { $category }.
+budget-offline = Budžetus var saglabāt tikai tiešsaistē. Pievienojieties un mēģiniet vēlreiz.
+budget-alert-near = { $category }: { $percent } % no mēneša budžeta
+budget-alert-over = { $category }: mēneša budžets pārsniegts
+personal-card-budget = { $month } · budžets { $amount }
+my-spending-search-summary =
+    { $count ->
+        [zero] { $count } rezultātu
+        [one] { $count } rezultāts
+       *[other] { $count } rezultāti
+    } · { $total } · personīgie un grupas, visi mēneši
 projects-join = Pievienoties projektam
 projects-import-tricount = Importēt no Tricount
 project-actions = Projekta darbības
@@ -322,6 +383,7 @@ expenses-show-more = Rādīt vairāk (atlikuši { $count })
 expense-type-expense = Izdevums
 expense-type-transfer = Pārskaitījums
 expense-type-gain = Ieņēmums
+expense-type-group = Veids
 expense-paid-by = maksāja
 expense-sent-by = nosūtīja
 expense-contributed-by = ieguldīja
@@ -387,6 +449,24 @@ export-failed = Eksports neizdevās: { $reason }
 history-expense-added = Izdevums pievienots: { $name }
 history-expense-edited = Izdevums rediģēts: { $name }
 history-expense-deleted = Izdevums dzēsts: { $name }
+move-expense = Pārvietot uz projektu
+move-expense-title = Pārvietot uz…
+move-current = Pašreizējais
+move-converted = { $currency }, pārrēķināts pēc mēneša kursa
+move-note-personal = Nākamajā solī izvēlēsieties, kas samaksāja un par ko. Izdevums atstās sadaļu Mani izdevumi.
+move-note-group = Izdevums atstās { $project } visiem dalībniekiem, un grupas bilance tiks pārrēķināta. Nākamajā solī izvēlēsieties, kas samaksāja un par ko.
+move-banner = No { $from } uz { $to }
+move-submit = Pārvietot
+move-done = Izdevums pārvietots uz { $project }
+move-delete-failed = Izdevums pievienots otram projektam, bet joprojām ir { $project }: izdzēsiet to tur.
+history-expense-moved = Izdevums pārvietots uz citu projektu: { $name }
+personal-badge = Personīgi
+move-members =
+    { $count ->
+        [zero] { $count } dalībnieku
+        [one] { $count } dalībnieks
+       *[other] { $count } dalībnieki
+    }
 history-project-edited = Projekts rediģēts: { $name }
 history-name-changed = Nosaukums: „{ $from }” → „{ $to }”
 history-description-added = Apraksts pievienots: „{ $value }”
@@ -400,11 +480,24 @@ expense-name-placeholder = Restorāns, pārtika…
 expense-actions = Izdevuma darbības
 expense-your-share = Tava daļa
 expense-your-share-value = Tava daļa: { $amount } { $currency }
+expense-share-percent = { $percent }%
+expense-added-by = Pievienoja { $name }, { $date }
 expense-inconsistent-detail = Summas nesakrīt: samaksāts { $paid }, parādā { $owed }, izdevumam { $total }. Rediģē izdevumu, lai to labotu.
 missing-access-key = Trūkst piekļuves atslēgas. Atver šo projektu caur tā kopīgošanas saiti.
 filter-all = Visi
 filter-my-payments = Mani maksājumi
 filter-my-debts = Ko esmu parādā
+expense-filter-group = Filtrs
+expenses-search = Meklēt izdevumus
+expenses-no-match = Neviens izdevums neatbilst.
+expenses-search-open = Meklēt
+expenses-search-clear = Notīrīt meklēšanu
+expenses-search-summary =
+    { $count ->
+        [zero] { $count } rezultātu
+        [one] { $count } rezultāts
+       *[other] { $count } rezultāti
+    } · { $total } · visi mēneši
 participants-shares-for = { $name } daļas
 participants-amount-for = { $name } summa
 reimbursement-add = Pievienot norēķinu
@@ -443,9 +536,9 @@ charts-expense-count =
 charts-nothing-to-show = Nav ko rādīt
 charts-my-share-skipped =
     { $count ->
-        [zero] { $count } projektu nav ieskaitīti — nav izvēlēts dalībnieks vai to dati neielādējās.
-        [one] { $count } projekts nav ieskaitīts — nav izvēlēts dalībnieks vai tā dati neielādējās.
-       *[other] { $count } projekti nav ieskaitīti — nav izvēlēts dalībnieks vai to dati neielādējās.
+        [zero] { $count } projektu nav ieskaitīti - nav izvēlēts dalībnieks vai to dati neielādējās.
+        [one] { $count } projekts nav ieskaitīts - nav izvēlēts dalībnieks vai tā dati neielādējās.
+       *[other] { $count } projekti nav ieskaitīti - nav izvēlēts dalībnieks vai to dati neielādējās.
     }
 
 ### Categories
@@ -519,6 +612,14 @@ payers-title-contributors = Ieguldītāji
 debtors-title-debtors = Parādā
 debtors-title-recipients = Saņēmēji
 debtors-title-beneficiaries = Labuma guvēji
+debtors-title-for = Kam
+debtors-title-recipient = Saņēmējs
+expense-people =
+    { $count ->
+        [zero] { $count } personu
+        [one] { $count } persona
+       *[other] { $count } personas
+    }
 
 ### Welcome
 
@@ -652,6 +753,8 @@ invitation-decline = Noraidīt
 participants-you-label = Tavs vārds šajā projektā
 participants-you-badge = Tu
 participants-others = Citi dalībnieki
+participants-removed = Noņemtie
+participant-restore = Atjaunot
 participants-empty = Pievieno dalībniekus zemāk.
 participants-duplicate = „{ $name }” jau ir sarakstā.
 participants-input-label = Pievienot draugu vai ierakstīt vārdu
@@ -796,3 +899,16 @@ error-recurring-not-found = Šis regulārais izdevums vairs neeksistē.
 error-recurring-stale = Kāds pa to laiku mainīja šo regulāro izdevumu. Tas ir ielādēts no jauna: pārbaudi un saglabā vēlreiz.
 error-too-many-recurring = Šim projektam jau ir 50 regulāri izdevumi. Beidz kādu nevajadzīgu, lai pievienotu jaunu.
 error-user-in-recurring = Šis dalībnieks ir iekļauts regulārajā izdevumā. Vispirms izņem viņu no tā vai beidz izdevumu.
+
+home-owed-to-you = Jums parādā
+home-you-owe = Jūs esat parādā
+home-details-show = Rādīt sīkāk
+home-details-hide = Paslēpt sīkāk
+home-all-settled = Viss nokārtots
+home-pay = Maksāt
+home-remind = Atgādināt
+home-remind-message = Neliels atgādinājums: projektā { $project } vēl ir nenokārtotas atmaksas.
+home-row-owed = jums parādā
+home-row-owe = jūs esat parādā
+home-row-settled = Nokārtots
+home-totals-partial = Bez projektiem bez valūtas kursa

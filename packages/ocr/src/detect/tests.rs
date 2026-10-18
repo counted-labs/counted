@@ -43,7 +43,7 @@ fn a_faint_blob_is_dropped_by_the_box_score() {
 
 /// The bug this pins: a long line at a few degrees of tilt. Its axis-aligned bounds are mostly
 /// empty corner triangles, and averaging over those halved the score of a header that was in fact
-/// detected at 0.87 — "SAS LE REFUGE", 5 degrees, dropped for scoring 0.43 against 0.45.
+/// detected at 0.87 - "SAS LE REFUGE", 5 degrees, dropped for scoring 0.43 against 0.45.
 #[test]
 fn a_tilted_line_is_scored_inside_its_own_polygon() {
     let (h, w) = (200usize, 400usize);

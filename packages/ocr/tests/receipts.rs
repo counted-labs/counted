@@ -6,7 +6,7 @@
 //!
 //! Adding a fixture: drop `<name>.jpg` next to the others with a `<name>.expected.json` sidecar.
 //! Real receipts carry card tails, loyalty numbers and sometimes names, and this repo has a public
-//! registry — scrub them, or shoot purpose-made ones, before committing.
+//! registry - scrub them, or shoot purpose-made ones, before committing.
 
 #![cfg(feature = "models")]
 
@@ -60,7 +60,7 @@ fn fixtures() -> Vec<PathBuf> {
 #[test]
 fn receipts_are_read_correctly() {
     let files = fixtures();
-    assert!(!files.is_empty(), "no fixtures — the quality metric is measuring nothing");
+    assert!(!files.is_empty(), "no fixtures - the quality metric is measuring nothing");
 
     // Loading 31 MB of weights is a one-off the user pays once per app launch; every scan after it
     // pays only inference. Reporting them together would hide which one is the problem.

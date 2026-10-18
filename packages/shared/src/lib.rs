@@ -19,7 +19,7 @@ pub fn round_currency(value: f64) -> f64 {
 }
 
 /// Every consistency comparison goes through this, so the validator quantises exactly as
-/// `distribute` does — otherwise a split the form produced could fail the validation that follows.
+/// `distribute` does - otherwise a split the form produced could fail the validation that follows.
 /// Saturating: a tampered payload can decrypt to NaN or inf, which must not panic.
 pub fn to_cents(amount: f64) -> i64 {
     (amount * 100.0).round() as i64
@@ -40,7 +40,7 @@ pub struct Currency {
 ///
 /// EUR first (the base and the default), then sorted by code, so the `<select>` needs no sorting
 /// of its own. Funds codes (BOV, CHE, CHW, CLF, COU, MXV, USN, UYI, UYW), precious metals, XDR and
-/// the test codes are left out: nobody pays a restaurant in them. Names are English on purpose —
+/// the test codes are left out: nobody pays a restaurant in them. Names are English on purpose -
 /// they are near-universal, and 150 keys in seven locales is not worth the bytes.
 ///
 /// The InforEuro table quotes ~152 codes and covers all but KPW, SVC and ZWG (quoted as the
@@ -213,7 +213,7 @@ pub const MAX_EXCHANGE_RATE: f64 = 1e9;
 /// `rate` is units of project currency per one unit of source currency, so
 /// `amount_project = amount_source * rate`.
 ///
-/// **Called once, on the expense total — never per share.** The converted total is what
+/// **Called once, on the expense total - never per share.** The converted total is what
 /// `distribute` then splits into cents, which is what keeps `sum(payers) == total == sum(debtors)`
 /// exact. Converting each share separately and rounding each one is precisely where the drift that
 /// `sums_to_total` would reject comes from.
@@ -243,8 +243,8 @@ pub fn cross_rate(rates: &HashMap<String, f64>, from: &str, to: &str) -> Option<
 
 /// The European Commission's InforEuro monthly table, as served by `GET /api/v1/fx/rates`.
 ///
-/// `day` is the first day of the month the rates are valid for — InforEuro fixes one rate per
-/// currency per calendar month — and the client shows that month next to the rate.
+/// `day` is the first day of the month the rates are valid for - InforEuro fixes one rate per
+/// currency per calendar month - and the client shows that month next to the rate.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct FxRates {
@@ -275,7 +275,7 @@ pub enum ProjectStatus {
 #[serde(rename_all = "camelCase")]
 pub struct HistoryPayload {
     pub summary: String,
-    /// Replaces `project_history.actor_user_id` — see docs/plans/participant-links-encryption.md.
+    /// Replaces `project_history.actor_user_id` - see docs/plans/participant-links-encryption.md.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub actor_user_id: Option<i32>,
 }
@@ -296,6 +296,42 @@ pub struct ProjectPayload {
 }
 
 pub type Unknown = serde_json::Map<String, serde_json::Value>;
+
+impl ProjectPayload {
+    /// The account's own "Mes dépenses" project. Read from `extra` until the build that creates
+    /// one makes `kind` a field: a string, so a kind added later never fails the decrypt.
+    pub fn is_personal(&self) -> bool {
+        self.extra.get("kind").and_then(serde_json::Value::as_str) == Some("personal")
+    }
+
+    /// The personal project's monthly budgets. A blob this build cannot read counts as none.
+    pub fn budgets(&self) -> Budgets {
+        self.extra.get("budgets").and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default()
+    }
+
+    pub fn set_budgets(&mut self, budgets: &Budgets) {
+        match serde_json::to_value(budgets) {
+            Ok(value) if !budgets.monthly.is_empty() => {
+                self.extra.insert("budgets".into(), value);
+            }
+            _ => {
+                self.extra.remove("budgets");
+            }
+        }
+    }
+}
+
+/// A ceiling per chart category, on my share of the month: personal expenses plus counted groups,
+/// in the personal project's currency.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct Budgets {
+    #[serde(default)]
+    pub monthly: std::collections::BTreeMap<String, f64>,
+    /// Warn on this device once a category reaches 80 %.
+    #[serde(default)]
+    pub alert: bool,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -319,14 +355,14 @@ pub struct ExpenseShare {
 
 /// `amount` is **always** in the project's currency, whatever currency the expense was entered in.
 ///
-/// That is what makes multi-currency additive: every reader — `balances.rs`, the charts, the export,
-/// `payments_are_inconsistent` — keeps comparing one currency and needs no change, and a client
+/// That is what makes multi-currency additive: every reader - `balances.rs`, the charts, the export,
+/// `payments_are_inconsistent` - keeps comparing one currency and needs no change, and a client
 /// built before this feature ignores the three `source_*`/`rate` fields and still shows the right
 /// number. The conversion happens once, at write time, on the total (see [`convert_to_project`]).
 ///
 /// The three are `Option` + `default` together: all absent means the expense was entered in the
 /// project currency and no conversion took place.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ExpensePayload {
     pub name: String,
@@ -340,7 +376,7 @@ pub struct ExpensePayload {
     /// The currency the amount was typed in, when it differs from the project's.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_currency: Option<String>,
-    /// The amount as typed, before conversion. Display and audit only — never summed.
+    /// The amount as typed, before conversion. Display and audit only - never summed.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_amount: Option<f64>,
     /// Units of project currency per one unit of `source_currency`, frozen at write time so the
@@ -384,7 +420,7 @@ pub struct PaymentPayload {
 /// Everything the project page reads, in one request.
 ///
 /// `expenses`/`payments` are withheld (`None` together) when the caller's `data_version` already
-/// matches. `project`/`users` are always sent — they are `Option` only so a rollback to a server
+/// matches. `project`/`users` are always sent - they are `Option` only so a rollback to a server
 /// that predates the merge still deserialises. Why the two halves differ:
 /// `docs/plans/expenses-tab-performance.md` §5.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -406,12 +442,16 @@ pub struct ProjectSync {
     pub server_date: Option<NaiveDate>,
 }
 
-/// Sent by a client with nothing cached — no real version can be negative, so it never matches.
+/// Sent by a client with nothing cached - no real version can be negative, so it never matches.
 pub const NO_CACHED_VERSION: i64 = -1;
 
 /// Ceiling on the participants of one project, and on the payers or debtors of one expense. Lives
 /// here so the expense and user controllers cannot drift apart on it.
 pub const MAX_PARTICIPANTS: usize = 100;
+
+/// Ceiling on one expense, rule or history payload's ciphertext, in bytes. A full roster of shares
+/// pads to 8 KiB; the rest is room for long names and descriptions.
+pub const MAX_PAYLOAD_LENGTH: usize = 65536;
 
 /// Worst case, from `ui::payment_methods`: 20 methods x ((40 kind + 140 value + 60 label) chars x
 /// 4 bytes for UTF-8 + ~48 bytes of JSON syntax incl. `"shared":true`) ~= 20,200 bytes, +16 for
@@ -426,7 +466,7 @@ pub const MAX_PAYMENT_METHODS_LENGTH: usize = 32768;
 /// Mitigation, not a fix: registration is open, so the hold can be spread across accounts.
 pub const MAX_ACCOUNT_PROJECTS: i64 = 500;
 
-/// An expense with the payment rows written for it — the write's own rows, all belonging to
+/// An expense with the payment rows written for it - the write's own rows, all belonging to
 /// `expense`. Returned by create and edit so the client patches locally instead of refetching
 /// ~2 MB for a one-row change.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -447,12 +487,12 @@ pub struct Account {
     pub kdf_salt: Vec<u8>,
     pub kdf_version: i16,
     /// `Preferences`, encrypted with the account key. `None` for an account that has never saved
-    /// any — the server stores and returns it without ever being able to read it.
+    /// any - the server stores and returns it without ever being able to read it.
     pub preferences: Option<EncryptedPair>,
     /// `PaymentMethods`, encrypted with the account key. `None` for an account that has never saved
     /// any. Bank details the server holds and cannot read, same contract as `preferences`.
     pub payment_methods: Option<EncryptedPair>,
-    /// The account's X25519 public key — what a friend boxes a project key to. `None` until a
+    /// The account's X25519 public key - what a friend boxes a project key to. `None` until a
     /// build that generates one has logged in. `default` so an older cached `Account` still loads.
     #[serde(default)]
     pub public_key: Option<Vec<u8>>,
@@ -471,7 +511,7 @@ pub struct Keypair {
 
 pub const PUBLIC_KEY_LENGTH: usize = 32;
 
-/// Ceiling on one account's outgoing friend requests (pending, accepted or rejected — the
+/// Ceiling on one account's outgoing friend requests (pending, accepted or rejected - the
 /// requester cannot tell them apart) and on how many it may send in a day.
 pub const MAX_FRIEND_REQUESTS: i64 = 300;
 pub const MAX_FRIEND_REQUESTS_PER_DAY: i64 = 50;
@@ -571,11 +611,11 @@ pub struct SentInvitation {
 }
 
 /// The locales push bodies are hand-written for (`api::server::push::texts`), *not* the shipped
-/// locales — those are `UI_LANGS`. A push token's `lang` is validated against this list; a code
+/// locales - those are `UI_LANGS`. A push token's `lang` is validated against this list; a code
 /// outside it would render an English body anyway.
 pub const SUPPORTED_LANGS: [&str; 7] = ["en", "fr", "es", "de", "it", "pt", "nl"];
 
-/// Every locale the app ships, by code — the same set as `ui::i18n::SUPPORTED`, which pairs them
+/// Every locale the app ships, by code - the same set as `ui::i18n::SUPPORTED`, which pairs them
 /// with endonyms and is asserted equal to this list in its tests. Lives here because `api` cannot
 /// depend on `ui` and needs a fixed list to bucket the aggregate language counters against.
 pub const UI_LANGS: [&str; 32] = [
@@ -609,7 +649,7 @@ pub enum PushPlatform {
 }
 
 /// `PUT /push/token`. `lang` is the two-letter code the device already sends as the
-/// `counted_lang` cookie — the server renders the notification sentence from it, so the platform
+/// `counted_lang` cookie - the server renders the notification sentence from it, so the platform
 /// vendor sees a localised sentence and never a name, email or project name.
 ///
 /// iOS: `token` is the APNs device token and `keys` is absent. Android: `token` is the RFC 8030
@@ -656,6 +696,9 @@ pub struct VerifyPushToken {
 pub struct Preferences {
     #[serde(default)]
     pub language: Option<String>,
+    /// Groups whose share stays out of "Mes dépenses". Every group counts until switched off.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub uncounted_projects: Vec<Uuid>,
     #[serde(flatten)]
     pub extra: Unknown,
 }
@@ -664,7 +707,7 @@ pub struct Preferences {
 ///
 /// `kind` is a **stable id**, not a translated label and not an enum: it is persisted inside the
 /// ciphertext, so renaming one orphans every blob already written, and a `MethodKind::Custom(_)`
-/// enum would make a kind added by a newer build fail to deserialise on an older one — taking the
+/// enum would make a kind added by a newer build fail to deserialise on an older one - taking the
 /// whole list down with it instead of the single row nobody recognises. The known ids and their
 /// brand names live in the client (`ui::payment_methods::KNOWN_KINDS`); anything else, including
 /// `other`, is carried as-is.
@@ -673,7 +716,7 @@ pub struct Preferences {
 pub struct PaymentMethod {
     pub kind: String,
     pub value: String,
-    /// The holder's own name for it — required when `kind` is `other`, optional otherwise (two
+    /// The holder's own name for it - required when `kind` is `other`, optional otherwise (two
     /// IBANs need telling apart).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
@@ -686,7 +729,7 @@ pub struct PaymentMethod {
 
 /// The account's payment details, serialised to JSON and encrypted before they leave the client.
 ///
-/// A struct rather than a bare `Vec` so a later field — an ordering hint, say — can be added
+/// A struct rather than a bare `Vec` so a later field - an ordering hint, say - can be added
 /// without invalidating blobs already written, the same reason `Preferences` is a struct with one
 /// field. Also the plaintext of the per-project copy, where it holds only the shared methods.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
@@ -705,7 +748,7 @@ pub struct ProjectPaymentMethods {
 }
 
 /// Body of `PUT /api/v1/auth/payment-methods`. `account` is flattened so the bare `{ct, iv}` an
-/// older client sends still deserialises, with `shared` empty — and the server clears every
+/// older client sends still deserialises, with `shared` empty - and the server clears every
 /// per-project copy it holds for the account before writing the ones listed, so a client that
 /// cannot produce them leaves none stale.
 ///
@@ -826,7 +869,7 @@ pub struct ProjectDto {
     pub status: ProjectStatus,
     pub created_at: NaiveDateTime,
     /// Server-side only. An account id is stable across projects, so returning it to every holder
-    /// of a project UUID would let two leaked share links prove the same person is in both — the
+    /// of a project UUID would let two leaked share links prove the same person is in both - the
     /// exact correlation `anonymous_project_members.member_id` is per-project to prevent. The
     /// server still needs it for the ownership handover in `leave_project`, so the field stays and
     /// only the wire drops it.
@@ -864,6 +907,10 @@ pub struct EditableProject {
     /// unless that is still the stored payload (409 `PROJECT_STALE`); `None` writes unconditionally.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expected_iv: Option<String>,
+    /// Set by the client that closes the project: the status is in the payload, so the server
+    /// cannot see the transition it rings the other account holders on.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub notify_closed: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -878,7 +925,7 @@ pub struct BatchProject {
 pub struct AccountProject {
     pub project_id: Uuid,
     pub user_id: Option<i32>,
-    /// The project's E2EE key, encrypted under the account key — see `docs/e2ee.md`, "Key escrow".
+    /// The project's E2EE key, encrypted under the account key - see `docs/e2ee.md`, "Key escrow".
     /// `None` for a membership recorded before escrow shipped, or by a device that held the
     /// membership without the key. `default` so a payload from an older client still deserializes.
     #[serde(default)]
@@ -889,7 +936,7 @@ pub struct AccountProject {
     pub claim_verifier_seeded: bool,
     /// Whether the server holds this account's shared payment methods under this project's key.
     /// When it does not and the account shares something, a key-holding client re-issues
-    /// `PUT /auth/payment-methods` from a fresh `me()` — see `ui::payment_methods::refill`.
+    /// `PUT /auth/payment-methods` from a fresh `me()` - see `ui::payment_methods::refill`.
     #[serde(default)]
     pub payment_methods_shared: bool,
 }
@@ -908,7 +955,7 @@ pub const MAX_CLAIM_LABEL_LENGTH: usize = 4096;
 pub struct UpsertAccountProject {
     pub project_id: Uuid,
     pub user_id: Option<i32>,
-    /// Wrapped project key. `None` means "I do not have it" — never "clear it": both upserts
+    /// Wrapped project key. `None` means "I do not have it" - never "clear it": both upserts
     /// COALESCE, so a device without the key cannot wipe one another device escrowed.
     #[serde(default)]
     pub key: Option<EncryptedPair>,
@@ -916,7 +963,7 @@ pub struct UpsertAccountProject {
     /// can read who claimed the identity. Same "never clear it" contract as `key`.
     #[serde(default)]
     pub claim_label: Option<EncryptedPair>,
-    /// `SHA-256("counted-claim-v1" || project_key)` — proof of holding the key. Required whenever
+    /// `SHA-256("counted-claim-v1" || project_key)` - proof of holding the key. Required whenever
     /// `user_id` is set and the project has a verifier; also what seeds the verifier when it has
     /// none. The server compares hashes and stores hashes, never the token.
     #[serde(default)]
@@ -936,13 +983,13 @@ pub struct BatchUpsertResult {
     pub identity_rejected: Vec<Uuid>,
     /// Projects whose `user_id` was dropped because the claim carried no valid `claim_token` or
     /// named a participant of another project. Distinct from `identity_rejected` on purpose: the
-    /// client keeps its local identity here — the fix is a key, not a new pick.
+    /// client keeps its local identity here - the fix is a key, not a new pick.
     #[serde(default)]
     pub proof_rejected: Vec<Uuid>,
 }
 
 /// Registers a holder the server has no identity for. `member_id` is random and per-project, and
-/// travels in the request body, never a URL — so it never reaches the access logs.
+/// travels in the request body, never a URL - so it never reaches the access logs.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct JoinProject {
@@ -951,7 +998,7 @@ pub struct JoinProject {
 }
 
 /// `member_id` is set when this device joined anonymously. The account side is read from the
-/// session — never from the payload.
+/// session - never from the payload.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct LeaveProject {
@@ -966,7 +1013,7 @@ pub struct User {
     pub payload: EncryptedPair,
     pub created_at: Option<NaiveDateTime>,
     /// An account holds this participant as its identity in the project. Blocks anyone else from
-    /// picking it — a coherence guarantee, not an authorisation one: `user_id` grants nothing
+    /// picking it - a coherence guarantee, not an authorisation one: `user_id` grants nothing
     /// server-side. See docs/project-membership.md.
     #[serde(default)]
     pub claimed: bool,
@@ -993,6 +1040,15 @@ pub enum CreatableUserBatch {
 pub struct CreatableUser {
     pub payload: EncryptedPair,
     pub project_id: Uuid,
+}
+
+/// A participant's payload rewritten - renamed, or `removed` set or cleared.
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct EditableUser {
+    pub id: i32,
+    pub project_id: Uuid,
+    pub payload: EncryptedPair,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -1024,7 +1080,9 @@ pub enum HistoryEntity {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct HistoryContext {
-    pub actor_user_id: i32,
+    /// `None` from clients that put the actor in the payload instead.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub actor_user_id: Option<i32>,
     pub payload: EncryptedPair,
 }
 
@@ -1049,7 +1107,7 @@ pub struct HistoryEntry {
 #[serde(rename_all = "camelCase")]
 pub struct Expense {
     pub id: i32,
-    /// `None` once the participant who recorded it has been removed — `expenses.author_id` is
+    /// `None` once the participant who recorded it has been removed - `expenses.author_id` is
     /// `ON DELETE SET NULL`, so an expense outlives its author rather than pinning them in the
     /// project forever. `default` so blobs written by an older client still deserialize.
     #[serde(default)]
@@ -1093,9 +1151,15 @@ pub struct EncryptedUserAmount {
 #[serde(rename_all = "camelCase")]
 pub struct CreatableExpense {
     pub project_id: Uuid,
-    pub author_id: i32,
+    /// `author_id`, `payers` and `debtors` are what clients before
+    /// docs/plans/participant-links-encryption.md send. Newer ones leave them empty and put all
+    /// three in the payload.
+    #[serde(default)]
+    pub author_id: Option<i32>,
     pub payload: EncryptedPair,
+    #[serde(default)]
     pub payers: Vec<EncryptedUserAmount>,
+    #[serde(default)]
     pub debtors: Vec<EncryptedUserAmount>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub history: Option<HistoryContext>,
@@ -1115,7 +1179,9 @@ pub struct EditableExpense {
     #[serde(default)]
     pub author_id: Option<i32>,
     pub payload: EncryptedPair,
+    #[serde(default)]
     pub payers: Vec<EncryptedUserAmount>,
+    #[serde(default)]
     pub debtors: Vec<EncryptedUserAmount>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub history: Option<HistoryContext>,
@@ -1131,7 +1197,7 @@ pub struct DeleteExpenseRequest {
 }
 
 /// A recurring expense rule. `payload` holds the rule, the expense template, the cursor and the
-/// seed of the occurrences' `client_op_id`s, all under the project key — the server knows neither
+/// seed of the occurrences' `client_op_id`s, all under the project key - the server knows neither
 /// when it is due nor what it is for. See docs/plans/recurring-expenses.md.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -1143,15 +1209,23 @@ pub struct RecurringExpense {
     pub payload: EncryptedPair,
     pub version: i64,
     pub created_at: NaiveDateTime,
+    /// The server still lists the template's participants in clear: a rule written, or last
+    /// edited, by a client before docs/plans/participant-links-encryption.md. What tells a client
+    /// that the rule has still to be converted.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub listed_participants: bool,
 }
 
-/// `participant_ids` are the template's payers and debtors. A participant listed here cannot be
-/// removed from the project while the rule exists, and every occurrence is checked against them.
+/// `participant_ids` are the template's payers and debtors, sent only by clients before
+/// docs/plans/participant-links-encryption.md: newer ones leave both fields empty, the payload
+/// holding the author and the template.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CreatableRecurringExpense {
     pub project_id: Uuid,
-    pub author_id: i32,
+    #[serde(default)]
+    pub author_id: Option<i32>,
+    #[serde(default)]
     pub participant_ids: Vec<i32>,
     pub payload: EncryptedPair,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1163,6 +1237,7 @@ pub struct CreatableRecurringExpense {
 pub struct EditableRecurringExpense {
     pub id: Uuid,
     pub project_id: Uuid,
+    #[serde(default)]
     pub participant_ids: Vec<i32>,
     pub payload: EncryptedPair,
     pub expected_version: i64,
@@ -1192,6 +1267,47 @@ pub struct MaterializeRecurringRequest {
     pub due_through: NaiveDate,
     pub occurrences: Vec<CreatableExpense>,
 }
+
+/// Rewrites a project's rows into the format of docs/plans/participant-links-encryption.md, in one
+/// transaction. Refused (409 `PROJECT_STALE`) when `expected_data_version` is no longer the
+/// project's: the client re-syncs and rebuilds.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ConvertProject {
+    pub project_id: Uuid,
+    pub expected_data_version: i64,
+    /// Each one's `author_id` and `payments` rows go.
+    pub expenses: Vec<ConvertedRow<i32>>,
+    /// Each one's `author_id` and participant rows go.
+    pub recurring: Vec<ConvertedRule>,
+    /// Rewritten with the actor inside.
+    pub history: Vec<ConvertedRow<i64>>,
+    /// The newest history row the client read. Every row up to it loses its actor columns: those
+    /// it did not rewrite are past the history read's cap and never shown again.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub history_through: Option<i64>,
+    /// Checked against `projects.claim_verifier`: rewriting history needs the key, not just the id.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub claim_token: Option<Vec<u8>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ConvertedRow<Id> {
+    pub id: Id,
+    pub payload: EncryptedPair,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ConvertedRule {
+    pub id: Uuid,
+    pub expected_version: i64,
+    pub payload: EncryptedPair,
+}
+
+/// Expenses per `ConvertProject` call. A larger project converts over several.
+pub const MAX_CONVERTED_EXPENSES: usize = 500;
 
 /// Bounds one materialization's transaction. A longer catch-up is several calls, each advancing
 /// the cursor by at most this many occurrences.
@@ -1249,6 +1365,7 @@ pub struct ReimbursementSuggestion {
 #[cfg(test)]
 mod tests {
     use super::{
+        Budgets,
         convert_to_project, cross_rate, is_valid_rate, pad_json, sums_to_total, to_cents,
         ExpensePayload, ExpenseShare, HashMap, HistoryAction, HistoryEntity, HistoryPayload,
         ProjectPayload, ProjectStatus, UserPayload, CURRENCIES, MAX_EXCHANGE_RATE,
@@ -1273,7 +1390,7 @@ mod tests {
 
     #[test]
     fn to_cents_saturates_instead_of_panicking() {
-        // A tampered payload decrypts to whatever it wants — the cast must not be UB or a panic.
+        // A tampered payload decrypts to whatever it wants - the cast must not be UB or a panic.
         assert_eq!(to_cents(f64::NAN), 0);
         assert_eq!(to_cents(f64::INFINITY), i64::MAX);
         assert_eq!(to_cents(f64::NEG_INFINITY), i64::MIN);
@@ -1375,7 +1492,7 @@ mod tests {
         assert!((there * back - 1.0).abs() < 1e-12);
     }
 
-    /// Neither leg is EUR — the quotient is the only way to get there.
+    /// Neither leg is EUR - the quotient is the only way to get there.
     #[test]
     fn cross_rate_between_two_non_eur_currencies() {
         let t = ecb_table();
@@ -1424,7 +1541,7 @@ mod tests {
         assert!(p.rate.is_none());
     }
 
-    /// And an expense with no conversion must not grow the three keys — the ciphertext length is
+    /// And an expense with no conversion must not grow the three keys - the ciphertext length is
     /// observable, so a same-currency expense has to stay byte-identical to what it was.
     #[test]
     fn expense_payload_omits_currency_fields_when_absent() {
@@ -1480,7 +1597,7 @@ mod tests {
 
     #[test]
     fn currency_list_is_sane() {
-        assert_eq!(CURRENCIES[0].code, "EUR", "EUR must lead — it is the base and the default");
+        assert_eq!(CURRENCIES[0].code, "EUR", "EUR must lead - it is the base and the default");
         let codes: Vec<&str> = CURRENCIES.iter().map(|c| c.code).collect();
         let mut sorted = codes[1..].to_vec();
         sorted.sort_unstable();
@@ -1544,6 +1661,35 @@ mod tests {
         let json = r#"{"language":"de"}"#;
         let p: crate::Preferences = serde_json::from_str(json).unwrap();
         assert_eq!(serde_json::to_string(&p).unwrap(), json);
+    }
+
+    #[test]
+    fn only_the_personal_kind_is_personal() {
+        let kind = |json: &str| serde_json::from_str::<ProjectPayload>(json).unwrap().is_personal();
+        assert!(kind(r#"{"name":"Mes dépenses","currency":"EUR","kind":"personal"}"#));
+        assert!(!kind(r#"{"name":"Corsica","currency":"EUR"}"#));
+        assert!(!kind(r#"{"name":"Alice","currency":"EUR","kind":"direct"}"#), "a kind added later still decrypts");
+        assert!(!kind(r#"{"name":"Odd","currency":"EUR","kind":true}"#));
+    }
+
+    #[test]
+    fn budgets_round_trip_and_clearing_them_leaves_no_field() {
+        let mut p: ProjectPayload =
+            serde_json::from_str(r#"{"name":"Mes dépenses","currency":"EUR","kind":"personal"}"#).unwrap();
+        assert_eq!(p.budgets(), Budgets::default());
+
+        let set = Budgets { monthly: [("Nourriture".to_string(), 400.0)].into_iter().collect(), alert: true };
+        p.set_budgets(&set);
+        let json = serde_json::to_string(&p).unwrap();
+        let value: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(value["budgets"], serde_json::json!({"monthly": {"Nourriture": 400.0}, "alert": true}));
+        assert_eq!(serde_json::from_str::<ProjectPayload>(&json).unwrap().budgets(), set);
+
+        p.set_budgets(&Budgets { monthly: Default::default(), alert: true });
+        assert_eq!(serde_json::to_string(&p).unwrap(), r#"{"name":"Mes dépenses","currency":"EUR","kind":"personal"}"#);
+
+        let odd: ProjectPayload = serde_json::from_str(r#"{"name":"X","currency":"EUR","budgets":"?"}"#).unwrap();
+        assert_eq!(odd.budgets(), Budgets::default());
     }
 
     #[test]

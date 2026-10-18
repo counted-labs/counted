@@ -24,14 +24,23 @@ pub struct ProjectHeaderProps {
     /// The share link: platform share sheet where there is one, clipboard otherwise. The caller
     /// decides at click time, so the button renders identically on SSR and in the browser.
     pub on_share: Option<EventHandler<()>>,
-    /// Drops the dangling project from this device — the only exit from a deleted project's link.
+    /// Drops the dangling project from this device - the only exit from a deleted project's link.
     pub on_forget: EventHandler<()>,
     /// `counted://` link, set only on a phone browser: the one handoff where universal links are
     /// unavailable (AltStore builds, unverified installs).
     pub native_app_link: Option<String>,
+    /// "Perso" on the account's personal project.
+    #[props(default)]
+    pub badge: Option<String>,
+    #[props(default)]
+    pub counted: Option<bool>,
+    #[props(default)]
+    pub on_counted: Option<EventHandler<bool>>,
+    #[props(default)]
+    pub on_counted_groups: Option<EventHandler<()>>,
 }
 
-/// The project page's header and its actions sheet. Decides nothing — every entry calls back out.
+/// The project page's header and its actions sheet. Decides nothing - every entry calls back out.
 #[component]
 pub fn ProjectHeader(props: ProjectHeaderProps) -> Element {
     let mut sheet_open = use_signal(|| false);
@@ -61,14 +70,14 @@ pub fn ProjectHeader(props: ProjectHeaderProps) -> Element {
         },
         // No actions menu: every entry below needs the live project row, which is what is missing.
         HeaderState::Cached { title } => rsx! {
-            AppHeader { back_button_route: Route::ProjectsPage {}, title, sticky: true }
+            AppHeader { back_button_route: Route::ProjectsPage {}, title, sticky: true, badge: props.badge.clone(), private_title: true }
         },
         HeaderState::Ready { title, status, read_only } => rsx! {
-            AppHeader { back_button_route: Route::ProjectsPage {}, title: title.clone(), sticky: true,
+            AppHeader { back_button_route: Route::ProjectsPage {}, title: title.clone(), sticky: true, badge: props.badge.clone(), private_title: true,
                 button {
                     id: "project-actions",
                     r#type: "button",
-                    class: "btn btn-circle size-11 bg-base-200 border-0",
+                    class: "btn btn-circle size-11 min-h-11 bg-base-300 border-0",
                     aria_label: tid!("project-actions"),
                     aria_haspopup: "dialog",
                     aria_expanded: sheet_open(),
@@ -97,6 +106,9 @@ pub fn ProjectHeader(props: ProjectHeaderProps) -> Element {
                     on_export_csv: props.on_export_csv,
                     on_export_json: props.on_export_json,
                     on_leave: props.on_leave,
+                    counted: props.counted,
+                    on_counted: props.on_counted,
+                    on_counted_groups: props.on_counted_groups,
                 }
             }
         },

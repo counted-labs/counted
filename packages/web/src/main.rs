@@ -76,7 +76,7 @@ fn main() {
         });
     }
     // The SSR markup is in the request's locale; the wasm must hold that locale before its first
-    // render or hydration diverges. Fetch it (hashed, immutable asset) and only then launch —
+    // render or hydration diverges. Fetch it (hashed, immutable asset) and only then launch -
     // `dioxus_web::launch` is itself a `spawn_local`, so nesting it here changes nothing else.
     #[cfg(all(not(feature = "server"), target_arch = "wasm32"))]
     ui::common::persist::enter_demo_if_requested();

@@ -151,7 +151,7 @@ payment-method-invalid-characters = Neħħi kull line break jew karattri inviżi
 payment-method-limit = Tista' taħżen sa { $max } metodi tal-ħlas.
 payment-methods-saved = Dettalji tal-ħlas maħżuna.
 payment-methods-offline = Trid tkun online biex taħżen id-dettalji tal-ħlas tiegħek.
-payment-methods-stale = Id-dettalji tal-ħlas tiegħek inbidlu fuq apparat ieħor. Reġgħu tgħabbew — jekk jogħġbok erġa' pprova.
+payment-methods-stale = Id-dettalji tal-ħlas tiegħek inbidlu fuq apparat ieħor. Reġgħu tgħabbew - jekk jogħġbok erġa' pprova.
 payment-methods-key-missing = Erġa' idħol biex timmaniġġja d-dettalji tal-ħlas tiegħek.
 settings-payment-methods-share-warning = Metodu maqsum huwa viżibbli għall-membri kollha tal-proġetti tiegħek.
 payment-method-share = Aqsam mal-proġetti tiegħi
@@ -233,7 +233,6 @@ projects-filter-active = Attivi
 projects-filter-all = Kollha
 projects-count-label = Proġetti
 projects-empty = L-ebda proġett
-projects-empty-hint = Oħloq proġett bil-buttuna t'hawn taħt
 projects-offline-banner = Data offline - erġa' ikkonnettja biex taġġorna.
 demo-banner = Proġett ta' dimostrazzjoni - qari biss.
 demo-start-own = Oħloq il-proġett tiegħek
@@ -247,6 +246,69 @@ projects-no-local-data = L-ebda data lokali
 projects-no-local-data-hint = Idħol biex tgħabbi l-proġetti tiegħek għall-ewwel darba.
 projects-add = Żid proġett
 projects-create = Oħloq proġett
+projects-personal-expense = Nefqa personali
+personal-expense-banner = Miżjuda ma' L-infiq tiegħi
+personal-create-title = Oħloq il-proġett personali tiegħek
+personal-create-hint = Segwi x’tonfoq waħdek
+group-create-title = Oħloq proġett komuni
+group-create-hint = Aqsam l-ispejjeż mal-ħbieb u l-familja
+personal-create-action = Oħloq
+personal-create-signup = Oħloq kont
+personal-sheet-title = Il-proġett personali tiegħek
+personal-sheet-intro = Biex tniżżel x’tonfoq waħdek. Jidher mal-gruppi tiegħek fl-Istatistika.
+personal-sheet-point-alone = Membru wieħed: int, bl-isem tal-kont tiegħek. L-ebda link biex taqsam.
+personal-sheet-point-encrypted = Ikkriptat fuq it-tagħmir tiegħek, bħall-proġetti l-oħra.
+personal-sheet-point-stats = Is-sehem tiegħek fil-gruppi jiżdied ma’ dan l-infiq fl-Istatistika.
+personal-default-name = L-infiq tiegħi
+my-spending-prev-month = Ix-xahar ta’ qabel
+my-spending-next-month = Ix-xahar li jmiss
+my-spending-spent = Nfaqt
+my-spending-groups = Gruppi
+my-spending-income = Dħul
+my-spending-balance = Bilanċ tax-xahar
+my-spending-unconverted = Is-sehem f’munita oħra jibqa’ barra sakemm ikun magħruf rata.
+my-spending-empty = Xejn dan ix-xahar
+my-spending-empty-hint = Żid nefqa b’+. Is-sehem tiegħek fil-gruppi jidher hawn awtomatikament.
+my-spending-share-of = minn { $amount }
+my-spending-uncounted = mhux magħdud
+payer-you = int
+expense-received-by = riċevut minn
+counted-switch = Għodd f’L-infiq tiegħi
+counted-switch-on = Mixgħul: is-sehem tiegħek jiżdied ma’ L-infiq tiegħi
+counted-switch-off = Mitfi: is-sehem tiegħek ma jidhirx f’L-infiq tiegħi
+counted-groups = Gruppi magħduda
+counted-groups-intro = Is-sehem tiegħek f’dawn il-gruppi jiżdied ma’ L-infiq tiegħi u mal-baġits.
+counted-groups-converted = { $from }, maqlub għal { $to }
+counted-groups-encrypted = Din l-għażla hija kriptata bil-kont tiegħek u ssegwik fuq it-tagħmir tiegħek.
+counted-groups-empty = Għad m’hemm l-ebda grupp fuq dan it-tagħmir.
+counted-groups-done = OK
+counted-save-failed = Din l-għażla ma setgħetx tiġi ssejvjata. Erġa’ pprova.
+tab-budget = Baġit
+budget-title = Baġits
+budget-manage = Immaniġġja
+budget-left = Fadal { $amount }
+budget-over = Maqbuż b’{ $amount }
+budget-empty = L-ebda baġit
+budget-empty-hint = Issettja limitu għal kull kategorija. Is-sehem tiegħek fil-gruppi jgħodd ukoll.
+budget-define = Issettja baġit
+budget-sheet-title = Baġits ta’ kull xahar
+budget-sheet-intro = Fuq is-sehem tiegħek: personali u gruppi. Ħalli vojt biex ma ssegwix kategorija.
+budget-average = Medja tal-aħħar 3 xhur: { $amount }
+budget-for = Baġit { $category }
+budget-alert = Avżani meta nilħaq 80 %
+budget-alert-hint = Ikkalkulat fuq dan it-tagħmir
+budget-invalid = Ammont mhux validu għal { $category }.
+budget-offline = Il-baġits jiġu ssejvjati biss online. Erġa’ qabbad u pprova mill-ġdid.
+budget-alert-near = { $category }: { $percent } % tal-baġit tax-xahar
+budget-alert-over = { $category }: il-baġit tax-xahar inqabeż
+personal-card-budget = { $month } · baġit { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } riżultat
+        [few] { $count } riżultati
+        [many] { $count } riżultati
+       *[other] { $count } riżultati
+    } · { $total } · personali u gruppi, ix-xhur kollha
 projects-join = Ingħaqad ma' proġett
 projects-import-tricount = Importa minn Tricount
 project-actions = Azzjonijiet tal-proġett
@@ -323,6 +385,7 @@ expenses-show-more = Uri aktar ({ $count } fadal)
 expense-type-expense = Spiża
 expense-type-transfer = Trasferiment
 expense-type-gain = Dħul
+expense-type-group = Tip
 expense-paid-by = imħallsa minn
 expense-sent-by = mibgħut minn
 expense-contributed-by = kontribwit minn
@@ -388,6 +451,25 @@ export-failed = L-esportazzjoni falliet: { $reason }
 history-expense-added = Spiża miżjuda: { $name }
 history-expense-edited = Spiża editjata: { $name }
 history-expense-deleted = Spiża mħassra: { $name }
+move-expense = Mexxi għal proġett
+move-expense-title = Mexxi għal…
+move-current = Attwali
+move-converted = { $currency }, ikkonvertit bir-rata tax-xahar
+move-note-personal = Fil-pass li jmiss tagħżel min ħallas u għal min. In-nefqa toħroġ minn L-infiq tiegħi.
+move-note-group = In-nefqa toħroġ minn { $project } għall-membri kollha, u l-bilanċ tal-grupp jerġa’ jinħadem. Fil-pass li jmiss tagħżel min ħallas u għal min.
+move-banner = Minn { $from } għal { $to }
+move-submit = Mexxi
+move-done = In-nefqa tmexxiet għal { $project }
+move-delete-failed = In-nefqa ġiet miżjuda mal-proġett l-ieħor iżda għadha f’{ $project }: ħassarha hemm.
+history-expense-moved = In-nefqa tmexxiet għal proġett ieħor: { $name }
+personal-badge = Personali
+move-members =
+    { $count ->
+        [one] { $count } membru
+        [few] { $count } membri
+        [many] { $count } membri
+       *[other] { $count } membri
+    }
 history-project-edited = Proġett editjat: { $name }
 history-name-changed = Isem: “{ $from }” → “{ $to }”
 history-description-added = Deskrizzjoni miżjuda: “{ $value }”
@@ -401,11 +483,25 @@ expense-name-placeholder = Restorant, groceries…
 expense-actions = Azzjonijiet tal-ispiża
 expense-your-share = Is-sehem tiegħek
 expense-your-share-value = Is-sehem tiegħek: { $amount } { $currency }
+expense-share-percent = { $percent }%
+expense-added-by = Miżjud minn { $name }, { $date }
 expense-inconsistent-detail = L-ammonti ma jaqblux: { $paid } imħallas, { $owed } dovut, għal spiża ta' { $total }. Editja l-ispiża biex tikkoreġih.
 missing-access-key = Iċ-ċavetta tal-aċċess nieqsa. Iftaħ dan il-proġett permezz tal-link tal-qsim tiegħu.
 filter-all = Kollha
 filter-my-payments = Il-ħlasijiet tiegħi
 filter-my-debts = X'għandi nagħti
+expense-filter-group = Filtru
+expenses-search = Fittex l-infiq
+expenses-no-match = L-ebda nfiq ma jaqbel.
+expenses-search-open = Fittex
+expenses-search-clear = Neħħi t-tfittxija
+expenses-search-summary =
+    { $count ->
+        [one] { $count } riżultat
+        [few] { $count } riżultati
+        [many] { $count } riżultati
+       *[other] { $count } riżultati
+    } · { $total } · ix-xhur kollha
 participants-shares-for = Ishma għal { $name }
 participants-amount-for = Ammont għal { $name }
 reimbursement-add = Żid saldu
@@ -445,10 +541,10 @@ charts-expense-count =
 charts-nothing-to-show = Xejn x'juri
 charts-my-share-skipped =
     { $count ->
-        [one] { $count } proġett mhux magħdud — l-ebda parteċipant magħżul, jew id-data tiegħu ma tgħabbietx.
-        [few] { $count } proġetti mhux magħduda — l-ebda parteċipant magħżul, jew id-data tagħhom ma tgħabbietx.
-        [many] { $count } proġetti mhux magħduda — l-ebda parteċipant magħżul, jew id-data tagħhom ma tgħabbietx.
-       *[other] { $count } proġetti mhux magħduda — l-ebda parteċipant magħżul, jew id-data tagħhom ma tgħabbietx.
+        [one] { $count } proġett mhux magħdud - l-ebda parteċipant magħżul, jew id-data tiegħu ma tgħabbietx.
+        [few] { $count } proġetti mhux magħduda - l-ebda parteċipant magħżul, jew id-data tagħhom ma tgħabbietx.
+        [many] { $count } proġetti mhux magħduda - l-ebda parteċipant magħżul, jew id-data tagħhom ma tgħabbietx.
+       *[other] { $count } proġetti mhux magħduda - l-ebda parteċipant magħżul, jew id-data tagħhom ma tgħabbietx.
     }
 
 ### Categories
@@ -522,6 +618,15 @@ payers-title-contributors = Kontributuri
 debtors-title-debtors = Għandhom jagħtu
 debtors-title-recipients = Riċevituri
 debtors-title-beneficiaries = Benefiċjarji
+debtors-title-for = Għal
+debtors-title-recipient = Riċevitur
+expense-people =
+    { $count ->
+        [one] { $count } persuna
+        [few] { $count } persuni
+        [many] { $count } persuna
+       *[other] { $count } persuni
+    }
 
 ### Welcome
 
@@ -656,6 +761,8 @@ invitation-decline = Irrifjuta
 participants-you-label = Ismek f'dan il-proġett
 participants-you-badge = Int
 participants-others = Parteċipanti oħra
+participants-removed = Imneħħija
+participant-restore = Irrestawra
 participants-empty = Żid parteċipanti hawn taħt.
 participants-duplicate = “{ $name }” diġà fil-lista.
 participants-input-label = Żid ħabib jew ikteb isem
@@ -800,3 +907,16 @@ error-recurring-not-found = Din l-ispiża rikorrenti m’għadhiex teżisti.
 error-recurring-stale = Xi ħadd biddel din l-ispiża rikorrenti sadanittant. Ġiet mgħobbija mill-ġdid: iċċekkjaha u erġa’ ssejvja.
 error-too-many-recurring = Dan il-proġett diġà għandu 50 spiża rikorrenti. Waqqaf waħda li m’għadekx teħtieġ biex iżżid oħra.
 error-user-in-recurring = Dan il-parteċipant huwa parti minn spiża rikorrenti. L-ewwel neħħih minnha jew waqqafha.
+
+home-owed-to-you = Għandek tieħu
+home-you-owe = Għandek tagħti
+home-details-show = Uri d-dettalji
+home-details-hide = Aħbi d-dettalji
+home-all-settled = Kollox imħallas
+home-pay = Ħallas
+home-remind = Fakkar
+home-remind-message = Tfakkira żgħira: għad hemm rimborżi x’jitħallsu f’{ $project }.
+home-row-owed = għandek tieħu
+home-row-owe = għandek tagħti
+home-row-settled = Imħallas
+home-totals-partial = Mingħajr proġetti mingħajr rata tal-kambju

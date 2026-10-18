@@ -6,7 +6,7 @@ use crate::route::Route;
 
 /// French legal notice, extracted to keys but translated only into `fr` and `en`.
 ///
-/// The other locales fall back to English per message — deliberately: this is legal text about a
+/// The other locales fall back to English per message - deliberately: this is legal text about a
 /// French publisher, and a translation nobody has reviewed is worse than an English one. Proper
 /// nouns (the host's address, the statute reference) stay verbatim in every language.
 #[component]

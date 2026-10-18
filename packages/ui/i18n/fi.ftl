@@ -149,7 +149,7 @@ payment-method-invalid-characters = Poista rivinvaihdot tai näkymättömät mer
 payment-method-limit = Voit tallentaa enintään { $max } maksutapaa.
 payment-methods-saved = Maksutiedot tallennettu.
 payment-methods-offline = Maksutietojen tallentaminen vaatii verkkoyhteyden.
-payment-methods-stale = Maksutietojasi muutettiin toisella laitteella. Ne ladattiin uudelleen — yritä uudelleen.
+payment-methods-stale = Maksutietojasi muutettiin toisella laitteella. Ne ladattiin uudelleen - yritä uudelleen.
 payment-methods-key-missing = Kirjaudu uudelleen hallitaksesi maksutietojasi.
 settings-payment-methods-share-warning = Jaettu maksutapa näkyy kaikille projektiesi jäsenille.
 payment-method-share = Jaa projekteilleni
@@ -231,7 +231,6 @@ projects-filter-active = Aktiiviset
 projects-filter-all = Kaikki
 projects-count-label = Projektit
 projects-empty = Ei projekteja
-projects-empty-hint = Luo projekti alla olevalla painikkeella
 projects-offline-banner = Offline-tiedot - yhdistä uudelleen päivittääksesi.
 demo-banner = Esittelyprojekti - vain luku.
 demo-start-own = Aloita oma projekti
@@ -245,6 +244,67 @@ projects-no-local-data = Ei paikallisia tietoja
 projects-no-local-data-hint = Kirjaudu sisään ladataksesi projektisi ensimmäistä kertaa.
 projects-add = Lisää projekti
 projects-create = Luo projekti
+projects-personal-expense = Oma kulu
+personal-expense-banner = Lisätty kohtaan Omat kulut
+personal-create-title = Luo oma projektisi
+personal-create-hint = Seuraa, mitä kulutat yksin
+group-create-title = Luo jaettu projekti
+group-create-hint = Jaa kulut ystävien ja perheen kanssa
+personal-create-action = Luo
+personal-create-signup = Luo tili
+personal-sheet-title = Oma projektisi
+personal-sheet-intro = Yksin kulutetuille menoille. Se näkyy ryhmiesi kanssa Tilastoissa.
+personal-sheet-point-alone = Yksi jäsen: sinä, tilisi nimellä. Ei jakolinkkiä.
+personal-sheet-point-encrypted = Salattu laitteillasi, kuten muut projektisi.
+personal-sheet-point-stats = Osuutesi ryhmissä lisätään näihin kuluihin Tilastoissa.
+personal-default-name = Omat kulut
+my-spending-prev-month = Edellinen kuukausi
+my-spending-next-month = Seuraava kuukausi
+my-spending-spent = Kulutit
+my-spending-groups = Ryhmät
+my-spending-income = Tulot
+my-spending-balance = Kuukauden saldo
+my-spending-unconverted = Muun valuutan osuudet jätetään pois, kunnes kurssi tiedetään.
+my-spending-empty = Ei mitään tässä kuussa
+my-spending-empty-hint = Lisää kulu +-painikkeella. Osuutesi ryhmissä näkyvät täällä automaattisesti.
+my-spending-share-of = / { $amount }
+my-spending-uncounted = ei laskettu
+payer-you = sinä
+expense-received-by = vastaanotti
+counted-switch = Laske mukaan: Omat kulut
+counted-switch-on = Päällä: osuutesi lasketaan mukaan kohteeseen Omat kulut
+counted-switch-off = Pois: osuutesi ei näy kohteessa Omat kulut
+counted-groups = Lasketut ryhmät
+counted-groups-intro = Osuutesi näissä ryhmissä lasketaan mukaan kohteeseen Omat kulut ja budjetteihin.
+counted-groups-converted = { $from }, muunnettu valuuttaan { $to }
+counted-groups-encrypted = Tämä valinta on salattu tililläsi ja seuraa sinua laitteillasi.
+counted-groups-empty = Tällä laitteella ei ole vielä ryhmiä.
+counted-groups-done = OK
+counted-save-failed = Valintaa ei voitu tallentaa. Yritä uudelleen.
+tab-budget = Budjetti
+budget-title = Budjetit
+budget-manage = Hallitse
+budget-left = { $amount } jäljellä
+budget-over = Ylitetty { $amount }
+budget-empty = Ei budjettia
+budget-empty-hint = Aseta katto kullekin luokalle. Osuutesi ryhmissä lasketaan mukaan.
+budget-define = Aseta budjetti
+budget-sheet-title = Kuukausibudjetit
+budget-sheet-intro = Osuudellesi: omat ja ryhmät. Jätä tyhjäksi, jos et seuraa luokkaa.
+budget-average = Keskiarvo 3 edellistä kk: { $amount }
+budget-for = Budjetti { $category }
+budget-alert = Varoita 80 %:ssa
+budget-alert-hint = Lasketaan tällä laitteella
+budget-invalid = Virheellinen summa: { $category }.
+budget-offline = Budjetit voi tallentaa vain verkossa. Yhdistä uudelleen ja yritä uudestaan.
+budget-alert-near = { $category }: { $percent } % kuukauden budjetista
+budget-alert-over = { $category }: kuukauden budjetti ylitetty
+personal-card-budget = { $month } · budjetti { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } tulos
+       *[other] { $count } tulosta
+    } · { $total } · omat ja ryhmät, kaikki kuukaudet
 projects-join = Liity projektiin
 projects-import-tricount = Tuo Tricountista
 project-actions = Projektin toiminnot
@@ -321,6 +381,7 @@ expenses-show-more = Näytä lisää ({ $count } jäljellä)
 expense-type-expense = Kulu
 expense-type-transfer = Siirto
 expense-type-gain = Tulo
+expense-type-group = Tyyppi
 expense-paid-by = maksoi
 expense-sent-by = lähetti
 expense-contributed-by = osallistui
@@ -386,6 +447,23 @@ export-failed = Vienti epäonnistui: { $reason }
 history-expense-added = Kulu lisätty: { $name }
 history-expense-edited = Kulua muokattu: { $name }
 history-expense-deleted = Kulu poistettu: { $name }
+move-expense = Siirrä projektiin
+move-expense-title = Siirrä kohteeseen…
+move-current = Nykyinen
+move-converted = { $currency }, muunnettu kuukauden kurssilla
+move-note-personal = Valitset seuraavassa vaiheessa, kuka maksoi ja kenen puolesta. Kulu poistuu Omista kuluista.
+move-note-group = Kulu poistuu projektista { $project } kaikilta jäseniltä, ja ryhmän saldo lasketaan uudelleen. Valitset seuraavassa vaiheessa, kuka maksoi ja kenen puolesta.
+move-banner = { $from } → { $to }
+move-submit = Siirrä
+move-done = Kulu siirretty projektiin { $project }
+move-delete-failed = Kulu lisättiin toiseen projektiin, mutta se on yhä projektissa { $project }: poista se sieltä.
+history-expense-moved = Kulu siirretty toiseen projektiin: { $name }
+personal-badge = Oma
+move-members =
+    { $count ->
+        [one] { $count } jäsen
+       *[other] { $count } jäsentä
+    }
 history-project-edited = Projektia muokattu: { $name }
 history-name-changed = Nimi: ”{ $from }” → ”{ $to }”
 history-description-added = Kuvaus lisätty: ”{ $value }”
@@ -399,11 +477,23 @@ expense-name-placeholder = Ravintola, ruokaostokset…
 expense-actions = Kulun toiminnot
 expense-your-share = Osuutesi
 expense-your-share-value = Osuutesi: { $amount } { $currency }
+expense-share-percent = { $percent } %
+expense-added-by = Lisännyt { $name }, { $date }
 expense-inconsistent-detail = Summat eivät täsmää: maksettu { $paid }, velkaa { $owed }, kulun summa { $total }. Korjaa muokkaamalla kulua.
 missing-access-key = Pääsyavain puuttuu. Avaa projekti sen jakolinkin kautta.
 filter-all = Kaikki
 filter-my-payments = Omat maksuni
 filter-my-debts = Omat velkani
+expense-filter-group = Suodatin
+expenses-search = Hae kuluja
+expenses-no-match = Yksikään kulu ei vastaa.
+expenses-search-open = Hae
+expenses-search-clear = Tyhjennä haku
+expenses-search-summary =
+    { $count ->
+        [one] { $count } tulos
+       *[other] { $count } tulosta
+    } · { $total } · kaikki kuukaudet
 participants-shares-for = Osuudet: { $name }
 participants-amount-for = Summa: { $name }
 reimbursement-add = Lisää tasaus
@@ -441,8 +531,8 @@ charts-expense-count =
 charts-nothing-to-show = Ei näytettävää
 charts-my-share-skipped =
     { $count ->
-        [one] 1 projektia ei lasketa — osallistujaa ei valittu tai sen tiedot eivät latautuneet.
-       *[other] { $count } projektia ei lasketa — osallistujaa ei valittu tai niiden tiedot eivät latautuneet.
+        [one] 1 projektia ei lasketa - osallistujaa ei valittu tai sen tiedot eivät latautuneet.
+       *[other] { $count } projektia ei lasketa - osallistujaa ei valittu tai niiden tiedot eivät latautuneet.
     }
 
 ### Categories
@@ -516,6 +606,13 @@ payers-title-contributors = Osallistujat
 debtors-title-debtors = Velalliset
 debtors-title-recipients = Vastaanottajat
 debtors-title-beneficiaries = Edunsaajat
+debtors-title-for = Kenelle
+debtors-title-recipient = Vastaanottaja
+expense-people =
+    { $count ->
+        [one] { $count } henkilö
+       *[other] { $count } henkilöä
+    }
 
 ### Welcome
 
@@ -648,6 +745,8 @@ invitation-decline = Hylkää
 participants-you-label = Nimesi tässä projektissa
 participants-you-badge = Sinä
 participants-others = Muut osallistujat
+participants-removed = Poistetut
+participant-restore = Palauta
 participants-empty = Lisää osallistujat alla.
 participants-duplicate = ”{ $name }” on jo listalla.
 participants-input-label = Lisää kaveri tai kirjoita nimi
@@ -792,3 +891,16 @@ error-recurring-not-found = Tätä toistuvaa kulua ei ole enää olemassa.
 error-recurring-stale = Joku muutti tätä toistuvaa kulua sillä välin. Se on ladattu uudelleen: tarkista se ja tallenna uudelleen.
 error-too-many-recurring = Projektissa on jo 50 toistuvaa kulua. Lopeta jokin tarpeeton lisätäksesi uuden.
 error-user-in-recurring = Osallistuja on mukana toistuvassa kulussa. Poista osallistuja siitä tai lopeta kulu ensin.
+
+home-owed-to-you = Sinulle velkaa
+home-you-owe = Olet velkaa
+home-details-show = Näytä erittely
+home-details-hide = Piilota erittely
+home-all-settled = Kaikki on selvitetty
+home-pay = Maksa
+home-remind = Muistuta
+home-remind-message = Pieni muistutus: projektissa { $project } on vielä maksamattomia korvauksia.
+home-row-owed = sinulle velkaa
+home-row-owe = olet velkaa
+home-row-settled = Selvitetty
+home-totals-partial = Ilman projekteja, joilla ei ole vaihtokurssia

@@ -23,6 +23,7 @@ pub struct InviteFriendsModalProps {
 /// key is boxed to each one on this device and the server only ever stores the boxes.
 #[component]
 pub fn InviteFriendsModal(props: InviteFriendsModalProps) -> Element {
+    crate::common::use_modal_focus("invite-friends-modal");
     let auth_ctx = use_context::<Signal<Option<Account>>>();
     let account_key = use_context::<Signal<Option<[u8; 32]>>>();
     let mut flash = use_context::<Signal<Option<Flash>>>();
@@ -81,10 +82,16 @@ pub fn InviteFriendsModal(props: InviteFriendsModalProps) -> Element {
     };
 
     rsx! {
-        dialog { open: true, class: "modal modal-open modal-bottom sm:modal-middle",
+        div {
+            id: "invite-friends-modal",
+            class: "modal modal-open modal-bottom sm:modal-middle",
+            role: "dialog",
+            aria_modal: "true",
+            aria_labelledby: "invite-friends-title",
+            tabindex: "-1",
             div { class: "modal-box p-0 flex flex-col",
                 div { class: "flex flex-col gap-0.5 px-6 pt-5 pb-4 border-b border-base-200 flex-shrink-0",
-                    h1 { class: "text-lg font-bold font-display", {tid!("invite-friends-title")} }
+                    h2 { id: "invite-friends-title", class: "text-lg font-bold font-display", {tid!("invite-friends-title")} }
                     p { class: "text-sm text-base-content/70", {tid!("invite-friends-hint")} }
                 }
                 div { class: "flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-3",
@@ -141,16 +148,23 @@ pub struct FriendPickerModalProps {
 
 #[component]
 pub fn FriendPickerModal(props: FriendPickerModalProps) -> Element {
+    crate::common::use_modal_focus("friend-picker-modal");
     let selected: Signal<Vec<Uuid>> = use_signal(Vec::new);
     let on_close = props.on_close;
     let on_pick = props.on_pick;
     let friends = props.friends.clone();
 
     rsx! {
-        dialog { open: true, class: "modal modal-open modal-bottom sm:modal-middle",
+        div {
+            id: "friend-picker-modal",
+            class: "modal modal-open modal-bottom sm:modal-middle",
+            role: "dialog",
+            aria_modal: "true",
+            aria_labelledby: "friend-picker-title",
+            tabindex: "-1",
             div { class: "modal-box p-0 flex flex-col",
                 div { class: "flex flex-col gap-0.5 px-6 pt-5 pb-4 border-b border-base-200 flex-shrink-0",
-                    h2 { class: "text-lg font-bold font-display", {tid!("friend-picker-title")} }
+                    h2 { id: "friend-picker-title", class: "text-lg font-bold font-display", {tid!("friend-picker-title")} }
                     p { class: "text-sm text-base-content/70", {tid!("invite-friends-hint")} }
                 }
                 div { class: "flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-3",

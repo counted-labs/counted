@@ -3,7 +3,7 @@ use std::rc::Rc;
 
 use super::super::helpers::expense_form_helpers::{amount_field_text, is_expression, keeps_draft_on_blur};
 
-/// The draft of the amount field that currently has focus — what `AmountOperatorBar` writes into.
+/// The draft of the amount field that currently has focus - what `AmountOperatorBar` writes into.
 /// `None` when no amount field is focused, which is also what hides the bar.
 pub type FocusedAmount = Signal<Option<Signal<Option<String>>>>;
 
@@ -15,20 +15,20 @@ const FOCUS_RETRY_MS: u32 = 50;
 /// A decimal text field bound to an `f64` that keeps showing the keystrokes as typed.
 ///
 /// Dioxus treats `value` as volatile and rewrites it on every render, and an `f64` cannot hold a
-/// trailing "12." or a "12,0" — binding the number directly erased the separator under a mobile
+/// trailing "12." or a "12,0" - binding the number directly erased the separator under a mobile
 /// keyboard. The draft lives here so every amount field in the form gets the same fix; what is
 /// displayed is decided by `amount_field_text`.
 ///
 /// An expression (`250/3`) is evaluated by `parse_amount` on every keystroke, so `value` is already
 /// 83.33 while the field still shows what was typed; blur only swaps the text for the number. A
-/// plain draft is left alone on blur — a French `12,50` must not come back as `12.5`.
+/// plain draft is left alone on blur - a French `12,50` must not come back as `12.5`.
 ///
 /// An empty field is 0: the caller is handed "0" while the field stays empty until blur. Focus
 /// selects the whole text, so the first keystroke replaces the 0 instead of making "05".
 ///
 /// On a coarse pointer an expression is covered by an overlay showing the running result, so the
 /// field reads `83.33` while `250/3` sits in the operator bar's bubble. The input's own value is
-/// still the expression — caret, backspace and paste are the browser's, untouched.
+/// still the expression - caret, backspace and paste are the browser's, untouched.
 #[derive(Props, Clone, PartialEq)]
 pub struct AmountInputProps {
     pub value: f64,
@@ -57,14 +57,15 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
     // The participants tests mount the fieldset with no form above it, so there may be no bar.
     let bar = try_use_context::<FocusedAmount>();
 
-    let shown = amount_field_text(draft().as_deref(), props.value);
+    let comma = crate::common::comma_language();
+    let shown = amount_field_text(draft().as_deref(), props.value, comma);
     let calc = draft().as_deref().is_some_and(is_expression);
-    let result = props.value.to_string();
+    let result = crate::common::plain_number(props.value, comma);
     let fit_chars = if calc { shown.chars().count().max(result.chars().count()) } else { shown.chars().count().max(1) };
     let fit_width = format!("width: calc({fit_chars}ch + 0.25ch); max-width: 100%");
 
     // The bar appears below the scroll body once a field takes focus, shrinking it from the bottom
-    // after the WebView's own scroll-into-view already ran — without this a row tapped near the
+    // after the WebView's own scroll-into-view already ran - without this a row tapped near the
     // bottom ends up behind the bar.
     use_effect(move || {
         if !focused() {
@@ -99,7 +100,7 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
                     mounted.set(Some(node.clone()));
                     if props.focus_on_mount {
                         // daisyUI animates the modal's `visibility` (0.3s, `allow-discrete`), and
-                        // `HTMLElement.focus()` on a still-hidden element is *silently* ignored —
+                        // `HTMLElement.focus()` on a still-hidden element is *silently* ignored -
                         // `set_focus` reports `Ok(())` and nothing moves, which is exactly how this
                         // read as "autofocus does not work". Retry until `onfocus` confirms it
                         // landed, rather than hard-coding daisyUI's duration.

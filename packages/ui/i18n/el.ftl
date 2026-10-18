@@ -149,7 +149,7 @@ payment-method-invalid-characters = Αφαίρεσε αλλαγές γραμμή
 payment-method-limit = Μπορείς να αποθηκεύσεις έως { $max } μεθόδους πληρωμής.
 payment-methods-saved = Τα στοιχεία πληρωμής αποθηκεύτηκαν.
 payment-methods-offline = Πρέπει να είσαι συνδεδεμένος για να αποθηκεύσεις τα στοιχεία πληρωμής.
-payment-methods-stale = Τα στοιχεία πληρωμής σου άλλαξαν σε άλλη συσκευή. Φορτώθηκαν ξανά — δοκίμασε ξανά.
+payment-methods-stale = Τα στοιχεία πληρωμής σου άλλαξαν σε άλλη συσκευή. Φορτώθηκαν ξανά - δοκίμασε ξανά.
 payment-methods-key-missing = Συνδέσου ξανά για να διαχειριστείς τα στοιχεία πληρωμής σου.
 settings-payment-methods-share-warning = Μια κοινόχρηστη μέθοδος είναι ορατή σε όλα τα μέλη των έργων σου.
 payment-method-share = Κοινή χρήση με τα έργα μου
@@ -231,7 +231,6 @@ projects-filter-active = Ενεργά
 projects-filter-all = Όλα
 projects-count-label = Έργα
 projects-empty = Δεν υπάρχουν έργα
-projects-empty-hint = Δημιούργησε ένα έργο με το κουμπί παρακάτω
 projects-offline-banner = Δεδομένα εκτός σύνδεσης - συνδέσου ξανά για ανανέωση.
 demo-banner = Έργο επίδειξης - μόνο για ανάγνωση.
 demo-start-own = Δημιούργησε το δικό σου έργο
@@ -245,6 +244,67 @@ projects-no-local-data = Δεν υπάρχουν τοπικά δεδομένα
 projects-no-local-data-hint = Συνδέσου για να φορτώσεις τα έργα σου για πρώτη φορά.
 projects-add = Προσθήκη έργου
 projects-create = Δημιουργία έργου
+projects-personal-expense = Προσωπικό έξοδο
+personal-expense-banner = Προστέθηκε στα Έξοδά μου
+personal-create-title = Δημιουργήστε το προσωπικό σας έργο
+personal-create-hint = Παρακολουθήστε τι ξοδεύετε μόνοι σας
+group-create-title = Δημιουργήστε κοινό έργο
+group-create-hint = Μοιραστείτε τα έξοδα με φίλους και οικογένεια
+personal-create-action = Δημιουργία
+personal-create-signup = Δημιουργία λογαριασμού
+personal-sheet-title = Το προσωπικό σας έργο
+personal-sheet-intro = Για να σημειώνετε ό,τι ξοδεύετε μόνοι σας. Εμφανίζεται με τις ομάδες σας στα Στατιστικά.
+personal-sheet-point-alone = Ένα μέλος: εσείς, με το όνομα του λογαριασμού σας. Χωρίς σύνδεσμο κοινοποίησης.
+personal-sheet-point-encrypted = Κρυπτογραφημένο στις συσκευές σας, όπως τα άλλα έργα σας.
+personal-sheet-point-stats = Τα μερίδιά σας στις ομάδες προστίθενται σε αυτά τα έξοδα στα Στατιστικά.
+personal-default-name = Τα έξοδά μου
+my-spending-prev-month = Προηγούμενος μήνας
+my-spending-next-month = Επόμενος μήνας
+my-spending-spent = Ξοδέψατε
+my-spending-groups = Ομάδες
+my-spending-income = Έσοδα
+my-spending-balance = Υπόλοιπο μήνα
+my-spending-unconverted = Τα μερίδια σε άλλο νόμισμα μένουν εκτός μέχρι να είναι γνωστή μια ισοτιμία.
+my-spending-empty = Τίποτα αυτόν τον μήνα
+my-spending-empty-hint = Προσθέστε ένα έξοδο με +. Τα μερίδιά σας στις ομάδες θα εμφανίζονται εδώ αυτόματα.
+my-spending-share-of = από { $amount }
+my-spending-uncounted = δεν υπολογίζεται
+payer-you = εσάς
+expense-received-by = ελήφθη από
+counted-switch = Υπολογισμός στα Τα έξοδά μου
+counted-switch-on = Ενεργό: το μερίδιό σας προστίθεται στα Τα έξοδά μου
+counted-switch-off = Ανενεργό: το μερίδιό σας δεν εμφανίζεται στα Τα έξοδά μου
+counted-groups = Ομάδες που υπολογίζονται
+counted-groups-intro = Το μερίδιό σας σε αυτές τις ομάδες προστίθεται στα Τα έξοδά μου και στους προϋπολογισμούς.
+counted-groups-converted = { $from }, μετατροπή σε { $to }
+counted-groups-encrypted = Αυτή η επιλογή κρυπτογραφείται με τον λογαριασμό σας και σας ακολουθεί στις συσκευές σας.
+counted-groups-empty = Δεν υπάρχει ακόμη ομάδα σε αυτή τη συσκευή.
+counted-groups-done = OK
+counted-save-failed = Δεν ήταν δυνατή η αποθήκευση αυτής της επιλογής. Δοκιμάστε ξανά.
+tab-budget = Προϋπολογισμός
+budget-title = Προϋπολογισμοί
+budget-manage = Διαχείριση
+budget-left = Απομένουν { $amount }
+budget-over = Υπέρβαση κατά { $amount }
+budget-empty = Κανένας προϋπολογισμός
+budget-empty-hint = Ορίστε ένα ανώτατο όριο ανά κατηγορία. Τα μερίδιά σας στις ομάδες μετράνε κι αυτά.
+budget-define = Ορισμός προϋπολογισμού
+budget-sheet-title = Μηνιαίοι προϋπολογισμοί
+budget-sheet-intro = Στο μερίδιό σας: προσωπικά και ομάδες. Αφήστε κενό για να μην παρακολουθείτε μια κατηγορία.
+budget-average = Μ.ό. τελευταίων 3 μηνών: { $amount }
+budget-for = Προϋπολογισμός { $category }
+budget-alert = Ειδοποίησέ με στο 80 %
+budget-alert-hint = Υπολογίζεται σε αυτή τη συσκευή
+budget-invalid = Μη έγκυρο ποσό για { $category }.
+budget-offline = Οι προϋπολογισμοί αποθηκεύονται μόνο online. Συνδεθείτε ξανά και δοκιμάστε πάλι.
+budget-alert-near = { $category }: { $percent } % του προϋπολογισμού του μήνα
+budget-alert-over = { $category }: υπέρβαση προϋπολογισμού του μήνα
+personal-card-budget = { $month } · προϋπολογισμός { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } αποτέλεσμα
+       *[other] { $count } αποτελέσματα
+    } · { $total } · προσωπικά και ομάδες, όλοι οι μήνες
 projects-join = Συμμετοχή σε έργο
 projects-import-tricount = Εισαγωγή από Tricount
 project-actions = Ενέργειες έργου
@@ -321,6 +381,7 @@ expenses-show-more = Εμφάνιση περισσότερων ({ $count } ακ�
 expense-type-expense = Δαπάνη
 expense-type-transfer = Μεταφορά
 expense-type-gain = Έσοδο
+expense-type-group = Τύπος
 expense-paid-by = πληρώθηκε από
 expense-sent-by = στάλθηκε από
 expense-contributed-by = συνεισφορά από
@@ -386,6 +447,23 @@ export-failed = Η εξαγωγή απέτυχε: { $reason }
 history-expense-added = Προστέθηκε δαπάνη: { $name }
 history-expense-edited = Επεξεργάστηκε δαπάνη: { $name }
 history-expense-deleted = Διαγράφηκε δαπάνη: { $name }
+move-expense = Μετακίνηση σε έργο
+move-expense-title = Μετακίνηση σε…
+move-current = Τρέχον
+move-converted = { $currency }, με την ισοτιμία του μήνα
+move-note-personal = Στο επόμενο βήμα θα επιλέξετε ποιος πλήρωσε και για ποιον. Το έξοδο θα φύγει από τα Έξοδά μου.
+move-note-group = Το έξοδο θα φύγει από το { $project } για όλα τα μέλη του και το υπόλοιπο της ομάδας θα υπολογιστεί ξανά. Στο επόμενο βήμα θα επιλέξετε ποιος πλήρωσε και για ποιον.
+move-banner = Από { $from } σε { $to }
+move-submit = Μετακίνηση
+move-done = Το έξοδο μετακινήθηκε στο { $project }
+move-delete-failed = Το έξοδο προστέθηκε στο άλλο έργο αλλά παραμένει στο { $project }: διαγράψτε το εκεί.
+history-expense-moved = Το έξοδο μετακινήθηκε σε άλλο έργο: { $name }
+personal-badge = Προσωπικό
+move-members =
+    { $count ->
+        [one] { $count } μέλος
+       *[other] { $count } μέλη
+    }
 history-project-edited = Επεξεργάστηκε έργο: { $name }
 history-name-changed = Όνομα: «{ $from }» → «{ $to }»
 history-description-added = Προστέθηκε περιγραφή: «{ $value }»
@@ -399,11 +477,23 @@ expense-name-placeholder = Εστιατόριο, ψώνια…
 expense-actions = Ενέργειες δαπάνης
 expense-your-share = Το μερίδιό σου
 expense-your-share-value = Το μερίδιό σου: { $amount } { $currency }
+expense-share-percent = { $percent }%
+expense-added-by = Προστέθηκε από { $name } στις { $date }
 expense-inconsistent-detail = Τα ποσά δεν συμφωνούν: { $paid } πληρώθηκαν, { $owed } οφείλονται, για δαπάνη { $total }. Επεξεργάσου τη δαπάνη για να το διορθώσεις.
 missing-access-key = Λείπει το κλειδί πρόσβασης. Άνοιξε αυτό το έργο μέσω του συνδέσμου κοινής χρήσης του.
 filter-all = Όλα
 filter-my-payments = Οι πληρωμές μου
 filter-my-debts = Τι χρωστάω
+expense-filter-group = Φίλτρο
+expenses-search = Αναζήτηση εξόδων
+expenses-no-match = Κανένα έξοδο δεν ταιριάζει.
+expenses-search-open = Αναζήτηση
+expenses-search-clear = Καθαρισμός αναζήτησης
+expenses-search-summary =
+    { $count ->
+        [one] { $count } αποτέλεσμα
+       *[other] { $count } αποτελέσματα
+    } · { $total } · όλοι οι μήνες
 participants-shares-for = Μερίδια για { $name }
 participants-amount-for = Ποσό για { $name }
 reimbursement-add = Προσθήκη εξόφλησης
@@ -441,8 +531,8 @@ charts-expense-count =
 charts-nothing-to-show = Τίποτα προς εμφάνιση
 charts-my-share-skipped =
     { $count ->
-        [one] 1 έργο δεν υπολογίζεται — δεν επιλέχθηκε συμμετέχων ή τα δεδομένα του δεν φορτώθηκαν.
-       *[other] { $count } έργα δεν υπολογίζονται — δεν επιλέχθηκε συμμετέχων ή τα δεδομένα τους δεν φορτώθηκαν.
+        [one] 1 έργο δεν υπολογίζεται - δεν επιλέχθηκε συμμετέχων ή τα δεδομένα του δεν φορτώθηκαν.
+       *[other] { $count } έργα δεν υπολογίζονται - δεν επιλέχθηκε συμμετέχων ή τα δεδομένα τους δεν φορτώθηκαν.
     }
 
 ### Categories
@@ -516,6 +606,13 @@ payers-title-contributors = Συνεισφέροντες
 debtors-title-debtors = Χρωστούν
 debtors-title-recipients = Παραλήπτες
 debtors-title-beneficiaries = Δικαιούχοι
+debtors-title-for = Για
+debtors-title-recipient = Παραλήπτης
+expense-people =
+    { $count ->
+        [one] { $count } άτομο
+       *[other] { $count } άτομα
+    }
 
 ### Welcome
 
@@ -648,6 +745,8 @@ invitation-decline = Απόρριψη
 participants-you-label = Το όνομά σου σε αυτό το έργο
 participants-you-badge = Εσύ
 participants-others = Άλλοι συμμετέχοντες
+participants-removed = Αφαιρέθηκαν
+participant-restore = Επαναφορά
 participants-empty = Πρόσθεσε συμμετέχοντες παρακάτω.
 participants-duplicate = Το «{ $name }» υπάρχει ήδη στη λίστα.
 participants-input-label = Πρόσθεσε φίλο ή γράψε όνομα
@@ -792,3 +891,16 @@ error-recurring-not-found = Αυτή η επαναλαμβανόμενη δαπ�
 error-recurring-stale = Κάποιος άλλαξε στο μεταξύ αυτή την επαναλαμβανόμενη δαπάνη. Φορτώθηκε ξανά: έλεγξέ την και αποθήκευσε ξανά.
 error-too-many-recurring = Αυτό το έργο έχει ήδη 50 επαναλαμβανόμενες δαπάνες. Σταμάτησε μία που δεν χρειάζεσαι για να προσθέσεις νέα.
 error-user-in-recurring = Αυτός ο συμμετέχων ανήκει σε επαναλαμβανόμενη δαπάνη. Αφαίρεσέ τον πρώτα από αυτή ή σταμάτησέ την.
+
+home-owed-to-you = Σας χρωστούν
+home-you-owe = Χρωστάτε
+home-details-show = Λεπτομέρειες
+home-details-hide = Απόκρυψη λεπτομερειών
+home-all-settled = Όλα έχουν εξοφληθεί
+home-pay = Πληρωμή
+home-remind = Υπενθύμιση
+home-remind-message = Μικρή υπενθύμιση: στο { $project } εκκρεμούν ακόμη αποπληρωμές.
+home-row-owed = σας χρωστούν
+home-row-owe = χρωστάτε
+home-row-settled = Εξοφλημένο
+home-totals-partial = Χωρίς τα έργα χωρίς συναλλαγματική ισοτιμία

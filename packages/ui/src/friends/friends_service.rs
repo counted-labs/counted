@@ -26,7 +26,7 @@ pub struct FriendRow {
     pub id: Uuid,
     pub account_id: Uuid,
     pub email: String,
-    /// `None` when the friend has not logged in on a build that makes a keypair yet — they cannot
+    /// `None` when the friend has not logged in on a build that makes a keypair yet - they cannot
     /// be invited until they do.
     pub fingerprint: Option<String>,
 }
@@ -128,7 +128,7 @@ pub struct Invitee {
 }
 
 /// One invitation per friend, each carrying the key boxed to that friend. Every one is attempted;
-/// returns those that were not sent — no private key on this device, no public key on theirs, or a
+/// returns those that were not sent - no private key on this device, no public key on theirs, or a
 /// refused request.
 pub async fn invite_each(
     project_id: Uuid,
@@ -170,7 +170,7 @@ pub fn invitee_emails(invitees: &[Invitee]) -> String {
 #[derive(Debug, Clone, PartialEq)]
 pub struct OpenedInvitation {
     pub invitation: ProjectInvitation,
-    /// `None` when the box did not open — the row can only be declined.
+    /// `None` when the box did not open - the row can only be declined.
     pub project_key: Option<[u8; 32]>,
     pub project_name: Option<String>,
 }
@@ -184,7 +184,7 @@ pub async fn load_invitations(my_private: Option<[u8; 32]>) -> Result<Vec<Opened
     for invitation in get_invitations().await? {
         let boxed = my_private.and_then(|p| open_invitation(&invitation, &p));
         // A box that opens is not a key that decrypts: one holding a wrong key used to show Accept
-        // with a blank name. Unreachable projects keep the key — accepting still proves it before
+        // with a blank name. Unreachable projects keep the key - accepting still proves it before
         // it can replace one already held.
         let (project_key, project_name) = match boxed {
             Some(k) => match get_project(invitation.project_id).await {
@@ -201,10 +201,10 @@ pub async fn load_invitations(my_private: Option<[u8; 32]>) -> Result<Vec<Opened
     Ok(opened)
 }
 
-/// Accepting is a local act: the key goes into the store exactly as a pasted share link's would —
-/// through [`adopt_project_key`], so it cannot replace a held key it does not prove — and
+/// Accepting is a local act: the key goes into the store exactly as a pasted share link's would -
+/// through [`adopt_project_key`], so it cannot replace a held key it does not prove - and
 /// `ExpensesPage` takes it from there (membership, escrow, the identity picker). The key is written
-/// before the row is deleted — a delete that fails leaves the invitation visible, and accepting it
+/// before the row is deleted - a delete that fails leaves the invitation visible, and accepting it
 /// again is harmless.
 pub async fn accept_invitation(
     ls_ctx: Signal<LocalStorageState>,

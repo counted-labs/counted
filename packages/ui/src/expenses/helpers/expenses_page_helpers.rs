@@ -1,7 +1,7 @@
 //! Every decision the project page makes, as plain functions.
 //!
 //! Nothing here touches a `Signal`. The page's effects read their resource guards, call in here,
-//! and act on the answer — which is what makes the offline and cache fallbacks testable at all.
+//! and act on the answer - which is what makes the offline and cache fallbacks testable at all.
 //! They used to live inside `use_effect` closures, where no test could reach them.
 
 use dioxus::fullstack::ServerFnError;
@@ -21,15 +21,15 @@ use crate::decrypted::{project_name, project_status, user_name};
 /// A fetch result paired with the project id it was fetched for.
 ///
 /// `use_resource` never clears `value` on a dependency change
-/// (`dioxus-hooks/src/use_resource.rs`), and the router gives `ExpensesPage` no `key:` — so
+/// (`dioxus-hooks/src/use_resource.rs`), and the router gives `ExpensesPage` no `key:` - so
 /// without the pairing a deep link between projects renders A's rows under B and poisons B's
 /// cache entry against B's `data_version` permanently.
 pub type For<T> = (Uuid, T);
 
-/// `export::download_json` / `download_csv` — same shape, picked per menu entry.
+/// `export::download_json` / `download_csv` - same shape, picked per menu entry.
 pub type DownloadFn = fn(&[u8; 32], &ProjectDto, &[User], &[Expense], &[Payment]);
 
-/// A resolved fetch, or `None` while it is pending — or while no project is open at all, which is
+/// A resolved fetch, or `None` while it is pending - or while no project is open at all, which is
 /// the store's resting state on `/projects`, `/login` and every other non-project route.
 pub type Resolved<'a, T> = Option<&'a Result<For<T>, ServerFnError>>;
 
@@ -41,7 +41,7 @@ fn ok_for<T>(guard: Resolved<'_, T>, project_id: Uuid) -> Option<&T> {
         .map(|(_, v)| v)
 }
 
-/// Unreachable server — the one failure the cold-start cache may paper over.
+/// Unreachable server - the one failure the cold-start cache may paper over.
 pub fn went_offline<T>(guard: Resolved<'_, T>) -> bool {
     guard.and_then(|r| r.as_ref().err()).map(is_offline_error).unwrap_or(false)
 }
@@ -78,7 +78,7 @@ pub enum Outcome {
     },
     /// "Unchanged", but the rows it meant are gone. Withdraw the version claim and ask again.
     Refetch,
-    /// The response is fine but names no participants, and there is no cache to fill the gap — a
+    /// The response is fine but names no participants, and there is no cache to fill the gap - a
     /// server predating the merged sync, met by a device that has never opened this project.
     /// Nothing arrives on its own from here, so the page offers a retry instead of a skeleton it
     /// would sit on for ever.
@@ -100,7 +100,7 @@ pub fn decide(
     let cached_project = || cached.and_then(|c| c.cached_project.clone());
 
     let Some(s) = ok_for(sync, project_id) else {
-        // Connectivity failures only — a genuine server error must surface, not be papered over
+        // Connectivity failures only - a genuine server error must surface, not be papered over
         // with stale rows. Offline renders what was cached, under the version it was cached at: the
         // cache effect writes these rows straight back, and a `None` there withdrew the claim, so
         // the next online open re-downloaded the whole project.
@@ -120,7 +120,7 @@ pub fn decide(
     };
 
     // A server predating the merged sync omits both. Falling back to the cache is what keeps a
-    // rollback from rendering a project with no participants — and when there is no cache either,
+    // rollback from rendering a project with no participants - and when there is no cache either,
     // the page says so rather than waiting on a response that will never carry them.
     let Some(users) = s.users.clone().or_else(cached_users) else { return Outcome::Unusable };
     let project = s.project.clone().or_else(cached_project);
@@ -129,7 +129,7 @@ pub fn decide(
         (Some(expenses), Some(payments)) => {
             Outcome::Load { users, project, expenses, payments, version: Some(s.data_version) }
         }
-        // "Unchanged": the held rows are current — unless the cache was cleared since the claim,
+        // "Unchanged": the held rows are current - unless the cache was cleared since the claim,
         // in which case believing the server strands the page on its skeleton.
         _ => match cached_rows() {
             Some((expenses, payments)) => {
@@ -142,7 +142,7 @@ pub fn decide(
 
 /// The project key: the URL fragment first, then whatever this device stored for the project.
 ///
-/// The fragment wins because it is how a share link hands the key over — the stored one may be
+/// The fragment wins because it is how a share link hands the key over - the stored one may be
 /// absent on a first open, and a link is never opened for a project it does not name.
 pub fn key_for_project(
     fragment: Option<&str>,
@@ -166,7 +166,7 @@ pub fn key_for_project(
 #[derive(Debug, Clone, PartialEq)]
 pub enum HeaderState {
     Loading,
-    /// The project was deleted server-side — the only exit from a dangling share link.
+    /// The project was deleted server-side - the only exit from a dangling share link.
     Gone,
     /// A translation key, not a sentence: the lookup belongs on the render path, and keeping it
     /// a key is what lets `header_state` be unit-tested without a Dioxus runtime.
@@ -200,7 +200,7 @@ pub fn header_state(
             },
             // A server predating the merged sync; the cached row still names the project, but
             // every dropdown action needs the live one. With no cached row there is nothing to
-            // title the header with and nothing further to wait for — a spinner here never stops.
+            // title the header with and nothing further to wait for - a spinner here never stops.
             None => match cached_project {
                 Some(p) => HeaderState::Cached { title: project_name(key, p) },
                 None => HeaderState::Error("error-generic"),
@@ -329,7 +329,7 @@ mod tests {
         assert_eq!(payments.len(), 1);
     }
 
-    // "Unchanged" withholds the rows but never the project or the participants — that is what lets
+    // "Unchanged" withholds the rows but never the project or the participants - that is what lets
     // a rename or an added participant land without a full expense re-download.
     #[test]
     fn unchanged_with_a_cache_loads_the_cached_rows_and_still_claims_the_version() {
@@ -396,7 +396,7 @@ mod tests {
     }
 
     // Rendering a project with no participants at all would be worse than waiting: every expense
-    // would show an unknown payer. Waiting *for ever* is worse than both — the response is final,
+    // would show an unknown payer. Waiting *for ever* is worse than both - the response is final,
     // so the page has to say so and offer a retry.
     #[test]
     fn an_old_server_omitting_users_with_no_cache_is_unusable() {
@@ -500,7 +500,7 @@ mod tests {
     }
 
     // The header moved onto the sync resource, so the dangling-share-link recovery has to come
-    // through it now — `get_data_version` 404s with the same `PROJECT_NOT_FOUND` as `get_project`.
+    // through it now - `get_data_version` 404s with the same `PROJECT_NOT_FOUND` as `get_project`.
     #[test]
     fn a_project_gone_error_survives_the_move_to_the_sync_resource() {
         assert_eq!(header_state(Some(&Err(gone())), None, &test_key(), pid()), HeaderState::Gone);

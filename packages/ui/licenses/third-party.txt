@@ -50,8 +50,8 @@ and clearly marked as such. This may include source files, build scripts and doc
 "Original Version" refers to the collection of Font Software components as distributed by the
 Copyright Holder(s).
 
-"Modified Version" refers to any derivative made by adding to, deleting, or substituting — in
-part or in whole — any of the components of the Original Version, by changing formats or by
+"Modified Version" refers to any derivative made by adding to, deleting, or substituting - in
+part or in whole - any of the components of the Original Version, by changing formats or by
 porting the Font Software to a new environment.
 
 "Author" refers to any designer, engineer, programmer, technical writer or other person who
@@ -3833,7 +3833,7 @@ DEALINGS IN THE SOFTWARE.
 
 ================================================================================
 MIT License
-Used by: hyper-rustls 0.27.9, rustls 0.23.45
+Used by: hyper-rustls 0.27.9, rustls 0.23.46
 
 Copyright (c) 2016 Joseph Birr-Pixton <jpixton@gmail.com>
 

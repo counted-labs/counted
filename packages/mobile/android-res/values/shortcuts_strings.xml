@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launcher shortcut's label, from projects-personal-expense in packages/ui/i18n. Not named
+     strings.xml: dx generates that one with app_name, and `cp -r android-res/.` would replace it. -->
+<resources>
+    <string name="shortcut_personal_expense">Personal expense</string>
+</resources>

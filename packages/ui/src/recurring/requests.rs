@@ -7,14 +7,16 @@ use uuid::Uuid;
 
 use super::model::{DecryptedRule, RecurringPayload};
 use super::split::side_amounts;
-use crate::crypto::encrypt_json;
-use crate::expenses::helpers::expense_modal_helpers::encrypt_user_amounts;
+use crate::crypto::encrypt_padded_json;
+use crate::expenses::helpers::expense_modal_helpers::with_shares;
 
 /// A rule's history row. `None` without an actor to sign it, like an expense with no author.
 pub fn history(key: &[u8; 32], actor: Option<i32>, summary: String) -> Option<HistoryContext> {
+    let actor = actor?;
     Some(HistoryContext {
-        actor_user_id: actor?,
-        payload: encrypt_json(key, &HistoryPayload { summary, actor_user_id: None }).ok()?,
+        actor_user_id: None,
+        payload: encrypt_padded_json(key, &HistoryPayload { summary, actor_user_id: Some(actor) })
+            .ok()?,
     })
 }
 
@@ -27,9 +29,12 @@ pub fn create_request(
 ) -> Result<CreatableRecurringExpense, String> {
     Ok(CreatableRecurringExpense {
         project_id,
-        author_id,
-        participant_ids: payload.template.participant_ids(),
-        payload: encrypt_json(key, payload)?,
+        author_id: None,
+        participant_ids: Vec::new(),
+        payload: encrypt_padded_json(
+            key,
+            &RecurringPayload { author_id: Some(author_id), ..payload.clone() },
+        )?,
         history,
     })
 }
@@ -44,8 +49,11 @@ pub fn edit_request(
     Ok(EditableRecurringExpense {
         id: rule.id,
         project_id,
-        participant_ids: payload.template.participant_ids(),
-        payload: encrypt_json(key, payload)?,
+        participant_ids: Vec::new(),
+        payload: encrypt_padded_json(
+            key,
+            &RecurringPayload { author_id: payload.author_id.or(rule.author_id), ..payload.clone() },
+        )?,
         expected_version: rule.version,
         history,
     })
@@ -68,6 +76,7 @@ pub fn materialize_request(
         return Err("due dates do not start at the cursor".to_string());
     }
     let t = &rule.payload.template;
+    let author = rule.author_id.unwrap_or(actor_user_id);
     let occurrences = due
         .iter()
         .map(|(index, date)| {
@@ -87,26 +96,39 @@ pub fn materialize_request(
                 shares: None,
                 extra: Default::default(),
             };
+            let payload = with_shares(
+                payload,
+                Some(author),
+                &side_amounts(&t.payers, t.amount, *index),
+                &side_amounts(&t.debtors, t.amount, *index),
+            );
             Ok(CreatableExpense {
                 project_id,
-                author_id: rule.author_id.unwrap_or(actor_user_id),
-                payload: encrypt_json(key, &payload)?,
-                payers: encrypt_user_amounts(key, &side_amounts(&t.payers, t.amount, *index), false)?,
-                debtors: encrypt_user_amounts(key, &side_amounts(&t.debtors, t.amount, *index), true)?,
+                author_id: None,
+                payload: encrypt_padded_json(key, &payload)?,
+                payers: Vec::new(),
+                debtors: Vec::new(),
                 history: Some(HistoryContext {
-                    actor_user_id: rule.author_id.unwrap_or(actor_user_id),
-                    payload: encrypt_json(key, &HistoryPayload { summary: summary(*date), actor_user_id: None })?,
+                    actor_user_id: None,
+                    payload: encrypt_padded_json(
+                        key,
+                        &HistoryPayload { summary: summary(*date), actor_user_id: Some(author) },
+                    )?,
                 }),
                 client_op_id: Some(super::schedule::occurrence_id(rule.payload.seed, *date)),
             })
         })
         .collect::<Result<Vec<_>, String>>()?;
-    let advanced = RecurringPayload { next: last.0 + 1, ..rule.payload.clone() };
+    let advanced = RecurringPayload {
+        next: last.0 + 1,
+        author_id: rule.payload.author_id.or(rule.author_id),
+        ..rule.payload.clone()
+    };
     Ok(MaterializeRecurringRequest {
         id: rule.id,
         project_id,
         expected_version: rule.version,
-        payload: encrypt_json(key, &advanced)?,
+        payload: encrypt_padded_json(key, &advanced)?,
         due_through: last.1,
         occurrences,
     })
@@ -118,7 +140,6 @@ mod tests {
     use crate::common::test_fixtures::test_key;
     use crate::crypto::decrypt_json;
     use crate::recurring::model::{Ends, Freq, Rule, Side, Template};
-    use shared::PaymentPayload;
 
     fn d(y: i32, m: u32, day: u32) -> NaiveDate {
         NaiveDate::from_ymd_opt(y, m, day).unwrap()
@@ -173,7 +194,9 @@ mod tests {
         assert_eq!(first.date, "2026-08-01");
         assert_eq!(first.recurring_id, Some(r.id));
         assert!(first.estimate, "a variable rule writes estimates");
-        assert_eq!(req.occurrences[0].author_id, 1, "the rule's author, not the device");
+        assert_eq!(first.author_id, Some(1), "the rule's author, not the device");
+        assert_eq!(req.occurrences[0].author_id, None);
+        assert!(req.occurrences[0].payers.is_empty() && req.occurrences[0].debtors.is_empty());
         assert_eq!(
             req.occurrences[0].client_op_id,
             Some(crate::recurring::schedule::occurrence_id(r.payload.seed, d(2026, 8, 1)))
@@ -185,11 +208,9 @@ mod tests {
         let key = test_key();
         let due = [(1, d(2026, 9, 1))];
         let req = materialize_request(&key, Uuid::nil(), &rule(1), &due, 2, |_| String::new()).unwrap();
-        let amounts: Vec<f64> = req.occurrences[0]
-            .debtors
-            .iter()
-            .map(|p| decrypt_json::<PaymentPayload>(&key, &p.payload).unwrap().amount)
-            .collect();
+        let occurrence: ExpensePayload = decrypt_json(&key, &req.occurrences[0].payload).unwrap();
+        let amounts: Vec<f64> =
+            occurrence.shares.unwrap().iter().filter(|s| s.is_debt).map(|s| s.amount).collect();
         assert_eq!(amounts, vec![483.33, 483.34, 483.33]);
     }
 
@@ -197,9 +218,11 @@ mod tests {
     fn a_removed_author_falls_back_to_the_member_materializing() {
         let mut r = rule(0);
         r.author_id = None;
-        let req = materialize_request(&test_key(), Uuid::nil(), &r, &[(0, d(2026, 8, 1))], 2, |_| String::new())
+        let key = test_key();
+        let req = materialize_request(&key, Uuid::nil(), &r, &[(0, d(2026, 8, 1))], 2, |_| String::new())
             .unwrap();
-        assert_eq!(req.occurrences[0].author_id, 2);
+        let occurrence: ExpensePayload = decrypt_json(&key, &req.occurrences[0].payload).unwrap();
+        assert_eq!(occurrence.author_id, Some(2));
     }
 
     #[test]
@@ -210,14 +233,21 @@ mod tests {
     }
 
     #[test]
-    fn create_and_edit_name_every_participant_once() {
+    fn create_and_edit_keep_participants_and_author_in_the_payload() {
         let key = test_key();
         let r = rule(0);
         let c = create_request(&key, Uuid::nil(), 1, &r.payload, None).unwrap();
-        assert_eq!(c.participant_ids, vec![1, 2, 3]);
+        assert!(c.participant_ids.is_empty());
+        assert_eq!(c.author_id, None);
+        let p: RecurringPayload = decrypt_json(&key, &c.payload).unwrap();
+        assert_eq!(p.author_id, Some(1));
+        assert_eq!(p.template.participant_ids(), vec![1, 2, 3]);
+
         let e = edit_request(&key, Uuid::nil(), &r, &r.payload, None).unwrap();
         assert_eq!(e.expected_version, 4);
-        assert_eq!(e.participant_ids, vec![1, 2, 3]);
+        assert!(e.participant_ids.is_empty());
+        let p: RecurringPayload = decrypt_json(&key, &e.payload).unwrap();
+        assert_eq!(p.author_id, Some(1), "a rule written before keeps the author its column held");
     }
 
     #[test]
@@ -225,8 +255,9 @@ mod tests {
         let key = test_key();
         assert!(history(&key, None, "Rent".to_string()).is_none());
         let ctx = history(&key, Some(2), "Rent".to_string()).unwrap();
-        assert_eq!(ctx.actor_user_id, 2);
+        assert_eq!(ctx.actor_user_id, None);
         let p: HistoryPayload = decrypt_json(&key, &ctx.payload).unwrap();
         assert_eq!(p.summary, "Rent");
+        assert_eq!(p.actor_user_id, Some(2));
     }
 }

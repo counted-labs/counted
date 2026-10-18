@@ -5,25 +5,26 @@ use chrono::{Duration, Local, NaiveDate};
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use shared::{
-    to_cents, CreatableExpense, CreatableProject, CreatableUser, CreatableUserBatch,
-    EncryptedUserAmount, ExpensePayload, ExpenseType, PaymentPayload, ProjectPayload, UserPayload,
+    to_cents, CreatableExpense, CreatableProject, CreatableUser, CreatableUserBatch, ExpensePayload,
+    ExpenseType, ProjectPayload, UserPayload,
 };
 use uuid::Uuid;
 
 use super::dataset::Dataset;
 use crate::common::{error_message, update_ls, upsert_project, upsert_project_key, LocalStorageState};
-use crate::crypto::{claim_verifier, encrypt_json, generate_key, key_to_fragment};
+use crate::crypto::{claim_verifier, encrypt_json, encrypt_padded_json, generate_key, key_to_fragment};
+use crate::expenses::helpers::expense_modal_helpers::with_shares;
 use crate::tid;
 
 /// The visitor's own copy, through the same three calls as a Tricount import, with them as its first
 /// participant. Stored only once complete: a half-seeded project has no member and the sweep takes it.
 pub async fn seed_demo(ls_ctx: Signal<LocalStorageState>, data: &'static Dataset) -> Result<Uuid, String> {
     let key = generate_key();
-    let payload = encrypt_json(&key, &ProjectPayload {
+    let payload = encrypt_padded_json(&key, &ProjectPayload {
         name: data.project.to_string(),
         currency: "EUR".to_string(),
         description: None,
-        status: None,
+        status: Some(shared::ProjectStatus::Ongoing),
         extra: Default::default(),
     })?;
     let project = add_project(Json(CreatableProject {
@@ -77,7 +78,7 @@ fn expense_creatables(
         .iter()
         .map(|e| {
             let payer = user_ids[e.payer];
-            let payload = encrypt_json(key, &ExpensePayload {
+            let payload = ExpensePayload {
                 name: e.name.to_string(),
                 amount: e.amount,
                 expense_type: ExpenseType::Expense.as_str().to_string(),
@@ -92,24 +93,16 @@ fn expense_creatables(
                 author_id: None,
                 shares: None,
                 extra: Default::default(),
-            })?;
-            let paid = encrypt_json(key, &PaymentPayload { amount: e.amount, is_debt: false })?;
-            let debtors = user_ids
-                .iter()
-                .zip(equal_shares(e.amount, user_ids.len()))
-                .map(|(id, amount)| {
-                    Ok(EncryptedUserAmount {
-                        user_id: *id,
-                        payload: encrypt_json(key, &PaymentPayload { amount, is_debt: true })?,
-                    })
-                })
-                .collect::<Result<Vec<_>, String>>()?;
+            };
+            let debtors: Vec<(i32, f64)> =
+                user_ids.iter().copied().zip(equal_shares(e.amount, user_ids.len())).collect();
+            let payload = with_shares(payload, Some(payer), &[(payer, e.amount)], &debtors);
             Ok(CreatableExpense {
                 project_id,
-                author_id: payer,
-                payload,
-                payers: vec![EncryptedUserAmount { user_id: payer, payload: paid }],
-                debtors,
+                author_id: None,
+                payload: encrypt_padded_json(key, &payload)?,
+                payers: Vec::new(),
+                debtors: Vec::new(),
                 history: None,
                 client_op_id: None,
             })
@@ -149,11 +142,14 @@ mod tests {
             for (created, source) in expenses.iter().zip(data.expenses) {
                 let payload: ExpensePayload = decrypt_json(&key, &created.payload).unwrap();
                 assert_eq!(payload.date, (today - Duration::days(source.days_ago)).to_string());
-                assert_eq!(created.author_id, ids[source.payer]);
-                let owed: i64 = created
-                    .debtors
+                assert_eq!(payload.author_id, Some(ids[source.payer]));
+                assert!(created.payers.is_empty() && created.debtors.is_empty());
+                let owed: i64 = payload
+                    .shares
+                    .unwrap()
                     .iter()
-                    .map(|d| to_cents(decrypt_json::<PaymentPayload>(&key, &d.payload).unwrap().amount))
+                    .filter(|s| s.is_debt)
+                    .map(|s| to_cents(s.amount))
                     .sum();
                 assert_eq!(owed, to_cents(source.amount), "{}", source.name);
             }

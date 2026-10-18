@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The wallet of the "Dépense perso" action, white on the brand green, as launchers show shortcut
+     icons in a circle. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:pathData="M24,0a24,24 0 1,0 0.01,0Z"
+        android:fillColor="#12A27A" />
+    <group android:translateX="12" android:translateY="12">
+        <path
+            android:pathData="M3,7a2,2 0 0,1 2,-2h13v4"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="1.8"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M3,7v11a2,2 0 0,0 2,2h15V9H5a2,2 0 0,1 -2,-2"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="1.8"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M15,14.5a1,1 0 1,0 2,0a1,1 0 1,0 -2,0"
+            android:fillColor="#FFFFFF" />
+    </group>
+</vector>

@@ -2,7 +2,7 @@
 //!
 //! `AppLayout` never remounts, so this survives every navigation: opening an expense and coming
 //! back reads already-decrypted data out of context instead of refetching and re-decrypting. The
-//! store follows the route's project via [`project_id_of`] and fetches only when that changes — see
+//! store follows the route's project via [`project_id_of`] and fetches only when that changes - see
 //! `docs/plans/expenses-tab-performance.md`.
 
 use api::payments::payments_controller::sync_project_data;
@@ -19,13 +19,15 @@ use crate::common::{
 use crate::expenses::helpers::expenses_page_helpers::{
     cached_data_version, decide, key_for_project, For, Outcome,
 };
+use crate::expenses::helpers::expense_query::ExpenseQuery;
+use crate::expenses::move_expense::MoveDraft;
 use crate::expenses::helpers::project_data::{self, LiveData, ProjectData};
 use crate::expenses::tabs::expenses_tab::{apply_mutation, ExpenseMutation};
 use crate::recurring::materializer::use_recurring_materializer;
 use crate::recurring::store::{self as recurring_store, RecurringData, RecurringSnapshot};
 use crate::route::{project_id_of, Route};
 
-/// The URL fragment, web only — no other target has one.
+/// The URL fragment, web only - no other target has one.
 fn url_fragment() -> Option<String> {
     #[cfg(target_arch = "wasm32")]
     {
@@ -44,17 +46,23 @@ pub struct ProjectStore {
     pub sync: Resource<Option<Result<For<ProjectSync>, ServerFnError>>>,
     /// Still-encrypted rows, resolved against the offline cache. Mutations patch this directly.
     pub live: Signal<Option<LiveData>>,
-    /// The one decryption pass. **Check `data().project_id` before rendering it** — the store
+    /// The one decryption pass. **Check `data().project_id` before rendering it** - the store
     /// outlives any one page and still holds the previous project until the new sync lands.
     pub data: Memo<Arc<ProjectData>>,
     /// A share link opened without its `#fragment`: resolution failed for good.
     pub key_missing: Signal<bool>,
     /// The sync answered, but with nothing this device can render and no cache to fill the gap.
-    /// Only a retry changes it — see [`Outcome::Unusable`].
+    /// Only a retry changes it - see [`Outcome::Unusable`].
     pub unusable: Signal<bool>,
     pub on_expenses_changed: Callback<ExpenseMutation>,
     /// The project's recurring rules, decrypted. Same caveat as `data`: check the project id.
     pub recurring: Memo<RecurringData>,
+    /// The expenses tab's search and filters, here so they survive opening an expense and coming
+    /// back. Cleared when another project is opened.
+    pub query: Signal<ExpenseQuery>,
+    /// An expense on its way to another project: set on the source's page, consumed by the
+    /// destination's expenses tab once that project is the one loaded.
+    pub pending_move: Signal<Option<MoveDraft>>,
 }
 
 impl ProjectStore {
@@ -87,6 +95,8 @@ pub fn use_project_store() -> ProjectStore {
     let mut live: Signal<Option<LiveData>> = use_signal(|| None);
     let mut recurring: Signal<Option<RecurringSnapshot>> = use_signal(|| None);
     let mut force_full_sync = use_signal(|| false);
+    let mut query = use_signal(ExpenseQuery::default);
+    let mut pending_move: Signal<Option<MoveDraft>> = use_signal(|| None);
 
     // The project the store is following. It never falls back to `None`: leaving a project for the
     // list and returning must cost no request, and clearing it would refetch on the way back.
@@ -96,13 +106,18 @@ pub fn use_project_store() -> ProjectStore {
         if let Some(id) = wanted {
             if *active.peek() != Some(id) {
                 active.set(Some(id));
+                query.set(ExpenseQuery::default());
+                // Any project but the destination abandons the move.
+                if pending_move.peek().as_ref().is_some_and(|m| m.to_project != id) {
+                    pending_move.set(None);
+                }
             }
         }
     }));
     let project_id = active();
 
     // Resolving the key is reactive on the project, not on the key signal. Keyed off `key_ctx` it
-    // never re-ran on a project change, so the page decrypted B's rows with A's key — and the
+    // never re-ran on a project change, so the page decrypted B's rows with A's key - and the
     // persist below then wrote A's key into B's entry.
     use_effect(use_reactive!(|project_id| {
         let Some(id) = project_id else { return };
@@ -117,8 +132,8 @@ pub fn use_project_store() -> ProjectStore {
         }
         let Some(k) = resolved else { return };
 
-        // Holding the key is what makes this device a member, and every way in — create, join
-        // modal, deep link, share link, Tricount import — passes through here. Reading `auth_ctx`
+        // Holding the key is what makes this device a member, and every way in - create, join
+        // modal, deep link, share link, Tricount import - passes through here. Reading `auth_ctx`
         // subscribes on purpose: when `me()` resolves later, an anonymous membership is upgraded.
         let account = auth_ctx();
         let account_key = account_key_ctx();
@@ -126,7 +141,15 @@ pub fn use_project_store() -> ProjectStore {
         spawn(async move {
             // Persisted before the membership write, which escrows whatever the store holds. A
             // fragment key that differs from the held one is kept only if it decrypts the project.
-            adopt_project_key(ls_ctx, id, k).await;
+            let adopted = adopt_project_key(ls_ctx, id, k).await;
+            // Once stored, the key has no business in the address bar, the browser history or
+            // whatever syncs it (docs/e2ee.md). A key that was refused stays, as the link was given.
+            #[cfg(target_arch = "wasm32")]
+            if adopted && url_fragment().is_some() {
+                crate::common::web_dom::clear_hash();
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            let _ = adopted;
             // `IdentityTaken` has already dropped the local `user_id`, so `stored_user_id()` goes
             // `None` and `ExpensesPage` reopens `UserSelectionModal` on its own. All that is left is
             // to say why, otherwise the picker reappears with no explanation.
@@ -143,14 +166,10 @@ pub fn use_project_store() -> ProjectStore {
                 ClaimOutcome::Ok => {}
             }
         });
-        #[cfg(target_arch = "wasm32")]
-        if url_fragment().is_none() {
-            crate::common::web_dom::replace_state_hash(&crate::crypto::key_to_fragment(&k));
-        }
     }));
 
     // Dropping the previous project's rows before the new sync lands saves a full decryption pass
-    // over them under the wrong key. Only on a real switch — going to the list keeps them.
+    // over them under the wrong key. Only on a real switch - going to the list keeps them.
     use_effect(use_reactive!(|project_id| {
         let loaded = live.peek().as_ref().map(|l| l.project_id);
         if let (Some(loaded), Some(want)) = (loaded, project_id) {
@@ -175,7 +194,7 @@ pub fn use_project_store() -> ProjectStore {
     // `use_reactive!`, like the two effects above, and for a sharper reason than they have: this
     // one runs first on `AppLayout`'s mount, where no project is open. Without a declared
     // dependency it would bail at the `let Some` before reading `sync`, subscribe to nothing, and
-    // never be woken again — the store would stay empty for the life of the app and every project
+    // never be woken again - the store would stay empty for the life of the app and every project
     // page would sit on its skeleton for ever.
     use_effect(use_reactive!(|project_id| {
         let Some(id) = project_id else { return };
@@ -248,7 +267,7 @@ pub fn use_project_store() -> ProjectStore {
         let Some(proj) = l.project else { return };
 
         // Both writes are expensive at scale (serialise the store, re-render every `ls_ctx`
-        // reader) and an unchanged revisit is the common case — hence the `_if_changed` variant.
+        // reader) and an unchanged revisit is the common case - hence the `_if_changed` variant.
         update_ls_if_changed(ls_ctx, |next| {
             set_project_cache(
                 next,
@@ -296,6 +315,7 @@ pub fn use_project_store() -> ProjectStore {
 
     use_revalidation(sync, is_online);
     use_recurring_materializer(recurring_data, data, key_ctx, is_online, ls_ctx, sync, flash_ctx);
+    use_conversion(live, recurring, key_ctx, is_online, sync);
 
     ProjectStore {
         sync,
@@ -305,11 +325,50 @@ pub fn use_project_store() -> ProjectStore {
         unusable,
         on_expenses_changed,
         recurring: recurring_data,
+        query,
+        pending_move,
     }
 }
 
+/// Converts the open project once per session when what it loaded still has rows in the format
+/// before docs/plans/participant-links-encryption.md - written before the conversion ran, or since
+/// by an older build. Once, so a row that cannot be converted does not refetch the project forever.
+fn use_conversion(
+    live: Signal<Option<LiveData>>,
+    recurring: Signal<Option<RecurringSnapshot>>,
+    key_ctx: Signal<Option<[u8; 32]>>,
+    is_online: Signal<bool>,
+    sync: Resource<Option<Result<For<ProjectSync>, ServerFnError>>>,
+) {
+    let mut attempted: Signal<std::collections::HashSet<Uuid>> = use_signal(Default::default);
+    use_effect(move || {
+        let (Some(key), true) = (key_ctx(), is_online()) else { return };
+        let needed = {
+            let live = live.read();
+            let recurring = recurring.read();
+            live.as_ref().and_then(|l| {
+                let project = l.project.as_ref()?;
+                let rules = recurring
+                    .as_ref()
+                    .filter(|r| r.project_id == l.project_id)
+                    .map_or(&[][..], |r| &r.rules[..]);
+                crate::conversion::needs_conversion(&key, project, &l.expenses, &l.payments, rules)
+                    .then_some(l.project_id)
+            })
+        };
+        let Some(id) = needed.filter(|id| !attempted.peek().contains(id)) else { return };
+        attempted.write().insert(id);
+        spawn(async move {
+            if crate::conversion::convert(key, id).await.is_ok() {
+                let mut sync = sync;
+                sync.restart();
+            }
+        });
+    });
+}
+
 /// Refetch on the two events that can have changed the project behind our back: the network coming
-/// back, and the app being foregrounded. Navigation deliberately does not — that is the point of
+/// back, and the app being foregrounded. Navigation deliberately does not - that is the point of
 /// the store.
 fn use_revalidation(sync: Resource<Option<Result<For<ProjectSync>, ServerFnError>>>, is_online: Signal<bool>) {
     // `is_online` starts `true` on every platform, so without the previous value the first run
@@ -327,7 +386,7 @@ fn use_revalidation(sync: Resource<Option<Result<For<ProjectSync>, ServerFnError
         }
     });
 
-    // Android has no reliable `visibilitychange` in a WebView, and this is not JS — the same hook
+    // Android has no reliable `visibilitychange` in a WebView, and this is not JS - the same hook
     // the deep-link listener uses to read the resume intent.
     #[cfg(any(target_os = "android", target_os = "ios"))]
     dioxus::mobile::use_wry_event_handler(move |event, _| {
@@ -341,7 +400,7 @@ fn use_revalidation(sync: Resource<Option<Result<For<ProjectSync>, ServerFnError
     // Unconditional hook with the target inside it: gating the `use_hook` itself would give the
     // wasm render one more hook than the SSR render.
     use_hook(move || {
-        // `visibilitychange` through web-sys, never `document::eval` — the CSP refuses
+        // `visibilitychange` through web-sys, never `document::eval` - the CSP refuses
         // `new Function` and the throw freezes the app (DOCUMENTATION §8).
         #[cfg(target_arch = "wasm32")]
         crate::common::web_dom::on_tab_visible(move || {
@@ -349,7 +408,7 @@ fn use_revalidation(sync: Resource<Option<Result<For<ProjectSync>, ServerFnError
             sync.restart();
         });
         // Named, not `let _`: `Resource` is a future, and `let _ =` on one reads as a dropped
-        // task (clippy::let_underscore_future). Nothing is being fired and forgotten — this
+        // task (clippy::let_underscore_future). Nothing is being fired and forgotten - this
         // branch exists only so `sync` counts as used where there is no tab to watch.
         #[cfg(not(target_arch = "wasm32"))]
         let _sync_unused_off_web = sync;

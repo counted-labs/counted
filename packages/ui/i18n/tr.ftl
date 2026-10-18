@@ -149,7 +149,7 @@ payment-method-invalid-characters = Satır sonlarını veya görünmez karakterl
 payment-method-limit = En fazla { $max } ödeme yöntemi kaydedebilirsin.
 payment-methods-saved = Ödeme bilgileri kaydedildi.
 payment-methods-offline = Ödeme bilgilerini kaydetmek için çevrimiçi olmalısın.
-payment-methods-stale = Ödeme bilgilerin başka bir cihazda değiştirildi. Yeniden yüklendi — lütfen tekrar dene.
+payment-methods-stale = Ödeme bilgilerin başka bir cihazda değiştirildi. Yeniden yüklendi - lütfen tekrar dene.
 payment-methods-key-missing = Ödeme bilgilerini yönetmek için yeniden giriş yap.
 settings-payment-methods-share-warning = Paylaşılan bir yöntem, projelerinin tüm üyelerine görünür.
 payment-method-share = Projelerimle paylaş
@@ -231,7 +231,6 @@ projects-filter-active = Etkin
 projects-filter-all = Tümü
 projects-count-label = Projeler
 projects-empty = Proje yok
-projects-empty-hint = Aşağıdaki düğmeyle bir proje oluştur
 projects-offline-banner = Çevrimdışı veriler - yenilemek için yeniden bağlan.
 demo-banner = Demo proje - salt okunur.
 demo-start-own = Kendi projeni oluştur
@@ -245,6 +244,67 @@ projects-no-local-data = Yerel veri yok
 projects-no-local-data-hint = Projelerini ilk kez yüklemek için giriş yap.
 projects-add = Proje ekle
 projects-create = Proje oluştur
+projects-personal-expense = Kişisel harcama
+personal-expense-banner = Harcamalarım'a eklendi
+personal-create-title = Kişisel projenizi oluşturun
+personal-create-hint = Tek başınıza ne harcadığınızı izleyin
+group-create-title = Ortak bir proje oluşturun
+group-create-hint = Harcamaları arkadaşlarınız ve ailenizle paylaşın
+personal-create-action = Oluştur
+personal-create-signup = Hesap oluştur
+personal-sheet-title = Kişisel projeniz
+personal-sheet-intro = Tek başınıza harcadıklarınızı not etmek için. İstatistiklerde gruplarınızla birlikte görünür.
+personal-sheet-point-alone = Tek üye: siz, hesap adınızla. Paylaşım bağlantısı yok.
+personal-sheet-point-encrypted = Diğer projeleriniz gibi cihazlarınızda şifrelenir.
+personal-sheet-point-stats = Gruplardaki paylarınız İstatistiklerde bu harcamalara eklenir.
+personal-default-name = Harcamalarım
+my-spending-prev-month = Önceki ay
+my-spending-next-month = Sonraki ay
+my-spending-spent = Harcadığınız
+my-spending-groups = Gruplar
+my-spending-income = Gelir
+my-spending-balance = Ay bakiyesi
+my-spending-unconverted = Başka para birimindeki paylar, bir kur bilinene kadar dışarıda kalır.
+my-spending-empty = Bu ay hiçbir şey yok
+my-spending-empty-hint = + ile bir harcama ekleyin. Gruplardaki paylarınız burada otomatik olarak görünür.
+my-spending-share-of = { $amount } içinden
+my-spending-uncounted = sayılmıyor
+payer-you = siz
+expense-received-by = alan:
+counted-switch = Harcamalarım içinde say
+counted-switch-on = Açık: payınız Harcamalarım içine eklenir
+counted-switch-off = Kapalı: payınız Harcamalarım içinde görünmez
+counted-groups = Sayılan gruplar
+counted-groups-intro = Bu gruplardaki payınız Harcamalarım içine ve bütçelere eklenir.
+counted-groups-converted = { $from }, { $to } birimine çevrildi
+counted-groups-encrypted = Bu seçim hesabınızla şifrelenir ve cihazlarınızda sizi izler.
+counted-groups-empty = Bu cihazda henüz grup yok.
+counted-groups-done = Tamam
+counted-save-failed = Bu seçim kaydedilemedi. Tekrar deneyin.
+tab-budget = Bütçe
+budget-title = Bütçeler
+budget-manage = Yönet
+budget-left = { $amount } kaldı
+budget-over = { $amount } aşıldı
+budget-empty = Bütçe yok
+budget-empty-hint = Her kategori için bir üst sınır belirleyin. Gruplardaki paylarınız da sayılır.
+budget-define = Bütçe belirle
+budget-sheet-title = Aylık bütçeler
+budget-sheet-intro = Payınız üzerinden: kişisel ve gruplar. Bir kategoriyi izlememek için boş bırakın.
+budget-average = Son 3 ay ort.: { $amount }
+budget-for = { $category } bütçesi
+budget-alert = %80’de beni uyar
+budget-alert-hint = Bu cihazda hesaplanır
+budget-invalid = { $category } için geçersiz tutar.
+budget-offline = Bütçeler yalnızca çevrimiçi kaydedilir. Yeniden bağlanıp tekrar deneyin.
+budget-alert-near = { $category }: ay bütçesinin %{ $percent } kadarı
+budget-alert-over = { $category }: ay bütçesi aşıldı
+personal-card-budget = { $month } · bütçe { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } sonuç
+       *[other] { $count } sonuç
+    } · { $total } · kişisel ve gruplar, tüm aylar
 projects-join = Bir projeye katıl
 projects-import-tricount = Tricount'tan içe aktar
 project-actions = Proje işlemleri
@@ -321,6 +381,7 @@ expenses-show-more = Daha fazla göster ({ $count } kaldı)
 expense-type-expense = Harcama
 expense-type-transfer = Transfer
 expense-type-gain = Gelir
+expense-type-group = Tür
 expense-paid-by = ödeyen:
 expense-sent-by = gönderen:
 expense-contributed-by = katkıda bulunan:
@@ -386,6 +447,23 @@ export-failed = Dışa aktarma başarısız: { $reason }
 history-expense-added = Harcama eklendi: { $name }
 history-expense-edited = Harcama düzenlendi: { $name }
 history-expense-deleted = Harcama silindi: { $name }
+move-expense = Bir projeye taşı
+move-expense-title = Şuraya taşı…
+move-current = Mevcut
+move-converted = { $currency }, ayın kuruyla çevrildi
+move-note-personal = Bir sonraki adımda kimin ödediğini ve kimin için olduğunu seçeceksiniz. Harcama Harcamalarım’dan çıkacak.
+move-note-group = Harcama tüm üyeler için { $project } projesinden çıkacak ve grubun bakiyesi yeniden hesaplanacak. Bir sonraki adımda kimin ödediğini ve kimin için olduğunu seçeceksiniz.
+move-banner = { $from } → { $to }
+move-submit = Taşı
+move-done = Harcama { $project } projesine taşındı
+move-delete-failed = Harcama diğer projeye eklendi ama hâlâ { $project } içinde: oradan silin.
+history-expense-moved = Harcama başka bir projeye taşındı: { $name }
+personal-badge = Kişisel
+move-members =
+    { $count ->
+        [one] { $count } üye
+       *[other] { $count } üye
+    }
 history-project-edited = Proje düzenlendi: { $name }
 history-name-changed = Ad: “{ $from }” → “{ $to }”
 history-description-added = Açıklama eklendi: “{ $value }”
@@ -399,11 +477,23 @@ expense-name-placeholder = Restoran, market…
 expense-actions = Harcama işlemleri
 expense-your-share = Senin payın
 expense-your-share-value = Senin payın: { $amount } { $currency }
+expense-share-percent = %{ $percent }
+expense-added-by = { $name } tarafından { $date } tarihinde eklendi
 expense-inconsistent-detail = Tutarlar tutmuyor: { $total } tutarındaki harcama için { $paid } ödendi, { $owed } borçlanıldı. Düzeltmek için harcamayı düzenle.
 missing-access-key = Erişim anahtarı eksik. Bu projeyi paylaşım bağlantısından aç.
 filter-all = Tümü
 filter-my-payments = Ödemelerim
 filter-my-debts = Borçlarım
+expense-filter-group = Filtre
+expenses-search = Harcama ara
+expenses-no-match = Eşleşen harcama yok.
+expenses-search-open = Ara
+expenses-search-clear = Aramayı temizle
+expenses-search-summary =
+    { $count ->
+        [one] { $count } sonuç
+       *[other] { $count } sonuç
+    } · { $total } · tüm aylar
 participants-shares-for = { $name } payları
 participants-amount-for = { $name } tutarı
 reimbursement-add = Hesaplaşma ekle
@@ -441,8 +531,8 @@ charts-expense-count =
 charts-nothing-to-show = Gösterilecek bir şey yok
 charts-my-share-skipped =
     { $count ->
-        [one] { $count } proje sayılmadı — katılımcı seçilmemiş veya verileri yüklenmemiş.
-       *[other] { $count } proje sayılmadı — katılımcı seçilmemiş veya verileri yüklenmemiş.
+        [one] { $count } proje sayılmadı - katılımcı seçilmemiş veya verileri yüklenmemiş.
+       *[other] { $count } proje sayılmadı - katılımcı seçilmemiş veya verileri yüklenmemiş.
     }
 
 ### Categories
@@ -516,6 +606,13 @@ payers-title-contributors = Katkıda bulunanlar
 debtors-title-debtors = Borçlular
 debtors-title-recipients = Alıcılar
 debtors-title-beneficiaries = Yararlananlar
+debtors-title-for = Kimin için
+debtors-title-recipient = Alıcı
+expense-people =
+    { $count ->
+        [one] { $count } kişi
+       *[other] { $count } kişi
+    }
 
 ### Welcome
 
@@ -648,6 +745,8 @@ invitation-decline = Reddet
 participants-you-label = Bu projedeki adın
 participants-you-badge = Sen
 participants-others = Diğer katılımcılar
+participants-removed = Kaldırılanlar
+participant-restore = Geri getir
 participants-empty = Aşağıdan katılımcı ekle.
 participants-duplicate = “{ $name }” zaten listede.
 participants-input-label = Arkadaş ekle ya da ad yaz
@@ -792,3 +891,16 @@ error-recurring-not-found = Bu tekrarlanan harcama artık yok.
 error-recurring-stale = Biri bu arada bu tekrarlanan harcamayı değiştirdi. Yeniden yüklendi: kontrol et ve yeniden kaydet.
 error-too-many-recurring = Bu projede zaten 50 tekrarlanan harcama var. Yenisini eklemek için gerekmeyen birini durdur.
 error-user-in-recurring = Bu katılımcı tekrarlanan bir harcamanın parçası. Önce onu oradan çıkar ya da harcamayı durdur.
+
+home-owed-to-you = Size borçlu olunan
+home-you-owe = Borcunuz
+home-details-show = Ayrıntıları göster
+home-details-hide = Ayrıntıları gizle
+home-all-settled = Her şey ödendi
+home-pay = Öde
+home-remind = Hatırlat
+home-remind-message = Küçük bir hatırlatma: { $project } içinde hâlâ ödenmemiş geri ödemeler var.
+home-row-owed = size borçlu
+home-row-owe = borcunuz
+home-row-settled = Güncel
+home-totals-partial = Döviz kuru olmayan projeler hariç

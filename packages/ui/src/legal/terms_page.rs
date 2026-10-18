@@ -4,7 +4,7 @@ use crate::tid;
 use crate::common::{AppHeader, MailLink};
 use crate::route::Route;
 
-/// Terms of use, extracted to keys but translated only into `fr` and `en` — see
+/// Terms of use, extracted to keys but translated only into `fr` and `en` - see
 /// `LegalNoticePage` for why the other locales deliberately fall back to English.
 #[component]
 pub fn TermsPage() -> Element {

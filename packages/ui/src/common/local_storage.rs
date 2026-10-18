@@ -13,7 +13,7 @@ pub struct LocalStorageState {
     pub projects: Vec<LocalStorageProject>,
     #[serde(default)]
     pub onboarding_seen: bool,
-    /// Invisible to SSR like `onboarding_seen` — read it post-mount or hydration breaks.
+    /// Invisible to SSR like `onboarding_seen` - read it post-mount or hydration breaks.
     #[serde(default)]
     pub show_archived: bool,
     #[serde(default)]
@@ -23,7 +23,7 @@ pub struct LocalStorageState {
     #[serde(default)]
     pub account_key: Option<String>,
     /// Chosen UI language, or `None` to follow `Accept-Language`. Invisible to SSR like
-    /// `onboarding_seen` — the *cookie* is what the server reads; this is the native store and the
+    /// `onboarding_seen` - the *cookie* is what the server reads; this is the native store and the
     /// recovery path when the cookie is cleared. Applied post-mount, never on the first render.
     #[serde(default)]
     pub language: Option<String>,
@@ -56,7 +56,7 @@ pub struct LocalStorageProject {
     pub user_id: Option<i32>,
     /// Anonymous membership, set when this device joined without an account. Random and
     /// per-project: a reused id would let the server group a person's projects together. Only ever
-    /// sent in a request body — never a URL, which nginx logs.
+    /// sent in a request body - never a URL, which nginx logs.
     #[serde(default)]
     pub anon_member_id: Option<Uuid>,
     #[serde(default)]
@@ -71,21 +71,25 @@ pub struct LocalStorageProject {
     pub cached_payments: Option<Vec<Payment>>,
     /// The `data_version` the rows above were written at, sent back on the next open so the server
     /// can answer "unchanged". Absent means "no usable cache", which a truncated cache also
-    /// reports — see [`set_project_cache`].
+    /// reports - see [`set_project_cache`].
     #[serde(default)]
     pub cached_data_version: Option<i64>,
     /// The account whose `account_projects` row this entry was last seen in. What lets
     /// reconciliation tell "the account never had this" (push it) from "the account left it on
-    /// another device" (forget it) — see `account_sync::left_elsewhere`. Keyed by account rather
+    /// another device" (forget it) - see `account_sync::left_elsewhere`. Keyed by account rather
     /// than a flag so a different account signing in here still inherits the list.
     #[serde(default)]
     pub synced_account: Option<Uuid>,
+    /// This device has run `conversion::convert` on the project once: an account holder's devices
+    /// convert every project they hold, not only those opened. Goes with that module.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub converted: bool,
 }
 
 /// How many expenses are cached per project. **Web is the only target with a ceiling.**
 ///
 /// localStorage is a hard ~5 MB per origin charged in UTF-16 units, so ASCII JSON costs two bytes
-/// per character: a 2000-expense project is ~2.8 MB of JSON, ~5.6 MB of quota — over the wall, and
+/// per character: a 2000-expense project is ~2.8 MB of JSON, ~5.6 MB of quota - over the wall, and
 /// unraisable (IndexedDB/Cache/OPFS have a different quota, unreachable from here). So the web
 /// cache is bounded by construction: 300 expenses and their payments is ~450 KB and cannot grow
 /// with the project. Native writes a plain file, no quota, caches everything.
@@ -104,10 +108,14 @@ pub fn read_from_ls() -> LocalStorageState {
     read_json(LS_KEY)
 }
 
+pub fn remove_quarantined_ls() {
+    super::persist::remove_quarantine(LS_KEY);
+}
+
 /// True when everything but the caches reached storage.
 ///
 /// There is no bound across projects, so enough of them at the per-project ceiling fill the web
-/// quota, and a failed write used to lose whatever it carried — a newly joined project's key
+/// quota, and a failed write used to lose whatever it carried - a newly joined project's key
 /// lived in memory only and was gone on reload. The retry drops every cached row: keys, user ids
 /// and anonymous memberships are a few hundred bytes a project, and the caches refill on the next
 /// sync.
@@ -144,7 +152,7 @@ fn report_unsaved() {
 /// The base is `read_from_ls()`, never the `Signal`: the signal is seeded once at mount
 /// (`app_contexts::use_app_contexts`) and never re-read, so any writer that serialised it back to
 /// disk overwrote whatever another writer had put there since. That is how project keys and
-/// `anon_member_id`s went missing — `use_project_store` wrote a key resolved from a share link to
+/// `anon_member_id`s went missing - `use_project_store` wrote a key resolved from a share link to
 /// disk alone, and the next signal-based write erased it.
 pub fn update_ls(mut ls_ctx: Signal<LocalStorageState>, f: impl FnOnce(&mut LocalStorageState)) {
     let mut state = read_from_ls();
@@ -158,7 +166,7 @@ pub fn update_ls(mut ls_ctx: Signal<LocalStorageState>, f: impl FnOnce(&mut Loca
 /// [`update_ls`], but writes nothing when the mutation changed nothing.
 ///
 /// Only for the hot paths: serialising the store and notifying every `ls_ctx` reader is expensive
-/// at scale, and an unchanged revisit is the common case. `peek` on purpose — subscribing here
+/// at scale, and an unchanged revisit is the common case. `peek` on purpose - subscribing here
 /// would re-run the caller's effect on its own write.
 pub fn update_ls_if_changed(
     mut ls_ctx: Signal<LocalStorageState>,
@@ -196,7 +204,7 @@ pub fn upsert_project(state: &mut LocalStorageState, project_id: Uuid, user_id: 
 /// stored `user_id` is `None`.
 ///
 /// Called when the server refuses a claim because another account holds that participant. Nothing
-/// else is touched — the key, the cache and the anonymous membership all stay.
+/// else is touched - the key, the cache and the anonymous membership all stay.
 pub fn clear_user_id(state: &mut LocalStorageState, project_id: Uuid) {
     if let Some(entry) = state.projects.iter_mut().find(|p| p.project_id == project_id) {
         entry.user_id = None;
@@ -217,11 +225,17 @@ pub fn remove_project(state: &mut LocalStorageState, project_id: Uuid) {
     }
 }
 
-/// Records that `account_id`'s `account_projects` row for each of these projects exists — at the
+/// Records that `account_id`'s `account_projects` row for each of these projects exists - at the
 /// time of writing. Only touches entries this device holds; it never creates one.
 pub fn mark_synced(state: &mut LocalStorageState, project_ids: &[Uuid], account_id: Uuid) {
     for entry in state.projects.iter_mut().filter(|p| project_ids.contains(&p.project_id)) {
         entry.synced_account = Some(account_id);
+    }
+}
+
+pub fn mark_converted(state: &mut LocalStorageState, project_id: Uuid) {
+    if let Some(entry) = state.projects.iter_mut().find(|p| p.project_id == project_id) {
+        entry.converted = true;
     }
 }
 
@@ -236,7 +250,7 @@ pub fn key_of(entry: &LocalStorageProject) -> Option<[u8; 32]> {
 }
 
 /// Same, looked up by id. Prefer [`key_of`] when the caller already holds a `read_from_ls()`
-/// result — this reads the whole store again.
+/// result - this reads the whole store again.
 pub fn project_key(project_id: Uuid) -> Option<[u8; 32]> {
     read_from_ls().projects.iter().find(|p| p.project_id == project_id).and_then(key_of)
 }
@@ -246,7 +260,7 @@ pub fn set_cached_projects_list(state: &mut LocalStorageState, list: Vec<Project
     state.cached_projects_list = Some(list);
 }
 
-/// The most recent `max` expenses and their payments. Recency is by id — `expenses.id` is a
+/// The most recent `max` expenses and their payments. Recency is by id - `expenses.id` is a
 /// `SERIAL`, so a higher id is later whatever the user-supplied date says. `None` on truncation,
 /// which is how the caller knows the cache no longer covers the whole project.
 fn most_recent(
@@ -293,10 +307,10 @@ pub fn set_project_cache(
 pub fn user_color_class(user_id: i32) -> &'static str {
     const COLORS: &[&str] = &[
         "bg-primary",
-        "bg-secondary",
+        "bg-[oklch(62%_0.14_300)]",
         "bg-accent",
         "bg-info",
-        "bg-success",
+        "bg-[oklch(70%_0.15_350)]",
         "bg-warning",
         "bg-error",
     ];
@@ -363,10 +377,22 @@ mod tests {
         use super::*;
         use shared::{EncryptedPair, ProjectStatus};
 
-        // with_data_dir takes the process-wide env_lock — offline_queue and export set the same
+        // with_data_dir takes the process-wide env_lock - offline_queue and export set the same
         // COUNTED_DATA_DIR, so a module-local lock would not keep them apart.
         use crate::common::env_lock;
         use crate::common::test_fixtures::with_data_dir;
+
+        #[test]
+        fn logout_removes_the_quarantined_copy() {
+            with_data_dir("quarantine", |dir| {
+                std::fs::write(storage_file(), "{not json").unwrap();
+                let _ = read_from_ls();
+                let quarantine = dir.join("counted_local_storage.json.corrupt");
+                assert!(quarantine.exists());
+                remove_quarantined_ls();
+                assert!(!quarantine.exists());
+            });
+        }
 
         fn make_project_dto(id: Uuid) -> ProjectDto {
             ProjectDto {
@@ -439,7 +465,7 @@ mod tests {
             assert!(p.iter().all(|x| kept.contains(&x.expense_id)), "no orphaned payments");
         }
 
-        /// Exactly at the bound is not truncation — the off-by-one here would silently disable the
+        /// Exactly at the bound is not truncation - the off-by-one here would silently disable the
         /// version check for every project of exactly that size.
         #[test]
         fn exactly_at_the_bound_is_still_complete() {
@@ -512,7 +538,7 @@ mod tests {
         /// `ls_ctx` is seeded once at mount and never re-read, so a writer that serialised the
         /// signal back to disk overwrote whatever another writer had put there since. The key
         /// resolved from a share link was written to disk alone (`use_project_store`), and the
-        /// account-projects sync — which runs on every projects-page load while signed in — then
+        /// account-projects sync - which runs on every projects-page load while signed in - then
         /// wrote its stale snapshot over it.
         ///
         /// A `VirtualDom` because `update_ls` takes a `Signal`, which needs a runtime to exist.
@@ -815,7 +841,7 @@ mod tests {
                 write_to_ls(&initial);
 
                 // Project A's detail page loads: writes cache for A via read_from_ls.
-                // Twice, simulating a reactive re-run — it must be idempotent.
+                // Twice, simulating a reactive re-run - it must be idempotent.
                 for _ in 0..2 {
                     let mut state = read_from_ls();
                     set_project_cache(
@@ -892,8 +918,8 @@ mod tests {
     #[test]
     fn test_user_color_class_valid_values() {
         const VALID: &[&str] = &[
-            "bg-primary", "bg-secondary", "bg-accent", "bg-info",
-            "bg-success", "bg-warning", "bg-error",
+            "bg-primary", "bg-[oklch(62%_0.14_300)]", "bg-accent", "bg-info",
+            "bg-[oklch(70%_0.15_350)]", "bg-warning", "bg-error",
         ];
         for id in 0..20i32 {
             assert!(VALID.contains(&user_color_class(id)), "unexpected class for id {id}");

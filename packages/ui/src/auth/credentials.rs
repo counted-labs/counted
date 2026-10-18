@@ -1,5 +1,5 @@
-//! The password stays here. Both entry points turn it into what the server is allowed to see —
-//! a login proof — and into the account key, which never leaves the client at all.
+//! The password stays here. Both entry points turn it into what the server is allowed to see -
+//! a login proof - and into the account key, which never leaves the client at all.
 
 use api::auth::auth_controller::{login, login_salt, me, register, set_keypair};
 use dioxus::fullstack::Json;
@@ -58,7 +58,7 @@ pub async fn sign_in(
 
 /// Seeds the keypair of an account that predates it. The server keeps the first one it is given,
 /// so the account is re-read afterwards rather than trusted: another device may have won. Any
-/// failure leaves the account as it was — the next login tries again.
+/// failure leaves the account as it was - the next login tries again.
 pub async fn ensure_keypair(account: Account, account_key: &[u8; 32]) -> Account {
     if account.public_key.is_some() {
         return account;

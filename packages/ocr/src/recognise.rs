@@ -19,7 +19,7 @@ pub const REC_H: u32 = 48;
 ///
 /// `rec.inference.yml` names 320 as the nominal width, but the width axis is dynamic and padding
 /// every crop to a fixed 320 measured four times slower than padding to what the crop actually
-/// needs — most receipt lines warp to ~105-140px.
+/// needs - most receipt lines warp to ~105-140px.
 const MAX_W: usize = 1024;
 /// Recognition runs one crop at a time.
 ///
@@ -29,7 +29,7 @@ const MAX_W: usize = 1024;
 /// timestep. One crop per run pays for exactly the width it has, and needs no sorting.
 const BATCH: usize = 1;
 
-/// Symmetric, so channel order does not affect the arithmetic — but the model was trained on BGR
+/// Symmetric, so channel order does not affect the arithmetic - but the model was trained on BGR
 /// features, so `to_nchw_bgr` still matters.
 const MEAN: [f32; 3] = [0.5, 0.5, 0.5];
 const STD: [f32; 3] = [0.5, 0.5, 0.5];
@@ -90,7 +90,7 @@ fn run_batch(
     let width = crops.iter().map(|c| c.width() as usize).max()?.next_multiple_of(8).max(8);
 
     // Zero after normalisation is mid-grey, which is exactly what PaddleOCR's `resize_norm_img`
-    // pads with — so an unfilled tail is neutral, not black.
+    // pads with - so an unfilled tail is neutral, not black.
     let mut input = NdTensor::<f32, 4>::zeros([crops.len(), 3, REC_H as usize, width]);
     for (n, crop) in crops.iter().enumerate() {
         let strip = prep::to_nchw_bgr(crop, MEAN, STD);
@@ -110,7 +110,7 @@ fn run_batch(
 
 /// Greedy CTC: argmax per timestep, collapse runs of the same class, drop the blank.
 ///
-/// The model already emits probabilities — the spike measured each timestep summing to 1 — so the
+/// The model already emits probabilities - the spike measured each timestep summing to 1 - so the
 /// winning value is used as a confidence directly, with no softmax here.
 pub fn ctc_greedy(logits: NdTensorView<f32, 3>, n: usize, charset: &[char]) -> Recognised {
     let [_, steps, classes] = logits.shape();

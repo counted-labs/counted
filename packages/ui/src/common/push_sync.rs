@@ -70,7 +70,7 @@ pub fn use_push_registration() {
 
 /// Called before `logout()`, while the session cookie still authenticates the request. Failure is
 /// ignored: the token stays registered until the vendor reports it dead or the account signs in
-/// again on this device, and neither leaks anything — notifications carry no account data.
+/// again on this device, and neither leaks anything - notifications carry no account data.
 pub async fn unregister_push() {
     if native_push().is_none() {
         return;

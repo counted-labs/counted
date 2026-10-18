@@ -15,9 +15,9 @@ pub struct DropdownButtonProps {
     /// Close the menu when a menu item is clicked. Set false for menus with toggles.
     #[props(default = true)]
     close_on_select: bool,
-    /// DOM id for the trigger. E2E selects on it — `aria-label` is French copy and changes freely.
+    /// DOM id for the trigger. E2E selects on it - `aria-label` is French copy and changes freely.
     id: Option<String>,
-    /// For callers with another way in — e.g. a long press on the surrounding card. Omitted, the
+    /// For callers with another way in - e.g. a long press on the surrounding card. Omitted, the
     /// trigger button is the only way to open it.
     open: Option<Signal<bool>>,
 }
@@ -52,6 +52,7 @@ pub fn DropdownButton(props: DropdownButtonProps) -> Element {
             onkeydown: move |e| {
                 let key = e.key();
                 if key == Key::Escape && is_open() {
+                    e.prevent_default();
                     e.stop_propagation();
                     is_open.set(false);
                 } else if key == Key::Enter || key == Key::Character(" ".to_string()) {
@@ -81,7 +82,7 @@ pub fn DropdownButton(props: DropdownButtonProps) -> Element {
             if is_open() {
                 ul {
                     class: "{menu_class}",
-                    // Unconditional — the one place keeping menu actions from reaching a clickable
+                    // Unconditional - the one place keeping menu actions from reaching a clickable
                     // parent (ProjectCard navigating). Applies to toggle menus too.
                     onclick: move |e| {
                         e.stop_propagation();
@@ -101,14 +102,16 @@ pub struct DropdownItemProps {
     pub variant: String,
     pub label: String,
     pub onclick: EventHandler<()>,
-    /// DOM id for the item button — see `DropdownButtonProps::id`.
+    /// DOM id for the item button - see `DropdownButtonProps::id`.
     pub id: Option<String>,
+    pub icon: Option<Element>,
 }
 
 #[component]
 pub fn DropdownItem(props: DropdownItemProps) -> Element {
     let text_class = match props.variant.as_str() {
         "error" => "text-error",
+        "primary" if props.icon.is_some() => "text-primary",
         _ => "",
     };
     rsx! {
@@ -118,6 +121,9 @@ pub fn DropdownItem(props: DropdownItemProps) -> Element {
                 r#type: "button",
                 class: "{text_class}",
                 onclick: move |_| props.onclick.call(()),
+                if let Some(icon) = props.icon.clone() {
+                    {icon}
+                }
                 "{props.label}"
             }
         }
@@ -211,7 +217,7 @@ mod tests {
         let ids = card.open_menu();
         card.dom.runtime().handle_event("click", click(), ids[2]);
 
-        assert!(card.item.get(), "the item handler must fire — otherwise the dispatch missed it");
+        assert!(card.item.get(), "the item handler must fire - otherwise the dispatch missed it");
         assert!(!card.outer.get(), "a menu click must not bubble into the card's onclick");
     }
 
@@ -231,7 +237,7 @@ mod tests {
         let mut card = Card::new();
 
         let ids = card.open_menu();
-        // [card, dropdown root] — the menu adds no touchstart handler of its own, so the item
+        // [card, dropdown root] - the menu adds no touchstart handler of its own, so the item
         // button's id is the one the click listeners named.
         let guards = touch_ids(card.dom.rebuild_to_vec());
         assert_eq!(guards.len(), 2, "expected the card and the dropdown root to guard touchstart");

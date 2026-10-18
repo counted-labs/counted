@@ -9,7 +9,7 @@ fn solid(w: u32, h: u32, colour: [u8; 3]) -> RgbImage {
 }
 
 /// The regression this function was rewritten for. `limit_side_len` is a floor on the **short**
-/// side, so a photo already above it is passed through at native size — PaddleOCR's `'min'` mode
+/// side, so a photo already above it is passed through at native size - PaddleOCR's `'min'` mode
 /// sets `ratio = 1.` in that branch. Read as a ceiling on the long edge, this same 1200x1600 input
 /// used to be detected at 720x960: 36% of the pixels, at the one stage that decides recall.
 #[test]

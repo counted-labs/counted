@@ -23,6 +23,12 @@ Pas de pub ni de traqueur, pas d'abonnement, pas de version payante, pas de plaf
 • Plus de 150 devises, converties au taux mensuel de la Commission européenne
 • Statistiques par catégorie, par personne et mois par mois
 • Historique de ce qui a été ajouté, modifié ou supprimé
+• Recherche par nom, note ou catégorie, faite sur votre appareil
+• Avec un compte, un projet perso « Mes dépenses » : vos dépenses seul et votre part des groupes, mois par mois
+• Déplacement d’une dépense d’un projet à un autre
+• Budgets mensuels par catégorie sur votre vraie part, avertissement à 80 % calculé sur votre appareil
+• Dès l’accueil, ce qu’on vous doit et ce que vous devez dans tous vos projets, calculé sur votre appareil
+• Raccourci « Dépense perso » d’un appui long sur l’icône de l’app
 • Hors connexion : consultez et ajoutez des dépenses sans réseau
 • Export CSV et JSON en un clic
 • Coordonnées de paiement (IBAN, PayPal, Wero, Lydia, Revolut…) chiffrées comme le reste

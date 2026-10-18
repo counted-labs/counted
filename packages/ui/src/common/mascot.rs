@@ -6,17 +6,17 @@
 //! 105 degrees about the back rim edge (110..190 at y 75.4), which is why the two share that edge.
 //! Every face is stroked in its own paint at 16 with round joins: that is what rounds the corners.
 //!
-//! Poses differ only in the lid, the face and the object beside the box — never a second copy of
+//! Poses differ only in the lid, the face and the object beside the box - never a second copy of
 //! the box.
 
 use dioxus::prelude::*;
 
 /// Onboarding, empty and success states inside a page. Default.
 ///
-/// An open lid renders at `size * 350 / 300`, so 120 is already 140 CSS px tall — a larger hero
+/// An open lid renders at `size * 350 / 300`, so 120 is already 140 CSS px tall - a larger hero
 /// size pushed the welcome page's last row under the Android navigation bar.
 pub const MASCOT_EMPTY: u32 = 120;
-/// Compact slots — a single empty chart, a card.
+/// Compact slots - a single empty chart, a card.
 pub const MASCOT_INLINE: u32 = 72;
 
 const INK: &str = "#2E3236";

@@ -106,7 +106,7 @@ pub struct RecurringPayload {
     #[serde(default)]
     pub paused: bool,
     pub seed: Uuid,
-    /// Replaces `recurring_expenses.author_id` — see docs/plans/participant-links-encryption.md.
+    /// Replaces `recurring_expenses.author_id` - see docs/plans/participant-links-encryption.md.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub author_id: Option<i32>,
     #[serde(flatten)]
@@ -186,6 +186,7 @@ mod tests {
             payload: encrypt_json(&key, &payload).unwrap(),
             version: 3,
             created_at: NaiveDateTime::default(),
+            listed_participants: false,
         };
         let rules = decrypt_rules(&key, &[row]);
         assert_eq!(rules.len(), 1);
@@ -203,6 +204,7 @@ mod tests {
             payload,
             version: 0,
             created_at: NaiveDateTime::default(),
+            listed_participants: false,
         };
         assert!(decrypt_rules(&test_key(), &[row]).is_empty());
     }

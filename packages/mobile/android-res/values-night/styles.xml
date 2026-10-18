@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark-mode variant of values/styles.xml, so every item there is repeated here. The parent is
+         the point: from targetSdk 33 the WebView answers prefers-color-scheme from the activity
+         theme's isLightTheme, so under Theme.AppCompat.Light the CSS never sees dark and the app
+         stays light whatever the system says. -->
+    <style name="AppTheme" parent="@style/Theme.AppCompat.NoActionBar">
+        <item name="windowActionModeOverlay">true</item>
+        <item name="android:windowSoftInputMode">adjustResize</item>
+        <!-- Light icons on the dark ground. -->
+        <item name="android:windowLightStatusBar">false</item>
+        <!-- #1B221F is the sRGB of the counted-dark color-base-200 token (oklch(24.5% 0.012 165)). -->
+        <item name="android:windowBackground">#1B221F</item>
+    </style>
+</resources>

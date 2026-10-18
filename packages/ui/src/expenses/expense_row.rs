@@ -1,28 +1,29 @@
 //! One expense row: swipe left to delete, right to edit. Separate from `expenses_tab` because the
-//! drag offset must be a *per-row* signal — one on the list re-renders every row per pointermove.
+//! drag offset must be a *per-row* signal - one on the list re-renders every row per pointermove.
 //!
 //! **Why pointer events are affordable.** On mobile each dispatched event costs a *synchronous*
 //! XHR to wry's custom protocol (`dioxus-interpreter-js`, `handleVirtualdomEventSync` →
-//! `xhr.open(..., false)`) — why `ProjectCard` refuses `ontouchmove`. `touch-action: pan-y` on the
+//! `xhr.open(..., false)`) - why `ProjectCard` refuses `ontouchmove`. `touch-action: pan-y` on the
 //! foreground is the escape: a vertical drag is claimed by the UA at once, firing `pointercancel`,
 //! so scrolling costs a handful of events rather than one per frame. Horizontal drags are never
 //! claimed, so moves flow only for the ~300ms of a deliberate swipe.
 //!
 //! Touch events cannot do this: `TouchPoint::identifier()` is not `pub` in dioxus-html 0.7.9, so a
 //! touch cannot be tracked across events. `PointerData::pointer_id()` can. It also gates the web
-//! build out — `pointer_type()` is `"mouse"` there, and a mouse never enters the state machine.
+//! build out - `pointer_type()` is `"mouse"` there, and a mouse never enters the state machine.
 
 use dioxus::prelude::*;
 use crate::tid;
 
-use crate::common::{haptic, Avatar, Haptic, SizeClass};
+use crate::common::{haptic, Haptic};
+use crate::expenses::expense_search::Marked;
 use crate::icons::{PencilIcon, RepeatIcon, TrashIcon, ICON_ACTION};
 
 /// How far the finger must travel before a release commits the action.
 const SWIPE_THRESHOLD: f64 = 72.0;
 /// Movement before the gesture is claimed for an axis. Below it, this is still a tap.
 const AXIS_SLOP: f64 = 10.0;
-/// Gestures this close to the left edge belong to the OS back-swipe — not enabled in any build
+/// Gestures this close to the left edge belong to the OS back-swipe - not enabled in any build
 /// today (docs/mobile-navigation.md), but a row must not eat it the day it is.
 const EDGE_GUARD: f64 = 24.0;
 /// Never further than the panel behind it is wide (`w-20` = 5rem = 80px), plus overshoot so the
@@ -31,7 +32,7 @@ const MAX_PULL: f64 = 96.0;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 enum Axis {
-    /// Still within the slop — could yet become a tap, a scroll or a swipe.
+    /// Still within the slop - could yet become a tap, a scroll or a swipe.
     Undecided,
     /// Ours: the row follows the finger.
     Horizontal,
@@ -74,7 +75,7 @@ fn clamp_pull(dx: f64, can_edit: bool, can_delete: bool) -> f64 {
     dx.clamp(-MAX_PULL, MAX_PULL)
 }
 
-/// Right is edit, left is delete — the sides the affordances are painted on.
+/// Right is edit, left is delete - the sides the affordances are painted on.
 fn swipe_action(dx: f64, can_edit: bool, can_delete: bool) -> Option<SwipeAction> {
     let pull = clamp_pull(dx, can_edit, can_delete);
     if pull >= SWIPE_THRESHOLD {
@@ -92,7 +93,7 @@ fn affordance_opacity(pull: f64) -> f64 {
 }
 
 /// Whether the two swipe panels are in the tree at all. They are 11 of the row's 22 elements and
-/// fully transparent at rest — 22 000 unseen DOM nodes on a 2000-expense project. They exist only
+/// fully transparent at rest - 22 000 unseen DOM nodes on a 2000-expense project. They exist only
 /// while a gesture is live; `settling` keeps them through the glide home so the row is never seen
 /// sliding over an empty gutter.
 fn affordances_mounted(dragging: bool, settling: bool) -> bool {
@@ -106,24 +107,38 @@ pub struct ExpenseRowProps {
     /// Already-formatted "Dépense payée par Alice" line.
     pub subtitle: String,
     pub emoji: String,
-    /// Always in `currency` — an expense entered in another currency was converted at write time.
+    /// Always in `currency` - an expense entered in another currency was converted at write time.
     pub amount: f64,
     pub currency: String,
     /// `Some((amount, code))` when the expense was entered in another currency, shown under the
     /// total as what was actually paid. The rate itself is on the detail page, not here.
     pub source: Option<(f64, String)>,
-    /// Payments no longer adding up to the total — badged, never blocked.
+    /// Payments no longer adding up to the total - badged, never blocked.
     pub inconsistent: bool,
     /// "Mes dettes" filter only: this user's share, shown under the total. Every other call site
     /// omits it.
     pub my_debt: Option<f64>,
+    /// Typed search words, folded: their matches are marked in the name.
+    #[props(default)]
+    pub highlight: Vec<String>,
+    /// The category label, when the search matched it and not the name.
+    #[props(default)]
+    pub matched_category: Option<String>,
+    /// "Mes dépenses": the group a share comes from, badged ahead of the subtitle.
+    #[props(default)]
+    pub group: Option<String>,
+    /// "Mes dépenses": under the amount, what it is a share of, or that it is not counted.
+    #[props(default)]
+    pub note: Option<String>,
     #[props(default)]
     pub recurring: bool,
     #[props(default)]
     pub estimate: bool,
+    #[props(default)]
+    pub income: bool,
     pub can_edit: bool,
     pub can_delete: bool,
-    /// A tap or Enter/Space — navigation is the parent's job, so this row needs no router.
+    /// A tap or Enter/Space - navigation is the parent's job, so this row needs no router.
     pub on_open: EventHandler<()>,
     pub on_edit: EventHandler<()>,
     pub on_delete: EventHandler<()>,
@@ -138,7 +153,7 @@ pub fn ExpenseRow(props: ExpenseRowProps) -> Element {
     // the row would also navigate.
     let mut swiped = use_signal(|| false);
     // Whether the pull is currently past the threshold. Held so the haptic fires on the *crossing*
-    // rather than on every move event past it — a buzz per frame is what "too much haptics" is.
+    // rather than on every move event past it - a buzz per frame is what "too much haptics" is.
     let mut armed = use_signal(|| false);
 
     let expense_id = props.expense_id;
@@ -193,7 +208,7 @@ pub fn ExpenseRow(props: ExpenseRowProps) -> Element {
                 }
             }
             div {
-                // `bg-base-100` is opaque — it is what hides the two panels at rest. `select-none`
+                // `bg-base-100` is opaque - it is what hides the two panels at rest. `select-none`
                 // stops a drag becoming a text selection; `touch-action: pan-y` is the whole
                 // performance story (module docs).
                 class: "relative flex items-center gap-3 p-3 bg-base-100 select-none cursor-pointer hover:bg-base-200 transition-colors",
@@ -266,7 +281,7 @@ pub fn ExpenseRow(props: ExpenseRowProps) -> Element {
                         None => {}
                     }
                 },
-                // The UA claimed it for scrolling and sends nothing further for this pointer —
+                // The UA claimed it for scrolling and sends nothing further for this pointer -
                 // the only chance to put the row back.
                 onpointercancel: move |_| release(),
                 onclick: move |_| {
@@ -283,19 +298,27 @@ pub fn ExpenseRow(props: ExpenseRowProps) -> Element {
                         props.on_open.call(());
                     }
                 },
-                Avatar {
-                    initials: props.emoji.clone(),
-                    color_class: "bg-transparent".to_string(),
-                    size: SizeClass::W10,
-                }
+                span { class: "size-10 shrink-0 flex items-center justify-center text-2xl leading-none", aria_hidden: "true", "{props.emoji}" }
                 div { class: "flex-1 min-w-0",
                     p { class: "font-medium flex items-center gap-1.5 min-w-0",
-                        span { class: "truncate", "{props.name}" }
+                        span { class: "truncate",
+                            Marked { text: props.name.clone(), words: props.highlight.clone() }
+                        }
                         if props.recurring {
                             span { class: "shrink-0 text-primary", title: tid!("occurrence-recurring"), aria_label: tid!("occurrence-recurring"), RepeatIcon { size: 14 } }
                         }
                     }
-                    p { class: "text-xs text-base-content/70", "{props.subtitle}" }
+                    p { class: "text-xs text-base-content/70 flex items-center gap-1.5 min-w-0",
+                        if let Some(group) = props.group.clone() {
+                            span { class: "badge badge-xs badge-soft badge-success font-semibold shrink-0 whitespace-nowrap", "{group}" }
+                        }
+                        span { class: "truncate",
+                        "{props.subtitle}"
+                        if let Some(category) = props.matched_category.clone() {
+                            Marked { text: format!(" · {category}"), words: props.highlight.clone() }
+                        }
+                        }
+                    }
                 }
                 div { class: "shrink-0 flex items-center gap-2",
                     if props.inconsistent {
@@ -307,22 +330,25 @@ pub fn ExpenseRow(props: ExpenseRowProps) -> Element {
                         }
                     }
                     // A flex *item*, so `items-center` above centres the badge against the whole
-                    // of it — one line or two.
+                    // of it - one line or two.
                     div { class: "flex flex-col items-end leading-tight",
                         if props.estimate {
                             span { class: "badge badge-warning badge-soft badge-xs mb-0.5", {tid!("estimate-badge")} }
                         }
-                        p { class: "text-sm font-semibold", "{props.amount:.2} {props.currency}" }
+                        p { class: "text-sm font-semibold", if props.income { {crate::common::signed_amount(props.amount, &props.currency)} } else { {crate::common::amount(props.amount, &props.currency)} } }
                         if let Some((source_amount, source_currency)) = props.source.clone() {
-                            p { class: "text-xs text-base-content/60", "{source_amount:.2} {source_currency}" }
+                            p { class: "text-xs text-base-content/60", {crate::common::amount(source_amount, &source_currency)} }
+                        }
+                        if let Some(note) = props.note.clone() {
+                            p { class: "text-xs text-base-content/60", "{note}" }
                         }
                         if let Some(debt) = props.my_debt {
-                            // Bare number — the label lives in the a11y name, not on screen.
+                            // Bare number - the label lives in the a11y name, not on screen.
                             p {
                                 class: "text-xs text-success/70",
                                 title: tid!("expense-your-share"),
-                                aria_label: tid!("expense-your-share-value", amount: format!("{debt:.2}"), currency: props.currency.clone()),
-                                "{debt:.2} {props.currency}"
+                                aria_label: tid!("expense-your-share-value", amount: crate::common::number(debt), currency: props.currency.clone()),
+                                {crate::common::amount(debt, &props.currency)}
                             }
                         }
                     }
@@ -405,7 +431,7 @@ mod tests {
     /// The clamp must never sit below the commit distance, or a full-strength swipe never fires.
     ///
     /// `const` assertions rather than a `#[test]`: all three are compile-time constants, so a
-    /// runtime `assert!` on them is a tautology the optimiser deletes — the check would pass
+    /// runtime `assert!` on them is a tautology the optimiser deletes - the check would pass
     /// whatever the values were. These fail the build instead.
     const _: () = assert!(MAX_PULL >= SWIPE_THRESHOLD);
     const _: () = assert!(SWIPE_THRESHOLD > AXIS_SLOP);
@@ -428,15 +454,15 @@ mod tests {
     #[test]
     fn the_panels_are_mounted_for_the_whole_gesture_including_the_glide_home() {
         assert!(affordances_mounted(true, false), "a live drag");
-        assert!(affordances_mounted(false, true), "still settling — the row is mid-glide");
+        assert!(affordances_mounted(false, true), "still settling - the row is mid-glide");
         assert!(affordances_mounted(true, true));
     }
 
     // The pure functions say what a `dx` means; these say the handlers wire the four pointer
-    // events to them correctly — where the bugs are (missed `pointer_id` guard, a `pointercancel`
+    // events to them correctly - where the bugs are (missed `pointer_id` guard, a `pointercancel`
     // that forgets to drop the drag).
 
-    /// Everything the row reported, in order — `Open` included, since "a swipe must not also
+    /// Everything the row reported, in order - `Open` included, since "a swipe must not also
     /// navigate" is the likeliest regression.
     #[derive(Debug, PartialEq, Clone, Copy)]
     enum Fired {
@@ -557,7 +583,7 @@ mod tests {
         row.send("pointerup", 100.0, 100.0);
         assert_eq!(row.fired(), vec![Fired::Delete]);
 
-        // No `row.tap()` here — the user cancelled the modal, which ate the synthesised click.
+        // No `row.tap()` here - the user cancelled the modal, which ate the synthesised click.
         row.send("pointerdown", 200.0, 100.0);
         row.send("pointerup", 200.0, 100.0);
         row.tap();
@@ -583,7 +609,7 @@ mod tests {
         assert_eq!(row.fired(), vec![]);
     }
 
-    /// Once vertical has won, a later horizontal wander must not resurrect the swipe — the
+    /// Once vertical has won, a later horizontal wander must not resurrect the swipe - the
     /// diagonal flick down a long list.
     #[test]
     fn a_gesture_lost_to_the_scroller_never_comes_back() {
@@ -685,14 +711,14 @@ mod tests {
 
     #[test]
     fn without_a_share_the_row_shows_one_amount() {
-        assert_eq!(money_texts(None), vec!["24.00 EUR"]);
+        assert_eq!(money_texts(None), vec!["24.00\u{a0}EUR"]);
     }
 
     #[test]
     fn a_share_is_rendered_next_to_the_total() {
         let money = money_texts(Some(8.0));
         assert_eq!(money.len(), 2, "{money:?}");
-        assert!(money.contains(&"24.00 EUR".to_string()), "{money:?}");
-        assert!(money.contains(&"8.00 EUR".to_string()), "{money:?}");
+        assert!(money.contains(&"24.00\u{a0}EUR".to_string()), "{money:?}");
+        assert!(money.contains(&"8.00\u{a0}EUR".to_string()), "{money:?}");
     }
 }

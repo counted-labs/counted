@@ -6,6 +6,7 @@ use crate::tid;
 use shared::{Expense, Payment, ProjectDto, User};
 use std::collections::HashMap;
 
+use crate::categories::get_expense_category;
 use crate::decrypted::{decrypt_expense, decrypt_ledger, decrypt_project, decrypt_user};
 
 pub fn download_json(
@@ -32,6 +33,13 @@ pub fn download_csv(
     trigger_download(&to_csv(key, project, users, expenses, payments), &filename, "text/csv;charset=utf-8");
 }
 
+/// Excel opens a UTF-8 CSV without it as the system code page, so "Café" reads "CafÃ©".
+pub(crate) const CSV_BOM: char = '\u{feff}';
+
+/// `category` is the one the charts file the expense under - picked, or inferred from the name.
+/// The `original_*` and `rate` columns are empty unless the expense was entered in another currency.
+const CSV_HEADER: &str = "date,name,type,amount,currency,paid_by,owes,category,original_amount,original_currency,rate,description";
+
 fn to_csv(
     key: &[u8; 32],
     project: &ProjectDto,
@@ -50,8 +58,9 @@ fn to_csv(
         .collect();
 
     // Machine-readable header, deliberately not translated: a CSV whose columns rename themselves
-    // per UI language cannot be reimported or diffed against an older export.
-    let mut lines = vec!["date,name,type,amount,currency,paid_by,owes".to_string()];
+    // per UI language cannot be reimported or diffed against an older export. New columns go last,
+    // so a reader that picks columns by position keeps working.
+    let mut lines = vec![format!("{CSV_BOM}{CSV_HEADER}")];
 
     let mut sorted = expenses.to_vec();
     sorted.sort_by_key(|e| e.created_at);
@@ -81,8 +90,15 @@ fn to_csv(
             .collect::<Vec<_>>()
             .join("; ");
 
+        let category = de.as_ref().map(get_expense_category).unwrap_or_default();
+        let conversion = de.as_ref().and_then(|d| d.conversion());
+        let original_amount = conversion.map(|(a, _, _)| format!("{a:.2}")).unwrap_or_default();
+        let original_currency = conversion.map(|(_, c, _)| c).unwrap_or_default();
+        let rate = conversion.map(|(_, _, r)| r.to_string()).unwrap_or_default();
+        let description = de.as_ref().and_then(|d| d.description.as_deref()).unwrap_or_default();
+
         lines.push(format!(
-            "{},{},{},{},{},{},{}",
+            "{},{},{},{},{},{},{},{},{},{},{},{}",
             csv_field(date),
             csv_field(name),
             csv_field(&etype),
@@ -90,6 +106,11 @@ fn to_csv(
             csv_field(&currency),
             csv_field(&payers),
             csv_field(&debtors),
+            csv_field(category),
+            original_amount,
+            csv_field(original_currency),
+            rate,
+            csv_field(description),
         ));
     }
 
@@ -134,6 +155,12 @@ fn to_json(
                 "amount": de.amount,
                 "type": format!("{:?}", de.expense_type),
                 "date": de.date,
+                "category": get_expense_category(&de),
+                "source_amount": de.source_amount,
+                "source_currency": de.source_currency,
+                "rate": de.rate,
+                "recurring_id": de.recurring_id,
+                "estimate": de.estimate,
                 "created_at": de.created_at.to_string(),
             }),
             Err(_) => serde_json::json!({ "id": e.id }),
@@ -169,7 +196,7 @@ fn to_json(
 ///
 /// Quoting alone is not enough: Excel and LibreOffice evaluate `"=1+1"` after unquoting, so a field
 /// opening with `= + - @` (or a tab/CR that a spreadsheet trims first) is prefixed with `'`. Never
-/// pass a formatted number through this — `-30.00` would become `'-30.00` and stop parsing.
+/// pass a formatted number through this - `-30.00` would become `'-30.00` and stop parsing.
 pub(crate) fn csv_field(s: &str) -> String {
     let guarded = if s.starts_with(['=', '+', '-', '@', '\t', '\r']) {
         format!("'{s}")
@@ -192,14 +219,14 @@ fn slug(name: &str) -> String {
     s.trim_matches('_').to_string()
 }
 
-// Web: blob + anchor click, built through web-sys — eval is CSP-blocked (see `common::web_dom`).
+// Web: blob + anchor click, built through web-sys - eval is CSP-blocked (see `common::web_dom`).
 #[cfg(target_arch = "wasm32")]
 pub(crate) fn trigger_download(content: &str, filename: &str, mime_type: &str) {
     crate::common::web_dom::download(content, filename, mime_type);
 }
 
 // Mobile: the share sheet, on the file itself. It used to be written into the app's private
-// data directory and announced with `alert()` — a path no other app can open on Android, and no
+// data directory and announced with `alert()` - a path no other app can open on Android, and no
 // dialog at all on iOS, whose webview implements no alert panel.
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn trigger_download(content: &str, filename: &str, mime_type: &str) {
@@ -330,7 +357,72 @@ mod tests {
         let k = test_key();
         let p = make_project(&k, "Trip", "EUR");
         let csv = to_csv(&k, &p, &[], &[], &[]);
-        assert!(csv.starts_with("date,name,type,amount,currency,paid_by,owes"));
+        assert!(csv.starts_with('\u{feff}'), "Excel needs the BOM to read UTF-8");
+        assert!(csv.trim_start_matches('\u{feff}').starts_with("date,name,type,amount,currency,paid_by,owes,"));
+    }
+
+    fn columns(csv: &str) -> HashMap<String, String> {
+        let mut lines = csv.trim_start_matches('\u{feff}').split("\r\n");
+        let header: Vec<&str> = lines.next().unwrap().split(',').collect();
+        let row: Vec<&str> = lines.next().unwrap().split(',').collect();
+        assert_eq!(header.len(), row.len(), "{csv}");
+        header.iter().map(|h| h.to_string()).zip(row.iter().map(|v| v.to_string())).collect()
+    }
+
+    #[test]
+    fn csv_category_is_the_picked_one_or_the_inferred_one() {
+        let k = test_key();
+        let p = make_project(&k, "Trip", "EUR");
+        let picked = vec![crate::common::test_fixtures::make_expense_with_category(&k, 1, "Pizza", "Loisirs")];
+        assert_eq!(columns(&to_csv(&k, &p, &[], &picked, &[]))["category"], "Loisirs");
+        let inferred = vec![make_expense(&k, 1, "Taxi", 10.0, ExpenseType::Expense, "2024-01-01")];
+        assert_eq!(columns(&to_csv(&k, &p, &[], &inferred, &[]))["category"], "Transport");
+    }
+
+    fn converted(k: &[u8; 32]) -> Expense {
+        let mut e = make_expense(k, 1, "Hotel", 92.0, ExpenseType::Expense, "2024-01-01");
+        let mut payload: shared::ExpensePayload = crate::crypto::decrypt_json(k, &e.payload).unwrap();
+        payload.source_currency = Some("CHF".into());
+        payload.source_amount = Some(100.0);
+        payload.rate = Some(0.92);
+        payload.description = Some("two nights".into());
+        e.payload = crate::crypto::encrypt_json(k, &payload).unwrap();
+        e
+    }
+
+    #[test]
+    fn csv_carries_the_original_currency_and_the_description() {
+        let k = test_key();
+        let p = make_project(&k, "Trip", "EUR");
+        let c = columns(&to_csv(&k, &p, &[], &[converted(&k)], &[]));
+        assert_eq!(c["amount"], "92.00");
+        assert_eq!(c["original_amount"], "100.00");
+        assert_eq!(c["original_currency"], "CHF");
+        assert_eq!(c["rate"], "0.92");
+        assert_eq!(c["description"], "two nights");
+    }
+
+    #[test]
+    fn csv_leaves_the_conversion_empty_for_a_project_currency_expense() {
+        let k = test_key();
+        let p = make_project(&k, "Trip", "EUR");
+        let expenses = vec![make_expense(&k, 1, "Dinner", 30.0, ExpenseType::Expense, "2024-06-01")];
+        let c = columns(&to_csv(&k, &p, &[], &expenses, &[]));
+        assert_eq!((c["original_amount"].as_str(), c["original_currency"].as_str(), c["rate"].as_str()), ("", "", ""));
+    }
+
+    #[test]
+    fn json_carries_the_category_and_the_conversion() {
+        let k = test_key();
+        let p = make_project(&k, "Trip", "EUR");
+        let json = to_json(&k, &p, &[], &[converted(&k)], &[]);
+        let v: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let e = &v["expenses"][0];
+        assert_eq!(e["category"], "Hébergement");
+        assert_eq!(e["source_currency"], "CHF");
+        assert_eq!(e["source_amount"], 100.0);
+        assert_eq!(e["rate"], 0.92);
+        assert_eq!(e["estimate"], false);
     }
 
     #[test]

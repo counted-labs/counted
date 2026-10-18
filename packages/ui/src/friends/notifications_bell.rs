@@ -6,7 +6,7 @@ use super::use_friends::use_friends;
 use crate::common::DropdownButton;
 use crate::icons::{BellIcon, ICON_HEADER};
 
-/// The unread notifications — today only incoming friend requests — behind a bell with a count.
+/// The unread notifications - today only incoming friend requests - behind a bell with a count.
 /// Renders nothing for an anonymous user.
 #[component]
 pub fn NotificationsBell() -> Element {

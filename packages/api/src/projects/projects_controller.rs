@@ -1,7 +1,8 @@
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use shared::{
-    BatchProject, CreatableProject, EditableProject, JoinProject, LeaveProject, ProjectDto,
+    BatchProject, ConvertProject, CreatableProject, EditableProject, JoinProject, LeaveProject,
+    ProjectDto,
 };
 use uuid::Uuid;
 
@@ -31,6 +32,13 @@ pub async fn update_project_by_id(
     crate::server::projects::update_project_by_id(editable_project).await
 }
 
+/// Moves a project's participant links, authors and history actors into its payloads
+/// (docs/plans/participant-links-encryption.md). Returns the `data_version` the next call expects.
+#[post("/api/v1/projects/convert")]
+pub async fn convert_project(Json(req): Json<ConvertProject>) -> Result<i64, ServerFnError> {
+    crate::server::projects::conversion::convert_project(req).await
+}
+
 /// Registers a holder that has no account, so the project knows someone is still in it.
 /// Idempotent: re-registering the same `member_id` is a no-op.
 #[post("/api/v1/projects/members")]
@@ -40,7 +48,7 @@ pub async fn join_project(Json(payload): Json<JoinProject>) -> Result<(), Server
 
 /// Leaves a project. Removing the last member does **not** delete it here.
 ///
-/// No session is required — anonymous holders have to be able to leave too. That is exactly why
+/// No session is required - anonymous holders have to be able to leave too. That is exactly why
 /// teardown cannot happen inline: joining is free, so anyone holding a project id could join a
 /// dormant project and leave again, driving the member count 0 → 1 → 0 and destroying it and every
 /// expense in it with two unauthenticated requests. A project left with no members is reaped by the

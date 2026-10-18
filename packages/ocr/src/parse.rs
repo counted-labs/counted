@@ -117,7 +117,7 @@ fn is_digit(b: u8) -> bool {
 ///
 /// - a space is a group separator only before any decimal separator has been seen and only in
 ///   front of exactly three digits, so `1 234,56` is one number but `12,90 20,00` is two;
-/// - a token touching `/`, `:` or `-` is a date or a time, not money — without this the
+/// - a token touching `/`, `:` or `-` is a date or a time, not money - without this the
 ///   bottom-of-page fallback happily returns the year off `04/09/2026`;
 /// - a token followed by `%` is a VAT rate, and one followed by `x` is a quantity.
 fn money_tokens(s: &str) -> Vec<Money> {
@@ -173,7 +173,7 @@ fn touches_date_punctuation(b: &[u8], start: usize, end: usize) -> bool {
     is_date_punct(before) || is_date_punct(after)
 }
 
-/// `%` is a VAT rate; `x` is a quantity, and it is the token *before* the `x` that is rejected —
+/// `%` is a VAT rate; `x` is a quantity, and it is the token *before* the `x` that is rejected -
 /// `2 x 4,50` must still yield 4.50.
 fn followed_by_rate_or_quantity(b: &[u8], end: usize) -> bool {
     let mut i = end;
@@ -281,6 +281,14 @@ const NEGATIVE: &[&str] = &[
     "article",
     "points",
     "fidelite",
+    // A restaurant's per-head split, printed below the grand total.
+    "par couvert",
+    "par personne",
+    "per person",
+    "pro person",
+    "a persona",
+    "por persona",
+    "per persoon",
 ];
 
 const POSITIVE: &[&str] = &[
@@ -363,7 +371,7 @@ fn find_amount(lines: &[TextLine]) -> Option<(f64, bool)> {
         .map(|value| (value, false))
 }
 
-/// The rightmost figure on the nearest line below the anchor — a left-hand one is usually a
+/// The rightmost figure on the nearest line below the anchor - a left-hand one is usually a
 /// quantity or an article count.
 fn amount_below(lines: &[TextLine], anchor: usize) -> Option<f64> {
     let a = &lines[anchor];
@@ -443,8 +451,8 @@ fn numeric_date_at(b: &[u8], i: usize) -> Option<NaiveDate> {
     if *b.get(i + flen + 1 + slen)? != sep {
         return None;
     }
-    // Unbounded on purpose. The recogniser drops the space between a date and the time beside it —
-    // "04/09/2026 14:32" comes back as "04/09/202614:32" — and requiring a non-digit after the year
+    // Unbounded on purpose. The recogniser drops the space between a date and the time beside it -
+    // "04/09/2026 14:32" comes back as "04/09/202614:32" - and requiring a non-digit after the year
     // threw away every timestamped receipt. Four digits are taken greedily and the plausibility
     // window below is what rejects nonsense.
     let (third, tlen) = take_digits(b, i + flen + 1 + slen + 1, false)?;
@@ -474,7 +482,7 @@ fn named_date(folded: &str) -> Option<NaiveDate> {
         let (day, month, year) = match (w[0].parse::<u32>(), month_number(w[1])) {
             // 4 septembre 2026
             (Ok(day), Some(month)) => (day, month, w[2].parse::<i32>().ok()?),
-            // september 4 2026 — the comma is already gone, folding removed it
+            // september 4 2026 - the comma is already gone, folding removed it
             _ => (w[1].parse::<u32>().ok()?, month_number(w[0])?, w[2].parse::<i32>().ok()?),
         };
         NaiveDate::from_ymd_opt(year, month, day)
@@ -483,14 +491,14 @@ fn named_date(folded: &str) -> Option<NaiveDate> {
 
 // ─── title ───────────────────────────────────────────────────────────────────
 
-/// The merchant name is printed in the header, above the address block — as a fraction of the
+/// The merchant name is printed in the header, above the address block - as a fraction of the
 /// **detected text**, not of the image.
 ///
 /// `TextLine.y` is a fraction of image height (`detect::group_bounds`), and a hand-held photo puts
 /// an arbitrary amount of background above the receipt. Measuring the zone against the image made
 /// the title the only field whose accuracy depended on framing, and `tests/framing.rs` shows the
 /// cost precisely: pad the fixture with 30% background and the header is still detected and
-/// recognised perfectly — "CARREFOUR MARKET" at confidence 1.00 — but lands at `y = 0.280` and is
+/// recognised perfectly - "CARREFOUR MARKET" at confidence 1.00 - but lands at `y = 0.280` and is
 /// discarded for being 0.03 outside a window that has nothing to do with the receipt. 20% padding
 /// still passes, 30% does not, and 30% is an ordinary photo.
 const TITLE_ZONE: f32 = 0.25;
@@ -500,7 +508,7 @@ const TITLE_ZONE_WIDE: f32 = 0.45;
 
 /// Currently equal to `lib.rs`'s `MIN_LINE_CONFIDENCE`, so in the shipped pipeline this rejects
 /// nothing. It is kept because `find_title` is a pure function with its own tests, and because
-/// lowering the global floor to admit stylised header text is a live option — the day that happens,
+/// lowering the global floor to admit stylised header text is a live option - the day that happens,
 /// this is the guard that stops a garbled but large line from outscoring the real name.
 const MIN_CONFIDENCE: f32 = 0.5;
 
@@ -566,7 +574,7 @@ fn is_title_candidate(text: &str) -> bool {
     if longest_digit_run(text) >= 9 {
         return false;
     }
-    // A priced line — "PAIN COMPLET 2,40", "TOTAL 12,90". `has_cents` is the discriminator the
+    // A priced line - "PAIN COMPLET 2,40", "TOTAL 12,90". `has_cents` is the discriminator the
     // amount parser already relies on: prices carry a decimal part, while the digits that legally
     // appear in a merchant name ("MAGASIN 24", "CARREFOUR 2000") do not. Without this the widened
     // zone below lets item lines compete with the header, and a receipt whose only readable line is
@@ -579,7 +587,7 @@ fn is_title_candidate(text: &str) -> bool {
         return false;
     }
     // An amount anchor is not a merchant name. On a skewed page `group_lines` can split "TOTAL
-    // 12,90" into two lines, and the bare "TOTAL" then has no decimal part left to disqualify it —
+    // 12,90" into two lines, and the bare "TOTAL" then has no decimal part left to disqualify it -
     // `tests/framing.rs` caught exactly that at 5 degrees. Reusing the amount parser's own
     // vocabulary keeps the two from drifting apart. The known cost is the French fuel brand: a line
     // reading exactly "TOTAL" loses, though "TOTALENERGIES" survives because `has_word` matches

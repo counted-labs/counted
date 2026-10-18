@@ -5,7 +5,7 @@
 //! iOS build is in someone's hands: the app installs as "Mobile", the launch screen paints black,
 //! a share link opens nothing.
 //!
-//! Lives in `ui` rather than `mobile` for the reason given in `stylesheet_guard.rs` — and because
+//! Lives in `ui` rather than `mobile` for the reason given in `stylesheet_guard.rs` - and because
 //! `APP_SCHEME`, one of the two sides being compared, is defined here.
 
 use std::path::PathBuf;
@@ -35,7 +35,7 @@ mod tests {
     use crate::common::APP_SCHEME;
 
     /// Fix 4's guard. dx's template points `UILaunchStoryboardName` at a `LaunchScreen` storyboard
-    /// it never generates, so iOS resolves it to nothing and paints black until the webview draws —
+    /// it never generates, so iOS resolves it to nothing and paints black until the webview draws -
     /// and a dangling key is worse than no key, because with neither iOS applies its own default.
     /// See docs/dioxus-issues/mobile-no-native-splash-screen.md.
     #[test]
@@ -61,7 +61,7 @@ mod tests {
     }
 
     /// The plist replaces dx's template wholesale, so `[bundle] identifier` in Dioxus.toml no
-    /// longer reaches iOS. Two sources of truth that must agree — and the provisioning profile is
+    /// longer reaches iOS. Two sources of truth that must agree - and the provisioning profile is
     /// matched against this one.
     #[test]
     fn the_bundle_identifier_matches_dioxus_toml() {
@@ -76,7 +76,7 @@ mod tests {
     }
 
     /// `[deep_links]` in Dioxus.toml is inert on iOS, so the custom scheme is hand-maintained here.
-    /// If it drifts from `APP_SCHEME`, `scheme_link_for` builds links the app cannot open — and
+    /// If it drifts from `APP_SCHEME`, `scheme_link_for` builds links the app cannot open - and
     /// AltStore builds have no universal links to fall back on.
     #[test]
     fn the_url_scheme_matches_app_scheme() {
@@ -89,7 +89,7 @@ mod tests {
     }
 
     /// The Scan button opens a file input with `capture`, and WKWebView presents the system camera
-    /// for it. iOS **terminates the app** when a camera is opened without this key — and only on a
+    /// for it. iOS **terminates the app** when a camera is opened without this key - and only on a
     /// real device, on first use, which is the worst possible place to find out. The plist replaces
     /// dx's template wholesale, so nothing else supplies it.
     #[test]

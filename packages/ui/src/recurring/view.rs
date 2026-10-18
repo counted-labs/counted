@@ -157,8 +157,11 @@ pub fn repeat_of(p: &RecurringPayload) -> Repeat {
     Repeat { freq: p.rule.freq, interval: p.rule.interval, ends, variable: p.template.variable }
 }
 
-/// How many occurrences saving a rule anchored on `anchor` writes at once.
+/// How many occurrences saving a rule anchored in the past writes at once.
 pub fn backfill_count(repeat: Repeat, anchor: NaiveDate, today: NaiveDate) -> usize {
+    if anchor >= today {
+        return 0;
+    }
     super::schedule::due(&repeat.rule(anchor), 0, today, 10_000).len()
 }
 
@@ -281,5 +284,6 @@ mod tests {
         let r = Repeat::monthly();
         assert_eq!(backfill_count(r, d(2026, 8, 1), d(2026, 9, 30)), 2);
         assert_eq!(backfill_count(r, d(2026, 10, 1), d(2026, 9, 30)), 0);
+        assert_eq!(backfill_count(r, d(2026, 9, 30), d(2026, 9, 30)), 0);
     }
 }

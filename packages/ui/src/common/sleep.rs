@@ -1,6 +1,6 @@
 /// Dioxus runs the script as the *body* of an async function, so the top-level `await` is what
-/// suspends it — an IIFE expression statement would resolve immediately. Same contract as
-/// `copy_js`. Web uses a timer future instead — eval is CSP-blocked there (see `common::web_dom`).
+/// suspends it - an IIFE expression statement would resolve immediately. Same contract as
+/// `copy_js`. Web uses a timer future instead - eval is CSP-blocked there (see `common::web_dom`).
 #[cfg(not(target_arch = "wasm32"))]
 fn sleep_js(ms: u32) -> String {
     format!("await new Promise(r => setTimeout(r, {ms}));")

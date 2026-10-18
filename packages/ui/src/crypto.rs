@@ -55,7 +55,7 @@ pub fn encrypt(key: &[u8; 32], plaintext: &str) -> Result<EncryptedPair, String>
     seal(&XChaCha20Poly1305::new(key.into()), plaintext.as_bytes())
 }
 
-// The expenses-tab guard asserts on this count, not wall-clock — the stall it protects against was
+// The expenses-tab guard asserts on this count, not wall-clock - the stall it protects against was
 // a call-count bug. Thread-local: `cargo test` runs tests concurrently.
 #[cfg(test)]
 thread_local! {
@@ -83,12 +83,18 @@ pub fn encrypt_json<T: Serialize>(key: &[u8; 32], value: &T) -> Result<Encrypted
     encrypt(key, &json)
 }
 
+/// For a payload that names participants - expense, rule, history: its length must not count them.
+pub fn encrypt_padded_json<T: Serialize>(key: &[u8; 32], value: &T) -> Result<EncryptedPair, String> {
+    let json = serde_json::to_string(value).map_err(|e| e.to_string())?;
+    encrypt(key, &shared::pad_json(json))
+}
+
 pub fn decrypt_json<T: DeserializeOwned>(key: &[u8; 32], pair: &EncryptedPair) -> Result<T, String> {
     serde_json::from_str(&decrypt(key, pair)?).map_err(|e| e.to_string())
 }
 
 /// A project key or the private key, encrypted under the account key. Stored as its fragment, so an
-/// escrowed project key is byte-identical to what a share link carries — see `docs/e2ee.md`,
+/// escrowed project key is byte-identical to what a share link carries - see `docs/e2ee.md`,
 /// "Key escrow".
 pub fn wrap_key(account_key: &[u8; 32], key: &[u8; 32]) -> Option<EncryptedPair> {
     encrypt(account_key, &key_to_fragment(key)).ok()
@@ -99,7 +105,7 @@ pub fn unwrap_key(account_key: &[u8; 32], wrapped: &EncryptedPair) -> Option<[u8
 }
 
 /// The account's `display_name`, re-encrypted under the project key so the other members can see
-/// who claimed an identity — see `docs/e2ee.md`, "The claim label". `None` when the name does not
+/// who claimed an identity - see `docs/e2ee.md`, "The claim label". `None` when the name does not
 /// decrypt under `account_key`.
 pub fn claim_label(
     account: &Account,
@@ -110,7 +116,7 @@ pub fn claim_label(
     encrypt_json(project_key, &name).ok()
 }
 
-/// Proof of holding a project key, for identity claims — see `docs/e2ee.md`, "The claim token".
+/// Proof of holding a project key, for identity claims - see `docs/e2ee.md`, "The claim token".
 /// A fixed label in front of a fixed-length secret, so plain SHA-256 needs no MAC construction.
 pub fn claim_token(project_key: &[u8; 32]) -> [u8; 32] {
     Sha256::new().chain_update(b"counted-claim-v1").chain_update(project_key).finalize().into()
@@ -121,7 +127,7 @@ pub fn claim_verifier(project_key: &[u8; 32]) -> [u8; 32] {
     Sha256::digest(claim_token(project_key)).into()
 }
 
-/// The account's X25519 keypair (public, private) — see `docs/e2ee.md`, "Account keypair and boxed
+/// The account's X25519 keypair (public, private) - see `docs/e2ee.md`, "Account keypair and boxed
 /// invitations".
 pub fn generate_keypair() -> (Vec<u8>, [u8; 32]) {
     let secret = crypto_box::SecretKey::from_bytes(generate_key());
@@ -154,7 +160,7 @@ pub fn unbox_project_key(
 
 /// Sixteen characters, in groups of four, that two friends can read to each other to check the
 /// server handed out the right key: SHA-256 of the public key, first 80 bits, base32. 40 bits was
-/// within reach of a server grinding a lookalike key — see `docs/e2ee.md`.
+/// within reach of a server grinding a lookalike key - see `docs/e2ee.md`.
 pub fn key_fingerprint(public_key: &[u8]) -> String {
     const ALPHABET: &[u8; 32] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
     let digest = Sha256::digest(public_key);
@@ -179,7 +185,7 @@ pub fn derive_account_key_v1(password: &str, salt: &[u8]) -> [u8; 32] {
     argon2_hash(&Argon2::new(Algorithm::Argon2id, Version::V0x13, account_kdf_params()), password, salt)
 }
 
-/// What the server is sent instead of the password — see `docs/auth.md`, "Login proof".
+/// What the server is sent instead of the password - see `docs/auth.md`, "Login proof".
 ///
 /// - legacy: `Argon2::default()`, exactly what the server used to run on the plaintext, so the
 ///   stored hash verifies it without re-enrolment;
@@ -221,7 +227,7 @@ mod tests {
     }
 
     /// The whole point of the claim label: a name only the account could read becomes a name every
-    /// member of the project can read, and nobody else — the server included.
+    /// member of the project can read, and nobody else - the server included.
     #[test]
     fn a_claim_label_crosses_from_the_account_key_to_the_project_key() {
         let account_key = generate_key();
@@ -231,7 +237,7 @@ mod tests {
         let label = claim_label(&account, &account_key, &project_key).unwrap();
 
         assert_eq!(decrypt_json::<String>(&project_key, &label).unwrap(), "Jonathan");
-        // The account key must not open it — it is a genuinely separate copy, not a re-wrap.
+        // The account key must not open it - it is a genuinely separate copy, not a re-wrap.
         assert!(decrypt_json::<String>(&account_key, &label).is_err());
     }
 
@@ -257,7 +263,7 @@ mod tests {
     #[test]
     fn encrypt_decrypt_roundtrip() {
         let key = test_key();
-        for s in ["hello world", "", "Déjeuner à Paris — 日本語 🍜"] {
+        for s in ["hello world", "", "Déjeuner à Paris - 日本語 🍜"] {
             assert_eq!(decrypt(&key, &encrypt(&key, s).unwrap()).unwrap(), s);
         }
     }
@@ -368,7 +374,7 @@ mod tests {
     }
 
     /// The legacy proof must equal the hash segment of a PHC string `Argon2::default()` produced
-    /// on the server — that is what the migration turned into `login_hash`, and it is the only
+    /// on the server - that is what the migration turned into `login_hash`, and it is the only
     /// way an existing account logs in without re-enrolling.
     #[test]
     fn legacy_login_proof_matches_the_server_side_argon2_default() {

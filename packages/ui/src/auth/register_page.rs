@@ -43,7 +43,7 @@ fn RegisterForm() -> Element {
             }
             loading.set(true);
             error_msg.set(None);
-            // The KDF below blocks the thread — without this the spinner paints only once it is over.
+            // The KDF below blocks the thread - without this the spinner paints only once it is over.
             next_paint().await;
 
             let kdf_salt = generate_kdf_salt();
@@ -123,7 +123,7 @@ fn RegisterForm() -> Element {
             }
 
             if let Some(err) = error_msg() {
-                div { role: "alert", class: "alert alert-error", "{err}" }
+                div { id: "register-error", role: "alert", class: "alert alert-error", "{err}" }
             }
 
             form { class: "flex flex-col gap-4", onsubmit: on_submit,
@@ -164,6 +164,8 @@ fn RegisterForm() -> Element {
                         maxlength: "128",
                         placeholder: tid!("register-password-placeholder"),
                         autocomplete: "new-password",
+                        aria_invalid: if error_msg().is_some() && password_error_key(&password()).is_some() { "true" },
+                        aria_describedby: if error_msg().is_some() { "register-error" },
                         value: "{password}",
                         oninput: move |e| password.set(e.value()),
                     }

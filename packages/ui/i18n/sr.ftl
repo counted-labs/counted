@@ -150,7 +150,7 @@ payment-method-invalid-characters = Ukloni prelome redova ili nevidljive znakove
 payment-method-limit = Možeš da sačuvaš do { $max } načina plaćanja.
 payment-methods-saved = Podaci za plaćanje sačuvani.
 payment-methods-offline = Moraš biti na mreži da sačuvaš podatke za plaćanje.
-payment-methods-stale = Tvoji podaci za plaćanje promenjeni su na drugom uređaju. Ponovo su učitani — pokušaj ponovo.
+payment-methods-stale = Tvoji podaci za plaćanje promenjeni su na drugom uređaju. Ponovo su učitani - pokušaj ponovo.
 payment-methods-key-missing = Prijavi se ponovo da upravljaš podacima za plaćanje.
 settings-payment-methods-share-warning = Podeljeni način vidljiv je svim članovima tvojih projekata.
 payment-method-share = Podeli s mojim projektima
@@ -232,7 +232,6 @@ projects-filter-active = Aktivni
 projects-filter-all = Svi
 projects-count-label = Projekti
 projects-empty = Nema projekata
-projects-empty-hint = Napravi projekat dugmetom ispod
 projects-offline-banner = Podaci van mreže - ponovo se poveži za osvežavanje.
 demo-banner = Demo projekat - samo za čitanje.
 demo-start-own = Pokreni svoj projekat
@@ -246,6 +245,68 @@ projects-no-local-data = Nema lokalnih podataka
 projects-no-local-data-hint = Prijavi se da prvi put učitaš svoje projekte.
 projects-add = Dodaj projekat
 projects-create = Napravi projekat
+projects-personal-expense = Lični trošak
+personal-expense-banner = Dodato u Moje troškove
+personal-create-title = Napravite lični projekat
+personal-create-hint = Pratite šta trošite sami
+group-create-title = Napravite zajednički projekat
+group-create-hint = Delite troškove sa prijateljima i porodicom
+personal-create-action = Napravi
+personal-create-signup = Napravi nalog
+personal-sheet-title = Vaš lični projekat
+personal-sheet-intro = Za beleženje onoga što trošite sami. Prikazuje se sa vašim grupama u Statistici.
+personal-sheet-point-alone = Jedan član: vi, sa imenom vašeg naloga. Bez linka za deljenje.
+personal-sheet-point-encrypted = Šifrovano na vašim uređajima, kao i ostali projekti.
+personal-sheet-point-stats = Vaši udeli u grupama dodaju se ovim troškovima u Statistici.
+personal-default-name = Moji troškovi
+my-spending-prev-month = Prethodni mesec
+my-spending-next-month = Sledeći mesec
+my-spending-spent = Potrošili ste
+my-spending-groups = Grupe
+my-spending-income = Prihodi
+my-spending-balance = Saldo meseca
+my-spending-unconverted = Udeli u drugoj valuti ostaju po strani dok kurs nije poznat.
+my-spending-empty = Ništa ovog meseca
+my-spending-empty-hint = Dodajte trošak pomoću +. Vaši udeli u grupama pojaviće se ovde automatski.
+my-spending-share-of = od { $amount }
+my-spending-uncounted = ne računa se
+payer-you = vi
+expense-received-by = primio/la
+counted-switch = Računaj u Moji troškovi
+counted-switch-on = Uključeno: vaš udeo se dodaje u Moji troškovi
+counted-switch-off = Isključeno: vaš udeo se ne prikazuje u Moji troškovi
+counted-groups = Računate grupe
+counted-groups-intro = Vaš udeo u ovim grupama dodaje se u Moji troškovi i u budžete.
+counted-groups-converted = { $from }, preračunato u { $to }
+counted-groups-encrypted = Ovaj izbor je šifrovan vašim nalogom i prati vaše uređaje.
+counted-groups-empty = Još nema grupe na ovom uređaju.
+counted-groups-done = U redu
+counted-save-failed = Ovaj izbor nije moguće sačuvati. Pokušajte ponovo.
+tab-budget = Budžet
+budget-title = Budžeti
+budget-manage = Upravljaj
+budget-left = Preostalo { $amount }
+budget-over = Prekoračeno za { $amount }
+budget-empty = Nema budžeta
+budget-empty-hint = Postavite gornju granicu po kategoriji. Vaši udeli u grupama se takođe računaju.
+budget-define = Postavi budžet
+budget-sheet-title = Mesečni budžeti
+budget-sheet-intro = Na vaš udeo: lično i grupe. Ostavite prazno da ne pratite kategoriju.
+budget-average = Prosek poslednja 3 meseca: { $amount }
+budget-for = Budžet { $category }
+budget-alert = Upozori me na 80 %
+budget-alert-hint = Izračunato na ovom uređaju
+budget-invalid = Neispravan iznos za { $category }.
+budget-offline = Budžeti se čuvaju samo uz vezu. Ponovo se povežite i pokušajte opet.
+budget-alert-near = { $category }: { $percent } % mesečnog budžeta
+budget-alert-over = { $category }: mesečni budžet prekoračen
+personal-card-budget = { $month } · budžet { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } rezultat
+        [few] { $count } rezultata
+       *[other] { $count } rezultata
+    } · { $total } · lično i grupe, svi meseci
 projects-join = Pridruži se projektu
 projects-import-tricount = Uvezi iz Tricounta
 project-actions = Radnje projekta
@@ -322,6 +383,7 @@ expenses-show-more = Prikaži više (još { $count })
 expense-type-expense = Trošak
 expense-type-transfer = Prenos
 expense-type-gain = Prihod
+expense-type-group = Vrsta
 expense-paid-by = platio/la
 expense-sent-by = poslao/la
 expense-contributed-by = doprineo/la
@@ -387,6 +449,24 @@ export-failed = Izvoz nije uspeo: { $reason }
 history-expense-added = Trošak dodat: { $name }
 history-expense-edited = Trošak izmenjen: { $name }
 history-expense-deleted = Trošak obrisan: { $name }
+move-expense = Premesti u projekat
+move-expense-title = Premesti u…
+move-current = Trenutni
+move-converted = { $currency }, preračunato po mesečnom kursu
+move-note-personal = U sledećem koraku birate ko je platio i za koga. Trošak će napustiti Moje troškove.
+move-note-group = Trošak će napustiti { $project } za sve članove, a saldo grupe biće ponovo izračunat. U sledećem koraku birate ko je platio i za koga.
+move-banner = Iz { $from } u { $to }
+move-submit = Premesti
+move-done = Trošak premešten u { $project }
+move-delete-failed = Trošak je dodat u drugi projekat, ali je još u { $project }: obrišite ga tamo.
+history-expense-moved = Trošak premešten u drugi projekat: { $name }
+personal-badge = Lično
+move-members =
+    { $count ->
+        [one] { $count } član
+        [few] { $count } člana
+       *[other] { $count } članova
+    }
 history-project-edited = Projekat izmenjen: { $name }
 history-name-changed = Naziv: „{ $from }” → „{ $to }”
 history-description-added = Opis dodat: „{ $value }”
@@ -400,11 +480,24 @@ expense-name-placeholder = Restoran, namirnice…
 expense-actions = Radnje troška
 expense-your-share = Tvoj udeo
 expense-your-share-value = Tvoj udeo: { $amount } { $currency }
+expense-share-percent = { $percent }%
+expense-added-by = Dodato: { $name }, { $date }
 expense-inconsistent-detail = Iznosi se ne slažu: { $paid } plaćeno, { $owed } dugovano, za trošak od { $total }. Izmeni trošak da to ispraviš.
 missing-access-key = Nedostaje pristupni ključ. Otvori ovaj projekat preko njegovog linka za deljenje.
 filter-all = Sve
 filter-my-payments = Moja plaćanja
 filter-my-debts = Šta dugujem
+expense-filter-group = Filter
+expenses-search = Pretraži troškove
+expenses-no-match = Nijedan trošak ne odgovara.
+expenses-search-open = Pretraži
+expenses-search-clear = Obriši pretragu
+expenses-search-summary =
+    { $count ->
+        [one] { $count } rezultat
+        [few] { $count } rezultata
+       *[other] { $count } rezultata
+    } · { $total } · svi meseci
 participants-shares-for = Udeli za { $name }
 participants-amount-for = Iznos za { $name }
 reimbursement-add = Dodaj izmirenje
@@ -443,9 +536,9 @@ charts-expense-count =
 charts-nothing-to-show = Nema šta da se prikaže
 charts-my-share-skipped =
     { $count ->
-        [one] 1 projekat nije uračunat — nije izabran učesnik ili se njegovi podaci nisu učitali.
-        [few] { $count } projekta nisu uračunata — nije izabran učesnik ili se njihovi podaci nisu učitali.
-       *[other] { $count } projekata nije uračunato — nije izabran učesnik ili se njihovi podaci nisu učitali.
+        [one] 1 projekat nije uračunat - nije izabran učesnik ili se njegovi podaci nisu učitali.
+        [few] { $count } projekta nisu uračunata - nije izabran učesnik ili se njihovi podaci nisu učitali.
+       *[other] { $count } projekata nije uračunato - nije izabran učesnik ili se njihovi podaci nisu učitali.
     }
 
 ### Categories
@@ -519,6 +612,14 @@ payers-title-contributors = Učesnici
 debtors-title-debtors = Duguje
 debtors-title-recipients = Primaoci
 debtors-title-beneficiaries = Korisnici
+debtors-title-for = Za
+debtors-title-recipient = Primalac
+expense-people =
+    { $count ->
+        [one] { $count } osoba
+        [few] { $count } osobe
+       *[other] { $count } osoba
+    }
 
 ### Welcome
 
@@ -652,6 +753,8 @@ invitation-decline = Odbij
 participants-you-label = Tvoje ime u ovom projektu
 participants-you-badge = Ti
 participants-others = Ostali učesnici
+participants-removed = Uklonjeni
+participant-restore = Vrati
 participants-empty = Dodaj učesnike ispod.
 participants-duplicate = „{ $name }” je već na listi.
 participants-input-label = Dodaj prijatelja ili upiši ime
@@ -796,3 +899,16 @@ error-recurring-not-found = Ovaj ponavljajući trošak više ne postoji.
 error-recurring-stale = Neko je u međuvremenu promenio ovaj ponavljajući trošak. Ponovo je učitan: proveri ga i ponovo sačuvaj.
 error-too-many-recurring = Ovaj projekat već ima 50 ponavljajućih troškova. Prekini jedan koji ti više ne treba da bi dodao novi.
 error-user-in-recurring = Ovaj učesnik je deo ponavljajućeg troška. Prvo ga skloni iz njega ili prekini trošak.
+
+home-owed-to-you = Duguju vam
+home-you-owe = Dugujete
+home-details-show = Prikaži detalje
+home-details-hide = Sakrij detalje
+home-all-settled = Sve je izmireno
+home-pay = Plati
+home-remind = Podseti
+home-remind-message = Mali podsetnik: u { $project } još ima neizmirenih povraćaja.
+home-row-owed = duguju vam
+home-row-owe = dugujete
+home-row-settled = Izmireno
+home-totals-partial = Bez projekata bez kursa

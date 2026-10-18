@@ -100,8 +100,13 @@ pub fn CategoryShareCard(rows: Vec<CategoryShare>, currency: String) -> Element 
                                     span { class: "absolute inset-y-0 left-0 rounded-full", style: "width: {fill:.1}%; background: {color};" }
                                 }
                                 span { class: "text-right whitespace-nowrap tabular-nums",
-                                    b { {money(row.mine, &currency)} }
-                                    span { class: "text-base-content/70", {format!(" / {}", money(row.group, &currency))} }
+                                    span { aria_hidden: "true",
+                                        b { {money(row.mine, "")} }
+                                        span { class: "text-base-content/70", {format!(" / {}", money(row.group, &currency))} }
+                                    }
+                                    span { class: "sr-only",
+                                        {tid!("charts-of-total", amount: money(row.mine, &currency), total: money(row.group, &currency))}
+                                    }
                                 }
                             }
                         }

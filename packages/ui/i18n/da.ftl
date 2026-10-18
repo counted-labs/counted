@@ -149,7 +149,7 @@ payment-method-invalid-characters = Fjern linjeskift eller usynlige tegn.
 payment-method-limit = Du kan gemme op til { $max } betalingsmetoder.
 payment-methods-saved = Betalingsoplysninger gemt.
 payment-methods-offline = Du skal være online for at gemme dine betalingsoplysninger.
-payment-methods-stale = Dine betalingsoplysninger blev ændret på en anden enhed. De er genindlæst — prøv igen.
+payment-methods-stale = Dine betalingsoplysninger blev ændret på en anden enhed. De er genindlæst - prøv igen.
 payment-methods-key-missing = Log ind igen for at administrere dine betalingsoplysninger.
 settings-payment-methods-share-warning = En delt metode er synlig for alle medlemmer af dine projekter.
 payment-method-share = Del med mine projekter
@@ -231,7 +231,6 @@ projects-filter-active = Aktive
 projects-filter-all = Alle
 projects-count-label = Projekter
 projects-empty = Ingen projekter
-projects-empty-hint = Opret et projekt med knappen nedenfor
 projects-offline-banner = Offlinedata - opret forbindelse igen for at opdatere.
 demo-banner = Demoprojekt - skrivebeskyttet.
 demo-start-own = Opret dit eget projekt
@@ -245,6 +244,67 @@ projects-no-local-data = Ingen lokale data
 projects-no-local-data-hint = Log ind for at indlæse dine projekter for første gang.
 projects-add = Tilføj et projekt
 projects-create = Opret et projekt
+projects-personal-expense = Personlig udgift
+personal-expense-banner = Tilføjet til Mine udgifter
+personal-create-title = Opret dit personlige projekt
+personal-create-hint = Hold styr på, hvad du bruger alene
+group-create-title = Opret et delt projekt
+group-create-hint = Del udgifter med venner og familie
+personal-create-action = Opret
+personal-create-signup = Opret en konto
+personal-sheet-title = Dit personlige projekt
+personal-sheet-intro = Til det, du bruger alene. Det vises sammen med dine grupper i Statistik.
+personal-sheet-point-alone = Ét medlem: dig, med dit kontonavn. Intet delingslink.
+personal-sheet-point-encrypted = Krypteret på dine enheder, som dine andre projekter.
+personal-sheet-point-stats = Dine andele i grupper lægges til disse udgifter i Statistik.
+personal-default-name = Mine udgifter
+my-spending-prev-month = Forrige måned
+my-spending-next-month = Næste måned
+my-spending-spent = Du har brugt
+my-spending-groups = Grupper
+my-spending-income = Indtægter
+my-spending-balance = Månedens saldo
+my-spending-unconverted = Andele i en anden valuta holdes udenfor, indtil en kurs er kendt.
+my-spending-empty = Intet denne måned
+my-spending-empty-hint = Tilføj en udgift med +. Dine andele i grupper vises her automatisk.
+my-spending-share-of = af { $amount }
+my-spending-uncounted = ikke talt med
+payer-you = dig
+expense-received-by = modtaget af
+counted-switch = Tæl med i Mine udgifter
+counted-switch-on = Til: din andel lægges til Mine udgifter
+counted-switch-off = Fra: din andel vises ikke i Mine udgifter
+counted-groups = Grupper der tælles med
+counted-groups-intro = Din andel i disse grupper lægges til Mine udgifter og budgetterne.
+counted-groups-converted = { $from }, omregnet til { $to }
+counted-groups-encrypted = Dette valg er krypteret med din konto og følger dine enheder.
+counted-groups-empty = Ingen grupper på denne enhed endnu.
+counted-groups-done = OK
+counted-save-failed = Valget kunne ikke gemmes. Prøv igen.
+tab-budget = Budget
+budget-title = Budgetter
+budget-manage = Administrer
+budget-left = { $amount } tilbage
+budget-over = Overskredet med { $amount }
+budget-empty = Intet budget
+budget-empty-hint = Sæt et loft pr. kategori. Dine andele i grupper tæller også med.
+budget-define = Sæt et budget
+budget-sheet-title = Månedlige budgetter
+budget-sheet-intro = På din andel: personlige og grupper. Lad stå tomt for ikke at følge en kategori.
+budget-average = Gns. sidste 3 måneder: { $amount }
+budget-for = Budget { $category }
+budget-alert = Advar mig ved 80 %
+budget-alert-hint = Beregnet på denne enhed
+budget-invalid = Ugyldigt beløb for { $category }.
+budget-offline = Budgetter kan kun gemmes online. Opret forbindelse igen, og prøv igen.
+budget-alert-near = { $category }: { $percent } % af månedens budget
+budget-alert-over = { $category }: månedens budget er overskredet
+personal-card-budget = { $month } · budget { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } resultat
+       *[other] { $count } resultater
+    } · { $total } · personlige og grupper, alle måneder
 projects-join = Deltag i et projekt
 projects-import-tricount = Importér fra Tricount
 project-actions = Projekthandlinger
@@ -321,6 +381,7 @@ expenses-show-more = Vis flere ({ $count } tilbage)
 expense-type-expense = Udgift
 expense-type-transfer = Overførsel
 expense-type-gain = Indtægt
+expense-type-group = Type
 expense-paid-by = betalt af
 expense-sent-by = sendt af
 expense-contributed-by = bidraget af
@@ -386,6 +447,23 @@ export-failed = Eksport mislykkedes: { $reason }
 history-expense-added = Udgift tilføjet: { $name }
 history-expense-edited = Udgift redigeret: { $name }
 history-expense-deleted = Udgift slettet: { $name }
+move-expense = Flyt til et projekt
+move-expense-title = Flyt til…
+move-current = Nuværende
+move-converted = { $currency }, omregnet til månedens kurs
+move-note-personal = Du vælger, hvem der betalte og for hvem, i næste trin. Udgiften forlader Mine udgifter.
+move-note-group = Udgiften forlader { $project } for alle medlemmer, og gruppens saldo bliver genberegnet. Du vælger, hvem der betalte og for hvem, i næste trin.
+move-banner = Fra { $from } til { $to }
+move-submit = Flyt
+move-done = Udgift flyttet til { $project }
+move-delete-failed = Udgiften blev tilføjet det andet projekt, men er stadig i { $project }: slet den der.
+history-expense-moved = Udgift flyttet til et andet projekt: { $name }
+personal-badge = Personlig
+move-members =
+    { $count ->
+        [one] { $count } medlem
+       *[other] { $count } medlemmer
+    }
 history-project-edited = Projekt redigeret: { $name }
 history-name-changed = Navn: ”{ $from }” → ”{ $to }”
 history-description-added = Beskrivelse tilføjet: ”{ $value }”
@@ -399,11 +477,23 @@ expense-name-placeholder = Restaurant, dagligvarer…
 expense-actions = Udgiftshandlinger
 expense-your-share = Din andel
 expense-your-share-value = Din andel: { $amount } { $currency }
+expense-share-percent = { $percent } %
+expense-added-by = Tilføjet af { $name } den { $date }
 expense-inconsistent-detail = Beløbene stemmer ikke: { $paid } betalt, { $owed } skyldigt, for en udgift på { $total }. Rediger udgiften for at rette det.
 missing-access-key = Adgangsnøgle mangler. Åbn projektet via dets delelink.
 filter-all = Alle
 filter-my-payments = Mine betalinger
 filter-my-debts = Hvad jeg skylder
+expense-filter-group = Filter
+expenses-search = Søg i udgifter
+expenses-no-match = Ingen udgifter matcher.
+expenses-search-open = Søg
+expenses-search-clear = Ryd søgning
+expenses-search-summary =
+    { $count ->
+        [one] { $count } resultat
+       *[other] { $count } resultater
+    } · { $total } · alle måneder
 participants-shares-for = Andele for { $name }
 participants-amount-for = Beløb for { $name }
 reimbursement-add = Tilføj en afregning
@@ -441,8 +531,8 @@ charts-expense-count =
 charts-nothing-to-show = Intet at vise
 charts-my-share-skipped =
     { $count ->
-        [one] 1 projekt tælles ikke med — ingen deltager valgt, eller dets data blev ikke indlæst.
-       *[other] { $count } projekter tælles ikke med — ingen deltager valgt, eller deres data blev ikke indlæst.
+        [one] 1 projekt tælles ikke med - ingen deltager valgt, eller dets data blev ikke indlæst.
+       *[other] { $count } projekter tælles ikke med - ingen deltager valgt, eller deres data blev ikke indlæst.
     }
 
 ### Categories
@@ -516,6 +606,13 @@ payers-title-contributors = Bidragydere
 debtors-title-debtors = Skylder
 debtors-title-recipients = Modtagere
 debtors-title-beneficiaries = Begunstigede
+debtors-title-for = For
+debtors-title-recipient = Modtager
+expense-people =
+    { $count ->
+        [one] { $count } person
+       *[other] { $count } personer
+    }
 
 ### Welcome
 
@@ -648,6 +745,8 @@ invitation-decline = Afvis
 participants-you-label = Dit navn i dette projekt
 participants-you-badge = Dig
 participants-others = Andre deltagere
+participants-removed = Fjernet
+participant-restore = Gendan
 participants-empty = Tilføj deltagere nedenfor.
 participants-duplicate = ”{ $name }” er allerede på listen.
 participants-input-label = Tilføj en ven, eller skriv et navn
@@ -792,3 +891,16 @@ error-recurring-not-found = Denne tilbagevendende udgift findes ikke længere.
 error-recurring-stale = Nogen har ændret denne tilbagevendende udgift imens. Den er genindlæst: tjek den og gem igen.
 error-too-many-recurring = Projektet har allerede 50 tilbagevendende udgifter. Stop en, du ikke længere har brug for, for at tilføje en ny.
 error-user-in-recurring = Deltageren indgår i en tilbagevendende udgift. Fjern deltageren derfra eller stop udgiften først.
+
+home-owed-to-you = Du har til gode
+home-you-owe = Du skylder
+home-details-show = Vis detaljer
+home-details-hide = Skjul detaljer
+home-all-settled = Alt er gjort op
+home-pay = Betal
+home-remind = Påmind
+home-remind-message = Lille påmindelse: der mangler stadig tilbagebetalinger i { $project }.
+home-row-owed = du har til gode
+home-row-owe = du skylder
+home-row-settled = Gjort op
+home-totals-partial = Uden projekter uden valutakurs

@@ -151,7 +151,7 @@ payment-method-invalid-characters = Прибери розриви рядків �
 payment-method-limit = Можна зберегти до { $max } способів оплати.
 payment-methods-saved = Платіжні реквізити збережено.
 payment-methods-offline = Щоб зберегти платіжні реквізити, потрібне з’єднання з інтернетом.
-payment-methods-stale = Твої платіжні реквізити було змінено на іншому пристрої. Їх перезавантажено — спробуй ще раз.
+payment-methods-stale = Твої платіжні реквізити було змінено на іншому пристрої. Їх перезавантажено - спробуй ще раз.
 payment-methods-key-missing = Увійди ще раз, щоб керувати платіжними реквізитами.
 settings-payment-methods-share-warning = Спільний спосіб бачать усі учасники твоїх проєктів.
 payment-method-share = Поділитися з моїми проєктами
@@ -233,7 +233,6 @@ projects-filter-active = Активні
 projects-filter-all = Усі
 projects-count-label = Проєкти
 projects-empty = Немає проєктів
-projects-empty-hint = Створи проєкт кнопкою нижче
 projects-offline-banner = Дані офлайн - під’єднайся, щоб оновити.
 demo-banner = Демонстраційний проєкт - лише для читання.
 demo-start-own = Створити власний проєкт
@@ -247,6 +246,69 @@ projects-no-local-data = Немає локальних даних
 projects-no-local-data-hint = Увійди, щоб уперше завантажити свої проєкти.
 projects-add = Додати проєкт
 projects-create = Створити проєкт
+projects-personal-expense = Особиста витрата
+personal-expense-banner = Додано до Моїх витрат
+personal-create-title = Створіть особистий проєкт
+personal-create-hint = Стежте, що витрачаєте самі
+group-create-title = Створіть спільний проєкт
+group-create-hint = Діліться витратами з друзями та родиною
+personal-create-action = Створити
+personal-create-signup = Створити обліковий запис
+personal-sheet-title = Ваш особистий проєкт
+personal-sheet-intro = Щоб записувати, що ви витрачаєте самі. Він показується з вашими групами в Статистиці.
+personal-sheet-point-alone = Один учасник: ви, з іменем вашого облікового запису. Без посилання для поширення.
+personal-sheet-point-encrypted = Зашифровано на ваших пристроях, як і інші проєкти.
+personal-sheet-point-stats = Ваші частки в групах додаються до цих витрат у Статистиці.
+personal-default-name = Мої витрати
+my-spending-prev-month = Попередній місяць
+my-spending-next-month = Наступний місяць
+my-spending-spent = Ви витратили
+my-spending-groups = Групи
+my-spending-income = Доходи
+my-spending-balance = Баланс місяця
+my-spending-unconverted = Частки в іншій валюті не враховуються, доки курс невідомий.
+my-spending-empty = Цього місяця нічого
+my-spending-empty-hint = Додайте витрату кнопкою +. Ваші частки в групах з’являтимуться тут автоматично.
+my-spending-share-of = з { $amount }
+my-spending-uncounted = не враховано
+payer-you = ви
+expense-received-by = отримав(ла)
+counted-switch = Враховувати в Мої витрати
+counted-switch-on = Увімкнено: ваша частка додається до Мої витрати
+counted-switch-off = Вимкнено: ваша частка не показується в Мої витрати
+counted-groups = Враховані групи
+counted-groups-intro = Ваша частка в цих групах додається до Мої витрати і до бюджетів.
+counted-groups-converted = { $from }, переведено в { $to }
+counted-groups-encrypted = Цей вибір зашифровано вашим обліковим записом, і він супроводжує вас на ваших пристроях.
+counted-groups-empty = На цьому пристрої ще немає груп.
+counted-groups-done = OK
+counted-save-failed = Не вдалося зберегти цей вибір. Спробуйте ще раз.
+tab-budget = Бюджет
+budget-title = Бюджети
+budget-manage = Керувати
+budget-left = Залишилось { $amount }
+budget-over = Перевищено на { $amount }
+budget-empty = Немає бюджету
+budget-empty-hint = Встановіть ліміт для кожної категорії. Ваші частки в групах теж враховуються.
+budget-define = Встановити бюджет
+budget-sheet-title = Місячні бюджети
+budget-sheet-intro = На вашу частку: особисті та групи. Залиште порожнім, щоб не стежити за категорією.
+budget-average = Сер. за останні 3 місяці: { $amount }
+budget-for = Бюджет { $category }
+budget-alert = Попередити мене на 80 %
+budget-alert-hint = Обчислюється на цьому пристрої
+budget-invalid = Неправильна сума для { $category }.
+budget-offline = Бюджети зберігаються лише онлайн. Підключіться та спробуйте ще раз.
+budget-alert-near = { $category }: { $percent } % бюджету місяця
+budget-alert-over = { $category }: бюджет місяця перевищено
+personal-card-budget = { $month } · бюджет { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } результат
+        [few] { $count } результати
+        [many] { $count } результатів
+       *[other] { $count } результату
+    } · { $total } · особисті та групи, усі місяці
 projects-join = Приєднатися до проєкту
 projects-import-tricount = Імпортувати з Tricount
 project-actions = Дії з проєктом
@@ -323,6 +385,7 @@ expenses-show-more = Показати більше (ще { $count })
 expense-type-expense = Витрата
 expense-type-transfer = Переказ
 expense-type-gain = Надходження
+expense-type-group = Тип
 expense-paid-by = заплатив(ла)
 expense-sent-by = надіслав(ла)
 expense-contributed-by = вніс(ла)
@@ -388,6 +451,25 @@ export-failed = Експорт не вдався: { $reason }
 history-expense-added = Витрату додано: { $name }
 history-expense-edited = Витрату змінено: { $name }
 history-expense-deleted = Витрату видалено: { $name }
+move-expense = Перемістити до проєкту
+move-expense-title = Перемістити до…
+move-current = Поточний
+move-converted = { $currency }, за курсом місяця
+move-note-personal = На наступному кроці ви оберете, хто платив і за кого. Витрата покине Мої витрати.
+move-note-group = Витрата покине { $project } для всіх учасників, а баланс групи буде перераховано. На наступному кроці ви оберете, хто платив і за кого.
+move-banner = З { $from } до { $to }
+move-submit = Перемістити
+move-done = Витрату переміщено до { $project }
+move-delete-failed = Витрату додано до іншого проєкту, але вона досі в { $project }: видаліть її там.
+history-expense-moved = Витрату переміщено до іншого проєкту: { $name }
+personal-badge = Особисте
+move-members =
+    { $count ->
+        [one] { $count } учасник
+        [few] { $count } учасники
+        [many] { $count } учасників
+       *[other] { $count } учасника
+    }
 history-project-edited = Проєкт змінено: { $name }
 history-name-changed = Назва: «{ $from }» → «{ $to }»
 history-description-added = Опис додано: «{ $value }»
@@ -401,11 +483,25 @@ expense-name-placeholder = Ресторан, продукти…
 expense-actions = Дії з витратою
 expense-your-share = Твоя частка
 expense-your-share-value = Твоя частка: { $amount } { $currency }
+expense-share-percent = { $percent }%
+expense-added-by = Додано: { $name }, { $date }
 expense-inconsistent-detail = Суми не сходяться: заплачено { $paid }, винні { $owed }, для витрати { $total }. Зміни витрату, щоб виправити.
 missing-access-key = Відсутній ключ доступу. Відкрий цей проєкт через його посилання для спільного доступу.
 filter-all = Усі
 filter-my-payments = Мої платежі
 filter-my-debts = Що я винен
+expense-filter-group = Фільтр
+expenses-search = Пошук витрат
+expenses-no-match = Жодна витрата не відповідає.
+expenses-search-open = Пошук
+expenses-search-clear = Очистити пошук
+expenses-search-summary =
+    { $count ->
+        [one] { $count } результат
+        [few] { $count } результати
+        [many] { $count } результатів
+       *[other] { $count } результату
+    } · { $total } · усі місяці
 participants-shares-for = Частки для { $name }
 participants-amount-for = Сума для { $name }
 reimbursement-add = Додати розрахунок
@@ -445,10 +541,10 @@ charts-expense-count =
 charts-nothing-to-show = Нічого показувати
 charts-my-share-skipped =
     { $count ->
-        [one] { $count } проєкт не враховано — не вибрано учасника, або його дані не завантажилися.
-        [few] { $count } проєкти не враховано — не вибрано учасника, або їхні дані не завантажилися.
-        [many] { $count } проєктів не враховано — не вибрано учасника, або їхні дані не завантажилися.
-       *[other] { $count } проєкту не враховано — не вибрано учасника, або їхні дані не завантажилися.
+        [one] { $count } проєкт не враховано - не вибрано учасника, або його дані не завантажилися.
+        [few] { $count } проєкти не враховано - не вибрано учасника, або їхні дані не завантажилися.
+        [many] { $count } проєктів не враховано - не вибрано учасника, або їхні дані не завантажилися.
+       *[other] { $count } проєкту не враховано - не вибрано учасника, або їхні дані не завантажилися.
     }
 
 ### Categories
@@ -479,7 +575,7 @@ charts-paid-more = На { $amount } більше за мою частку
 charts-paid-less = На { $amount } менше за мою частку
 charts-paid-even = Рівно моя частка
 charts-part-title = Твоя частка в кожній категорії
-charts-part-desc = Сірим — що витратила група, кольором — що спожив ти.
+charts-part-desc = Сірим - що витратила група, кольором - що спожив ти.
 charts-breakdown-title = Розподіл за категоріями
 charts-breakdown-desc = Торкнися сектора чи рядка, щоб побачити витрати.
 charts-of-total = { $amount } з { $total }
@@ -522,13 +618,22 @@ payers-title-contributors = Внесли
 debtors-title-debtors = Винні
 debtors-title-recipients = Отримувачі
 debtors-title-beneficiaries = Бенефіціари
+debtors-title-for = Для
+debtors-title-recipient = Отримувач
+expense-people =
+    { $count ->
+        [one] { $count } особа
+        [few] { $count } особи
+        [many] { $count } осіб
+       *[other] { $count } особи
+    }
 
 ### Welcome
 
 welcome-title = Твої рахунки - нікого не стосуються.
 welcome-subtitle = Діліть витрати з друзями.
 welcome-note = Безкоштовно. Без облікового запису. Без реклами.
-welcome-link-title = Одне посилання — і всі долучаються.
+welcome-link-title = Одне посилання - і всі долучаються.
 welcome-link-body = Нікому не потрібно створювати обліковий запис.
 welcome-link-account = Обліковий запис? Ніколи не обов'язковий. Він потрібен, щоб знаходити свої проєкти на іншому пристрої, запрошувати друзів із застосунку й ділитися своїми платіжними реквізитами.
 welcome-demo-project = Вихідні в Ліоні
@@ -626,7 +731,7 @@ friends-list-title = Мої друзі
 friends-list-empty = Друзів ще немає. Додай когось за електронною поштою вище або зі спільного проєкту.
 friends-remove = Видалити
 friends-remove-confirm-title = Видалити друга
-friends-remove-confirm-message = { $email } більше не буде у ваших друзях, а ви — у його. Будь-хто з вас зможе надіслати новий запит пізніше.
+friends-remove-confirm-message = { $email } більше не буде у ваших друзях, а ви - у його. Будь-хто з вас зможе надіслати новий запит пізніше.
 friends-no-key = Ще не готово
 friends-fingerprint = Код безпеки
 friends-fingerprint-hint = Двоє друзів, які прочитали одне одному однаковий код безпеки, знають, що між ними ніхто не стоїть - навіть наш сервер.
@@ -656,6 +761,8 @@ invitation-decline = Відхилити
 participants-you-label = Твоє ім’я в цьому проєкті
 participants-you-badge = Ти
 participants-others = Інші учасники
+participants-removed = Вилучені
+participant-restore = Відновити
 participants-empty = Додай учасників нижче.
 participants-duplicate = «{ $name }» уже є в списку.
 participants-input-label = Додати друга або ввести ім’я
@@ -800,3 +907,16 @@ error-recurring-not-found = Цієї регулярної витрати біл�
 error-recurring-stale = Хтось тим часом змінив цю регулярну витрату. Її перезавантажено: перевір і збережи знову.
 error-too-many-recurring = У проєкті вже 50 регулярних витрат. Припини непотрібну, щоб додати нову.
 error-user-in-recurring = Цей учасник входить до регулярної витрати. Спершу вилучи його з неї або припини її.
+
+home-owed-to-you = Вам винні
+home-you-owe = Ви винні
+home-details-show = Докладніше
+home-details-hide = Сховати подробиці
+home-all-settled = Усе розраховано
+home-pay = Сплатити
+home-remind = Нагадати
+home-remind-message = Невелике нагадування: у { $project } ще залишилися невирівняні повернення.
+home-row-owed = вам винні
+home-row-owe = ви винні
+home-row-settled = Розраховано
+home-totals-partial = Без проєктів без обмінного курсу

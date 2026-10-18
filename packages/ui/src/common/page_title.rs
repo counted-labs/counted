@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-/// Sets `document.title`. Replaces `document::Title`, which dioxus-web implements through eval —
+/// Sets `document.title`. Replaces `document::Title`, which dioxus-web implements through eval -
 /// blocked by the app's CSP (see `common::web_dom`). Renders nothing on every target, so the
 /// server-rendered tree and the hydrated one stay identical, and SSR still emits `<title>`.
 #[component]

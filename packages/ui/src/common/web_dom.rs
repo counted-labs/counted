@@ -1,9 +1,9 @@
-//! Direct DOM bindings for the web build — the CSP-safe replacement for `document::eval`.
+//! Direct DOM bindings for the web build - the CSP-safe replacement for `document::eval`.
 //!
 //! dioxus-web implements `document::eval` (and `document::Title`) with `new Function(...)`.
 //! The app's CSP allows `'wasm-unsafe-eval'` but not `'unsafe-eval'` (nginx/nginx.conf), so the
 //! constructor throws an `EvalError`; the exception unwinds the wasm stack through whatever was
-//! running and leaves the app frozen. Web code calls these bindings instead — no eval, no CSP
+//! running and leaves the app frozen. Web code calls these bindings instead - no eval, no CSP
 //! relaxation. Native targets (mobile WebView, desktop) keep using eval: no CSP applies there.
 
 use wasm_bindgen::{JsCast, JsValue};
@@ -30,12 +30,12 @@ pub fn set_html_lang(lang: &str) {
 /// `document.cookie = "name=value; …"`.
 ///
 /// Only ever used for the language preference, which the *server* has to know before the client
-/// can speak — localStorage is invisible to SSR, so a stored choice alone would render the wrong
+/// can speak - localStorage is invisible to SSR, so a stored choice alone would render the wrong
 /// language until hydration. Not HttpOnly by necessity (the client writes it). `Secure` is set
 /// unconditionally because this is the generic cookie writer and the next caller inherits its
 /// default; browsers accept a `Secure` cookie from `http://localhost` (a secure context) but drop
 /// it on other plain-http origins such as the Android emulator's `10.0.2.2`, where SSR then falls
-/// back to `Accept-Language` — a dev-only cost.
+/// back to `Accept-Language` - a dev-only cost.
 pub fn set_cookie(name: &str, value: &str, max_age: i64) {
     let Some(doc) = document().map(|d| d.unchecked_into::<web_sys::HtmlDocument>()) else {
         return;
@@ -64,10 +64,14 @@ pub async fn fetch_text(url: &str) -> Option<String> {
     JsFuture::from(response.text().ok()?).await.ok()?.as_string()
 }
 
-/// `history.replaceState(null, '', '#fragment')` — keeps the key in the URL without navigating.
-pub fn replace_state_hash(fragment: &str) {
-    if let Some(h) = web_sys::window().and_then(|w| w.history().ok()) {
-        let _ = h.replace_state_with_url(&JsValue::NULL, "", Some(&format!("#{fragment}")));
+/// `history.replaceState` to the same path and query without the `#fragment`, so the key a share
+/// link carried leaves the address bar and the history entry once the store holds it.
+pub fn clear_hash() {
+    let Some(w) = web_sys::window() else { return };
+    let loc = w.location();
+    let url = format!("{}{}", loc.pathname().unwrap_or_default(), loc.search().unwrap_or_default());
+    if let Ok(h) = w.history() {
+        let _ = h.replace_state_with_url(&JsValue::NULL, "", Some(&url));
     }
 }
 
@@ -108,7 +112,7 @@ fn text_like(el: &web_sys::Element) -> bool {
     }
 }
 
-/// Web twin of the keydown listener in `enter_next.rs` — same algorithm, same guards; change both.
+/// Web twin of the keydown listener in `enter_next.rs` - same algorithm, same guards; change both.
 pub fn enter_advances_focus() {
     let Some(doc) = document() else { return };
     let handler = wasm_bindgen::closure::Closure::<dyn Fn(web_sys::KeyboardEvent)>::new({
@@ -155,7 +159,7 @@ pub fn enter_advances_focus() {
 
 /// `navigator.clipboard`, but only when `method` really exists on it. web-sys' bindings are not
 /// `catch`: on a non-secure origin `clipboard` is undefined, and Firefox has `writeText` but no
-/// `readText` — either way the call throws a TypeError through wasm and freezes the app, which is
+/// `readText` - either way the call throws a TypeError through wasm and freezes the app, which is
 /// the whole failure this module exists to avoid.
 fn clipboard_with(method: &str) -> Option<web_sys::Clipboard> {
     let nav = web_sys::window()?.navigator();
@@ -165,7 +169,7 @@ fn clipboard_with(method: &str) -> Option<web_sys::Clipboard> {
 }
 
 /// `navigator.clipboard.writeText`. False when the browser refuses (denied permission, no
-/// secure context) — callers surface it, the link stays selectable by hand.
+/// secure context) - callers surface it, the link stays selectable by hand.
 pub async fn copy_to_clipboard(text: &str) -> bool {
     let Some(clipboard) = clipboard_with("writeText") else {
         return false;
@@ -188,7 +192,7 @@ fn navigator_with_share() -> Option<web_sys::Navigator> {
 }
 
 /// `navigator.share({ url })`. The user dismissing the sheet rejects with `AbortError` and counts
-/// as handled — only a sheet that could not open is a failure.
+/// as handled - only a sheet that could not open is a failure.
 pub async fn share_url(url: &str) -> bool {
     let Some(nav) = navigator_with_share() else {
         return false;
@@ -242,7 +246,7 @@ pub async fn select_focused_input() {
 }
 
 /// Resolves once the browser has painted. `requestAnimationFrame` fires *before* paint, so the
-/// macrotask hop after it is what lands once the frame is on screen. A hidden tab never fires rAF —
+/// macrotask hop after it is what lands once the frame is on screen. A hidden tab never fires rAF -
 /// skip the wait there rather than hang until it is foregrounded.
 pub async fn next_paint() {
     let hidden = document().map(|d| d.hidden()).unwrap_or(true);
@@ -255,9 +259,128 @@ pub async fn next_paint() {
     gloo_timers::future::TimeoutFuture::new(0).await;
 }
 
-/// Whether a form field holds the focus — a button that opened a modal does not count.
+/// Whether a form field holds the focus - a button that opened a modal does not count.
 pub fn a_field_has_focus() -> bool {
     document()
         .and_then(|d| d.active_element())
         .is_some_and(|el| matches!(el.tag_name().as_str(), "INPUT" | "TEXTAREA" | "SELECT"))
+}
+
+struct OpenModal {
+    id: &'static str,
+    opener: Option<web_sys::HtmlElement>,
+    inerted: Vec<web_sys::Element>,
+}
+
+thread_local! {
+    static OPEN_MODALS: std::cell::RefCell<Vec<OpenModal>> = const { std::cell::RefCell::new(Vec::new()) };
+    static ESCAPE_LISTENER: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+fn is_live_region(el: &web_sys::Element) -> bool {
+    el.has_attribute("aria-live")
+        || matches!(el.get_attribute("role").as_deref(), Some("alert") | Some("status"))
+}
+
+fn inert_outside(dialog: &web_sys::Element) -> Vec<web_sys::Element> {
+    let body: Option<web_sys::Element> = document().and_then(|d| d.body()).map(Into::into);
+    let mut inerted = Vec::new();
+    let mut el = dialog.clone();
+    while Some(&el) != body.as_ref() {
+        let Some(parent) = el.parent_element() else { break };
+        let mut sibling = parent.first_element_child();
+        while let Some(s) = sibling {
+            if s != el && !s.has_attribute("inert") && !is_live_region(&s) {
+                let _ = s.set_attribute("inert", "");
+                inerted.push(s.clone());
+            }
+            sibling = s.next_element_sibling();
+        }
+        el = parent;
+    }
+    inerted
+}
+
+/// Web twin of the Escape listener in `modal_focus.rs`.
+fn listen_for_escape(doc: &web_sys::Document) {
+    if ESCAPE_LISTENER.replace(true) {
+        return;
+    }
+    let handler = wasm_bindgen::closure::Closure::<dyn Fn(web_sys::KeyboardEvent)>::new(
+        move |e: web_sys::KeyboardEvent| {
+            if e.key() != "Escape" || e.default_prevented() {
+                return;
+            }
+            let Some(top) = OPEN_MODALS.with_borrow(|m| m.last().map(|m| m.id)) else { return };
+            let backdrop = document()
+                .and_then(|d| d.get_element_by_id(top))
+                .and_then(|dialog| dialog.query_selector(":scope > .modal-backdrop").ok().flatten());
+            if let Some(backdrop) = backdrop {
+                e.prevent_default();
+                backdrop.unchecked_ref::<web_sys::HtmlElement>().click();
+            }
+        },
+    );
+    let _ = doc.add_event_listener_with_callback("keydown", handler.as_ref().unchecked_ref());
+    handler.forget();
+}
+
+/// Web twin of `enter` in `modal_focus.rs`. True once the focus is inside the dialog.
+pub fn enter_modal(id: &'static str) -> bool {
+    let Some(doc) = document() else { return true };
+    let Some(dialog) = doc.get_element_by_id(id) else { return false };
+    if !OPEN_MODALS.with_borrow(|m| m.iter().any(|m| m.id == id)) {
+        listen_for_escape(&doc);
+        let opener = doc.active_element().and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok());
+        let inerted = inert_outside(&dialog);
+        OPEN_MODALS.with_borrow_mut(|m| m.push(OpenModal { id, opener, inerted }));
+    }
+    let focus_inside = |doc: &web_sys::Document| {
+        dialog.contains(doc.active_element().as_ref().map(|el| el.as_ref()))
+    };
+    if !focus_inside(&doc) {
+        let _ = dialog.unchecked_ref::<web_sys::HtmlElement>().focus();
+    }
+    focus_inside(&doc)
+}
+
+/// Web twin of `leave` in `modal_focus.rs`.
+pub fn leave_modal(id: &'static str) {
+    let Some(modal) = OPEN_MODALS.with_borrow_mut(|m| {
+        m.iter().rposition(|m| m.id == id).map(|i| m.remove(i))
+    }) else {
+        return;
+    };
+    for el in modal.inerted {
+        let _ = el.remove_attribute("inert");
+    }
+    if let Some(opener) = modal.opener.filter(|o| o.is_connected()) {
+        let _ = opener.focus();
+    }
+}
+
+/// Web twin of `FOCUS_HEADING_JS` in `route_focus.rs`. True once there is nothing left to do.
+pub fn focus_page_heading() -> bool {
+    let Some(doc) = document() else { return true };
+    let outside_inert = |el: &web_sys::Element| el.closest("[inert]").ok().flatten().is_none();
+    let body: Option<web_sys::Element> = doc.body().map(Into::into);
+    if let Some(active) = doc.active_element() {
+        if Some(&active) != body.as_ref() && active.is_connected() && outside_inert(&active) {
+            return true;
+        }
+    }
+    let Ok(headings) = doc.query_selector_all("h1") else { return true };
+    let Some(heading) = (0..headings.length())
+        .filter_map(|i| headings.item(i)?.dyn_into::<web_sys::Element>().ok())
+        .find(|h| outside_inert(h))
+    else {
+        return false;
+    };
+    if !heading.has_attribute("tabindex") {
+        let _ = heading.set_attribute("tabindex", "-1");
+    }
+    let options = web_sys::FocusOptions::new();
+    options.set_prevent_scroll(true);
+    let _ = heading.unchecked_ref::<web_sys::HtmlElement>().focus_with_options(&options);
+    doc.active_element().as_ref() == Some(&heading)
 }

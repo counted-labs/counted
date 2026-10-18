@@ -1,7 +1,7 @@
 //! Reconciling this device's project list with the account's, in both directions.
 //!
 //! Signing in used to be a one-way pull: `get_account_projects` came down and was upserted locally,
-//! but nothing went up. A device holding projects from before it signed in kept them to itself —
+//! but nothing went up. A device holding projects from before it signed in kept them to itself -
 //! they reached `account_projects` only when each was individually *opened*, via
 //! `ensure_membership`. So a phone that created A, B, C while logged out and then signed in to an
 //! account holding C, D, E ended up with all five locally and the account still holding three.
@@ -11,12 +11,12 @@
 //!
 //! Keys ride along. A project key is wrapped under the account key (`crypto::wrap_key`) so
 //! the server can store it without reading it, and unwrapped on any other device the account signs
-//! in to — the only thing that stops a second device from showing a list of projects it cannot
+//! in to - the only thing that stops a second device from showing a list of projects it cannot
 //! decrypt. See `docs/e2ee.md`, "Key escrow".
 //!
 //! The push is not a blind union. Leaving a project on one device deletes the account's row, and
 //! a second device still holding that project locally would otherwise push it straight back on its
-//! next load — the leave undone, silently, and re-pulled onto the device that left. So every entry
+//! next load - the leave undone, silently, and re-pulled onto the device that left. So every entry
 //! remembers which account it was last seen synced with ([`LocalStorageProject::synced_account`]),
 //! and an entry marked for *this* account that the server no longer lists is forgotten, not pushed
 //! ([`left_elsewhere`]). An entry with no mark, or marked for another account, is what the push was
@@ -54,14 +54,14 @@ pub fn left_elsewhere(
 /// What this device should send up, given what the server already has.
 ///
 /// An entry is pushed when the server is missing the membership, the participant, or the escrowed
-/// key. Nothing is pushed for a project the server already knows about in full — reconciliation
+/// key. Nothing is pushed for a project the server already knows about in full - reconciliation
 /// runs on every projects-page load with an account, and a batch of unchanged rows is a write the
 /// database does not need.
 ///
 /// `account_key` is `None` when this device holds a session but not the key (local store cleared,
 /// or a session from before the key was persisted): no key can be wrapped. Memberships still go up.
 ///
-/// `account` is what the claim label is built from — it needs the account key too, to read
+/// `account` is what the claim label is built from - it needs the account key too, to read
 /// `display_name` before re-encrypting it under the project key. Absent either, the claim goes up
 /// unlabelled and the label is attached on the next project open.
 pub fn to_push(
@@ -120,11 +120,11 @@ pub fn to_push(
         .collect()
 }
 
-/// Whether some project this device claims an identity in — key and `user_id` both held — lacks
+/// Whether some project this device claims an identity in - key and `user_id` both held - lacks
 /// the account's payment-methods copy server-side. That is the copy a settings save could not
 /// produce: saved on a device without this project's key, or before this one claimed its identity
 /// here. The caller refills through `PUT /auth/payment-methods` from a fresh `me()`, never from
-/// the `Account` in context — see `payment_methods::refill_project_copies`.
+/// the `Account` in context - see `payment_methods::refill_project_copies`.
 pub fn copy_missing(state: &LocalStorageState, server: &[AccountProject]) -> bool {
     state.projects.iter().any(|local| {
         local.user_id.is_some()
@@ -139,7 +139,7 @@ pub fn copy_missing(state: &LocalStorageState, server: &[AccountProject]) -> boo
 /// device does not already hold one.
 ///
 /// A key that fails to unwrap is skipped rather than reported. It means this device cannot read that
-/// project — a wrong account key, a blob written under a password since changed — which is exactly
+/// project - a wrong account key, a blob written under a password since changed - which is exactly
 /// the state the locked card on the projects list exists to show.
 ///
 /// The local key wins over the escrowed one when both are present: it is the copy that came from a
@@ -147,7 +147,7 @@ pub fn copy_missing(state: &LocalStorageState, server: &[AccountProject]) -> boo
 /// swap in a key of its choosing on a device that already had the right one.
 ///
 /// Every pulled entry is marked as synced with `account_id`, which is what makes a later absence
-/// from the server mean "left elsewhere" — see [`left_elsewhere`].
+/// from the server mean "left elsewhere" - see [`left_elsewhere`].
 pub fn apply_pull(
     state: &mut LocalStorageState,
     server: &[AccountProject],
@@ -189,7 +189,7 @@ mod tests {
     }
 
     /// A server row for a project whose verifier is already seeded and whose payment-methods copy
-    /// is in place — the steady state.
+    /// is in place - the steady state.
     fn remote(project_id: Uuid, user_id: Option<i32>, key: Option<shared::EncryptedPair>) -> AccountProject {
         AccountProject { project_id, user_id, key, claim_verifier_seeded: true, payment_methods_shared: true }
     }
@@ -356,7 +356,7 @@ mod tests {
         );
 
         assert_eq!(s.projects.len(), 1, "the membership still lands");
-        assert!(s.projects[0].encryption_key.is_none(), "but no key — the card renders locked");
+        assert!(s.projects[0].encryption_key.is_none(), "but no key - the card renders locked");
     }
 
     #[test]
@@ -378,7 +378,7 @@ mod tests {
     }
 
     /// The reported edge case. Devices 1 and 2 both hold A, B, C synced with the account. Device 1
-    /// leaves C. Device 2 must forget C, not push it back — otherwise the leave is undone and C
+    /// leaves C. Device 2 must forget C, not push it back - otherwise the leave is undone and C
     /// comes back onto device 1 at its next pull.
     #[test]
     fn a_project_left_on_another_device_is_forgotten_not_pushed_back() {
@@ -415,7 +415,7 @@ mod tests {
     }
 
     /// A project this device holds but the account has never held is exactly what the push exists
-    /// for — it is not "left elsewhere", whatever the server's silence.
+    /// for - it is not "left elsewhere", whatever the server's silence.
     #[test]
     fn a_never_synced_project_is_not_treated_as_left() {
         let id = Uuid::new_v4();
@@ -439,7 +439,7 @@ mod tests {
         assert_eq!(to_push(&s, &[], None, None).len(), 1);
     }
 
-    /// The device that pushed a project must also know it is now synced — otherwise a leave on
+    /// The device that pushed a project must also know it is now synced - otherwise a leave on
     /// another device before this one's next pull would be undone all the same.
     #[test]
     fn an_accepted_push_marks_the_entry_synced() {

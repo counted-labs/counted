@@ -9,12 +9,12 @@ use crate::crypto::{claim_token, wrap_key};
 use crate::icons::{CloseIcon, ICON_HEADER};
 use crate::route::Route;
 
-/// Brings a shared project link into the app by hand — the counterpart of the native deep link,
+/// Brings a shared project link into the app by hand - the counterpart of the native deep link,
 /// and the only path available when the link arrives somewhere the OS cannot hand to the app
 /// (a desktop browser, a chat app that strips the handoff, an iOS build without universal links).
 ///
 /// The encryption key lives only in the link's fragment, so joining is a local-storage write plus a
-/// navigation — with one fetch of the project when a different key is already held, to prove the
+/// navigation - with one fetch of the project when a different key is already held, to prove the
 /// new one before it replaces it. The account link is best-effort on top.
 #[derive(Props, Clone, PartialEq)]
 pub struct JoinProjectModalProps {
@@ -27,11 +27,12 @@ pub struct JoinProjectModalProps {
 
 #[component]
 pub fn JoinProjectModal(props: JoinProjectModalProps) -> Element {
+    crate::common::use_modal_focus("join-project-modal");
     let mut link = use_signal(String::new);
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
 
     // WebView only: a native paste (long-press → Coller) never reaches oninput there. On the web
-    // oninput already fires on paste, and this listener would need eval — CSP-blocked, see
+    // oninput already fires on paste, and this listener would need eval - CSP-blocked, see
     // `common::web_dom`.
     #[cfg(not(target_arch = "wasm32"))]
     use_effect(move || {
@@ -80,7 +81,7 @@ pub fn JoinProjectModal(props: JoinProjectModalProps) -> Element {
             on_close.call(());
             nav.push(Route::ExpensesPage { project_id });
             if is_auth && adopted {
-                // user_id is None — the user identifies themselves via UserSelectionModal, which is
+                // user_id is None - the user identifies themselves via UserSelectionModal, which is
                 // also what attaches the claim label. Nothing to claim here yet.
                 let _ = upsert_account_project(Json(UpsertAccountProject {
                     project_id,
@@ -97,13 +98,19 @@ pub fn JoinProjectModal(props: JoinProjectModalProps) -> Element {
     let on_close = props.on_close;
 
     rsx! {
-        div { class: "modal modal-open modal-bottom sm:modal-middle", role: "dialog",
+        div {
+            id: "join-project-modal",
+            class: "modal modal-open modal-bottom sm:modal-middle",
+            role: "dialog",
+            aria_modal: "true",
+            aria_labelledby: "join-project-modal-title",
+            tabindex: "-1",
             div { class: "modal-box max-w-sm p-0 flex flex-col",
                 div { class: "flex items-center justify-between px-6 pt-5 pb-4 border-b border-base-200 flex-shrink-0",
-                    h3 { class: "font-bold text-lg font-display", {tid!("projects-join")} }
+                    h2 { id: "join-project-modal-title", class: "font-bold text-lg font-display", {tid!("projects-join")} }
                     button {
                         r#type: "button",
-                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11",
+                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
                         aria_label: tid!("close"),
                         onclick: move |_| on_close.call(()),
                         CloseIcon { size: ICON_HEADER }

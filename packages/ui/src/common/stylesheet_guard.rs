@@ -4,7 +4,7 @@
 //! reduced-transparency fallback, a `:hover` that latches on touch, a plist key pointing at a
 //! resource that does not exist. All three have shipped. They are checked here, in `ui`, because
 //! `ui` is the crate whose components render `.card-clickable` and `.chrome-material` and depends
-//! on all three shells defining them — the shared contract belongs with the consumer — and because
+//! on all three shells defining them - the shared contract belongs with the consumer - and because
 //! `cargo test --package ui` is the one a CI job actually runs.
 //!
 //! Modelled on the `ftl` guards in `i18n.rs`, which read the locale files and the crate source off
@@ -28,7 +28,7 @@ fn read(rel: &str) -> String {
         .unwrap_or_else(|e| panic!("guard cannot read {}: {e}", path.display()))
 }
 
-/// `/* … */` removed. Without this every assertion below trips on its own explanatory comment —
+/// `/* … */` removed. Without this every assertion below trips on its own explanatory comment -
 /// the reduced-transparency block's comment names `backdrop-filter`, and the card rule's names
 /// `:hover`.
 fn strip_comments(css: &str) -> String {
@@ -74,7 +74,7 @@ fn normalize(s: &str) -> String {
     s.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// A brace-aware walk. Enough for these files — they are hand-written, comment-stripped, and
+/// A brace-aware walk. Enough for these files - they are hand-written, comment-stripped, and
 /// contain no strings or url() with unbalanced braces.
 fn declarations(css: &str) -> Vec<Decl> {
     let mut out = Vec::new();
@@ -116,7 +116,7 @@ mod tests {
     use super::*;
 
     /// Fix 1's guard. A translucent bar that ignores Reduce Transparency is an accessibility
-    /// regression that looks perfectly fine to whoever added it — which is exactly how it shipped
+    /// regression that looks perfectly fine to whoever added it - which is exactly how it shipped
     /// the first time.
     #[test]
     fn every_backdrop_filter_has_a_reduced_transparency_fallback() {
@@ -164,7 +164,7 @@ mod tests {
                 .collect();
             assert!(
                 offenders.is_empty(),
-                "{file}: :hover outside @media (hover: hover) — it will latch on touch: {offenders:?}"
+                "{file}: :hover outside @media (hover: hover) - it will latch on touch: {offenders:?}"
             );
         }
     }

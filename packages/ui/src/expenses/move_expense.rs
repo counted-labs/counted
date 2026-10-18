@@ -1,0 +1,355 @@
+//! Moving an expense to another project (designs R8, R9, R9b, R10): the destination's own form,
+//! prefilled, writes the expense there; only then is it deleted here. Two writes, in that order,
+//! so a failure in between leaves the expense in both projects and never in neither.
+
+use api::expenses::expenses_controller::delete_expense;
+use dioxus::fullstack::Json;
+use dioxus::prelude::*;
+use shared::{ExpensePayload, ExpenseType, ProjectDto, ProjectPayload, ProjectStatus};
+use std::collections::VecDeque;
+use uuid::Uuid;
+
+use crate::common::{
+    key_of, Flash, LocalStorageState, ProjectTile, QueuedOp,
+};
+use crate::crypto::decrypt_json;
+use crate::decrypted::{pickable_users, project_status};
+use crate::expenses::helpers::delete_expense_action::{delete_expense_request, run_delete_expense};
+use crate::icons::{ChevronRightIcon, CloseIcon, WalletIcon};
+use crate::tid;
+
+/// Everything the destination's form needs, gathered on the source's page while its key is the one
+/// in context.
+#[derive(Clone, Debug, PartialEq)]
+pub struct MoveDraft {
+    pub from_project: Uuid,
+    pub from_name: String,
+    pub from_key: [u8; 32],
+    pub from_user_id: Option<i32>,
+    pub expense_id: i32,
+    pub to_project: Uuid,
+    pub to_name: String,
+    pub to_personal: bool,
+    /// Description, estimate and fields from newer builds - kept, as an edit keeps them.
+    pub payload: ExpensePayload,
+    /// What the amount was typed in: the original when the expense was entered in another
+    /// currency, so the destination converts from what was paid rather than from a conversion.
+    pub amount: f64,
+    pub currency: String,
+}
+
+impl MoveDraft {
+    pub fn category(&self) -> Option<String> {
+        self.payload.category.clone()
+    }
+
+    pub fn expense_type(&self) -> ExpenseType {
+        match self.payload.expense_type.as_str() {
+            "gain" => ExpenseType::Gain,
+            _ => ExpenseType::Expense,
+        }
+    }
+}
+
+/// `(amount, currency)` to prefill: the original when the payload carries a usable conversion.
+pub fn typed_amount(payload: &ExpensePayload, project_currency: &str) -> (f64, String) {
+    match (&payload.source_currency, payload.source_amount, payload.rate) {
+        (Some(c), Some(a), Some(r)) if a.is_finite() && shared::is_valid_rate(r) => (a, c.clone()),
+        _ => (payload.amount, project_currency.to_string()),
+    }
+}
+
+/// A transfer settles a debt between two people of this project; it has no meaning elsewhere.
+pub fn can_move(expense_type: &ExpenseType) -> bool {
+    *expense_type != ExpenseType::Transfer
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Destination {
+    pub project_id: Uuid,
+    pub name: String,
+    pub currency: String,
+    /// Participants still in the project, when this device has them cached.
+    pub members: Option<usize>,
+    pub personal: bool,
+    pub current: bool,
+}
+
+/// The source first (shown, not pickable), then every project that can take an expense: held with
+/// its key, ongoing, not read-only. "Mes dépenses" comes last.
+pub fn destinations(list: &[ProjectDto], state: &LocalStorageState, from: Uuid) -> Vec<Destination> {
+    let mut out: Vec<Destination> = list
+        .iter()
+        .filter_map(|p| {
+            let entry = state.projects.iter().find(|lp| lp.project_id == p.id)?;
+            let key = key_of(entry)?;
+            let payload: ProjectPayload = decrypt_json(&key, &p.payload).ok()?;
+            let current = p.id == from;
+            let open = project_status(Some(&key), p) == ProjectStatus::Ongoing && !p.read_only;
+            (current || open).then(|| Destination {
+                project_id: p.id,
+                personal: payload.is_personal(),
+                name: payload.name,
+                currency: payload.currency,
+                members: entry.cached_users.as_ref().map(|u| pickable_users(Some(&key), u, &[]).len()),
+                current,
+            })
+        })
+        .collect();
+    out.sort_by_key(|d| (!d.current, d.personal));
+    out
+}
+
+#[component]
+pub fn MoveExpenseSheet(
+    destinations: Vec<Destination>,
+    /// The source's display name; `None` when it is "Mes dépenses".
+    from_group: Option<String>,
+    on_pick: EventHandler<Uuid>,
+    on_close: EventHandler<()>,
+) -> Element {
+    crate::common::use_modal_focus("move-expense-sheet");
+    let from_currency = destinations.iter().find(|d| d.current).map(|d| d.currency.clone()).unwrap_or_default();
+    rsx! {
+        div {
+            id: "move-expense-sheet",
+            class: "modal modal-open modal-bottom sm:modal-middle",
+            role: "dialog",
+            aria_modal: "true",
+            aria_labelledby: "move-expense-title",
+            tabindex: "-1",
+            div { class: "modal-box max-w-md p-0",
+                div { class: "flex flex-col gap-3 px-6 pt-5 pb-6",
+                    div { class: "flex items-center gap-2",
+                        h2 { id: "move-expense-title", class: "flex-1 min-w-0 truncate font-bold text-lg font-display",
+                            {tid!("move-expense-title")}
+                        }
+                        button {
+                            id: "move-expense-close",
+                            r#type: "button",
+                            class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
+                            aria_label: tid!("close"),
+                            onclick: move |_| on_close.call(()),
+                            CloseIcon {}
+                        }
+                    }
+                    ul { class: "flex flex-col",
+                        for d in destinations {
+                            {
+                                let id = d.project_id;
+                                let detail = destination_detail(&d, &from_currency);
+                                let tile = if d.personal {
+                                    rsx! {
+                                        span { class: "size-[42px] shrink-0 rounded-[13px] bg-primary/10 text-primary flex items-center justify-center",
+                                            WalletIcon {}
+                                        }
+                                    }
+                                } else {
+                                    rsx! { ProjectTile { name: d.name.clone(), id } }
+                                };
+                                rsx! {
+                                    li { key: "{id}",
+                                        if d.current {
+                                            div { class: "flex items-center gap-3 py-2.5 px-1 opacity-55", aria_disabled: "true",
+                                                {tile}
+                                                span { class: "flex-1 min-w-0 flex flex-col",
+                                                    span { class: "font-semibold truncate", "{d.name}" }
+                                                    span { class: "text-xs text-base-content/70", "{detail}" }
+                                                }
+                                                span { class: "text-xs font-semibold text-base-content/70", {tid!("move-current")} }
+                                            }
+                                        } else {
+                                            button {
+                                                id: "move-to-{id}",
+                                                r#type: "button",
+                                                class: "w-full flex items-center gap-3 py-2.5 px-1 text-left rounded-xl hover:bg-base-200",
+                                                onclick: move |_| on_pick.call(id),
+                                                {tile}
+                                                span { class: "flex-1 min-w-0 flex flex-col",
+                                                    span { class: "font-semibold truncate", "{d.name}" }
+                                                    span { class: "text-xs text-base-content/70", "{detail}" }
+                                                }
+                                                span { class: "text-base-content/50", ChevronRightIcon {} }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    match from_group {
+                        Some(group) => rsx! {
+                            p { class: "rounded-xl bg-warning/15 text-sm leading-snug px-3.5 py-3",
+                                {tid!("move-note-group", project: group)}
+                            }
+                        },
+                        None => rsx! {
+                            p { class: "rounded-xl bg-success/10 text-sm leading-snug px-3.5 py-3",
+                                {tid!("move-note-personal")}
+                            }
+                        },
+                    }
+                }
+            }
+            div { class: "modal-backdrop", onclick: move |_| on_close.call(()) }
+        }
+    }
+}
+
+/// "7 membres · EUR", "Perso · EUR", or the currency with the conversion it implies.
+fn destination_detail(d: &Destination, from_currency: &str) -> String {
+    let currency = if d.currency == from_currency || d.current {
+        d.currency.clone()
+    } else {
+        tid!("move-converted", currency: d.currency.clone())
+    };
+    match (d.personal, d.members) {
+        (true, _) => format!("{} · {currency}", tid!("personal-badge")),
+        (false, Some(n)) => format!("{} · {currency}", tid!("move-members", count: n as i64)),
+        (false, None) => currency,
+    }
+}
+
+/// Once the destination has the expense: delete it here, with this project's key and identity.
+/// Offline the delete queues behind the add, so the replay keeps the order.
+pub fn finish_move(
+    draft: &MoveDraft,
+    is_online: bool,
+    pending_ops: Signal<VecDeque<QueuedOp>>,
+    mut flash: Signal<Option<Flash>>,
+) {
+    let req = delete_expense_request(
+        &draft.from_key,
+        draft.expense_id,
+        draft.from_project,
+        tid!("history-expense-moved", name: draft.payload.name.clone()),
+        draft.from_user_id.unwrap_or(0),
+    );
+    let done = tid!("move-done", project: draft.to_name.clone());
+    // Added there, still here: say where it is, so the user can delete the leftover by hand.
+    let stuck = tid!("move-delete-failed", project: draft.from_name.clone());
+    if !is_online {
+        run_delete_expense(req, draft.payload.name.clone(), false, pending_ops, flash, move || {
+            flash.set(Some(Flash::ok(done)));
+        });
+        return;
+    }
+    spawn(async move {
+        match delete_expense(Json(req)).await {
+            Ok(()) => flash.set(Some(Flash::ok(done))),
+            Err(_) => flash.set(Some(Flash::err(stuck))),
+        }
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::test_fixtures::{make_project, make_user, test_key};
+    use crate::common::LocalStorageProject;
+    use crate::crypto::{encrypt_json, key_to_fragment};
+
+    fn payload(amount: f64) -> ExpensePayload {
+        ExpensePayload {
+            name: "Hotel".into(),
+            amount,
+            expense_type: "expense".into(),
+            date: "2026-10-11".into(),
+            description: None,
+            category: None,
+            source_currency: None,
+            source_amount: None,
+            rate: None,
+            recurring_id: None,
+            estimate: false,
+            author_id: None,
+            shares: None,
+            extra: Default::default(),
+        }
+    }
+
+    #[test]
+    fn the_prefill_starts_from_what_was_paid() {
+        assert_eq!(typed_amount(&payload(92.0), "EUR"), (92.0, "EUR".to_string()));
+        let converted = ExpensePayload {
+            source_currency: Some("CHF".into()),
+            source_amount: Some(100.0),
+            rate: Some(0.92),
+            ..payload(92.0)
+        };
+        assert_eq!(typed_amount(&converted, "EUR"), (100.0, "CHF".to_string()));
+        let broken = ExpensePayload { rate: Some(0.0), ..converted };
+        assert_eq!(typed_amount(&broken, "EUR"), (92.0, "EUR".to_string()), "an unusable rate is ignored");
+    }
+
+    #[test]
+    fn a_transfer_stays_where_it_was_made() {
+        assert!(can_move(&ExpenseType::Expense));
+        assert!(can_move(&ExpenseType::Gain));
+        assert!(!can_move(&ExpenseType::Transfer));
+    }
+
+    fn held(p: &ProjectDto, k: &[u8; 32], users: Option<Vec<shared::User>>) -> LocalStorageProject {
+        LocalStorageProject {
+            project_id: p.id,
+            encryption_key: Some(key_to_fragment(k)),
+            cached_users: users,
+            ..Default::default()
+        }
+    }
+
+    fn with(k: &[u8; 32], name: &str, f: impl FnOnce(&mut ProjectPayload)) -> ProjectDto {
+        let mut p = make_project(k, Uuid::new_v4(), name, "EUR");
+        let mut pp: ProjectPayload = decrypt_json(k, &p.payload).unwrap();
+        f(&mut pp);
+        p.payload = encrypt_json(k, &pp).unwrap();
+        p
+    }
+
+    #[test]
+    fn destinations_are_the_open_projects_this_device_can_write_to() {
+        let k = test_key();
+        let source = with(&k, "Offsite", |_| {});
+        let corsica = with(&k, "Corsica", |_| {});
+        let mine = with(&k, "Mes dépenses", |p| { p.extra.insert("kind".into(), "personal".into()); });
+        let archived = with(&k, "Old", |p| p.status = Some(ProjectStatus::Archived));
+        let mut demo = with(&k, "Demo", |_| {});
+        demo.read_only = true;
+        let keyless = with(&k, "Locked", |_| {});
+        let state = LocalStorageState {
+            projects: vec![
+                held(&source, &k, None),
+                held(&mine, &k, None),
+                held(&corsica, &k, Some(vec![make_user(&k, 1, "A"), make_user(&k, 2, "B")])),
+                held(&archived, &k, None),
+                held(&demo, &k, None),
+            ],
+            ..Default::default()
+        };
+        let list = [source.clone(), mine.clone(), corsica.clone(), archived, demo, keyless];
+        let got = destinations(&list, &state, source.id);
+        let names: Vec<&str> = got.iter().map(|d| d.name.as_str()).collect();
+        assert_eq!(names, ["Offsite", "Corsica", "Mes dépenses"], "source first, personal last");
+        assert!(got[0].current);
+        assert_eq!(got[1].members, Some(2));
+        assert!(got[2].personal);
+    }
+
+    #[test]
+    fn the_draft_keeps_the_type_and_never_becomes_a_transfer() {
+        let draft = MoveDraft {
+            from_project: Uuid::nil(),
+            from_name: "A".into(),
+            from_key: test_key(),
+            from_user_id: None,
+            expense_id: 1,
+            to_project: Uuid::nil(),
+            to_name: "B".into(),
+            to_personal: false,
+            payload: ExpensePayload { expense_type: "gain".into(), ..payload(10.0) },
+            amount: 10.0,
+            currency: "EUR".into(),
+        };
+        assert_eq!(draft.expense_type(), ExpenseType::Gain);
+    }
+}

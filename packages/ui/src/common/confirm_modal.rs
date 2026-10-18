@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use crate::tid;
 
-use crate::common::{haptic, Haptic};
+use crate::common::{haptic, use_modal_focus, Haptic};
 
 /// Yes/no dialog for an action that cannot be undone. Same shell as `UserSelectionModal`.
 #[derive(PartialEq, Props, Clone)]
@@ -15,14 +15,23 @@ pub struct ConfirmModalProps {
 
 #[component]
 pub fn ConfirmModal(props: ConfirmModalProps) -> Element {
+    use_modal_focus("confirm-modal");
+
     rsx! {
-        div { class: "modal modal-open", role: "dialog",
+        div {
+            id: "confirm-modal",
+            class: "modal modal-open",
+            role: "dialog",
+            aria_modal: "true",
+            aria_labelledby: "confirm-modal-title",
+            aria_describedby: "confirm-modal-message",
+            tabindex: "-1",
             div { class: "modal-box max-w-sm p-0 flex flex-col",
                 div { class: "px-6 pt-5 pb-4 border-b border-base-200",
-                    h3 { class: "font-bold text-lg font-display", "{props.title}" }
+                    h2 { id: "confirm-modal-title", class: "font-bold text-lg font-display", "{props.title}" }
                 }
                 div { class: "px-6 py-4",
-                    p { class: "text-sm text-base-content/70", "{props.message}" }
+                    p { id: "confirm-modal-message", class: "text-sm text-base-content/70", "{props.message}" }
                 }
                 div { class: "flex justify-end gap-2 px-6 py-4 border-t border-base-200",
                     // Fixed ids, not props: only ever one confirmation is on screen at a time, and

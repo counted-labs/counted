@@ -3,13 +3,22 @@ input, textarea, select {
   /* WKWebView auto-zooms on focus below 16px, so 16px is a floor, not a value: `1em` carries the
      user's Dynamic Type size (Tailwind sizes are rem, and `html` below is scaled by --dt-scale)
      and wins whenever they asked for larger text. `em` rather than `rem` so a field wrapped in a
-     larger type scale — the expense sheet's amount — keeps that size instead of being clamped
-     back to 16px. The !important stays — it is fighting DaisyUI's own `.input` font-size. */
+     larger type scale - the expense sheet's amount - keeps that size instead of being clamped
+     back to 16px. The !important stays - it is fighting DaisyUI's own `.input` font-size. */
   font-size: max(16px, 1em) !important;
 }
 input, textarea {
   -webkit-user-select: text;
   user-select: text;
+}
+
+/* A long press on a label, an amount or a title selects nothing, as in a native app: no iOS loupe,
+   no Android floating toolbar (live, since main.rs keeps the context menu). Fields opt back in
+   above; text meant to be copied carries `select-all` or `select-text`. */
+body {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 :root {
@@ -19,11 +28,11 @@ input, textarea {
   /* Dynamic Type. Overwritten as an inline property on documentElement by the iOS-only effect in
      packages/mobile/src/main.rs, which measures `-apple-system-body` against its 17px default and
      clamps to 0.85–1.6. Declared here so every rule below is valid before that lands, and so
-     Android — whose WebView applies the system font size itself, via WebSettings.textZoom — stays
+     Android - whose WebView applies the system font size itself, via WebSettings.textZoom - stays
      at 1 and is scaled once rather than twice. */
   --dt-scale: 1;
   /* On-screen keyboard height, written by the visualViewport hook in packages/mobile/src/main.rs
-     through ui::common::keyboard_inset. 0 whenever no keyboard is up — and permanently 0 on any
+     through ui::common::keyboard_inset. 0 whenever no keyboard is up - and permanently 0 on any
      platform that resizes its own layout viewport, which is what makes the sheet rule below safe
      to state unconditionally. */
   --kb: 0px;
@@ -126,21 +135,15 @@ input[type="date"] {
 }
 
 /* No border here: the layered .shadow-soft above is what separates the card from the base-100
-   page now. user-select/callout off because the card is long-pressable (ProjectCard opens its
-   actions menu on a 500ms hold) — without it the hold first raises Android's floating
-   selection toolbar, which is live here since main.rs sets `with_disable_context_menu(false)`,
-   and iOS's callout. `input, textarea` keep `user-select: text` above; cards hold neither. */
+   page now. */
 .card-clickable {
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
   /* The pressed state touch actually gets. Without it a tap has no feedback at all: the hover
      below is the only thing that ever painted, and on a touch device it paints at the wrong time. */
   &:active {
     background-color: var(--color-base-300);
   }
   /* Wrapped, unlike every other rule in this file, because this is the one hand-written hover in
-     the app — Tailwind already wraps its own `hover:` utilities the same way. iOS latches :hover
+     the app - Tailwind already wraps its own `hover:` utilities the same way. iOS latches :hover
      on tap and holds it until you tap elsewhere, so unwrapped it left a card highlighted behind
      the page it had just opened. Guarded by stylesheet_guard.rs. */
   @media (hover: hover) {
@@ -152,13 +155,13 @@ input[type="date"] {
 }
 
 /* Push the whole app below the status bar. An element selector (specificity 0-0-1)
-   so it can never clobber a Tailwind margin utility on the page shells — main.css is
+   so it can never clobber a Tailwind margin utility on the page shells - main.css is
    unlayered and would otherwise win over anything in @layer utilities. */
 main {
   padding-top: var(--sat);
 }
 
-/* padding-top: 0 overrides `p-4`'s top only — the status bar inset above is the gap, so
+/* padding-top: 0 overrides `p-4`'s top only - the status bar inset above is the gap, so
    stacking another 1rem on it just wastes vertical space. Left/right/bottom keep `p-4`. */
 .app-container {
   padding-top: 0;
@@ -176,10 +179,10 @@ main {
 /* Sheet presentation. DaisyUI's `modal-bottom` already slides the box up from the bottom edge and
    rounds only its top corners; three things are missing to make it read as a UIKit sheet:
 
-   - it is not actually full width — daisyUI's own `width: 100%; max-width: none` sits inside
+   - it is not actually full width - daisyUI's own `width: 100%; max-width: none` sits inside
      `:where()`, which has zero specificity, so the `max-w-sm` / `max-w-md` utility each of these
      boxes carries beat it and the sheet stayed a narrow card parked at the bottom edge;
-   - a grabber pill, as a pseudo-element so no modal has to render one — all six shells are
+   - a grabber pill, as a pseudo-element so no modal has to render one - all six shells are
      `.modal-box` with their own padding-0 layout inside, and a real node would have to be added
      to each;
    - the home indicator's inset, since the box now reaches the screen edge.
@@ -192,16 +195,16 @@ main {
    get its four corners and no grabber back. */
 @media (max-width: 639.98px) {
   .modal-bottom .modal-box {
-    /* Anchors the grabber below — daisyUI's `.modal-box` is a grid item with no `position`.
+    /* Anchors the grabber below - daisyUI's `.modal-box` is a grid item with no `position`.
        The radii need nothing here: daisyUI's own `.modal-bottom :where(.modal-box)` already sets
        --modal-tl/tr to the box radius and --modal-bl/br to 0. */
     position: relative;
-    /* The keyboard or the home indicator, whichever is taller — never their sum. --kb is the strip
+    /* The keyboard or the home indicator, whichever is taller - never their sum. --kb is the strip
        of the layout viewport hidden below the visual one, measured from the same bottom edge this
        box is pinned to, so it already spans the bar the keyboard sits on; adding --sab left exactly
        one bar of blank sheet between the footer and the keyboard. Padding rather than a transform:
        daisyUI animates `translate` on this element for the open/close slide, and `place-items: end`
-       on the .modal already pins the box to the bottom edge — so growing its bottom padding lifts
+       on the .modal already pins the box to the bottom edge - so growing its bottom padding lifts
        the content clear of the keyboard without touching that animation. The body inside is
        `flex-1 overflow-y-auto`, so it absorbs the loss by scrolling; css_viewport_vars re-scrolls
        the focused field into it. --sab less --vvo, because a panned visual viewport leaves this
@@ -228,6 +231,22 @@ main {
     height: 0.3125rem;
     border-radius: 999px;
     background-color: var(--color-base-300);
+  }
+
+  /* Drag to dismiss - packages/ui/src/common/sheet_drag.rs writes the attributes and both
+     variables for the length of a gesture only. `transform`, because daisyUI's open slide is on the
+     separate `translate` property and the two compose. The scrim fades with the travel. */
+  .modal-bottom .modal-box[data-sheet-drag] {
+    transform: translateY(var(--sheet-drag, 0px));
+  }
+  .modal-bottom .modal-box[data-sheet-drag="settling"] {
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .modal-bottom[data-sheet-drag] {
+    background-color: oklch(0% 0 0 / calc(0.4 * var(--sheet-scrim, 1)));
+  }
+  .modal-bottom[data-sheet-drag="pulling"] {
+    transition: none;
   }
 }
 
@@ -283,7 +302,7 @@ main {
   }
 }
 
-/* Reduce Transparency. Both materials go opaque and drop the blur — the same end state as the
+/* Reduce Transparency. Both materials go opaque and drop the blur - the same end state as the
    @supports fallbacks above, so a device that lacks backdrop-filter and a user who asked for less
    transparency land in the same place.
 
@@ -313,7 +332,7 @@ main {
   padding-top: calc(0.375rem + var(--sat));
 }
 
-/* `min-h-dvh` + `p-6` on the welcome page — the only full-page shell without
+/* `min-h-dvh` + `p-6` on the welcome page - the only full-page shell without
    .app-container. The top inset already comes from `main`, so only the height has to
    shrink by it; without that the page would overflow by exactly --sat. */
 .safe-page {
@@ -321,7 +340,7 @@ main {
   padding-bottom: calc(1.5rem + var(--sab));
 }
 
-/* `bottom-42` on the toast (above the dock and the FAB — see toast.rs) and DaisyUI's `.toast-end`
+/* `bottom-42` on the toast (above the dock and the FAB - see toast.rs) and DaisyUI's `.toast-end`
    1rem end offset. */
 .safe-toast {
   bottom: calc(10.5rem + var(--sab));
@@ -345,20 +364,20 @@ main {
   }
 }
 
-/* Page transitions — see docs/mobile-navigation.md and
+/* Page transitions - see docs/mobile-navigation.md and
    packages/ui/src/common/page_transition.rs. `.page-shell` is the route-keyed wrapper around the
    Outlet, so a new one is created on every navigation and its animation runs once; `.page-exiting`
    is the outgoing one, put back by the MutationObserver.
 
    Neither ever gets `position` or `will-change`: the transform below already makes the shell a
    containing block for its `position: fixed` descendants (the FAB, the dropdown scrims) for the
-   length of the animation, which is what makes them slide with the page — making that permanent
+   length of the animation, which is what makes them slide with the page - making that permanent
    would re-anchor them to the shell forever. Paint order is DOM order, never `z-index`, for the
    same reason.
 
    The shell is full-height and opaque for those same fixed descendants: while it is their containing
    block, `bottom:` resolves from *its* bottom edge, and a shell only as tall as its `.app-container`
-   ends `1rem + --sab` above the viewport — the FAB sat that much too high for the length of every
+   ends `1rem + --sab` above the viewport - the FAB sat that much too high for the length of every
    push, then snapped. And the incoming shell has to cover the dimmed `.page-exiting` under it, or
    the strip of dim below the outgoing page's box shows until the overlay is thrown away. */
 .page-shell {
@@ -383,7 +402,7 @@ main {
   pointer-events: none;
 }
 
-/* iOS — UINavigationController push/pop: the incoming view slides the full width with a leading
+/* iOS - UINavigationController push/pop: the incoming view slides the full width with a leading
    shadow, the outgoing one trails at a quarter of the distance under a dim. Tab switches are
    deliberately absent: UIKit changes tabs instantly, and the observer skips the overlay for them.
    `forwards` on every exit rule because the shorthand resets fill-mode and the outgoing page must
@@ -452,7 +471,7 @@ main {
   to { opacity: 0.1; }
 }
 
-/* Android — Material 3. Shared axis X for a step up or down the hierarchy, fade-through between
+/* Android - Material 3. Shared axis X for a step up or down the hierarchy, fade-through between
    top-level destinations. The 30% stop is M3's sequencing: the outgoing view is gone by 90ms of
    300ms, the incoming one starts appearing there. 30dp is 30 CSS px. */
 .page-shell[data-plat="android"][data-nav="fwd"] {
@@ -514,19 +533,19 @@ main {
   30%, 100% { opacity: 0; }
 }
 
-/* Elastic scrolling and pull-to-refresh — packages/ui/src/common/overscroll.rs drives every
+/* Elastic scrolling and pull-to-refresh - packages/ui/src/common/overscroll.rs drives every
    attribute and variable here; docs/mobile-scrolling.md has the platform facts.
 
    Android's own overscroll stretch is drawn for a non-root scroller only on some WebView versions
    (`kOverscrollEffectOnNonRootScrollers`), so it is switched off and the JS rubber band is the one
    look. Not on iOS: there `overscroll-behavior: none` clears `bouncesVertically` on the backing
-   UIScrollView and the native bounce — kept wherever the box is scrollable — would be gone. */
+   UIScrollView and the native bounce - kept wherever the box is scrollable - would be gone. */
 .page-shell[data-plat="android"] .app-container {
   overscroll-behavior-y: none;
 }
 
 /* Present only mid-gesture: `pulling` follows the finger, `settling` springs back, then the
-   attribute is removed. Nothing may stay transformed at rest — even `translateY(0)` makes a child
+   attribute is removed. Nothing may stay transformed at rest - even `translateY(0)` makes a child
    the containing block of the fixed FAB and dropdown scrims (see page_transition.rs). */
 .app-container[data-overscroll] > * {
   transform: translateY(var(--overscroll));
@@ -544,7 +563,7 @@ main {
 }
 
 /* Zero-height first child of every data page's `.app-container`, sticky so the indicator stays at
-   the top edge. The negative margin cancels the container's `gap-4` — without it every data page's
+   the top edge. The negative margin cancels the container's `gap-4` - without it every data page's
    header sits 1rem lower than the static pages'. */
 .ptr {
   position: sticky;
@@ -581,10 +600,10 @@ main {
   to { transform: rotate(360deg); }
 }
 
-/* iOS — UIRefreshControl: a grey spinner parked 2rem above the content, revealed by the rubber band
+/* iOS - UIRefreshControl: a grey spinner parked 2rem above the content, revealed by the rubber band
    (the scrollport clips it until then, exactly as UIKit does), growing in as the pull nears the
    threshold. Once released the box springs back and would hide it again, so `.ptr` takes 3rem of
-   height for the length of the refresh — the contentInset UIKit adds — and collapses on `done`. */
+   height for the length of the refresh - the contentInset UIKit adds - and collapses on `done`. */
 .ptr[data-plat="ios"] .ptr-indicator {
   top: -2rem;
   width: 1.5rem;
@@ -612,7 +631,7 @@ main {
   transition: top 250ms cubic-bezier(0.2, 0, 0, 1), opacity 200ms ease;
 }
 
-/* Android — Material 3: a 40px disc dropping in from under the top edge, the arc turning with the
+/* Android - Material 3: a 40px disc dropping in from under the top edge, the arc turning with the
    pull, then spinning in place; `done` fades it out where it is. The shadow is `.shadow-soft`
    restated, since the indicator is rendered without Tailwind classes. */
 .ptr[data-plat="android"] .ptr-indicator {
@@ -646,7 +665,7 @@ main {
 
 /* Honour the OS "reduce motion" setting. Unlayered, so it beats Tailwind transition
    utilities without !important on every call site. The exit overlay is skipped entirely in that
-   case — the observer checks the same media query, because a 0.01ms animation would otherwise
+   case - the observer checks the same media query, because a 0.01ms animation would otherwise
    leave the outgoing page sitting there fully painted until its removal timer fired. */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -656,5 +675,21 @@ main {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Dark mode (the `counted-dark` theme in tailwind.input.css). A shadow does not read on a dark
+   ground, so a card is told apart from the page by a hairline instead - the page and the card are
+   both base-100. The drop shadow stays for whatever floats over other content. A sheet is base-100
+   too, over a scrim that darkens the page by only a few percent: measured #121815 on #0B0E0D, an
+   edge the eye loses, so it takes the same hairline. */
+@media (prefers-color-scheme: dark) {
+  .modal-box,
+  .shadow-soft,
+  .filter .btn,
+  .ptr[data-plat="android"] .ptr-indicator {
+    box-shadow:
+      0 0 0 1px oklch(100% 0 0 / 0.08),
+      0 8px 18px -6px oklch(0% 0 0 / 0.5);
   }
 }

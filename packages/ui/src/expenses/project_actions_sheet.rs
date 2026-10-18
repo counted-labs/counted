@@ -5,7 +5,7 @@ use shared::ProjectStatus;
 use crate::common::status_transitions;
 use crate::icons::{
     ArchiveIcon, CloseIcon, DownloadIcon, HistoryIcon, LockIcon, LogOutIcon, PencilIcon, RepeatIcon,
-    ShareIcon, SmartphoneIcon, UndoIcon, UserPlusIcon, ICON_HEADER,
+    ShareIcon, SmartphoneIcon, UndoIcon, UserPlusIcon, WalletIcon, ICON_HEADER,
 };
 
 #[derive(PartialEq, Props, Clone)]
@@ -25,11 +25,20 @@ pub struct ProjectActionsSheetProps {
     pub on_export_csv: EventHandler<()>,
     pub on_export_json: EventHandler<()>,
     pub on_leave: EventHandler<()>,
+    /// R4, on a group when the account has a personal project: whether my share counts there.
+    #[props(default)]
+    pub counted: Option<bool>,
+    #[props(default)]
+    pub on_counted: Option<EventHandler<bool>>,
+    /// R5, on the personal project: the groups it counts.
+    #[props(default)]
+    pub on_counted_groups: Option<EventHandler<()>>,
 }
 
 /// The project page's actions, as a bottom sheet. Every entry closes the sheet, then calls out.
 #[component]
 pub fn ProjectActionsSheet(props: ProjectActionsSheetProps) -> Element {
+    crate::common::use_modal_focus("project-actions-sheet");
     let on_close = props.on_close;
     let on_status = props.on_status;
     let pick = move |action: EventHandler<()>| {
@@ -42,21 +51,16 @@ pub fn ProjectActionsSheet(props: ProjectActionsSheetProps) -> Element {
 
     rsx! {
         div {
+            id: "project-actions-sheet",
             class: "modal modal-open modal-bottom sm:modal-middle",
             role: "dialog",
             aria_modal: "true",
             aria_labelledby: "project-actions-title",
             tabindex: "-1",
-            onkeydown: move |e| {
-                if e.key() == Key::Escape {
-                    e.prevent_default();
-                    on_close.call(());
-                }
-            },
             div { class: "modal-box max-w-md p-0",
                 div { class: "flex flex-col gap-4 px-6 pt-5 pb-6",
                 div { class: "flex items-center gap-2",
-                    h3 {
+                    h2 {
                         id: "project-actions-title",
                         class: "flex-1 min-w-0 truncate font-bold text-lg font-display",
                         "{props.title}"
@@ -64,7 +68,7 @@ pub fn ProjectActionsSheet(props: ProjectActionsSheetProps) -> Element {
                     button {
                         id: "project-actions-close",
                         r#type: "button",
-                        class: "btn btn-ghost btn-circle size-11",
+                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
                         aria_label: tid!("close"),
                         onclick: move |_| on_close.call(()),
                         CloseIcon {}
@@ -99,6 +103,37 @@ pub fn ProjectActionsSheet(props: ProjectActionsSheetProps) -> Element {
                             label: tid!("project-sheet-recurring"),
                             onclick: pick(props.on_recurring),
                             RepeatIcon { size: 24 }
+                        }
+                    }
+                }
+                if let (Some(counted), Some(on_counted)) = (props.counted, props.on_counted) {
+                    div { class: "bg-base-200 rounded-box overflow-hidden",
+                        label { class: "flex items-center gap-3 min-h-16 px-4 py-2 cursor-pointer",
+                            WalletIcon { size: ICON_HEADER }
+                            span { class: "flex-1 min-w-0",
+                                span { class: "block font-medium", {tid!("counted-switch")} }
+                                span { class: "block text-xs text-base-content/70 leading-snug",
+                                    if counted { {tid!("counted-switch-on")} } else { {tid!("counted-switch-off")} }
+                                }
+                            }
+                            input {
+                                id: "counted-switch",
+                                r#type: "checkbox",
+                                role: "switch",
+                                class: "toggle toggle-primary",
+                                checked: counted,
+                                onchange: move |e| on_counted.call(e.checked()),
+                            }
+                        }
+                    }
+                }
+                if let Some(on_counted_groups) = props.on_counted_groups {
+                    div { class: "bg-base-200 rounded-box overflow-hidden",
+                        Row {
+                            id: "counted-groups-item",
+                            label: tid!("counted-groups"),
+                            onclick: pick(on_counted_groups),
+                            WalletIcon { size: ICON_HEADER }
                         }
                     }
                 }

@@ -1,11 +1,11 @@
 use chrono::NaiveDateTime;
 use shared::{
-    EncryptedPair, Expense, ExpensePayload, ExpenseType, Payment, PaymentMethod, PaymentMethods, PaymentPayload,
+    EditableProject, Expense, ExpensePayload, ExpenseType, Payment, PaymentMethod, PaymentMethods, PaymentPayload,
     ProjectDto, ProjectPayload, ProjectStatus, User, UserPayload,
 };
 use uuid::Uuid;
 
-use crate::crypto::{decrypt_json, encrypt_json};
+use crate::crypto::{decrypt_json, encrypt_padded_json};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DecryptedProject {
@@ -26,7 +26,7 @@ pub struct DecryptedUser {
     /// An account holds this participant as its identity in the project.
     pub claimed: bool,
     /// That account's display name. `None` when the claim carries no label, or when it does not
-    /// decrypt — the padlock still shows, only the name is missing.
+    /// decrypt - the padlock still shows, only the name is missing.
     pub claim_name: Option<String>,
     /// The payment methods that account chose to share with the project. Empty when it shares
     /// nothing, when there is no claim, or when the copy does not decrypt.
@@ -43,7 +43,7 @@ pub struct DecryptedExpense {
     pub created_at: NaiveDateTime,
     pub name: String,
     pub description: Option<String>,
-    /// Always in the project's currency — see `shared::ExpensePayload`. Every reader sums this and
+    /// Always in the project's currency - see `shared::ExpensePayload`. Every reader sums this and
     /// only this; the three fields below are for display and for prefilling the edit form.
     pub amount: f64,
     pub expense_type: ExpenseType,
@@ -57,7 +57,7 @@ pub struct DecryptedExpense {
 }
 
 impl DecryptedExpense {
-    /// The original amount, its currency and the rate it was booked at — `None` unless all three
+    /// The original amount, its currency and the rate it was booked at - `None` unless all three
     /// are present and the rate is usable, so a half-written payload renders as a plain
     /// project-currency expense instead of a broken conversion line.
     pub fn conversion(&self) -> Option<(f64, &str, f64)> {
@@ -109,7 +109,7 @@ pub fn decrypt_user(key: &[u8; 32], u: &User) -> Result<DecryptedUser, String> {
     })
 }
 
-/// The participants a picker offers: everyone not removed, plus `keep` — the ones an existing
+/// The participants a picker offers: everyone not removed, plus `keep` - the ones an existing
 /// expense or rule already names, which editing must not silently drop. Without a key nothing
 /// can be read, so everyone is offered.
 pub fn pickable_users(key: Option<&[u8; 32]>, users: &[User], keep: &[i32]) -> Vec<User> {
@@ -155,14 +155,21 @@ pub fn project_status(key: Option<&[u8; 32]>, p: &ProjectDto) -> ProjectStatus {
         .unwrap_or_else(|| p.status.clone())
 }
 
-/// The payload re-encrypted with `status`, for a project whose payload already carries one — the
-/// payload wins over the column, so a column-only write would not take. `None` for a payload that
-/// does not carry one: writing it there while a client that only knows the column can still change
-/// the status would freeze the status those clients see.
-pub fn payload_with_status(key: &[u8; 32], p: &ProjectDto, status: &ProjectStatus) -> Option<EncryptedPair> {
-    let mut pp = decrypt_json::<ProjectPayload>(key, &p.payload).ok().filter(|pp| pp.status.is_some())?;
+/// The write that sets `status`: in the payload, where the server cannot read it. The column goes
+/// back to `Ongoing` when it held anything else, and closing rings the other account holders,
+/// since the server no longer sees the transition. Every client since the version floor reads the
+/// payload first - docs/plans/participant-links-encryption.md §3.6.
+pub fn status_edit(key: &[u8; 32], p: &ProjectDto, status: &ProjectStatus) -> Result<EditableProject, String> {
+    let mut pp: ProjectPayload = decrypt_json(key, &p.payload)?;
     pp.status = Some(status.clone());
-    encrypt_json(key, &pp).ok()
+    Ok(EditableProject {
+        id: p.id,
+        payload: Some(encrypt_padded_json(key, &pp)?),
+        status: (p.status != ProjectStatus::Ongoing).then_some(ProjectStatus::Ongoing),
+        history: None,
+        expected_iv: None,
+        notify_closed: *status == ProjectStatus::Closed,
+    })
 }
 
 pub fn decrypt_expense(key: &[u8; 32], e: &Expense) -> Result<DecryptedExpense, String> {
@@ -170,7 +177,7 @@ pub fn decrypt_expense(key: &[u8; 32], e: &Expense) -> Result<DecryptedExpense, 
 }
 
 /// The expense and, when its payload carries them, its shares as payments. `None` means they are
-/// still `payments` rows — the format before docs/plans/participant-links-encryption.md.
+/// still `payments` rows - the format before docs/plans/participant-links-encryption.md.
 fn decrypt_expense_and_shares(
     key: &[u8; 32],
     e: &Expense,
@@ -263,10 +270,10 @@ pub fn decrypt_payment(key: &[u8; 32], p: &Payment) -> Result<DecryptedPayment, 
 }
 
 /// True when an expense's payments no longer add up on either side. The server cannot check this
-/// on ciphertext, so honest clients detect it on read — see DOCUMENTATION.md §8, "Why the server
+/// on ciphertext, so honest clients detect it on read - see DOCUMENTATION.md §8, "Why the server
 /// does not validate that an expense balances".
 ///
-/// Empty `payments` means the key could not open them — a missing key, not an inconsistency.
+/// Empty `payments` means the key could not open them - a missing key, not an inconsistency.
 pub fn payments_are_inconsistent(total: f64, payments: &[DecryptedPayment]) -> bool {
     if payments.is_empty() {
         return false;
@@ -347,7 +354,7 @@ mod tests {
 
     #[test]
     fn an_undecryptable_expense_is_not_an_inconsistency() {
-        // No payment decrypted — the key is wrong, the data is not necessarily broken.
+        // No payment decrypted - the key is wrong, the data is not necessarily broken.
         assert!(!payments_are_inconsistent(100.0, &[]));
     }
 
@@ -626,19 +633,22 @@ mod tests {
         assert_eq!(project_status(Some(&key), &legacy), ProjectStatus::Archived);
     }
 
-    /// A status change on a project whose payload carries the status must land in the payload, or
-    /// the payload would keep winning; one whose payload does not must stay column-only.
+    /// The status lands in the payload whatever the project held, and the column stops saying it.
     #[test]
-    fn a_status_change_follows_where_the_status_lives() {
+    fn a_status_change_goes_into_the_payload_and_clears_the_column() {
         let key = test_key();
-        let converted = project_with(&key, Some(ProjectStatus::Ongoing), ProjectStatus::Ongoing);
-        let payload = payload_with_status(&key, &converted, &ProjectStatus::Archived).unwrap();
-        let pp: ProjectPayload = decrypt_json(&key, &payload).unwrap();
+        let legacy = project_with(&key, None, ProjectStatus::Closed);
+        let edit = status_edit(&key, &legacy, &ProjectStatus::Archived).unwrap();
+        let pp: ProjectPayload = decrypt_json(&key, &edit.payload.unwrap()).unwrap();
         assert_eq!(pp.status, Some(ProjectStatus::Archived));
         assert_eq!(pp.name, "Trip");
+        assert_eq!(edit.status, Some(ProjectStatus::Ongoing), "the column no longer says closed");
+        assert!(!edit.notify_closed);
 
-        let legacy = project_with(&key, None, ProjectStatus::Ongoing);
-        assert!(payload_with_status(&key, &legacy, &ProjectStatus::Archived).is_none());
+        let converted = project_with(&key, Some(ProjectStatus::Ongoing), ProjectStatus::Ongoing);
+        let edit = status_edit(&key, &converted, &ProjectStatus::Closed).unwrap();
+        assert_eq!(edit.status, None, "a column already at ongoing is left alone");
+        assert!(edit.notify_closed, "closing rings, since the server cannot see it");
     }
 
     #[test]

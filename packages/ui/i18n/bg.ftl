@@ -149,7 +149,7 @@ payment-method-invalid-characters = Премахни новите редове �
 payment-method-limit = Можеш да запазиш до { $max } начина на плащане.
 payment-methods-saved = Данните за плащане са запазени.
 payment-methods-offline = Трябва да си онлайн, за да запазиш данните за плащане.
-payment-methods-stale = Данните ти за плащане бяха променени на друго устройство. Презаредени са — опитай отново.
+payment-methods-stale = Данните ти за плащане бяха променени на друго устройство. Презаредени са - опитай отново.
 payment-methods-key-missing = Влез отново, за да управляваш данните си за плащане.
 settings-payment-methods-share-warning = Споделен начин е видим за всички членове на твоите проекти.
 payment-method-share = Сподели с моите проекти
@@ -231,7 +231,6 @@ projects-filter-active = Активни
 projects-filter-all = Всички
 projects-count-label = Проекти
 projects-empty = Няма проекти
-projects-empty-hint = Създай проект с бутона по-долу
 projects-offline-banner = Офлайн данни - свържи се отново, за да обновиш.
 demo-banner = Демонстрационен проект - само за четене.
 demo-start-own = Създай свой проект
@@ -245,6 +244,67 @@ projects-no-local-data = Няма локални данни
 projects-no-local-data-hint = Влез, за да заредиш проектите си за първи път.
 projects-add = Добави проект
 projects-create = Създай проект
+projects-personal-expense = Личен разход
+personal-expense-banner = Добавено в Моите разходи
+personal-create-title = Създайте личен проект
+personal-create-hint = Следете какво харчите сами
+group-create-title = Създайте споделен проект
+group-create-hint = Поделете разходите с приятели и семейство
+personal-create-action = Създай
+personal-create-signup = Създай профил
+personal-sheet-title = Вашият личен проект
+personal-sheet-intro = За отбелязване на това, което харчите сами. Показва се с групите ви в Статистика.
+personal-sheet-point-alone = Един член: вие, с името на профила ви. Без връзка за споделяне.
+personal-sheet-point-encrypted = Шифрован на устройствата ви, като другите проекти.
+personal-sheet-point-stats = Дяловете ви в групите се добавят към тези разходи в Статистика.
+personal-default-name = Моите разходи
+my-spending-prev-month = Предишен месец
+my-spending-next-month = Следващ месец
+my-spending-spent = Похарчихте
+my-spending-groups = Групи
+my-spending-income = Приходи
+my-spending-balance = Баланс за месеца
+my-spending-unconverted = Дяловете в друга валута остават настрана, докато не е известен курс.
+my-spending-empty = Нищо този месец
+my-spending-empty-hint = Добавете разход с +. Дяловете ви в групите ще се появяват тук автоматично.
+my-spending-share-of = от { $amount }
+my-spending-uncounted = не се отчита
+payer-you = вас
+expense-received-by = получен от
+counted-switch = Отчитай в Моите разходи
+counted-switch-on = Включено: дялът ви се добавя към Моите разходи
+counted-switch-off = Изключено: дялът ви не се показва в Моите разходи
+counted-groups = Отчитани групи
+counted-groups-intro = Дялът ви в тези групи се добавя към Моите разходи и към бюджетите.
+counted-groups-converted = { $from }, превалутирано в { $to }
+counted-groups-encrypted = Този избор е шифрован с акаунта ви и ви следва на устройствата ви.
+counted-groups-empty = Все още няма група на това устройство.
+counted-groups-done = OK
+counted-save-failed = Изборът не можа да бъде запазен. Опитайте отново.
+tab-budget = Бюджет
+budget-title = Бюджети
+budget-manage = Управление
+budget-left = Остават { $amount }
+budget-over = Надвишен с { $amount }
+budget-empty = Няма бюджет
+budget-empty-hint = Задайте таван за всяка категория. Дяловете ви в групите също се броят.
+budget-define = Задаване на бюджет
+budget-sheet-title = Месечни бюджети
+budget-sheet-intro = Върху вашия дял: лични и групи. Оставете празно, за да не следите категория.
+budget-average = Ср. последни 3 месеца: { $amount }
+budget-for = Бюджет { $category }
+budget-alert = Предупреди ме при 80 %
+budget-alert-hint = Изчислено на това устройство
+budget-invalid = Невалидна сума за { $category }.
+budget-offline = Бюджетите се запазват само онлайн. Свържете се отново и опитайте пак.
+budget-alert-near = { $category }: { $percent } % от бюджета за месеца
+budget-alert-over = { $category }: бюджетът за месеца е надвишен
+personal-card-budget = { $month } · бюджет { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } резултат
+       *[other] { $count } резултата
+    } · { $total } · лични и групи, всички месеци
 projects-join = Присъедини се към проект
 projects-import-tricount = Импортирай от Tricount
 project-actions = Действия с проекта
@@ -321,6 +381,7 @@ expenses-show-more = Покажи още (остават { $count })
 expense-type-expense = Разход
 expense-type-transfer = Превод
 expense-type-gain = Приход
+expense-type-group = Вид
 expense-paid-by = платен от
 expense-sent-by = изпратен от
 expense-contributed-by = внесен от
@@ -386,6 +447,23 @@ export-failed = Експортът не успя: { $reason }
 history-expense-added = Добавен разход: { $name }
 history-expense-edited = Редактиран разход: { $name }
 history-expense-deleted = Изтрит разход: { $name }
+move-expense = Преместване в проект
+move-expense-title = Преместване в…
+move-current = Текущ
+move-converted = { $currency }, превърнато по месечния курс
+move-note-personal = В следващата стъпка ще изберете кой е платил и за кого. Разходът ще напусне Моите разходи.
+move-note-group = Разходът ще напусне { $project } за всички членове и балансът на групата ще бъде преизчислен. В следващата стъпка ще изберете кой е платил и за кого.
+move-banner = От { $from } в { $to }
+move-submit = Премести
+move-done = Разходът е преместен в { $project }
+move-delete-failed = Разходът е добавен в другия проект, но е все още в { $project }: изтрийте го там.
+history-expense-moved = Разходът е преместен в друг проект: { $name }
+personal-badge = Лично
+move-members =
+    { $count ->
+        [one] { $count } член
+       *[other] { $count } члена
+    }
 history-project-edited = Редактиран проект: { $name }
 history-name-changed = Име: „{ $from }“ → „{ $to }“
 history-description-added = Добавено описание: „{ $value }“
@@ -399,11 +477,23 @@ expense-name-placeholder = Ресторант, пазаруване…
 expense-actions = Действия с разхода
 expense-your-share = Твоят дял
 expense-your-share-value = Твоят дял: { $amount } { $currency }
+expense-share-percent = { $percent }%
+expense-added-by = Добавено от { $name } на { $date }
 expense-inconsistent-detail = Сумите не се равняват: { $paid } платени, { $owed } дължими, за разход от { $total }. Редактирай разхода, за да го поправиш.
 missing-access-key = Липсва ключ за достъп. Отвори този проект през връзката му за споделяне.
 filter-all = Всички
 filter-my-payments = Моите плащания
 filter-my-debts = Какво дължа
+expense-filter-group = Филтър
+expenses-search = Търсене на разходи
+expenses-no-match = Няма съвпадащи разходи.
+expenses-search-open = Търсене
+expenses-search-clear = Изчистване на търсенето
+expenses-search-summary =
+    { $count ->
+        [one] { $count } резултат
+       *[other] { $count } резултата
+    } · { $total } · всички месеци
 participants-shares-for = Дялове за { $name }
 participants-amount-for = Сума за { $name }
 reimbursement-add = Добави уреждане
@@ -441,8 +531,8 @@ charts-expense-count =
 charts-nothing-to-show = Няма нищо за показване
 charts-my-share-skipped =
     { $count ->
-        [one] 1 проект не е отчетен — не е избран участник или данните му не се заредиха.
-       *[other] { $count } проекта не са отчетени — не е избран участник или данните им не се заредиха.
+        [one] 1 проект не е отчетен - не е избран участник или данните му не се заредиха.
+       *[other] { $count } проекта не са отчетени - не е избран участник или данните им не се заредиха.
     }
 
 ### Categories
@@ -516,6 +606,13 @@ payers-title-contributors = Участници
 debtors-title-debtors = Дължат
 debtors-title-recipients = Получатели
 debtors-title-beneficiaries = Бенефициенти
+debtors-title-for = За
+debtors-title-recipient = Получател
+expense-people =
+    { $count ->
+        [one] { $count } човек
+       *[other] { $count } души
+    }
 
 ### Welcome
 
@@ -648,6 +745,8 @@ invitation-decline = Откажи
 participants-you-label = Името ти в този проект
 participants-you-badge = Ти
 participants-others = Други участници
+participants-removed = Премахнати
+participant-restore = Възстанови
 participants-empty = Добави участници по-долу.
 participants-duplicate = „{ $name }“ вече е в списъка.
 participants-input-label = Добави приятел или въведи име
@@ -792,3 +891,16 @@ error-recurring-not-found = Този повтарящ се разход вече
 error-recurring-stale = Някой междувременно промени този повтарящ се разход. Той е презареден: провери го и запази отново.
 error-too-many-recurring = Този проект вече има 50 повтарящи се разхода. Спри някой ненужен, за да добавиш нов.
 error-user-in-recurring = Този участник е част от повтарящ се разход. Първо го извади оттам или спри разхода.
+
+home-owed-to-you = Дължат ви
+home-you-owe = Дължите
+home-details-show = Подробности
+home-details-hide = Скрий подробностите
+home-all-settled = Всичко е уредено
+home-pay = Плати
+home-remind = Напомни
+home-remind-message = Малко напомняне: в { $project } още има неуредени възстановявания.
+home-row-owed = дължат ви
+home-row-owe = дължите
+home-row-settled = Уредено
+home-totals-partial = Без проекти без обменен курс

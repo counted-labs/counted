@@ -29,7 +29,7 @@ pub async fn share_text(text: &str) -> bool {
 /// Hands a URL the webview cannot open to the OS, true when something took it.
 ///
 /// The native interpreter routes every link through `webbrowser::open`, which on Android and iOS
-/// opens http(s) only and fails anything else — so a `mailto:` tap did nothing.
+/// opens http(s) only and fails anything else - so a `mailto:` tap did nothing.
 pub type NativeOpener = Arc<dyn Fn(&str) -> bool + Send + Sync + 'static>;
 
 static OPENER: OnceLock<NativeOpener> = OnceLock::new();

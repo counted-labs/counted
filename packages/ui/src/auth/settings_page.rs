@@ -4,7 +4,7 @@ use crate::tid;
 use shared::Account;
 
 use crate::common::{
-    error_message, flush_session, format_date, read_from_ls, unregister_push, write_to_ls,
+    error_message, flush_session, format_date, read_from_ls, remove_quarantined_ls, unregister_push, write_to_ls,
     AppHeader, AuthResolved, ConfirmModal, LanguagePicker, LocalStorageState, PullToRefresh,
 };
 use crate::auth::{LockedFeatureCard, PaymentMethodsCard};
@@ -26,6 +26,7 @@ fn clear_local_session(
     state.account_key = None;
     write_to_ls(&state);
     ls_ctx.set(state);
+    remove_quarantined_ls();
 
     account_enc_key_ctx.set(None);
     auth_ctx.set(None);
@@ -39,7 +40,7 @@ fn display_name_of(account: &Account, key: Option<[u8; 32]>) -> String {
 }
 
 /// Settings, for everyone. The dock routes here unconditionally, so this is the one page an
-/// anonymous user can reach to change a preference — hence preferences first, account second.
+/// anonymous user can reach to change a preference - hence preferences first, account second.
 #[component]
 pub fn SettingsPage() -> Element {
     let nav = use_navigator();
@@ -115,7 +116,7 @@ pub fn SettingsPage() -> Element {
                 fieldset { class: "fieldset card-body",
                     legend { class: "fieldset-legend", {tid!("settings-preferences")} }
                     LanguagePicker {}
-                    // Only once `me()` has answered — the two say opposite things, and guessing
+                    // Only once `me()` has answered - the two say opposite things, and guessing
                     // would tell a signed-in user their choice stays on this device.
                     if auth_resolved().0 {
                         p { class: "label",
@@ -214,7 +215,7 @@ pub fn SettingsPage() -> Element {
                     }
                 }
             } else {
-                // Same slots a signed-in user gets — account, friends, payment details — so what
+                // Same slots a signed-in user gets - account, friends, payment details - so what
                 // an account unlocks is shown in place rather than described. The account is free
                 // and the copy says so: a locked look must never read as a paid tier.
                 div { class: "card bg-base-100 shadow-soft",

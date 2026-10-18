@@ -1,4 +1,4 @@
-//! The participant block shared by the create and the edit modal — see `docs/plans/friends.md` §11.
+//! The participant block shared by the create and the edit modal - see `docs/plans/friends.md` §11.
 
 mod participants_editor;
 pub mod participants_service;

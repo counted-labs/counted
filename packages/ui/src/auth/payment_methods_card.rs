@@ -11,7 +11,7 @@ use crate::payment_methods::{
 };
 
 /// `validate_method` returns keys, not sentences. Matching on literals is what keeps the i18n
-/// guard in `i18n.rs` able to see every key this file can render — it only scans literal call
+/// guard in `i18n.rs` able to see every key this file can render - it only scans literal call
 /// sites, so a key handed straight to the macro would never be checked against en.ftl.
 fn validation_message(key: &str) -> String {
     match key {
@@ -28,7 +28,7 @@ fn validation_message(key: &str) -> String {
 ///
 /// `PaymentMethod` carries no identity of its own and a position is not one: deleting a row shifts
 /// every index after it, and each row here saves on its own, against a list it must be able to
-/// address afterwards. The id never leaves the client — it is not part of what is stored.
+/// address afterwards. The id never leaves the client - it is not part of what is stored.
 #[derive(Clone, PartialEq)]
 struct Row {
     id: u32,
@@ -39,7 +39,7 @@ fn methods_of(rows: &[Row]) -> Vec<PaymentMethod> {
     rows.iter().map(|r| r.method.clone()).collect()
 }
 
-/// The nonce of the blob the rows were seeded from — what the server must still hold for a save
+/// The nonce of the blob the rows were seeded from - what the server must still hold for a save
 /// to land. `None` for an account that never saved any.
 fn expected_iv(auth_ctx: Signal<Option<Account>>) -> Option<String> {
     auth_ctx().and_then(|a| a.payment_methods).map(|p| p.iv)
@@ -57,11 +57,11 @@ async fn reload(mut auth_ctx: Signal<Option<Account>>, mut seeded_for: Signal<Op
 /// How the holder wants to be paid back. Each method is saved and deleted on its own.
 ///
 /// The account still stores the whole list as one encrypted blob, so every write rewrites all of
-/// it — but from `persisted`, the list as last stored, with only the row being acted on replaced.
+/// it - but from `persisted`, the list as last stored, with only the row being acted on replaced.
 /// A half-typed method therefore never rides along with its neighbour's save, and a row nobody can
 /// finish never blocks the rest.
 ///
-/// Signed-in only — `SettingsPage` renders it inside the branch that already has an account.
+/// Signed-in only - `SettingsPage` renders it inside the branch that already has an account.
 #[component]
 pub fn PaymentMethodsCard() -> Element {
     let mut auth_ctx = use_context::<Signal<Option<Account>>>();
@@ -162,7 +162,7 @@ pub fn PaymentMethodsCard() -> Element {
     let delete_row = use_callback(move |id: u32| {
         row_error.set(None);
 
-        // A row that was never saved exists only in this form — dropping it is the whole deletion,
+        // A row that was never saved exists only in this form - dropping it is the whole deletion,
         // and asking the server to rewrite a blob that never mentioned it would be a wasted round
         // trip that also needs a connection.
         if !persisted().iter().any(|r| r.id == id) {
@@ -269,7 +269,7 @@ pub fn PaymentMethodsCard() -> Element {
                                                 }
                                                 // A kind written by a newer build has no entry
                                                 // above. Without this option the browser would
-                                                // show — and on the next save store — the first
+                                                // show - and on the next save store - the first
                                                 // one instead, silently rewriting it.
                                                 if !is_known {
                                                     option {

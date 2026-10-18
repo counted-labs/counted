@@ -1,7 +1,7 @@
 //! Enter moves focus to the next text field on mobile.
 //!
 //! The soft keyboard's action key fires a plain Enter, which the browser turns into implicit form
-//! submission — so Enter in `#expense-name` submitted a half-filled expense. One `keydown`
+//! submission - so Enter in `#expense-name` submitted a half-filled expense. One `keydown`
 //! listener on `document` walks the text-like inputs of the enclosing form (or dialog) and focuses
 //! the next one that accepts focus; when none does, the default stays and the last field still
 //! submits. Selects, dates, checkboxes and radios are never targets: on a phone they are tapped,
@@ -10,7 +10,7 @@
 //! Two twins of the same algorithm, kept in step by hand: the JS below runs through
 //! `document::eval` on the native mobile targets, and `web_dom::enter_advances_focus` is the
 //! web-sys copy for the browser build, which must never eval (DOCUMENTATION.md §8). Both decide
-//! synchronously inside the trusted keydown — `preventDefault` has to land before the event ends,
+//! synchronously inside the trusted keydown - `preventDefault` has to land before the event ends,
 //! and iOS drops the keyboard when `focus()` is deferred out of the gesture. Desktop keeps the
 //! standard Enter-submits.
 

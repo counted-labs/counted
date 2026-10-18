@@ -11,8 +11,8 @@ use ui::common::push_deep_link;
 #[cfg(any(target_os = "android", target_os = "ios"))]
 mod push;
 
-/// Where `UpdateRequiredScreen` sends the user. `webbrowser` — what an anchor click in the WebView
-/// goes through — only opens http(s), so the link is the store's web page, which hands off to the
+/// Where `UpdateRequiredScreen` sends the user. `webbrowser` - what an anchor click in the WebView
+/// goes through - only opens http(s), so the link is the store's web page, which hands off to the
 /// store app. The F-Droid build overrides it at compile time (`android-apk-unsigned` in
 /// packages/mobile/android.mk), since its users have no Play Store to update from.
 #[cfg(target_os = "ios")]
@@ -81,18 +81,18 @@ fn latin_font_face_css() -> String {
 }
 
 /// Stylesheets spliced into dioxus-desktop's index template before `</head>`, so they are
-/// render-blocking — `document::Link` only reaches the head after the first render, leaving the
+/// render-blocking - `document::Link` only reaches the head after the first render, leaving the
 /// webview's first paint unstyled. This does not replace the template (docs/dioxus-overrides.md).
 ///
 /// Order is tailwind then main: main.css is unlayered and must win.
 ///
-/// Only the mobile config consumes it — not the host server binary that
+/// Only the mobile config consumes it - not the host server binary that
 /// `dx bundle --platform android` also builds.
 #[cfg_attr(not(any(target_os = "android", target_os = "ios")), allow(dead_code))]
 fn head_html() -> String {
     format!(
         // The empty icon is not decoration: a WebView asks for /favicon.ico on every document load,
-        // wry's asset protocol has none to serve, and the 404 is logged as a console error — noise
+        // wry's asset protocol has none to serve, and the 404 is logged as a console error - noise
         // in every session, and enough to make `boots without console errors` flake depending on
         // whether it lands before the spec attaches. `data:,` answers it without a request. No app
         // window ever shows an icon here, so there is nothing to supply instead.
@@ -127,7 +127,7 @@ fn ios_data_dir() -> Option<String> {
 }
 
 /// Overrides `--sat`/`--sab`/`--sar` from `assets/main.css`. An inline property on the root
-/// element beats the `:root` rule, so this is the only hook Android needs — every `.safe-*` rule
+/// element beats the `:root` rule, so this is the only hook Android needs - every `.safe-*` rule
 /// and `main { padding-top }` follows. Android reports physical pixels; CSS wants density-independent.
 #[cfg_attr(not(target_os = "android"), allow(dead_code))]
 fn css_inset_vars(top_px: i32, bottom_px: i32, right_px: i32, density: f32) -> String {
@@ -148,7 +148,7 @@ fn css_inset_vars(top_px: i32, bottom_px: i32, right_px: i32, density: f32) -> S
 ///
 /// Android goes edge-to-edge for free only when the app targets SDK 35+ *and* runs on Android 15+.
 /// Only `android-release` / `android-release-apk` patch `targetSdk = 36`, so every other build
-/// (`dx serve` included) gets an already-inset window, where adding the bars counts them twice —
+/// (`dx serve` included) gets an already-inset window, where adding the bars counts them twice -
 /// the dock floats one navigation bar too high, with a matching gap under the status bar.
 ///
 /// Comparing content view against decor view settles it either way: equal heights mean the WebView
@@ -169,7 +169,7 @@ fn visible_insets(
         (top, bottom, right)
     }
 }
-/// API 30+: `insets.getInsets(WindowInsets.Type.systemBars())` — what Android 15 edge-to-edge
+/// API 30+: `insets.getInsets(WindowInsets.Type.systemBars())` - what Android 15 edge-to-edge
 /// reports, so the path that matters.
 #[cfg(target_os = "android")]
 fn insets_modern(
@@ -208,7 +208,7 @@ fn insets_legacy(
     ))
 }
 
-/// None until the decor view is attached — the caller retries on the next resize.
+/// None until the decor view is attached - the caller retries on the next resize.
 #[cfg(target_os = "android")]
 fn android_insets() -> Option<(i32, i32, i32, f32)> {
     let ctx = ndk_context::android_context();
@@ -259,6 +259,39 @@ fn android_insets() -> Option<(i32, i32, i32, f32)> {
     Some((top, bottom, right, density))
 }
 
+/// `Configuration.uiMode & UI_MODE_NIGHT_MASK == UI_MODE_NIGHT_YES`. Any JNI failure reads as light,
+/// the theme the app shipped with.
+#[cfg(target_os = "android")]
+fn system_is_dark() -> bool {
+    fn ui_mode() -> Option<i32> {
+        let ctx = ndk_context::android_context();
+        let vm = unsafe { jni::JavaVM::from_raw(ctx.vm().cast()) }.ok()?;
+        let mut env = vm.attach_current_thread().ok()?;
+        let activity = unsafe { jni::objects::JObject::from_raw(ctx.context().cast()) };
+        let resources =
+            env.call_method(&activity, "getResources", "()Landroid/content/res/Resources;", &[]).ok()?.l().ok()?;
+        let config = env
+            .call_method(&resources, "getConfiguration", "()Landroid/content/res/Configuration;", &[])
+            .ok()?
+            .l()
+            .ok()?;
+        env.get_field(&config, "uiMode", "I").ok()?.i().ok()
+    }
+    ui_mode().is_some_and(|mode| mode & 0x30 == 0x20)
+}
+
+#[cfg(target_os = "ios")]
+fn system_is_dark() -> bool {
+    use objc2::MainThreadMarker;
+    use objc2_ui_kit::{UIScreen, UITraitEnvironment, UIUserInterfaceStyle};
+
+    let Some(mtm) = MainThreadMarker::new() else {
+        return false;
+    };
+    let style = unsafe { UIScreen::mainScreen(mtm).traitCollection().userInterfaceStyle() };
+    style == UIUserInterfaceStyle::Dark
+}
+
 /// Sets COUNTED_DATA_DIR on Android/iOS so the ui crate's `storage_file()` picks it up.
 #[cfg(not(feature = "server"))]
 fn init_data_dir() -> String {
@@ -283,13 +316,13 @@ fn init_data_dir() -> String {
             Some(path)
         }
         // Every JNI step above is `.ok()?`, so any of them failing lands here. `"."` resolves to
-        // `/` for an Android process — unwritable — which meant reads returned an empty store and
+        // `/` for an Android process - unwritable - which meant reads returned an empty store and
         // writes failed with nothing but a log line: the app would look like a fresh install and
         // silently refuse to persist a single project key. Still the fallback, because there is
         // nothing better to do, but it is now loud.
         let dir = android_files_dir().unwrap_or_else(|| {
             tracing::error!(
-                "counted: getFilesDir() failed — COUNTED_DATA_DIR falls back to '.', which is not \
+                "counted: getFilesDir() failed - COUNTED_DATA_DIR falls back to '.', which is not \
                  writable on Android. Nothing will persist."
             );
             ".".to_string()
@@ -403,7 +436,7 @@ fn platform_read_clipboard() -> Option<String> {
 /// tao has no Android intent plumbing (wry#1563), so the intent is read off the activity over JNI.
 /// `setData(null)` makes this a take rather than a peek: `getIntent()` otherwise returns the same
 /// URI on every `Resumed` and returning from background would yank the user back to that project.
-/// The same link still works twice — `MainActivity.onNewIntent` installs a fresh intent.
+/// The same link still works twice - `MainActivity.onNewIntent` installs a fresh intent.
 #[cfg(target_os = "android")]
 fn android_take_intent_url() -> Option<String> {
     fn inner() -> jni::errors::Result<Option<String>> {
@@ -450,7 +483,7 @@ fn platform_read_clipboard() -> Option<String> {
 /// cheap, `prepare()` is what actually costs (it wakes the Taptic Engine), and holding one across
 /// calls would mean holding a `MainThreadOnly` object in a `Send + Sync` closure.
 ///
-/// `MainThreadMarker::new()` returning `None` is the guard — UIFeedbackGenerator is main-thread
+/// `MainThreadMarker::new()` returning `None` is the guard - UIFeedbackGenerator is main-thread
 /// only, and a haptic is never worth a crash. `initWithStyle`/`init` are deprecated in favour of
 /// the `forView:` constructors, which need a `UIView` this layer has no handle on.
 #[cfg(target_os = "ios")]
@@ -530,14 +563,14 @@ fn play_haptic(kind: ui::common::Haptic) {
         return;
     };
     if let Err(e) = call(&mut env, constant) {
-        // Always clear: a pending exception poisons every later JNI call on this thread — the
+        // Always clear: a pending exception poisons every later JNI call on this thread - the
         // inset reads above included.
         let _ = env.exception_clear();
         tracing::debug!("haptic failed: {e}");
     }
 }
 
-/// `ACTION_SEND` wrapped in `Intent.createChooser`, started from the activity itself — no
+/// `ACTION_SEND` wrapped in `Intent.createChooser`, started from the activity itself - no
 /// `FLAG_ACTIVITY_NEW_TASK` needed, and `startActivity` is a Binder call that is fine off the Java
 /// UI thread, like every other JNI call here.
 #[cfg(target_os = "android")]
@@ -684,17 +717,45 @@ fn open_url(url: &str) -> bool {
     }
 }
 
+#[cfg(target_os = "android")]
+fn cache_dir(env: &mut jni::JNIEnv) -> jni::errors::Result<String> {
+    let ctx = ndk_context::android_context();
+    let activity = unsafe { jni::objects::JObject::from_raw(ctx.context().cast()) };
+    let dir = env.call_method(&activity, "getCacheDir", "()Ljava/io/File;", &[])?.l()?;
+    let abs = env.call_method(&dir, "getAbsolutePath", "()Ljava/lang/String;", &[])?.l()?;
+    Ok(env.get_string(&jni::objects::JString::from(abs))?.into())
+}
+
+/// An export is a plaintext ledger. The share sheet is long done with the last one by the next
+/// launch, and left there it would outlive logout and leaving the project.
+#[cfg(target_os = "android")]
+fn purge_exports() {
+    let ctx = ndk_context::android_context();
+    let Ok(vm) = (unsafe { jni::JavaVM::from_raw(ctx.vm().cast()) }) else {
+        return;
+    };
+    let Ok(mut env) = vm.attach_current_thread() else {
+        return;
+    };
+    match cache_dir(&mut env) {
+        Ok(cache) => {
+            let _ = std::fs::remove_dir_all(std::path::Path::new(&cache).join("exports"));
+        }
+        Err(_) => {
+            let _ = env.exception_clear();
+        }
+    }
+}
+
+#[cfg(target_os = "ios")]
+fn purge_exports() {
+    let _ = std::fs::remove_dir_all(std::env::temp_dir().join("exports"));
+}
+
 /// Under `getCacheDir()/exports/`, the one directory `res/xml/file_paths.xml` exposes for this,
 /// then `MainActivity.shareFile` builds the FileProvider URI and opens the chooser.
 #[cfg(target_os = "android")]
 fn share_file(filename: &str, bytes: &[u8], mime: &str) -> Result<(), String> {
-    fn cache_dir(env: &mut jni::JNIEnv) -> jni::errors::Result<String> {
-        let ctx = ndk_context::android_context();
-        let activity = unsafe { jni::objects::JObject::from_raw(ctx.context().cast()) };
-        let dir = env.call_method(&activity, "getCacheDir", "()Ljava/io/File;", &[])?.l()?;
-        let abs = env.call_method(&dir, "getAbsolutePath", "()Ljava/lang/String;", &[])?.l()?;
-        Ok(env.get_string(&jni::objects::JString::from(abs))?.into())
-    }
     fn share(env: &mut jni::JNIEnv, path: &str, mime: &str) -> jni::errors::Result<()> {
         let ctx = ndk_context::android_context();
         let activity = unsafe { jni::objects::JObject::from_raw(ctx.context().cast()) };
@@ -722,7 +783,7 @@ fn share_file(filename: &str, bytes: &[u8], mime: &str) -> Result<(), String> {
     result
 }
 
-/// `openURL:options:completionHandler:`, not `openURL:` — the iOS 18 SDK turns the deprecated one
+/// `openURL:options:completionHandler:`, not `openURL:` - the iOS 18 SDK turns the deprecated one
 /// into a logged no-op that returns false.
 #[cfg(target_os = "ios")]
 fn open_url(url: &str) -> bool {
@@ -765,7 +826,7 @@ fn share_file(filename: &str, bytes: &[u8], _mime: &str) -> Result<(), String> {
 /// Bridges `ocr::scan` to the shape `ui` asks for, and installs the platform's temp-file purge.
 ///
 /// The adapter lives here rather than in either crate: `ocr` must not know about Dioxus, and `ui`
-/// must not depend on `ocr` — 31 MB of weights would land in the wasm bundle and the server binary.
+/// must not depend on `ocr` - 31 MB of weights would land in the wasm bundle and the server binary.
 /// Same seam as `set_haptics_player` below.
 #[cfg(any(target_os = "android", target_os = "ios"))]
 fn install_scanner() {
@@ -797,12 +858,12 @@ fn install_scanner() {
 
 /// wry builds the capture URI from `packageName + ".fileprovider"`. With no such provider declared,
 /// `FileProvider.getUriForFile` throws, `RustWebChromeClient` swallows it in `catch (ex: Exception)`
-/// and falls back to the document picker — so **Scan opens the gallery instead of the camera**, and
+/// and falls back to the document picker - so **Scan opens the gallery instead of the camera**, and
 /// the only trace is a `Tauri/FileChooser` log line from inside wry.
 ///
 /// `dx serve` can never carry the provider: dx 0.7.9 interpolates `[android.raw.manifest]` at
 /// `<manifest>` level, and a `<provider>` must be a child of `<application>`. Only the Makefile's
-/// `patch_file_provider` — i.e. `make android-build` — puts it there. This turns that structural gap
+/// `patch_file_provider` - i.e. `make android-build` - puts it there. This turns that structural gap
 /// into one obvious line at startup instead of a mystery on the device.
 ///
 /// The button is deliberately left enabled: scanning a photo already in the gallery is a legitimate
@@ -823,7 +884,7 @@ fn warn_if_no_file_provider() {
         let package =
             env.call_method(&activity, "getPackageName", "()Ljava/lang/String;", &[])?.l()?;
         let package: String = env.get_string(&jni::objects::JString::from(package))?.into();
-        // Derived exactly the way wry derives it, so an applicationIdSuffix cannot slip past this —
+        // Derived exactly the way wry derives it, so an applicationIdSuffix cannot slip past this -
         // the Makefile's grep hardcodes the authority and would not notice.
         let authority = env.new_string(format!("{package}.fileprovider"))?;
         let info = env
@@ -848,7 +909,7 @@ fn warn_if_no_file_provider() {
         Ok(true) => {}
         Ok(false) => tracing::warn!(
             "no capture FileProvider declared: Scan will open the gallery, not the camera. \
-             Expected under `dx serve` — build with `make android-build` to test capture."
+             Expected under `dx serve` - build with `make android-build` to test capture."
         ),
         Err(e) => {
             let _ = env.exception_clear();
@@ -903,7 +964,7 @@ fn purge_captures() {
         return;
     };
     if let Err(e) = inner(&mut env) {
-        // Always clear: a pending exception poisons every later JNI call on this thread — the
+        // Always clear: a pending exception poisons every later JNI call on this thread - the
         // safe-area inset reads included.
         let _ = env.exception_clear();
         tracing::warn!("could not purge captured photos: {e}");
@@ -987,6 +1048,7 @@ fn main() {
         ui::common::set_native_sharer(std::sync::Arc::new(share_text));
         ui::common::set_native_opener(std::sync::Arc::new(open_url));
         ui::common::set_native_file_sharer(std::sync::Arc::new(share_file));
+        purge_exports();
     }
 
     // Same contract: installed before launch, so no call site can race an unset scanner. Every
@@ -1002,7 +1064,7 @@ fn main() {
     // `contextmenu` -> preventDefault, which on Android/iOS also kills the native text-selection
     // toolbar. Re-enable it.
     //
-    // Covers only deep links arriving BEFORE the UI exists — installed ahead of the event loop, so
+    // Covers only deep links arriving BEFORE the UI exists - installed ahead of the event loop, so
     // a cold-start link cannot race the first render. `DeepLinkListener` then takes over; dioxus
     // dispatches registered wry handlers first, so without the stand-down both would handle the
     // same link. See packages/ui/src/common/deep_link.rs.
@@ -1010,9 +1072,10 @@ fn main() {
     let builder = builder.with_cfg(
         dioxus::mobile::Config::new()
             // wry paints this before parsing any HTML. The window shows right after the first
-            // rebuild's edits are *sent*, unflushed, so one frame has an empty document — this
-            // makes it base-200 rather than white. sRGB of --color-base-200.
-            .with_background_color((244, 248, 246, 255))
+            // rebuild's edits are *sent*, unflushed, so one frame has an empty document - this
+            // makes it base-200 rather than white. sRGB of --color-base-200, of the theme the
+            // system is in: the CSS picks `counted-dark` by media query, which this frame predates.
+            .with_background_color(if system_is_dark() { (27, 34, 31, 255) } else { (244, 248, 246, 255) })
             .with_custom_head(head_html())
             .with_disable_context_menu(false)
             .with_custom_event_handler(|event, _| {
@@ -1022,7 +1085,7 @@ fn main() {
                 }
                 match event {
                     // iOS delivers BOTH counted:// (application:openURL:) and universal links
-                    // (application:continueUserActivity:) as Opened — see tao ios/view.rs.
+                    // (application:continueUserActivity:) as Opened - see tao ios/view.rs.
                     Event::Opened { urls } => {
                         for url in urls {
                             push_deep_link(url.to_string());
@@ -1063,8 +1126,8 @@ fn app() -> Element {
         "#);
     });
     // WKWebView's left-edge back gesture, off by default. docs/mobile-navigation.md used to call
-    // this a manual Xcode edit; there is no Xcode project — `dx bundle --platform ios` emits the
-    // .app directly — so it is set here on wry's own WKWebView instead, and survives every bundle.
+    // this a manual Xcode edit; there is no Xcode project - `dx bundle --platform ios` emits the
+    // .app directly - so it is set here on wry's own WKWebView instead, and survives every bundle.
     //
     // `NavigationSync` is what gives the gesture something to go back to: it keeps one spare
     // window.history entry while a back press has anywhere to go, and the resulting popstate is
@@ -1095,7 +1158,7 @@ fn app() -> Element {
     // Accessibility sizes at the top of the range would break the dock and the header.
     //
     // **The sentinel is load-bearing.** Where the `font` shorthand does not parse the keyword, the
-    // declaration is dropped and the span inherits instead — and what it inherits is
+    // declaration is dropped and the span inherits instead - and what it inherits is
     // `16px * var(--dt-scale)`, the value this very effect wrote. That is a feedback loop: each
     // resize divides the previous scale by 17/16 until it sticks at the 0.85 floor, shrinking the
     // whole UI ~15% with nothing to point at. Setting `font-size` to a value nothing would ever
@@ -1133,14 +1196,14 @@ fn app() -> Element {
     // visual viewport's scroll as --vvo, which their max-height subtracts.
     //
     // Needed because daisyUI's .modal is `position: fixed` and neither platform resizes the layout
-    // viewport for the keyboard — WKWebView scrolls the *page* to reveal the focused input, the
-    // Android theme is `adjustNothing` — and a fixed element does not move with page scroll, so a
+    // viewport for the keyboard - WKWebView scrolls the *page* to reveal the focused input, the
+    // edge-to-edge Android window is never resized - and a fixed element does not move with page scroll, so a
     // sheet's field can sit behind the keyboard. Only visualViewport can see it.
     //
     // Both edges need a variable, not just the bottom one. --kb is measured net of the scroll, so
     // it lands the footer on the keyboard however far the page moved; but the box is bottom-pinned
     // inside a layout viewport that did not shrink, so its *top* stays where a keyboard-less screen
-    // would put it — one scroll's worth above the visible band, which is the header disappearing off
+    // would put it - one scroll's worth above the visible band, which is the header disappearing off
     // the top of the screen.
     //
     // Same split as the safe-area bridge below: JS observes, Rust decides. `keyboard_inset` lives in
@@ -1148,14 +1211,14 @@ fn app() -> Element {
     //
     // rAF-coalesced and change-gated on purpose. The keyboard animation fires these ~20 times over
     // ~250ms, and every message to Rust costs a synchronous XHR over wry's bridge (see the module
-    // docs on expense_row.rs) — so the listener sends at most one value per frame, and none at all
+    // docs on expense_row.rs) - so the listener sends at most one value per frame, and none at all
     // while the number is unchanged.
     //
     // The layout height is measured off a `position: fixed; top: 0; bottom: 0` probe, not
     // `innerHeight`: that probe is exactly the box every sheet is laid out in. iOS 26's WKWebView
     // reports `innerHeight` with the page scroll already taken out (measured on an iPhone 17:
     // innerHeight + offsetTop = the 874px screen), so feeding it here subtracted the scroll twice
-    // and sank the sheet — and the operator bar under it — by `offsetTop` behind the keyboard.
+    // and sank the sheet - and the operator bar under it - by `offsetTop` behind the keyboard.
     // Where `innerHeight` means what the spec says (Android), the probe measures the same number.
     //
     // No cfg split: the arithmetic is the same on both, and a build whose window *is* resized for
@@ -1238,7 +1301,7 @@ fn app() -> Element {
     });
 
     rsx! {
-        // Duplicated by head_html() on android/ios (same URLs, cached — no refetch, no repaint).
+        // Duplicated by head_html() on android/ios (same URLs, cached - no refetch, no repaint).
         // Kept because with_custom_head is cfg-gated to those targets, so dropping these would
         // strip the CSS from any other build of this package.
         document::Link { rel: "icon", href: FAVICON }
@@ -1252,24 +1315,23 @@ fn app() -> Element {
         UpdateRequiredScreen { store_url: STORE_URL }
 
         main {
-            "data-theme": "counted",
             class: "min-h-screen flex flex-col items-center",
             Router::<Route> {}
         }
     }
 }
 
-/// Stops iOS drawing its form-assistant bar — the floating `↑ ↓ ✓` pill — over the web content.
+/// Stops iOS drawing its form-assistant bar - the floating `↑ ↓ ✓` pill - over the web content.
 ///
 /// `ui`'s `AmountOperatorBar` is the last row of `.modal-box` and is placed by that box's
 /// `padding-bottom: max(--sab, --kb)` alone, so it lands flush on the keyboard. `--kb` is measured
 /// from `visualViewport.height`, and that does not shrink for an accessory view which *floats*
-/// above the keyboard rather than docking to it — so the pill painted straight over the operator
+/// above the keyboard rather than docking to it - so the pill painted straight over the operator
 /// keys and none of them could be reached.
 ///
 /// The override goes on the class, not on an instance: the first responder during text input is a
 /// `WKContentView`, a private class with no public handle, and finding the live one would mean
-/// walking the scroll view's subviews on every focus. Hence the name string — which is all this
+/// walking the scroll view's subviews on every focus. Hence the name string - which is all this
 /// reaches for, no private selector is ever sent. It is the Cordova/Capacitor
 /// `hideFormAccessoryBar` pattern.
 ///
@@ -1280,7 +1342,7 @@ fn app() -> Element {
 /// its own, and swaps the IMP when it has one, and in neither case can it reach `UIResponder`.
 ///
 /// **It was `class_addMethod`, and that silently did nothing.** `class_addMethod` fails, returning
-/// NO, when the class already implements the selector — and WebKit's `WKContentView` does implement
+/// NO, when the class already implements the selector - and WebKit's `WKContentView` does implement
 /// `-inputAccessoryView` (`WKContentViewInteraction.mm`), which is the whole reason the pill is
 /// drawn. So the override was never installed and the bar kept painting over the operator keys. The
 /// old comment read that failure as harmless insurance against WebKit "ever" declaring one; it had
@@ -1289,10 +1351,10 @@ fn app() -> Element {
 ///
 /// Called from the back-gesture effect rather than at launch, and for the same reason: the class
 /// is not registered with the runtime until WebKit has built a webview. A missing class is a
-/// silent skip — the same posture `haptic()` takes; the pill coming back is not worth a crash.
+/// silent skip - the same posture `haptic()` takes; the pill coming back is not worth a crash.
 ///
-/// The cost is that the numeric keypad is left with no dismiss control — it has no return key and
-/// the `✓` was the only one — which is what `AmountOperatorBar`'s own `⌄` key replaces. See
+/// The cost is that the numeric keypad is left with no dismiss control - it has no return key and
+/// the `✓` was the only one - which is what `AmountOperatorBar`'s own `⌄` key replaces. See
 /// docs/ios.md.
 #[cfg(target_os = "ios")]
 fn hide_form_accessory_bar() {

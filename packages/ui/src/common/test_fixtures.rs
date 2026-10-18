@@ -81,7 +81,7 @@ pub(crate) fn make_expense(
     }
 }
 
-/// Same row, with the category the user picked by hand — what `RowExpense` prefers over the name.
+/// Same row, with the category the user picked by hand - what `RowExpense` prefers over the name.
 pub(crate) fn make_expense_with_category(
     key: &[u8; 32],
     id: i32,
@@ -137,7 +137,7 @@ pub(crate) fn make_payment(
 /// clears the var and removes the dir. Takes [`super::env_lock`], so tests using it are
 /// serialised against every other test that touches those env vars.
 ///
-/// The value is returned so assertions can run *after* cleanup — a failing assertion then
+/// The value is returned so assertions can run *after* cleanup - a failing assertion then
 /// cannot leave the temp dir or the env var behind for the next test.
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn with_data_dir<T>(suffix: &str, f: impl FnOnce(&std::path::Path) -> T) -> T {

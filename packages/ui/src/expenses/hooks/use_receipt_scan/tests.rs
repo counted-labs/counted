@@ -1,7 +1,7 @@
 use super::*;
 
 /// Every key the hook can hand to `tid!` comes from `scan_error_key`, which the literal scanner in
-/// `i18n.rs` cannot see — so this module asserts its own keys, the pattern `error_utils` and
+/// `i18n.rs` cannot see - so this module asserts its own keys, the pattern `error_utils` and
 /// `project_status_menu` use.
 #[cfg(not(target_arch = "wasm32"))]
 #[test]

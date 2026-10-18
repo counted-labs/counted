@@ -135,7 +135,7 @@ payment-method-invalid-characters = Verwijder regeleinden of onzichtbare tekens.
 payment-method-limit = Je kunt maximaal { $max } betaalmethodes opslaan.
 payment-methods-saved = Betaalgegevens opgeslagen.
 payment-methods-offline = Je moet online zijn om je betaalgegevens op te slaan.
-payment-methods-stale = Je betaalgegevens zijn op een ander apparaat gewijzigd. Ze zijn opnieuw geladen — probeer het opnieuw.
+payment-methods-stale = Je betaalgegevens zijn op een ander apparaat gewijzigd. Ze zijn opnieuw geladen - probeer het opnieuw.
 payment-methods-key-missing = Log opnieuw in om je betaalgegevens te beheren.
 
 verify-email-checking = Je e-mailadres wordt geverifieerd…
@@ -208,7 +208,6 @@ projects-filter-active = Actief
 projects-filter-all = Alle
 projects-count-label = Projecten
 projects-empty = Geen projecten
-projects-empty-hint = Maak een project aan met de knop hieronder
 projects-offline-banner = Offlinegegevens - maak opnieuw verbinding om te vernieuwen.
 demo-banner = Demoproject - alleen-lezen.
 demo-start-own = Start je eigen project
@@ -222,6 +221,67 @@ projects-no-local-data = Geen lokale gegevens
 projects-no-local-data-hint = Log in om je projecten voor het eerst te laden.
 projects-add = Project toevoegen
 projects-create = Project aanmaken
+projects-personal-expense = Eigen uitgave
+personal-expense-banner = Toegevoegd aan Mijn uitgaven
+personal-create-title = Maak je eigen project
+personal-create-hint = Houd bij wat je alleen uitgeeft
+group-create-title = Maak een gedeeld project
+group-create-hint = Deel uitgaven met vrienden en familie
+personal-create-action = Maken
+personal-create-signup = Account maken
+personal-sheet-title = Je eigen project
+personal-sheet-intro = Om bij te houden wat je alleen uitgeeft. Het staat bij je groepen in Statistieken.
+personal-sheet-point-alone = Eén lid: jij, met je accountnaam. Geen deellink.
+personal-sheet-point-encrypted = Versleuteld op je apparaten, net als je andere projecten.
+personal-sheet-point-stats = Je aandelen in groepen tellen in Statistieken op bij deze uitgaven.
+personal-default-name = Mijn uitgaven
+my-spending-prev-month = Vorige maand
+my-spending-next-month = Volgende maand
+my-spending-spent = Je hebt uitgegeven
+my-spending-groups = Groepen
+my-spending-income = Inkomsten
+my-spending-balance = Maandsaldo
+my-spending-unconverted = Aandelen in een andere valuta blijven buiten beschouwing tot er een koers bekend is.
+my-spending-empty = Niets deze maand
+my-spending-empty-hint = Voeg een uitgave toe met +. Je aandelen in groepen verschijnen hier automatisch.
+my-spending-share-of = van { $amount }
+my-spending-uncounted = niet meegeteld
+payer-you = jou
+expense-received-by = ontvangen door
+counted-switch = Meetellen in Mijn uitgaven
+counted-switch-on = Aan: je aandeel telt mee in Mijn uitgaven
+counted-switch-off = Uit: je aandeel verschijnt niet in Mijn uitgaven
+counted-groups = Meegetelde groepen
+counted-groups-intro = Je aandeel in deze groepen telt mee in Mijn uitgaven en in de budgetten.
+counted-groups-converted = { $from }, omgerekend naar { $to }
+counted-groups-encrypted = Deze keuze is versleuteld met je account en volgt je apparaten.
+counted-groups-empty = Nog geen groep op dit apparaat.
+counted-groups-done = OK
+counted-save-failed = Deze keuze kon niet worden opgeslagen. Probeer het opnieuw.
+tab-budget = Budget
+budget-title = Budgetten
+budget-manage = Beheren
+budget-left = Nog { $amount }
+budget-over = Overschreden met { $amount }
+budget-empty = Geen budget
+budget-empty-hint = Stel per categorie een plafond in. Je aandelen in groepen tellen ook mee.
+budget-define = Budget instellen
+budget-sheet-title = Maandbudgetten
+budget-sheet-intro = Op je aandeel: eigen en groepen. Laat leeg om een categorie niet te volgen.
+budget-average = Gem. laatste 3 maanden: { $amount }
+budget-for = Budget { $category }
+budget-alert = Waarschuw me bij 80 %
+budget-alert-hint = Berekend op dit apparaat
+budget-invalid = Geen geldig bedrag voor { $category }.
+budget-offline = Budgetten worden alleen online opgeslagen. Maak verbinding en probeer het opnieuw.
+budget-alert-near = { $category }: { $percent } % van het maandbudget
+budget-alert-over = { $category }: maandbudget overschreden
+personal-card-budget = { $month } · budget { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } resultaat
+       *[other] { $count } resultaten
+    } · { $total } · eigen en groepen, alle maanden
 projects-join = Deelnemen aan een project
 projects-import-tricount = Importeren uit Tricount
 project-actions = Projectacties
@@ -284,6 +344,7 @@ expenses-empty-hint = Voeg je eerste uitgave toe met de knop hieronder
 expense-type-expense = Uitgave
 expense-type-transfer = Overboeking
 expense-type-gain = Inkomsten
+expense-type-group = Type
 expense-paid-by = betaald door
 expense-sent-by = verstuurd door
 expense-contributed-by = bijgedragen door
@@ -333,6 +394,23 @@ export-failed = Exporteren mislukt: { $reason }
 history-expense-added = Uitgave toegevoegd: { $name }
 history-expense-edited = Uitgave bewerkt: { $name }
 history-expense-deleted = Uitgave verwijderd: { $name }
+move-expense = Naar een project verplaatsen
+move-expense-title = Verplaatsen naar…
+move-current = Huidig
+move-converted = { $currency }, omgerekend tegen de maandkoers
+move-note-personal = Je kiest in de volgende stap wie betaalde en voor wie. De uitgave verlaat Mijn uitgaven.
+move-note-group = De uitgave verlaat { $project } voor alle leden, en het saldo van de groep wordt opnieuw berekend. Je kiest in de volgende stap wie betaalde en voor wie.
+move-banner = Van { $from } naar { $to }
+move-submit = Verplaatsen
+move-done = Uitgave verplaatst naar { $project }
+move-delete-failed = De uitgave is aan het andere project toegevoegd maar staat nog in { $project }: verwijder haar daar.
+history-expense-moved = Uitgave verplaatst naar een ander project: { $name }
+personal-badge = Eigen
+move-members =
+    { $count ->
+        [one] { $count } lid
+       *[other] { $count } leden
+    }
 history-project-edited = Project bewerkt: { $name }
 history-name-changed = Naam: ‘{ $from }’ → ‘{ $to }’
 history-description-added = Omschrijving toegevoegd: ‘{ $value }’
@@ -346,11 +424,23 @@ expense-name-placeholder = Restaurant, boodschappen…
 expense-actions = Acties voor de uitgave
 expense-your-share = Jouw deel
 expense-your-share-value = Jouw deel: { $amount } { $currency }
+expense-share-percent = { $percent }%
+expense-added-by = Toegevoegd door { $name } op { $date }
 expense-inconsistent-detail = Bedragen kloppen niet: { $paid } betaald, { $owed } verschuldigd, voor een uitgave van { $total }. Bewerk de uitgave om dit te corrigeren.
 missing-access-key = Toegangssleutel ontbreekt. Open dit project via de deellink.
 filter-all = Alles
 filter-my-payments = Mijn betalingen
 filter-my-debts = Wat ik verschuldigd ben
+expense-filter-group = Filter
+expenses-search = Uitgaven zoeken
+expenses-no-match = Geen uitgave gevonden.
+expenses-search-open = Zoeken
+expenses-search-clear = Zoekopdracht wissen
+expenses-search-summary =
+    { $count ->
+        [one] { $count } resultaat
+       *[other] { $count } resultaten
+    } · { $total } · alle maanden
 participants-shares-for = Delen van { $name }
 participants-amount-for = Bedrag voor { $name }
 reimbursement-add = Afrekening toevoegen
@@ -388,8 +478,8 @@ charts-expense-count =
 charts-nothing-to-show = Niets te tonen
 charts-my-share-skipped =
     { $count ->
-        [one] 1 project telt niet mee — geen deelnemer gekozen, of de gegevens zijn niet geladen.
-       *[other] { $count } projecten tellen niet mee — geen deelnemer gekozen, of de gegevens zijn niet geladen.
+        [one] 1 project telt niet mee - geen deelnemer gekozen, of de gegevens zijn niet geladen.
+       *[other] { $count } projecten tellen niet mee - geen deelnemer gekozen, of de gegevens zijn niet geladen.
     }
 
 ### Categories
@@ -410,6 +500,13 @@ payers-title-contributors = Bijdragers
 debtors-title-debtors = Verschuldigd
 debtors-title-recipients = Ontvangers
 debtors-title-beneficiaries = Begunstigden
+debtors-title-for = Voor
+debtors-title-recipient = Ontvanger
+expense-people =
+    { $count ->
+        [one] { $count } persoon
+       *[other] { $count } personen
+    }
 
 ### Welcome
 
@@ -676,6 +773,8 @@ invitation-decline = Weigeren
 participants-you-label = Je naam in dit project
 participants-you-badge = Jij
 participants-others = Andere deelnemers
+participants-removed = Verwijderd
+participant-restore = Herstellen
 participants-empty = Voeg hieronder deelnemers toe.
 participants-duplicate = “{ $name }” staat al in de lijst.
 participants-input-label = Een vriend toevoegen of een naam typen
@@ -820,3 +919,16 @@ error-recurring-not-found = Deze terugkerende uitgave bestaat niet meer.
 error-recurring-stale = Iemand heeft deze terugkerende uitgave intussen gewijzigd. Hij is opnieuw geladen: controleer hem en sla opnieuw op.
 error-too-many-recurring = Dit project heeft al 50 terugkerende uitgaven. Stop er een die je niet meer nodig hebt om een nieuwe toe te voegen.
 error-user-in-recurring = Deze deelnemer maakt deel uit van een terugkerende uitgave. Haal de deelnemer daar eerst uit of stop de uitgave.
+
+home-owed-to-you = Jij krijgt nog
+home-you-owe = Jij moet nog
+home-details-show = Details tonen
+home-details-hide = Details verbergen
+home-all-settled = Alles verrekend
+home-pay = Betalen
+home-remind = Herinneren
+home-remind-message = Kleine herinnering: er staan nog terugbetalingen open in { $project }.
+home-row-owed = jij krijgt nog
+home-row-owe = jij moet nog
+home-row-settled = Verrekend
+home-totals-partial = Zonder projecten zonder wisselkoers

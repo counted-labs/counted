@@ -2,7 +2,7 @@
 //!
 //! Every figure the page shows comes out of a single [`build`] call, held in a `use_memo` in
 //! `expenses_page.rs`. Nothing below it decrypts. The page used to decrypt everything twice off
-//! the same ciphertext — once for the stats, once for the rows. Guard:
+//! the same ciphertext - once for the stats, once for the rows. Guard:
 //! `decrypt_count_is_linear`.
 
 use shared::{
@@ -23,13 +23,15 @@ use crate::expenses::tabs::expenses_tab::inconsistent_expense_ids;
 /// Both are derived here and **never cached by expense id**: an edit replaces the ciphertext row
 /// and the emoji must follow the new name, which an id-keyed cache would not.
 ///
-/// A hand-picked category wins over the name so the row agrees with the charts — except when the
+/// A hand-picked category wins over the name so the row agrees with the charts - except when the
 /// two agree, where the more specific leaf emoji wins: "Pizza" under Nourriture stays 🍕, moved to
 /// Transport it becomes 🚕.
 #[derive(Clone, Debug, PartialEq)]
 pub struct RowExpense {
     pub expense: DecryptedExpense,
     pub emoji: &'static str,
+    /// One of `CHART_CATEGORIES`, as the charts file it.
+    pub category: &'static str,
     pub date: chrono::NaiveDate,
 }
 
@@ -42,7 +44,7 @@ impl From<DecryptedExpense> for RowExpense {
         // vanishing unexplained is worse than being filed under the day it was entered.
         let date = chrono::NaiveDate::parse_from_str(&expense.date, "%Y-%m-%d")
             .unwrap_or_else(|_| expense.created_at.date());
-        Self { expense, emoji, date }
+        Self { expense, emoji, category: parent, date }
     }
 }
 
@@ -76,7 +78,7 @@ pub struct ProjectData {
     pub project_id: Option<uuid::Uuid>,
     pub expenses: Vec<RowExpense>,
     pub payments: Vec<DecryptedPayment>,
-    /// The still-encrypted user rows — the avatar group and the participant pickers want these.
+    /// The still-encrypted user rows - the avatar group and the participant pickers want these.
     pub users: Vec<User>,
     pub user_names: HashMap<i32, String>,
     /// Payer ids per expense, for the "payée par …" subtitle.
@@ -84,17 +86,21 @@ pub struct ProjectData {
     /// Expenses whose payments no longer add up to their total.
     pub inconsistent: HashSet<i32>,
     pub summary: UserSummary,
-    /// Sum of what was paid, counting `Expense` entries only — transfers and gains are excluded.
+    /// Sum of what was paid, counting `Expense` entries only - transfers and gains are excluded.
     pub global_total: f64,
     /// Ids of the `Expense`-typed entries, so callers can apply the same exclusion.
     pub real_expense_ids: HashSet<i32>,
     pub currency: String,
     pub project_status: ProjectStatus,
     pub read_only: bool,
+    /// The account's "Mes dépenses": one participant, no balance to settle.
+    pub personal: bool,
+    /// The personal project's budgets; empty anywhere else.
+    pub budgets: shared::Budgets,
     /// False while the three body resources have produced neither live data nor a usable cache.
     /// The page shows its error/spinner instead of an empty project.
     pub loaded: bool,
-    /// Identity stamp, fresh on every `build` — see the `PartialEq` impl below.
+    /// Identity stamp, fresh on every `build` - see the `PartialEq` impl below.
     pub revision: u64,
 }
 
@@ -119,6 +125,8 @@ impl Default for ProjectData {
             currency: "...".to_string(),
             project_status: ProjectStatus::Ongoing,
             read_only: false,
+            personal: false,
+            budgets: Default::default(),
             loaded: false,
             revision: 0,
         }
@@ -130,7 +138,7 @@ impl Default for ProjectData {
 ///
 /// **Keep `eq` reflexive.** It was once `{ false }`, so `x != x` held; `Memo::recompute` and
 /// `ReadSignal`'s derived `PartialEq` both then reported "changed" on every read, and the
-/// render/write cycle pinned the main thread — see `equality_is_reflexive`.
+/// render/write cycle pinned the main thread - see `equality_is_reflexive`.
 impl PartialEq for ProjectData {
     fn eq(&self, other: &Self) -> bool {
         self.revision == other.revision
@@ -175,13 +183,14 @@ fn next_revision() -> u64 {
     })
 }
 
-/// Rows whose ciphertext will not open are dropped — one corrupt row must not take the page down.
+/// Rows whose ciphertext will not open are dropped - one corrupt row must not take the page down.
 pub fn build(key: Option<[u8; 32]>, live: Option<&LiveData>) -> ProjectData {
     let (Some(k), Some(live)) = (key, live) else {
         return ProjectData::default();
     };
     let (users, expenses, payments) = (&live.users, &live.expenses, &live.payments);
     let project = live.project.as_ref();
+    let payload = project.and_then(|p| crate::crypto::decrypt_json::<shared::ProjectPayload>(&k, &p.payload).ok());
 
     // Only the payments of expenses the page lists: the rest used to move balances by rows nobody
     // could see.
@@ -191,7 +200,7 @@ pub fn build(key: Option<[u8; 32]>, live: Option<&LiveData>) -> ProjectData {
         users.iter().filter_map(|u| decrypt_user(&k, u).ok().map(|d| (d.id, d.name))).collect();
 
     // Borrowed before `decrypted` moves into the row wrappers, so no clone. The signature stays
-    // `&[DecryptedExpense]` — 18 tests are written against it.
+    // `&[DecryptedExpense]` - 18 tests are written against it.
     let inconsistent = inconsistent_expense_ids(&decrypted, &payments);
 
     let real_expense_ids: HashSet<i32> = decrypted
@@ -231,6 +240,8 @@ pub fn build(key: Option<[u8; 32]>, live: Option<&LiveData>) -> ProjectData {
         currency,
         project_status,
         read_only: project.is_some_and(|p| p.read_only),
+        personal: payload.as_ref().is_some_and(|p| p.is_personal()),
+        budgets: payload.as_ref().filter(|p| p.is_personal()).map(|p| p.budgets()).unwrap_or_default(),
         loaded: true,
         revision: next_revision(),
     }
@@ -274,7 +285,7 @@ mod tests {
         }
     }
 
-    /// `large_project()` is a `&'static` fixture, so rows are cloned — outside `count_decrypts`,
+    /// `large_project()` is a `&'static` fixture, so rows are cloned - outside `count_decrypts`,
     /// so the clone never lands in a decryption count.
     fn large_live() -> LiveData {
         let p = large_project();
@@ -285,7 +296,7 @@ mod tests {
         build(Some(test_key()), Some(l))
     }
 
-    /// The tag is what stops A's rows rendering under B — see [`LiveData`].
+    /// The tag is what stops A's rows rendering under B - see [`LiveData`].
     ///
     /// The store is shared and outlives any one page, so it still holds A while B is mounting.
     /// `build` stamps the id it actually built from and `ProjectStore::data_for` compares it; a
@@ -314,14 +325,14 @@ mod tests {
         assert!(built.project_id != Some(b), "B must show its skeleton, never A's rows");
     }
 
-    /// Nothing loaded is nobody's project — `data_for` must not match a page on it.
+    /// Nothing loaded is nobody's project - `data_for` must not match a page on it.
     #[test]
     fn an_unloaded_pass_names_no_project() {
         assert_eq!(ProjectData::default().project_id, None);
         assert_eq!(build(Some(test_key()), None).project_id, None);
     }
 
-    /// A wrong key drops every row, so `loaded` is the only thing left saying data was expected —
+    /// A wrong key drops every row, so `loaded` is the only thing left saying data was expected -
     /// the page must not present that as an empty project.
     #[test]
     fn a_wrong_key_drops_every_row_without_panicking() {
@@ -379,7 +390,7 @@ mod tests {
         assert!(data.loaded);
     }
 
-    /// Regression guard for the freeze in `c0e10e0` — see the `PartialEq` impl.
+    /// Regression guard for the freeze in `c0e10e0` - see the `PartialEq` impl.
     #[test]
     fn equality_is_reflexive() {
         let k = test_key();
@@ -621,7 +632,7 @@ mod tests {
         assert!((sug.amount - 100.0).abs() < 0.01);
     }
 
-    /// A row that will not open is dropped by the pass, so it never reaches the summary — one
+    /// A row that will not open is dropped by the pass, so it never reaches the summary - one
     /// corrupt payment must not take the whole project's balances down with it.
     #[test]
     fn a_corrupt_payment_is_dropped_not_surfaced() {

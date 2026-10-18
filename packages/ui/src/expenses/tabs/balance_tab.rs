@@ -25,10 +25,10 @@ pub fn BalanceTab(props: BalanceTabProps) -> Element {
     let group = |label: String, total: f64, rows: &[BalanceRow], positive: bool| {
         let tone = if positive { "text-success" } else { "text-error" };
         let bar = if positive { "bg-success" } else { "bg-error" };
-        let total = format!("{total:.2} {}", props.currency);
+        let total = crate::common::amount(total, &props.currency);
         rsx! {
             section { class: "flex flex-col gap-2",
-                h3 { class: "flex items-baseline justify-between px-1 text-xs font-semibold uppercase tracking-wide text-base-content/70",
+                h2 { class: "flex items-baseline justify-between px-1 text-xs font-semibold uppercase tracking-wide text-base-content/70",
                     span { "{label}" }
                     span { class: "normal-case tracking-normal tabular-nums {tone}", "{total}" }
                 }
@@ -37,8 +37,7 @@ pub fn BalanceTab(props: BalanceTabProps) -> Element {
                         {
                             let name = name_of(&row.user);
                             let is_me = Some(row.user.id) == props.stored_user_id;
-                            let sign = if positive { "+" } else { "" };
-                            let amount = format!("{sign}{:.2} {}", row.balance, props.currency);
+                            let amount = crate::common::signed_amount(row.balance, &props.currency);
                             rsx! {
                                 li { class: if is_me { "flex items-center gap-3 px-4 py-2.5 bg-primary/5" } else { "flex items-center gap-3 px-4 py-2.5" },
                                     Avatar {
@@ -87,7 +86,7 @@ pub fn BalanceTab(props: BalanceTabProps) -> Element {
             }
             if !groups.settled.is_empty() {
                 section { class: "flex flex-col gap-2",
-                    h3 { class: "px-1 text-xs font-semibold uppercase tracking-wide text-base-content/70",
+                    h2 { class: "px-1 text-xs font-semibold uppercase tracking-wide text-base-content/70",
                         {tid!("balance-settled")}
                     }
                     div { class: "flex items-center gap-3 px-4 py-2.5 bg-base-100 rounded-box shadow-soft",

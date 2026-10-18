@@ -21,7 +21,7 @@ anyhow = "1.0"
 # thiserror = "1.0"
 # Not optional, for the same reason as sha2: the security events live in `#[cfg(feature = "server")]`
 # bodies, but gating the dependency too would mean every call site needs its own cfg. The subscriber
-# is not here — `packages/web` installs one; a library that installs a subscriber steals the
+# is not here - `packages/web` installs one; a library that installs a subscriber steals the
 # binary's choice.
 tracing = "0.1"
 dotenvy = "0.15"

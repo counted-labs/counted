@@ -152,7 +152,7 @@ payment-method-invalid-characters = Bain aon bhristeacha líne nó carachtair dh
 payment-method-limit = Is féidir leat suas le { $max } modh íocaíochta a shábháil.
 payment-methods-saved = Sonraí íocaíochta sábháilte.
 payment-methods-offline = Caithfidh tú a bheith ar líne chun do shonraí íocaíochta a shábháil.
-payment-methods-stale = Athraíodh do shonraí íocaíochta ar ghléas eile. Athlódáladh iad — bain triail eile as.
+payment-methods-stale = Athraíodh do shonraí íocaíochta ar ghléas eile. Athlódáladh iad - bain triail eile as.
 payment-methods-key-missing = Logáil isteach arís chun do shonraí íocaíochta a bhainistiú.
 settings-payment-methods-share-warning = Tá modh comhroinnte le feiceáil ag gach ball de do thionscadail.
 payment-method-share = Comhroinn le mo thionscadail
@@ -234,7 +234,6 @@ projects-filter-active = Gníomhach
 projects-filter-all = Uile
 projects-count-label = Tionscadail
 projects-empty = Gan tionscadail
-projects-empty-hint = Cruthaigh tionscadal leis an gcnaipe thíos
 projects-offline-banner = Sonraí as líne - athnasc chun athnuachan.
 demo-banner = Tionscadal taispeána - inléite amháin.
 demo-start-own = Cruthaigh do thionscadal féin
@@ -248,6 +247,70 @@ projects-no-local-data = Gan sonraí áitiúla
 projects-no-local-data-hint = Logáil isteach chun do thionscadail a lódáil den chéad uair.
 projects-add = Cuir tionscadal leis
 projects-create = Cruthaigh tionscadal
+projects-personal-expense = Costas pearsanta
+personal-expense-banner = Curtha le Mo chostais
+personal-create-title = Cruthaigh do thionscadal pearsanta
+personal-create-hint = Lean a gcaitheann tú i d’aonar
+group-create-title = Cruthaigh tionscadal comhroinnte
+group-create-hint = Roinn costais le cairde agus le do mhuintir
+personal-create-action = Cruthaigh
+personal-create-signup = Cruthaigh cuntas
+personal-sheet-title = Do thionscadal pearsanta
+personal-sheet-intro = Chun a gcaitheann tú i d’aonar a bhreacadh. Taispeántar é le do ghrúpaí sna Staitisticí.
+personal-sheet-point-alone = Ball amháin: tusa, le hainm do chuntais. Gan nasc comhroinnte.
+personal-sheet-point-encrypted = Criptithe ar do ghléasanna, cosúil le do thionscadail eile.
+personal-sheet-point-stats = Cuirtear do chodanna sna grúpaí leis na costais seo sna Staitisticí.
+personal-default-name = Mo chostais
+my-spending-prev-month = An mhí roimhe
+my-spending-next-month = An chéad mhí eile
+my-spending-spent = Chaith tú
+my-spending-groups = Grúpaí
+my-spending-income = Ioncam
+my-spending-balance = Iarmhéid na míosa
+my-spending-unconverted = Fágtar scaireanna in airgeadra eile as go dtí go mbeidh ráta ar eolas.
+my-spending-empty = Faic an mhí seo
+my-spending-empty-hint = Cuir costas leis le +. Taispeánfar do scaireanna sna grúpaí anseo go huathoibríoch.
+my-spending-share-of = as { $amount }
+my-spending-uncounted = nár comhaireadh
+payer-you = tú
+expense-received-by = faighte ag
+counted-switch = Comhair in Mo chostais
+counted-switch-on = Ar siúl: cuirtear do scair le Mo chostais
+counted-switch-off = As: ní thaispeántar do scair in Mo chostais
+counted-groups = Grúpaí a chomhairtear
+counted-groups-intro = Cuirtear do scair sna grúpaí seo le Mo chostais agus leis na buiséid.
+counted-groups-converted = { $from }, tiontaithe go { $to }
+counted-groups-encrypted = Tá an rogha seo criptithe le do chuntas agus leanann sé thú ar do ghléasanna.
+counted-groups-empty = Níl aon ghrúpa ar an ngléas seo fós.
+counted-groups-done = OK
+counted-save-failed = Níorbh fhéidir an rogha seo a shábháil. Bain triail eile as.
+tab-budget = Buiséad
+budget-title = Buiséid
+budget-manage = Bainistigh
+budget-left = { $amount } fágtha
+budget-over = Sáraithe faoi { $amount }
+budget-empty = Gan buiséad
+budget-empty-hint = Socraigh uasteorainn do gach catagóir. Comhairtear do scaireanna sna grúpaí freisin.
+budget-define = Socraigh buiséad
+budget-sheet-title = Buiséid mhíosúla
+budget-sheet-intro = Ar do scair: pearsanta agus grúpaí. Fág folamh gan catagóir a leanúint.
+budget-average = Meán 3 mhí dheireanacha: { $amount }
+budget-for = Buiséad { $category }
+budget-alert = Tabhair rabhadh dom ag 80 %
+budget-alert-hint = Ríomhtha ar an ngléas seo
+budget-invalid = Ní suim bhailí é do { $category }.
+budget-offline = Ní féidir buiséid a shábháil ach ar líne. Athcheangail agus bain triail eile as.
+budget-alert-near = { $category }: { $percent } % de bhuiséad na míosa
+budget-alert-over = { $category }: buiséad na míosa sáraithe
+personal-card-budget = { $month } · buiséad { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } toradh
+        [two] { $count } thoradh
+        [few] { $count } thoradh
+        [many] { $count } dtoradh
+       *[other] { $count } toradh
+    } · { $total } · pearsanta agus grúpaí, gach mí
 projects-join = Glac páirt i dtionscadal
 projects-import-tricount = Iompórtáil ó Tricount
 project-actions = Gníomhartha tionscadail
@@ -324,6 +387,7 @@ expenses-show-more = Taispeáin tuilleadh ({ $count } fágtha)
 expense-type-expense = Costas
 expense-type-transfer = Aistriú
 expense-type-gain = Ioncam
+expense-type-group = Cineál
 expense-paid-by = íoctha ag
 expense-sent-by = seolta ag
 expense-contributed-by = ranníoctha ag
@@ -389,6 +453,26 @@ export-failed = Theip ar an easpórtáil: { $reason }
 history-expense-added = Costas curtha leis: { $name }
 history-expense-edited = Costas curtha in eagar: { $name }
 history-expense-deleted = Costas scriosta: { $name }
+move-expense = Bog go tionscadal
+move-expense-title = Bog go…
+move-current = Reatha
+move-converted = { $currency }, tiontaithe ag ráta na míosa
+move-note-personal = Roghnóidh tú cé a d’íoc agus cé dó sa chéad chéim eile. Fágfaidh an costas Mo chostais.
+move-note-group = Fágfaidh an costas { $project } dá bhaill go léir, agus déanfar iarmhéid an ghrúpa a athríomh. Roghnóidh tú cé a d’íoc agus cé dó sa chéad chéim eile.
+move-banner = Ó { $from } go { $to }
+move-submit = Bog
+move-done = Bogadh an costas go { $project }
+move-delete-failed = Cuireadh an costas leis an tionscadal eile ach tá sé fós in { $project }: scrios ansin é.
+history-expense-moved = Bogadh an costas go tionscadal eile: { $name }
+personal-badge = Pearsanta
+move-members =
+    { $count ->
+        [one] { $count } ball
+        [two] { $count } bhall
+        [few] { $count } bhall
+        [many] { $count } mball
+       *[other] { $count } ball
+    }
 history-project-edited = Tionscadal curtha in eagar: { $name }
 history-name-changed = Ainm: “{ $from }” → “{ $to }”
 history-description-added = Cur síos curtha leis: “{ $value }”
@@ -402,11 +486,26 @@ expense-name-placeholder = Bialann, earraí grósaera…
 expense-actions = Gníomhartha costais
 expense-your-share = Do sciar
 expense-your-share-value = Do sciar: { $amount } { $currency }
+expense-share-percent = { $percent }%
+expense-added-by = Curtha leis ag { $name } ar { $date }
 expense-inconsistent-detail = Ní thagann na suimeanna le chéile: { $paid } íoctha, { $owed } dlite, do chostas { $total }. Cuir an costas in eagar chun é a cheartú.
 missing-access-key = Eochair rochtana ar iarraidh. Oscail an tionscadal seo trína nasc comhroinnte.
 filter-all = Uile
 filter-my-payments = M'íocaíochtaí
 filter-my-debts = Mo chuid fiacha
+expense-filter-group = Scagaire
+expenses-search = Cuardaigh costais
+expenses-no-match = Níl aon chostas ag teacht leis.
+expenses-search-open = Cuardaigh
+expenses-search-clear = Glan an cuardach
+expenses-search-summary =
+    { $count ->
+        [one] { $count } toradh
+        [two] { $count } thoradh
+        [few] { $count } thoradh
+        [many] { $count } dtoradh
+       *[other] { $count } toradh
+    } · { $total } · gach mí
 participants-shares-for = Scaireanna do { $name }
 participants-amount-for = Suim do { $name }
 reimbursement-add = Cuir socrú leis
@@ -447,11 +546,11 @@ charts-expense-count =
 charts-nothing-to-show = Faic le taispeáint
 charts-my-share-skipped =
     { $count ->
-        [one] Níl { $count } tionscadal amháin san áireamh — gan rannpháirtí roghnaithe, nó níor lódáladh a shonraí.
-        [two] Níl { $count } thionscadal san áireamh — gan rannpháirtí roghnaithe, nó níor lódáladh a sonraí.
-        [few] Níl { $count } thionscadal san áireamh — gan rannpháirtí roghnaithe, nó níor lódáladh a sonraí.
-        [many] Níl { $count } dtionscadal san áireamh — gan rannpháirtí roghnaithe, nó níor lódáladh a sonraí.
-       *[other] Níl { $count } tionscadal san áireamh — gan rannpháirtí roghnaithe, nó níor lódáladh a sonraí.
+        [one] Níl { $count } tionscadal amháin san áireamh - gan rannpháirtí roghnaithe, nó níor lódáladh a shonraí.
+        [two] Níl { $count } thionscadal san áireamh - gan rannpháirtí roghnaithe, nó níor lódáladh a sonraí.
+        [few] Níl { $count } thionscadal san áireamh - gan rannpháirtí roghnaithe, nó níor lódáladh a sonraí.
+        [many] Níl { $count } dtionscadal san áireamh - gan rannpháirtí roghnaithe, nó níor lódáladh a sonraí.
+       *[other] Níl { $count } tionscadal san áireamh - gan rannpháirtí roghnaithe, nó níor lódáladh a sonraí.
     }
 
 ### Categories
@@ -525,6 +624,16 @@ payers-title-contributors = Ranníocóirí
 debtors-title-debtors = Fiacha ar
 debtors-title-recipients = Faighteoirí
 debtors-title-beneficiaries = Tairbhithe
+debtors-title-for = Do
+debtors-title-recipient = Faighteoir
+expense-people =
+    { $count ->
+        [one] { $count } duine
+        [two] { $count } dhuine
+        [few] { $count } dhuine
+        [many] { $count } nduine
+       *[other] { $count } duine
+    }
 
 ### Welcome
 
@@ -660,6 +769,8 @@ invitation-decline = Diúltaigh
 participants-you-label = D'ainm sa tionscadal seo
 participants-you-badge = Tusa
 participants-others = Rannpháirtithe eile
+participants-removed = Bainte
+participant-restore = Athchóirigh
 participants-empty = Cuir rannpháirtithe leis thíos.
 participants-duplicate = Tá “{ $name }” ar an liosta cheana.
 participants-input-label = Cuir cara leis nó clóscríobh ainm
@@ -804,3 +915,16 @@ error-recurring-not-found = Níl an costas athfhillteach seo ann a thuilleadh.
 error-recurring-stale = D’athraigh duine éigin an costas athfhillteach seo idir an dá linn. Athlódáladh é: seiceáil é agus sábháil arís.
 error-too-many-recurring = Tá 50 costas athfhillteach sa tionscadal seo cheana. Stop ceann nach bhfuil uait a thuilleadh chun ceann nua a chur leis.
 error-user-in-recurring = Tá an rannpháirtí seo i gcostas athfhillteach. Bain as é ar dtús nó stop an costas.
+
+home-owed-to-you = Atá ag dul duit
+home-you-owe = Atá ort
+home-details-show = Taispeáin sonraí
+home-details-hide = Folaigh sonraí
+home-all-settled = Tá gach rud socraithe
+home-pay = Íoc
+home-remind = Meabhraigh
+home-remind-message = Meabhrúchán beag: tá aisíocaíochtaí fós le socrú in { $project }.
+home-row-owed = ag dul duit
+home-row-owe = ort
+home-row-settled = Socraithe
+home-totals-partial = Gan tionscadail gan ráta malairte

@@ -64,7 +64,12 @@ pub fn ReimbursementsTab(props: ReimbursementsTabProps) -> Element {
         let payer_initials = initials(&payer_name);
         let debtor_color = debtor.as_ref().map(|u| user_color_class(u.id)).unwrap_or("bg-neutral");
         let payer_color = payer.as_ref().map(|u| user_color_class(u.id)).unwrap_or("bg-neutral");
-        let amount = format!("{:.2} {}", suggestion.amount, props.currency);
+        let amount = crate::common::amount(suggestion.amount, &props.currency);
+        let record_label = format!(
+            "{}, {}, {amount}",
+            tid!("reimbursement-record"),
+            tid!("reimbursement-owes", debtor: debtor_name.clone(), creditor: payer_name.clone())
+        );
         let suggestion_clone = suggestion.clone();
         let payer_methods = payer.as_ref().map(|p| p.payment_methods.clone()).unwrap_or_default();
         // The claimant's own name, not the participant's: the methods are exactly as
@@ -103,6 +108,7 @@ pub fn ReimbursementsTab(props: ReimbursementsTabProps) -> Element {
                         r#type: "button",
                         class: "btn btn-sm btn-primary",
                         title: tid!("reimbursement-add"),
+                        aria_label: record_label.clone(),
                         onclick: move |_| props.on_reimburse.call(suggestion_clone.clone()),
                         {tid!("reimbursement-record")}
                     }
@@ -115,7 +121,7 @@ pub fn ReimbursementsTab(props: ReimbursementsTabProps) -> Element {
         div { class: "flex flex-col gap-4",
             if !mine.is_empty() {
                 section { class: "flex flex-col gap-2",
-                    h3 { class: "text-xs font-semibold uppercase tracking-wide text-primary px-1",
+                    h2 { class: "text-xs font-semibold uppercase tracking-wide text-primary px-1",
                         {tid!("reimbursements-mine-title")}
                     }
                     ul { class: "flex flex-col gap-3",
@@ -128,7 +134,7 @@ pub fn ReimbursementsTab(props: ReimbursementsTabProps) -> Element {
             if !others.is_empty() {
                 section { class: "flex flex-col gap-2",
                     if !mine.is_empty() {
-                        h3 { class: "text-xs font-semibold uppercase tracking-wide text-base-content/60 px-1",
+                        h2 { class: "text-xs font-semibold uppercase tracking-wide text-base-content/60 px-1",
                             {tid!("reimbursements-others-title")}
                         }
                     }
@@ -160,31 +166,48 @@ struct PayButtonProps {
 #[component]
 fn PayButton(props: PayButtonProps) -> Element {
     let mut open = use_signal(|| false);
-    let mut flash = use_context::<Signal<Option<Flash>>>();
 
     rsx! {
         button {
             id: props.id.clone(),
             r#type: "button",
             class: "btn btn-sm btn-soft btn-primary",
+            aria_label: tid!("reimbursement-pay-title", name: props.creditor_name.clone()),
             onclick: move |_| open.set(true),
             {tid!("reimbursement-pay-with")}
         }
         if open() {
-            div { class: "modal modal-open modal-bottom sm:modal-middle", role: "dialog",
+            PayMethodsSheet { pay: props.clone(), on_close: move |_| open.set(false) }
+        }
+    }
+}
+
+#[component]
+fn PayMethodsSheet(pay: PayButtonProps, on_close: EventHandler<()>) -> Element {
+    crate::common::use_modal_focus("pay-methods-sheet");
+    let mut flash = use_context::<Signal<Option<Flash>>>();
+
+    rsx! {
+            div {
+                id: "pay-methods-sheet",
+                class: "modal modal-open modal-bottom sm:modal-middle",
+                role: "dialog",
+                aria_modal: "true",
+                aria_labelledby: "pay-methods-title",
+                tabindex: "-1",
                 div { class: "modal-box max-w-sm p-0 flex flex-col",
                     div { class: "px-6 pt-5 pb-4 border-b border-base-200",
-                        h3 { class: "font-bold text-lg font-display",
-                            {tid!("reimbursement-pay-title", name: props.creditor_name.clone())}
+                        h2 { id: "pay-methods-title", class: "font-bold text-lg font-display",
+                            {tid!("reimbursement-pay-title", name: pay.creditor_name.clone())}
                         }
-                        p { class: "text-2xl font-bold text-primary", "{props.amount}" }
+                        p { class: "text-2xl font-bold text-primary", "{pay.amount}" }
                     }
                     div { class: "px-6 py-4 flex flex-col gap-3",
                         div { role: "alert", class: "alert alert-warning alert-soft text-sm",
-                            {tid!("reimbursement-pay-shared-by", name: props.shared_by.clone())}
+                            {tid!("reimbursement-pay-shared-by", name: pay.shared_by.clone())}
                         }
                         ul { class: "list bg-base-200 rounded-box",
-                            for method in props.methods.iter() {
+                            for method in pay.methods.iter() {
                                 {
                                     let value = method.value.clone();
                                     let name = method_display_name(method);
@@ -227,13 +250,12 @@ fn PayButton(props: PayButtonProps) -> Element {
                         button {
                             r#type: "button",
                             class: "btn",
-                            onclick: move |_| open.set(false),
+                            onclick: move |_| on_close.call(()),
                             {tid!("close")}
                         }
                     }
                 }
-                div { class: "modal-backdrop", onclick: move |_| open.set(false) }
+                div { class: "modal-backdrop", onclick: move |_| on_close.call(()) }
             }
-        }
     }
 }

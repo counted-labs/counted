@@ -7,7 +7,7 @@
 #
 # Same compiler digest as the private build (libraries/docker/tools/Dockerfile) and the same dx,
 # installed the same way. No `--fullstack`: packages/web does not name that feature directly, so
-# dx builds the client alone — the server pass would fail here, `packages/api/src/server/` being
+# dx builds the client alone - the server pass would fail here, `packages/api/src/server/` being
 # absent from the mirror by design. docs/reproducible-builds.md has the whole argument.
 FROM rust:1.98-trixie@sha256:bf5a9aa29062a6cb03c49bd59a46eb55e3cc770caf598a221a7866e500be3082 AS base
 

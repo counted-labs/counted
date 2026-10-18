@@ -151,7 +151,7 @@ payment-method-invalid-characters = Odstráň zalomenia riadkov alebo neviditeľ
 payment-method-limit = Môžeš uložiť až { $max } platobných metód.
 payment-methods-saved = Platobné údaje uložené.
 payment-methods-offline = Na uloženie platobných údajov musíš byť online.
-payment-methods-stale = Tvoje platobné údaje boli zmenené na inom zariadení. Boli znova načítané — skús to prosím znova.
+payment-methods-stale = Tvoje platobné údaje boli zmenené na inom zariadení. Boli znova načítané - skús to prosím znova.
 payment-methods-key-missing = Na správu platobných údajov sa znova prihlás.
 settings-payment-methods-share-warning = Zdieľaná metóda je viditeľná pre všetkých členov tvojich projektov.
 payment-method-share = Zdieľať s mojimi projektmi
@@ -233,7 +233,6 @@ projects-filter-active = Aktívne
 projects-filter-all = Všetky
 projects-count-label = Projekty
 projects-empty = Žiadne projekty
-projects-empty-hint = Vytvor projekt tlačidlom nižšie
 projects-offline-banner = Offline dáta - na obnovenie sa znova pripoj.
 demo-banner = Ukážkový projekt - iba na čítanie.
 demo-start-own = Založiť vlastný projekt
@@ -247,6 +246,69 @@ projects-no-local-data = Žiadne miestne dáta
 projects-no-local-data-hint = Prihlás sa a načítaj svoje projekty prvýkrát.
 projects-add = Pridať projekt
 projects-create = Vytvoriť projekt
+projects-personal-expense = Osobný výdavok
+personal-expense-banner = Pridané do Mojich výdavkov
+personal-create-title = Vytvorte si osobný projekt
+personal-create-hint = Sledujte, čo míňate sami
+group-create-title = Vytvorte zdieľaný projekt
+group-create-hint = Deľte sa o výdavky s priateľmi a rodinou
+personal-create-action = Vytvoriť
+personal-create-signup = Vytvoriť účet
+personal-sheet-title = Váš osobný projekt
+personal-sheet-intro = Na zapisovanie toho, čo míňate sami. Zobrazí sa s vašimi skupinami v Štatistikách.
+personal-sheet-point-alone = Jediný člen: vy, s menom vášho účtu. Bez odkazu na zdieľanie.
+personal-sheet-point-encrypted = Šifrovaný na vašich zariadeniach, ako vaše ostatné projekty.
+personal-sheet-point-stats = Vaše podiely v skupinách sa v Štatistikách pripočítajú k týmto výdavkom.
+personal-default-name = Moje výdavky
+my-spending-prev-month = Predchádzajúci mesiac
+my-spending-next-month = Nasledujúci mesiac
+my-spending-spent = Minuli ste
+my-spending-groups = Skupiny
+my-spending-income = Príjmy
+my-spending-balance = Bilancia mesiaca
+my-spending-unconverted = Podiely v inej mene zostávajú bokom, kým nie je známy kurz.
+my-spending-empty = Tento mesiac nič
+my-spending-empty-hint = Pridajte výdavok pomocou +. Vaše podiely v skupinách sa tu zobrazia automaticky.
+my-spending-share-of = z { $amount }
+my-spending-uncounted = nezapočítané
+payer-you = vy
+expense-received-by = prijal(a)
+counted-switch = Započítať do Moje výdavky
+counted-switch-on = Zapnuté: váš podiel sa pripočíta k Moje výdavky
+counted-switch-off = Vypnuté: váš podiel sa v Moje výdavky nezobrazuje
+counted-groups = Započítané skupiny
+counted-groups-intro = Váš podiel v týchto skupinách sa pripočíta k Moje výdavky a k rozpočtom.
+counted-groups-converted = { $from }, prepočítané na { $to }
+counted-groups-encrypted = Táto voľba je šifrovaná vaším účtom a nasleduje vás na vašich zariadeniach.
+counted-groups-empty = Na tomto zariadení zatiaľ nie je žiadna skupina.
+counted-groups-done = OK
+counted-save-failed = Túto voľbu sa nepodarilo uložiť. Skúste to znova.
+tab-budget = Rozpočet
+budget-title = Rozpočty
+budget-manage = Spravovať
+budget-left = Zostáva { $amount }
+budget-over = Prekročené o { $amount }
+budget-empty = Žiadny rozpočet
+budget-empty-hint = Nastavte strop pre každú kategóriu. Vaše podiely v skupinách sa počítajú tiež.
+budget-define = Nastaviť rozpočet
+budget-sheet-title = Mesačné rozpočty
+budget-sheet-intro = Na váš podiel: osobné a skupiny. Nechajte prázdne, ak kategóriu nechcete sledovať.
+budget-average = Priem. posledné 3 mesiace: { $amount }
+budget-for = Rozpočet { $category }
+budget-alert = Upozorniť ma pri 80 %
+budget-alert-hint = Vypočítané na tomto zariadení
+budget-invalid = Neplatná suma pre { $category }.
+budget-offline = Rozpočty sa dajú uložiť len online. Pripojte sa a skúste to znova.
+budget-alert-near = { $category }: { $percent } % mesačného rozpočtu
+budget-alert-over = { $category }: mesačný rozpočet prekročený
+personal-card-budget = { $month } · rozpočet { $amount }
+my-spending-search-summary =
+    { $count ->
+        [one] { $count } výsledok
+        [few] { $count } výsledky
+        [many] { $count } výsledku
+       *[other] { $count } výsledkov
+    } · { $total } · osobné a skupiny, všetky mesiace
 projects-join = Pripojiť sa k projektu
 projects-import-tricount = Importovať z Tricountu
 project-actions = Akcie projektu
@@ -323,6 +385,7 @@ expenses-show-more = Zobraziť viac (zostáva { $count })
 expense-type-expense = Výdavok
 expense-type-transfer = Prevod
 expense-type-gain = Príjem
+expense-type-group = Typ
 expense-paid-by = zaplatil(a)
 expense-sent-by = poslal(a)
 expense-contributed-by = prispel(a)
@@ -388,6 +451,25 @@ export-failed = Export zlyhal: { $reason }
 history-expense-added = Výdavok pridaný: { $name }
 history-expense-edited = Výdavok upravený: { $name }
 history-expense-deleted = Výdavok odstránený: { $name }
+move-expense = Presunúť do projektu
+move-expense-title = Presunúť do…
+move-current = Aktuálny
+move-converted = { $currency }, prepočítané kurzom mesiaca
+move-note-personal = V ďalšom kroku zvolíte, kto platil a za koho. Výdavok opustí Moje výdavky.
+move-note-group = Výdavok opustí { $project } pre všetkých členov a bilancia skupiny sa prepočíta. V ďalšom kroku zvolíte, kto platil a za koho.
+move-banner = Z { $from } do { $to }
+move-submit = Presunúť
+move-done = Výdavok presunutý do { $project }
+move-delete-failed = Výdavok bol pridaný do druhého projektu, ale je stále v { $project }: vymažte ho tam.
+history-expense-moved = Výdavok presunutý do iného projektu: { $name }
+personal-badge = Osobné
+move-members =
+    { $count ->
+        [one] { $count } člen
+        [few] { $count } členovia
+        [many] { $count } člena
+       *[other] { $count } členov
+    }
 history-project-edited = Projekt upravený: { $name }
 history-name-changed = Názov: „{ $from }“ → „{ $to }“
 history-description-added = Popis pridaný: „{ $value }“
@@ -401,11 +483,25 @@ expense-name-placeholder = Reštaurácia, nákup…
 expense-actions = Akcie výdavku
 expense-your-share = Tvoj podiel
 expense-your-share-value = Tvoj podiel: { $amount } { $currency }
+expense-share-percent = { $percent } %
+expense-added-by = Pridané: { $name }, { $date }
 expense-inconsistent-detail = Sumy nesedia: zaplatené { $paid }, dlžné { $owed }, pri výdavku { $total }. Uprav výdavok a oprav to.
 missing-access-key = Chýba prístupový kľúč. Otvor tento projekt cez jeho odkaz na zdieľanie.
 filter-all = Všetko
 filter-my-payments = Moje platby
 filter-my-debts = Čo dlhujem
+expense-filter-group = Filter
+expenses-search = Hľadať výdavky
+expenses-no-match = Žiadny výdavok nezodpovedá.
+expenses-search-open = Hľadať
+expenses-search-clear = Vymazať hľadanie
+expenses-search-summary =
+    { $count ->
+        [one] { $count } výsledok
+        [few] { $count } výsledky
+        [many] { $count } výsledku
+       *[other] { $count } výsledkov
+    } · { $total } · všetky mesiace
 participants-shares-for = Podiely pre { $name }
 participants-amount-for = Suma pre { $name }
 reimbursement-add = Pridať vyrovnanie
@@ -445,10 +541,10 @@ charts-expense-count =
 charts-nothing-to-show = Nie je čo zobraziť
 charts-my-share-skipped =
     { $count ->
-        [one] 1 projekt sa nepočíta — nebol vybraný účastník alebo sa nepodarilo načítať jeho dáta.
-        [few] { $count } projekty sa nepočítajú — nebol vybraný účastník alebo sa nepodarilo načítať ich dáta.
-        [many] { $count } projektu sa nepočíta — nebol vybraný účastník alebo sa nepodarilo načítať ich dáta.
-       *[other] { $count } projektov sa nepočíta — nebol vybraný účastník alebo sa nepodarilo načítať ich dáta.
+        [one] 1 projekt sa nepočíta - nebol vybraný účastník alebo sa nepodarilo načítať jeho dáta.
+        [few] { $count } projekty sa nepočítajú - nebol vybraný účastník alebo sa nepodarilo načítať ich dáta.
+        [many] { $count } projektu sa nepočíta - nebol vybraný účastník alebo sa nepodarilo načítať ich dáta.
+       *[other] { $count } projektov sa nepočíta - nebol vybraný účastník alebo sa nepodarilo načítať ich dáta.
     }
 
 ### Categories
@@ -522,6 +618,15 @@ payers-title-contributors = Prispievatelia
 debtors-title-debtors = Dlhuje
 debtors-title-recipients = Príjemcovia
 debtors-title-beneficiaries = Príjemcovia
+debtors-title-for = Pre
+debtors-title-recipient = Príjemca
+expense-people =
+    { $count ->
+        [one] { $count } osoba
+        [few] { $count } osoby
+        [many] { $count } osoby
+       *[other] { $count } osôb
+    }
 
 ### Welcome
 
@@ -656,6 +761,8 @@ invitation-decline = Odmietnuť
 participants-you-label = Tvoje meno v tomto projekte
 participants-you-badge = Ty
 participants-others = Ďalší účastníci
+participants-removed = Odstránení
+participant-restore = Obnoviť
 participants-empty = Pridaj účastníkov nižšie.
 participants-duplicate = „{ $name }“ už je v zozname.
 participants-input-label = Pridať priateľa alebo napísať meno
@@ -800,3 +907,16 @@ error-recurring-not-found = Tento opakovaný výdavok už neexistuje.
 error-recurring-stale = Niekto medzitým zmenil tento opakovaný výdavok. Bol znova načítaný: skontroluj ho a ulož znova.
 error-too-many-recurring = Tento projekt už má 50 opakovaných výdavkov. Ukonči jeden nepotrebný, aby si mohol pridať nový.
 error-user-in-recurring = Tento účastník je súčasťou opakovaného výdavku. Najprv ho z neho odstráň alebo výdavok ukonči.
+
+home-owed-to-you = Dlhujú vám
+home-you-owe = Dlhujete
+home-details-show = Zobraziť podrobnosti
+home-details-hide = Skryť podrobnosti
+home-all-settled = Všetko je vyrovnané
+home-pay = Zaplatiť
+home-remind = Pripomenúť
+home-remind-message = Malá pripomienka: v { $project } ešte zostávajú vyrovnania.
+home-row-owed = dlhujú vám
+home-row-owe = dlhujete
+home-row-settled = Vyrovnané
+home-totals-partial = Bez projektov bez výmenného kurzu

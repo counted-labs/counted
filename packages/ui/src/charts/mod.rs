@@ -4,4 +4,5 @@ mod model;
 mod primitives;
 mod svg;
 pub use charts_page::ChartsPage;
+pub(crate) use model::category_color;
 pub(crate) use model::money;

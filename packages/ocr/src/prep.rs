@@ -2,7 +2,7 @@
 //!
 //! **Channel order is BGR, not RGB.** Both `det.inference.yml` and `rec.inference.yml` declare
 //! `DecodeImage: img_mode: BGR`, so the networks were trained on OpenCV's byte order and the
-//! normalisation constants line up against it. Feeding RGB costs accuracy silently — nothing
+//! normalisation constants line up against it. Feeding RGB costs accuracy silently - nothing
 //! errors, the text just comes out worse.
 
 use image::{imageops::FilterType, RgbImage};
@@ -46,8 +46,8 @@ pub struct Letterboxed {
 /// if min(h, w) < limit_side_len: ratio = limit_side_len / <shorter side>
 /// else:                          ratio = 1.
 /// ```
-///
-/// — so a photo larger than the floor is passed through untouched. This function previously read
+/// -
+/// so a photo larger than the floor is passed through untouched. This function previously read
 /// the constant as a *ceiling on the long edge*, which is the opposite axis and the opposite
 /// direction: a 1200x1600 photo was detected at 720x960, 36% of the pixels, with every glyph 1.67x
 /// smaller. Detection is where recall is decided, and recognition crops come from the full-size
@@ -122,7 +122,7 @@ fn sample(src: &RgbImage, x: f32, y: f32) -> [f32; 3] {
 /// Derived from the rect's own basis rather than the corner order, because `corners()` makes no
 /// promise about which corner is which. Both axes are then flipped to point right and down, which
 /// is what stops a near-horizontal line coming out mirrored or upside down. There is no
-/// text-direction classifier in this pipeline — receipts are printed upright, and a rotated one is
+/// text-direction classifier in this pipeline - receipts are printed upright, and a rotated one is
 /// a retake, not a code path.
 fn axes(rect: &rten_imageproc::RotatedRect) -> ([f32; 2], f32, [f32; 2], f32) {
     let up = rect.up_axis();

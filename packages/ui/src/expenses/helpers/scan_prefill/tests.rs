@@ -17,7 +17,7 @@ fn the_merchant_becomes_the_expense_name() {
     assert_eq!(p.date.as_deref(), Some("2026-09-04"));
 }
 
-/// The category must come from the shared keyword table, not a second copy of it — these ids are
+/// The category must come from the shared keyword table, not a second copy of it - these ids are
 /// persisted inside the encrypted payload.
 #[test]
 fn the_category_is_a_stable_chart_category_id() {
@@ -26,7 +26,7 @@ fn the_category_is_a_stable_chart_category_id() {
     assert!(crate::categories::CHART_CATEGORIES.contains(&p.category.as_deref().unwrap()));
 }
 
-/// The keyword table matches whole words, plurals and truncations, not derivations — "Pizzaiolo"
+/// The keyword table matches whole words, plurals and truncations, not derivations - "Pizzaiolo"
 /// is not "pizza". Worth pinning so nobody assumes the scan path does its own smarter matching.
 #[test]
 fn a_derived_word_is_not_a_keyword_match() {

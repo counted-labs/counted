@@ -1,0 +1,8 @@
+• My expenses: track what you spend alone, with your share in groups, month by month
+• Budgets per category, with an 80 % warning
+• Search expenses by name, note or category
+• Move an expense to another project
+• Redesigned expense page: amount, participants and shares
+• Richer export: category, original currency and description
+• More reliable offline edits
+• Who takes part in which expense is now encrypted too; a removed participant can be restored

@@ -7,7 +7,7 @@ use crate::common::{Mascot, MascotPose};
 
 /// The share link was opened without its `#fragment` and this device never stored the key.
 ///
-/// `on_unlock` is optional so the screen stays usable where there is nothing to open — the caller
+/// `on_unlock` is optional so the screen stays usable where there is nothing to open - the caller
 /// owns the modal, this component only says when it should appear.
 #[derive(PartialEq, Props, Clone)]
 pub struct MissingKeyScreenProps {
@@ -37,7 +37,7 @@ pub fn MissingKeyScreen(props: MissingKeyScreenProps) -> Element {
     }
 }
 
-/// Offline on a project this device has never loaded — nothing cached to fall back to.
+/// Offline on a project this device has never loaded - nothing cached to fall back to.
 #[component]
 pub fn NoLocalDataScreen() -> Element {
     rsx! {
@@ -69,10 +69,19 @@ pub fn Spinner(props: SpinnerProps) -> Element {
 #[component]
 pub fn ExpensesSkeleton() -> Element {
     rsx! {
-        div { class: "flex flex-col gap-2", aria_hidden: "true",
-            div { class: "flex justify-end",
+        div { class: "flex flex-col gap-2",
+            div { class: "flex justify-end", aria_hidden: "true",
                 div { class: "skeleton h-8 w-8 rounded-full" }
             }
+            ExpenseRowsSkeleton {}
+        }
+    }
+}
+
+#[component]
+pub fn ExpenseRowsSkeleton() -> Element {
+    rsx! {
+        div { id: "expense-rows-skeleton", class: "flex flex-col gap-2", aria_hidden: "true",
             for _ in 0..5u8 {
                 div { class: "flex items-center gap-3 p-3 bg-base-100 rounded-box",
                     div { class: "skeleton h-10 w-10 rounded-full shrink-0" }

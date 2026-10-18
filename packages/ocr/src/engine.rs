@@ -1,7 +1,7 @@
 //! The two PP-OCRv6 models and the character set they decode against.
 //!
 //! `load_static_slice` is zero-copy: the weights stay in the mapped binary image and are never
-//! heap-allocated. `asset!()` could not do this — on Android a bundled asset lives inside the APK
+//! heap-allocated. `asset!()` could not do this - on Android a bundled asset lives inside the APK
 //! and is reachable only through AssetManager over JNI, never `std::fs`.
 
 use std::sync::OnceLock;
@@ -23,7 +23,7 @@ pub struct Engine {
     pub charset: Vec<char>,
 }
 
-/// CTC class index to character. The recogniser emits `charset.len() + 2` classes — measured, not
+/// CTC class index to character. The recogniser emits `charset.len() + 2` classes - measured, not
 /// assumed: `rec.inference.yml` carries no `use_space_char` key, but the model's output width is
 /// 18710 against an 18708-entry dictionary, so PaddleOCR's space *is* appended. Getting this wrong
 /// costs every space in the output and shifts nothing else, which is the hardest kind of bug to

@@ -1,5 +1,5 @@
 //! The API contract: every server function's route, signature and types. Bodies live in `server`,
-//! which only the `server` feature compiles — the WASM client never sees them, and the module's
+//! which only the `server` feature compiles - the WASM client never sees them, and the module's
 //! directory is absent from the public source mirror (docs/reproducible-builds.md).
 
 pub mod account_projects;

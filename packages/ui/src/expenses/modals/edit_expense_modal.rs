@@ -23,17 +23,17 @@ use crate::recurring::view::{next_date, state, template_from_form, RuleState};
 use super::expense_form::ExpenseForm;
 use super::super::helpers::expense_form_helpers::{init_entries_from_payments, UserEntry};
 use super::super::helpers::expense_modal_helpers::{
-    conversion_matches_total, encrypt_user_amounts, expense_payload, resolve_conversion,
-    validate_expense_form, Conversion, ValidatedExpense,
+    conversion_matches_total, expense_payload, resolve_conversion, validate_expense_form,
+    with_shares, Conversion, ValidatedExpense,
 };
 use super::super::hooks::use_fx_rates::use_fx_rates;
-use crate::crypto::{decrypt_json, encrypt_json};
+use crate::crypto::{decrypt_json, encrypt_padded_json};
 use crate::decrypted::{decrypt_expense_payments, pickable_users, user_names};
 
 #[derive(Props, Clone, PartialEq)]
 pub struct EditExpenseModalProps {
     pub on_close: EventHandler<()>,
-    /// `None` when the op was queued offline — there is no server row to report yet.
+    /// `None` when the op was queued offline - there is no server row to report yet.
     pub on_edited: EventHandler<Option<ExpenseWithPayments>>,
     pub expense: Expense,
     pub payments: Vec<Payment>,
@@ -94,7 +94,7 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
 
     let involved: Vec<i32> = decrypted_payments.iter().map(|p| p.user_id).collect();
     let users = pickable_users(key_snap.as_ref(), &props.users, &involved);
-    // Names for display — blank when the key is unavailable.
+    // Names for display - blank when the key is unavailable.
     let names = user_names(key_snap.as_ref(), &users);
 
     let expense_name = use_signal(|| initial_name.clone());
@@ -104,7 +104,7 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
 
     // Prefilled from the payload: the form opens showing what was entered, at the rate it was
     // entered at. `rate_input` is seeded with the stored rate rather than left blank, because blank
-    // means "use this month's InforEuro rate" — which is exactly the silent repricing to avoid.
+    // means "use this month's InforEuro rate" - which is exactly the silent repricing to avoid.
     let init_currency = stored_conversion
         .as_ref()
         .map(|(c, _, _)| c.clone())
@@ -337,35 +337,32 @@ fn build_editable_expense(
     conversion: Option<&Conversion>,
     original: Option<&ExpensePayload>,
 ) -> Result<EditableExpense, String> {
-    // No actor, no history row. This device knows of no participant it is acting as — the original
-    // author was removed and nothing is stored locally — and the server validates the actor against
-    // the project, so any id invented here would be rejected anyway.
+    // No actor, no history row: this device knows of no participant it is acting as, and an entry
+    // signed by nobody records nothing.
     let history = match actor_id {
         Some(actor_user_id) => Some(HistoryContext {
-            actor_user_id,
-            payload: encrypt_json(
+            actor_user_id: None,
+            payload: encrypt_padded_json(
                 key,
-                &HistoryPayload { summary: history_summary, actor_user_id: None },
+                &HistoryPayload { summary: history_summary, actor_user_id: Some(actor_user_id) },
             )?,
         }),
         None => None,
     };
 
+    let payload = ExpensePayload {
+        recurring_id: original.and_then(|o| o.recurring_id),
+        description: original.and_then(|o| o.description.clone()),
+        extra: original.map(|o| o.extra.clone()).unwrap_or_default(),
+        ..expense_payload(&form.name, form.total, &form.date, expense_type, category, conversion)
+    };
     Ok(EditableExpense {
         id,
-        payload: encrypt_json(
-            key,
-            &ExpensePayload {
-                recurring_id: original.and_then(|o| o.recurring_id),
-                description: original.and_then(|o| o.description.clone()),
-                extra: original.map(|o| o.extra.clone()).unwrap_or_default(),
-                ..expense_payload(&form.name, form.total, &form.date, expense_type, category, conversion)
-            },
-        )?,
+        payload: encrypt_padded_json(key, &with_shares(payload, author_id, &form.payers, &form.debtors))?,
         project_id,
-        payers: encrypt_user_amounts(key, &form.payers, false)?,
-        debtors: encrypt_user_amounts(key, &form.debtors, true)?,
-        author_id,
+        payers: Vec::new(),
+        debtors: Vec::new(),
+        author_id: None,
         history,
     })
 }
@@ -375,7 +372,7 @@ mod tests {
     use crate::common::test_fixtures::{make_payment, test_key};
     use crate::crypto::decrypt_json;
     use crate::decrypted::{decrypt_payment, DecryptedPayment};
-    use shared::{ExpensePayload, PaymentPayload};
+    use shared::ExpensePayload;
 
     // Payload-level assertions live in expense_modal_helpers; these cover what building an
     // EditableExpense adds on top, plus the payment pre-fill decoding this modal relies on.
@@ -434,8 +431,11 @@ mod tests {
             None,
         )
         .unwrap();
-        assert_eq!(ee.author_id, Some(1));
-        assert_eq!(ee.history.unwrap().actor_user_id, 2);
+        let ep: ExpensePayload = decrypt_json(&test_key(), &ee.payload).unwrap();
+        assert_eq!(ep.author_id, Some(1));
+        assert_eq!(ee.author_id, None, "the author travels in the payload only");
+        let hp: HistoryPayload = decrypt_json(&test_key(), &ee.history.unwrap().payload).unwrap();
+        assert_eq!(hp.actor_user_id, Some(2));
     }
 
     #[test]
@@ -502,17 +502,15 @@ mod tests {
         assert_eq!(ep.name, "Loyer");
     }
 
+    /// An edit writes the payload format whatever the expense was, which is what converts it.
     #[test]
-    fn editable_payers_not_debt_debtors_are_debt() {
+    fn an_edit_carries_its_shares_in_the_payload() {
         let ee = build(1, "x", 30.0, &[(1, 30.0)], &[(2, 15.0), (3, 15.0)]);
-        for p in &ee.payers {
-            let pp: PaymentPayload = decrypt_json(&test_key(), &p.payload).unwrap();
-            assert!(!pp.is_debt);
-        }
-        for d in &ee.debtors {
-            let pp: PaymentPayload = decrypt_json(&test_key(), &d.payload).unwrap();
-            assert!(pp.is_debt);
-        }
+        assert!(ee.payers.is_empty() && ee.debtors.is_empty());
+        let ep: ExpensePayload = decrypt_json(&test_key(), &ee.payload).unwrap();
+        let shares = ep.shares.unwrap();
+        assert_eq!(shares.iter().filter(|s| !s.is_debt).map(|s| s.user_id).collect::<Vec<_>>(), vec![1]);
+        assert_eq!(shares.iter().filter(|s| s.is_debt).map(|s| s.user_id).collect::<Vec<_>>(), vec![2, 3]);
     }
 
     #[test]

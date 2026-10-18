@@ -3,7 +3,7 @@
 //!
 //! The device token never crosses this seam as a value: the platform layer writes it to
 //! `COUNTED_DATA_DIR/push_token` (iOS from the app-delegate callback, Android from the UnifiedPush
-//! service), and [`read_push_token`] reads it back. One file, two platforms, no channel — and a
+//! service), and [`read_push_token`] reads it back. One file, two platforms, no channel - and a
 //! token that arrives while the app is asleep is still there at the next boot.
 
 use std::sync::{Arc, OnceLock};

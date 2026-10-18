@@ -1,8 +1,8 @@
-//! On-device receipt OCR. Runs entirely in the app process — no image and no recognised text ever
+//! On-device receipt OCR. Runs entirely in the app process - no image and no recognised text ever
 //! reaches the network. See `docs/plans/ocr-receipt-scan.md`.
 //!
-//! The pipeline modules are behind the `models` feature so `parse` — which holds the logic worth
-//! testing — builds and tests in a checkout whose Git LFS blobs were never pulled.
+//! The pipeline modules are behind the `models` feature so `parse` - which holds the logic worth
+//! testing - builds and tests in a checkout whose Git LFS blobs were never pulled.
 
 pub mod parse;
 
@@ -36,7 +36,7 @@ const MIN_LINE_CONFIDENCE: f32 = 0.5;
 
 /// Decode, detect, recognise, parse. The whole feature.
 ///
-/// Blocking and CPU-bound for one to three seconds — the caller must keep it off the platform UI
+/// Blocking and CPU-bound for one to three seconds - the caller must keep it off the platform UI
 /// thread, which on both phones is also the Dioxus event loop.
 #[cfg(feature = "models")]
 pub fn scan(jpeg: &[u8]) -> Result<Receipt, OcrError> {
@@ -51,7 +51,7 @@ pub fn scan(jpeg: &[u8]) -> Result<Receipt, OcrError> {
 ///
 /// Public for diagnostics: when a field comes back empty, the only question that matters is whether
 /// the line was never detected, recognised as something else, or found and then rejected by the
-/// parser — and those three have nothing in common as fixes. `tests/framing.rs` is the caller.
+/// parser - and those three have nothing in common as fixes. `tests/framing.rs` is the caller.
 #[cfg(feature = "models")]
 pub fn text_lines(jpeg: &[u8]) -> Result<Vec<TextLine>, OcrError> {
     let engine = engine::shared()?;

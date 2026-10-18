@@ -1,6 +1,6 @@
 use std::sync::{Arc, OnceLock};
 
-/// What a haptic means, not what it feels like — the entry point maps these onto each platform's
+/// What a haptic means, not what it feels like - the entry point maps these onto each platform's
 /// own vocabulary (UIKit's impact/notification generators, Android's `HapticFeedbackConstants`).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Haptic {
@@ -26,8 +26,8 @@ pub fn set_haptics_player(player: HapticsPlayer) {
 /// Plays `kind`, or does nothing when no player is installed.
 ///
 /// A process-global rather than a Dioxus context like `NativeClipboardReader`, because every call
-/// site is an event handler well down the tree — a swipe passing its threshold, a toast mounting, a
-/// long press opening a menu — and a context would need a `use_context` hook in each of their
+/// site is an event handler well down the tree - a swipe passing its threshold, a toast mounting, a
+/// long press opening a menu - and a context would need a `use_context` hook in each of their
 /// components just to reach it. Nothing request- or session-specific is stored: the only value is a
 /// function the entry point owns for the life of the process, so this is not the kind of state
 /// DOCUMENTATION.md §3.6 forbids (which is about the server binary in any case).

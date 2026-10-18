@@ -372,28 +372,9 @@ pub fn currencies(projects: &[ProjectInfo]) -> Vec<String> {
     counts.into_iter().map(|(c, _)| c).collect()
 }
 
-fn group_thousands(n: u64) -> String {
-    let digits = n.to_string();
-    let mut out = String::new();
-    for (i, ch) in digits.chars().enumerate() {
-        if i > 0 && (digits.len() - i) % 3 == 0 {
-            out.push('\u{202f}');
-        }
-        out.push(ch);
-    }
-    out
-}
-
 /// Whole units, sign handled by the caller ([`signed_money`]).
 pub fn money(value: f64, currency: &str) -> String {
-    let n = group_thousands(value.abs().round() as u64);
-    let body = match currency {
-        "EUR" => format!("€{n}"),
-        "USD" => format!("${n}"),
-        "GBP" => format!("£{n}"),
-        "" => n,
-        other => format!("{n}\u{a0}{other}"),
-    };
+    let body = crate::common::whole_amount(value, currency);
     if value.round() < 0.0 {
         format!("−{body}")
     } else {
@@ -620,13 +601,13 @@ mod tests {
 
     #[test]
     fn money_formats() {
-        assert_eq!(money(1728.4, "EUR"), "€1\u{202f}728");
-        assert_eq!(money(640.0, "USD"), "$640");
-        assert_eq!(money(12.0, "CHF"), "12\u{a0}CHF");
-        assert_eq!(money(-0.3, "EUR"), "€0");
-        assert_eq!(signed_money(185.0, "EUR"), "+€185");
-        assert_eq!(signed_money(-285.0, "EUR"), "−€285");
-        assert_eq!(signed_money(0.2, "EUR"), "€0");
+        assert_eq!(money(1728.4, "EUR"), "1\u{a0}728\u{a0}EUR");
+        assert_eq!(money(640.0, "USD"), "640\u{a0}USD");
+        assert_eq!(money(12.0, ""), "12");
+        assert_eq!(money(-0.3, "EUR"), "0\u{a0}EUR");
+        assert_eq!(signed_money(185.0, "EUR"), "+185\u{a0}EUR");
+        assert_eq!(signed_money(-285.0, "EUR"), "−285\u{a0}EUR");
+        assert_eq!(signed_money(0.2, "EUR"), "0\u{a0}EUR");
     }
 
     #[test]

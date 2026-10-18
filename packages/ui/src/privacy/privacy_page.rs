@@ -4,7 +4,7 @@ use crate::tid;
 use crate::common::{AppHeader, MailLink};
 use crate::route::Route;
 
-/// Privacy policy, extracted to keys but translated only into `fr` and `en` — see
+/// Privacy policy, extracted to keys but translated only into `fr` and `en` - see
 /// `LegalNoticePage` for why the other locales deliberately fall back to English.
 ///
 /// The `counted_lang` cookie is named in §8 alongside the session cookie: both are strictly
@@ -52,6 +52,8 @@ pub fn PrivacyPage() -> Element {
                         li { strong { {tid!("privacy-collected-content-term")} } " " {tid!("privacy-collected-content-def")} }
                         li { strong { {tid!("privacy-collected-prefs-term")} } " " {tid!("privacy-collected-prefs-def")} }
                         li { strong { {tid!("privacy-collected-keys-term")} } " " {tid!("privacy-collected-keys-def")} }
+                        li { strong { {tid!("privacy-collected-payment-term")} } " " {tid!("privacy-collected-payment-def")} }
+                        li { strong { {tid!("privacy-collected-anon-term")} } " " {tid!("privacy-collected-anon-def")} }
                         li { strong { {tid!("privacy-collected-invite-term")} } " " {tid!("privacy-collected-invite-def")} }
                         li { strong { {tid!("privacy-collected-friends-term")} } " " {tid!("privacy-collected-friends-def")} }
                         li { strong { {tid!("privacy-collected-push-term")} } " " {tid!("privacy-collected-push-def")} }
@@ -65,6 +67,7 @@ pub fn PrivacyPage() -> Element {
                         li { {tid!("privacy-purpose-3")} }
                         li { {tid!("privacy-purpose-4")} }
                         li { {tid!("privacy-purpose-5")} }
+                        li { {tid!("privacy-purpose-6")} }
                     }
 
                     h2 { class: "text-lg font-semibold", {tid!("privacy-legal-basis-title")} }
@@ -78,6 +81,7 @@ pub fn PrivacyPage() -> Element {
                         " "
                         {tid!("privacy-e2ee-b")}
                     }
+                    p { {tid!("privacy-e2ee-metadata")} }
                     p { class: "text-warning",
                         strong { {tid!("privacy-e2ee-consequence-label")} }
                         " "
@@ -94,6 +98,7 @@ pub fn PrivacyPage() -> Element {
                         li { strong { "Scaleway TEM " } {tid!("privacy-processor-scaleway")} }
                         li { strong { "Bunq / Tricount " } {tid!("privacy-processor-tricount")} }
                         li { strong { "Grafana Labs " } {tid!("privacy-processor-grafana")} }
+                        li { strong { "Proton AG " } {tid!("privacy-processor-proton")} }
                         li { strong { "Apple " } {tid!("privacy-processor-apple")} }
                         li { strong { {tid!("privacy-processor-android-push-term")} } " " {tid!("privacy-processor-android-push-def")} }
                     }
@@ -120,6 +125,7 @@ pub fn PrivacyPage() -> Element {
                         " "
                         {tid!("privacy-logs-b")}
                     }
+                    p { {tid!("privacy-retention-backups")} }
                     p { {tid!("privacy-shared-expenses-survive")} }
 
                     h2 { class: "text-lg font-semibold", {tid!("privacy-cookies-title")} }

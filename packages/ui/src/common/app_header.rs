@@ -12,11 +12,18 @@ pub struct AppHeaderProps {
     sticky: bool,
     #[props(default = false)]
     brand: bool,
+    /// A short label beside the title, such as "Perso".
+    #[props(default)]
+    badge: Option<String>,
+    /// The title is decrypted data: it stays out of the browser tab, which history and extensions
+    /// with the `tabs` permission keep.
+    #[props(default = false)]
+    private_title: bool,
     children: Element,
 }
 
 /// Toggles `.is-scrolled` on the sticky header once its scroll container has moved, which is what
-/// makes the bar transparent at rest and translucent over content — the iOS navigation-bar
+/// makes the bar transparent at rest and translucent over content - the iOS navigation-bar
 /// behaviour. The classes it drives live in `packages/mobile/assets/main.css`.
 ///
 /// Plain JS on a passive **capture-phase** listener, for two reasons: `scroll` does not bubble, so
@@ -36,15 +43,15 @@ fn use_scroll_material() {
                 if (window._countedNavMaterial) return;
                 const main = document.querySelector('main');
                 if (!main) return;
-                // Only once `main` was actually found — setting it above would burn the guard on a
+                // Only once `main` was actually found - setting it above would burn the guard on a
                 // first run that attached nothing, and no later mount would retry.
                 window._countedNavMaterial = true;
                 main.addEventListener('scroll', function(e) {
                     const t = e.target;
                     if (!t || !t.querySelector) return;
                     // Scoped to the container that scrolled, never document-wide: mid-transition
-                    // there are two page shells in `main` — the incoming one and the exiting
-                    // overlay — and on a push the overlay is inserted *before* the live shell, so
+                    // there are two page shells in `main` - the incoming one and the exiting
+                    // overlay - and on a push the overlay is inserted *before* the live shell, so
                     // a document-wide lookup would style the dying header and leave the real one
                     // flat. The sticky header is a child of the scroller, so this is exact.
                     const bar = t.querySelector('.nav-material');
@@ -64,13 +71,13 @@ pub fn AppHeader(props: AppHeaderProps) -> Element {
     use_scroll_material();
 
     rsx! {
-        PageTitle { text: "{props.title} · counted" }
+        PageTitle { text: if props.private_title { "counted".to_string() } else { format!("{} · counted", props.title) } }
         // `bg-base-100` is load-bearing when sticky: the header is transparent otherwise and the
         // page would scroll through it. `z-20` sits above the page, below the dock (z-50) and the
         // offline banner (z-60).
         //
         // `nav-material` overrides that fill on mobile only, where it is swapped for a blur that
-        // appears on scroll — the class is undefined on web and desktop, so those keep the solid
+        // appears on scroll - the class is undefined on web and desktop, so those keep the solid
         // bar and nothing changes for them.
         //
         // Not daisyUI's `navbar-start/center/end`: that is `50% / shrink-0 / 50%`, built for a
@@ -99,7 +106,12 @@ pub fn AppHeader(props: AppHeaderProps) -> Element {
                 }
             }
             div { class: "flex flex-col items-center min-w-0 text-center",
-                h1 { id: "page-title", class: if props.brand { "text-2xl font-extrabold font-display text-gradient-brand truncate max-w-full" } else { "text-xl font-bold font-display truncate max-w-full" }, "{props.title}" }
+                div { class: "flex items-center gap-2 min-w-0 max-w-full",
+                    h1 { id: "page-title", class: if props.brand { "text-2xl font-extrabold font-display text-gradient-brand truncate max-w-full" } else { "text-xl font-bold font-display truncate max-w-full" }, "{props.title}" }
+                    if let Some(badge) = props.badge {
+                        span { id: "page-title-badge", class: "badge badge-sm badge-soft badge-success shrink-0 font-semibold", "{badge}" }
+                    }
+                }
                 if let Some(sub_title) = props.sub_title {
                     div { class: "text-sm mb-3 truncate max-w-full", "{sub_title}" }
                 }

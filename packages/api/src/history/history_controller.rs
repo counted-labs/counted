@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use shared::HistoryEntry;
 use uuid::Uuid;
 
-/// Open to any holder of the project UUID, like every other read here — the capability *is* the
+/// Open to any holder of the project UUID, like every other read here - the capability *is* the
 /// project id, and gating this one endpoint would protect nothing while locking anonymous
 /// share-link holders out of their own project's history. What the entries carry is bounded
 /// instead: the payload is E2EE, `actor_account_id` never reaches the wire, the actor is validated

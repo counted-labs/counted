@@ -21,7 +21,7 @@ const STD: [f32; 3] = [0.229, 0.224, 0.225];
 pub struct DetConfig {
     /// Floor on the **short** side, PaddleOCR's `limit_side_len` with `limit_type='min'`. 736 is
     /// the reference default for this model, and it means "scale a small photo up to it, pass a
-    /// larger one through untouched" — not "shrink to it". Lower it first if a device is slow;
+    /// larger one through untouched" - not "shrink to it". Lower it first if a device is slow;
     /// that is now a deliberate, documented deviation rather than the accidental one it replaced.
     pub limit_side_len: u32,
     /// Ours, not the reference's: an upper bound so "never downscale" stays bounded for a caller
@@ -108,11 +108,11 @@ fn postprocess(prob: NdTensorView<f32, 2>, cfg: &DetConfig) -> Vec<RotatedRect> 
 /// PaddleOCR's `box_score_fast`: the mean probability **inside the rotated box**, which the
 /// reference gets from a `fillPoly` mask over the box's bounds.
 ///
-/// Averaging over the axis-aligned bounds instead — the previous version — is the same number for
+/// Averaging over the axis-aligned bounds instead - the previous version - is the same number for
 /// an upright line and a very different one for a tilted line: the corner triangles outside the
 /// polygon are empty, and their area is `width × sin θ`, so the widest lines on the page lose the
 /// most. A receipt's widest lines are its header. On the Le Refuge fixture "SAS LE REFUGE" sits at
-/// 5 degrees and scored 0.43 over its bounds against 0.87 inside the polygon — dropped at 0.45,
+/// 5 degrees and scored 0.43 over its bounds against 0.87 inside the polygon - dropped at 0.45,
 /// and the title fell through to "TABLE 62". It is also the mechanism `tests/framing.rs` measured
 /// and could not name: "3 degrees loses the top third of the receipt".
 fn box_score(prob: NdTensorView<f32, 2>, rect: &RotatedRect) -> f32 {
@@ -142,7 +142,7 @@ fn box_score(prob: NdTensorView<f32, 2>, rect: &RotatedRect) -> f32 {
 /// DBNet shrinks its training targets, so every predicted box has to be grown back. `d = area *
 /// ratio / perimeter` is the Vatti offset; for a rectangle, moving all four sides out by `d` is
 /// exactly what the polygon clipper would produce, so growing the rect directly is not an
-/// approximation — and no receipt box is non-convex.
+/// approximation - and no receipt box is non-convex.
 fn unclip(rect: &RotatedRect, ratio: f32) -> RotatedRect {
     let (w, h) = (rect.width(), rect.height());
     let perimeter = 2.0 * (w + h);
@@ -197,7 +197,7 @@ fn mean_y(group: &[RotatedRect]) -> f32 {
     group.iter().map(|r| r.center().y).sum::<f32>() / group.len() as f32
 }
 
-/// The group's bounds in the source image, as fractions — what `parse::TextLine` wants.
+/// The group's bounds in the source image, as fractions - what `parse::TextLine` wants.
 pub fn group_bounds(group: &[RotatedRect], img_w: f32, img_h: f32) -> (f32, f32, f32) {
     let left = group.iter().map(|r| r.bounding_rect().left()).fold(f32::MAX, f32::min);
     let top = group.iter().map(|r| r.bounding_rect().top()).fold(f32::MAX, f32::min);

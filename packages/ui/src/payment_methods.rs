@@ -18,14 +18,14 @@ use crate::{
 
 /// Stable ids and their brand names.
 ///
-/// The id is persisted inside the ciphertext — **never rename one**, or every blob already written
+/// The id is persisted inside the ciphertext - **never rename one**, or every blob already written
 /// points at a kind that no longer exists. The brand names are not translated either: "PayPal" is
 /// "PayPal" in every locale. Only `other` gets a translated label, at the render site.
 ///
 /// Adding a kind here is safe in both directions: an older build renders an id it does not know as
 /// itself rather than failing the blob.
 /// Ordered as it renders: the ones that cross borders first, then the domestic rails
-/// alphabetically, then `other` last. Nothing here is regional gatekeeping — a Brazilian can pick
+/// alphabetically, then `other` last. Nothing here is regional gatekeeping - a Brazilian can pick
 /// Swish and a Swede can pick Pix; the list is a convenience, and `other` covers the rest.
 pub const KNOWN_KINDS: &[(&str, &str)] = &[
     ("iban", "IBAN"),
@@ -70,7 +70,7 @@ pub const MAX_LABEL_LEN: usize = 60;
 pub const MAX_KIND_LEN: usize = 40;
 
 /// The account's stored methods, or empty when it never saved any, the blob does not decrypt, or
-/// the key is the wrong one — a device can hold a session without the account key (local store
+/// the key is the wrong one - a device can hold a session without the account key (local store
 /// cleared), and the display name already degrades the same way.
 pub fn account_payment_methods(account: &Account, key: &[u8; 32]) -> Vec<PaymentMethod> {
     let Some(pair) = account.payment_methods.as_ref() else {
@@ -79,7 +79,7 @@ pub fn account_payment_methods(account: &Account, key: &[u8; 32]) -> Vec<Payment
     decrypt_json::<PaymentMethods>(key, pair).map(|p| p.methods).unwrap_or_default()
 }
 
-/// True for a row the user added and did not fill in — not an error to shout about.
+/// True for a row the user added and did not fill in - not an error to shout about.
 pub fn is_blank(method: &PaymentMethod) -> bool {
     method.value.trim().is_empty() && method.label.as_deref().unwrap_or("").trim().is_empty()
 }
@@ -132,7 +132,7 @@ pub fn shared_methods(methods: &[PaymentMethod]) -> Vec<PaymentMethod> {
         .collect()
 }
 
-/// One copy per project this device holds a key **and an identity** for — a copy on a row with
+/// One copy per project this device holds a key **and an identity** for - a copy on a row with
 /// no `user_id` is served to nobody, and the server refuses it for the same reason. Empty when
 /// nothing is shared, which the server turns into "clear every copy".
 pub fn project_copies(
@@ -190,7 +190,7 @@ pub enum SaveFailure {
 ///
 /// The per-project copies ride along, derived from the same list: the server replaces every copy
 /// it holds with these, so a project whose key is not on this device loses its copy until the
-/// projects page next runs [`refill_project_copies`] on a device that has it — absent for a while
+/// projects page next runs [`refill_project_copies`] on a device that has it - absent for a while
 /// rather than stale.
 ///
 /// `expected_iv` is the nonce of the blob the edited list came from; the server refuses the write
@@ -211,7 +211,7 @@ pub async fn save_payment_methods(
 ///
 /// `fresh` must come from a `me()` made for this call, not from context: the whole point is that
 /// the copies are derived from the blob the server holds *now*, and `expected_iv` makes the
-/// server prove it. A `Stale` refusal is not an error — someone saved in between, and the next
+/// server prove it. A `Stale` refusal is not an error - someone saved in between, and the next
 /// projects-page load retries from the newer blob.
 pub async fn refill_project_copies(fresh: &Account, account_key: &[u8; 32]) -> Result<(), String> {
     let Some(pair) = fresh.payment_methods.clone() else {
@@ -238,8 +238,8 @@ async fn put(payload: UpdatePaymentMethods) -> Result<(), SaveFailure> {
     })
 }
 
-/// The rail a debtor pays through — brand for a known kind, raw id for one this build does not
-/// know — or `None` for `other`, whose only name is its label.
+/// The rail a debtor pays through - brand for a known kind, raw id for one this build does not
+/// know - or `None` for `other`, whose only name is its label.
 pub fn method_kind_name(method: &PaymentMethod) -> Option<String> {
     if method.kind == OTHER_KIND {
         return None;
@@ -255,7 +255,7 @@ pub fn method_kind_name(method: &PaymentMethod) -> Option<String> {
 }
 
 /// What to call a row: the holder's own label, else the brand name for a known kind, else the raw
-/// id — which is what a kind written by a newer build looks like here.
+/// id - which is what a kind written by a newer build looks like here.
 pub fn method_display_name(method: &PaymentMethod) -> String {
     if let Some(label) = method.label.as_deref().filter(|l| !l.trim().is_empty()) {
         return label.to_string();
@@ -357,7 +357,7 @@ mod tests {
     /// The whole reason `kind` is a `String` and not an enum: a kind added by a newer build must
     /// come back untouched instead of failing the blob and losing every other method with it.
     /// `futurepay` stands in for a kind a newer build added and this one has never heard of. Do not
-    /// swap it for a real id — adding that id to `KNOWN_KINDS` would quietly stop testing this.
+    /// swap it for a real id - adding that id to `KNOWN_KINDS` would quietly stop testing this.
     #[test]
     fn an_unknown_kind_survives_the_round_trip() {
         let acc = stored(vec![method("futurepay", "@jb", None)]);
@@ -372,7 +372,7 @@ mod tests {
         assert_eq!(cleaned, vec![method("iban", "FR76", Some("Main"))]);
     }
 
-    /// A row the user added and left alone is not an error — it is a row they changed their mind
+    /// A row the user added and left alone is not an error - it is a row they changed their mind
     /// about, and refusing to save would strand them on a form they cannot submit.
     #[test]
     fn a_blank_row_is_dropped_rather_than_rejected() {
@@ -384,7 +384,7 @@ mod tests {
     }
 
     /// Removing every row and saving has to actually clear the account. An empty list is a real
-    /// value to store here, not "nothing to write" — otherwise the last method could never be
+    /// value to store here, not "nothing to write" - otherwise the last method could never be
     /// deleted, only edited.
     #[test]
     fn an_emptied_list_saves_and_reads_back_as_empty() {
@@ -467,10 +467,10 @@ mod tests {
         assert_eq!(cleaned, vec![method("iban", "FR76", None)]);
     }
 
-    /// The limits the client enforces must never produce a blob the server refuses — that would be
+    /// The limits the client enforces must never produce a blob the server refuses - that would be
     /// an opaque 400 on a form the client had just called valid, with nothing the user could do.
     /// Emoji because the client counts characters and the server counts bytes. Every row shared,
-    /// because the flag is the one thing that lengthens the JSON — and the per-project copy is
+    /// because the flag is the one thing that lengthens the JSON - and the per-project copy is
     /// held to the same cap, so it is checked too.
     #[test]
     fn the_worst_list_the_client_accepts_still_fits_the_server_cap() {
@@ -591,7 +591,7 @@ mod tests {
         assert!(KNOWN_KINDS.iter().any(|(id, _)| *id == DEFAULT_KIND), "the default must exist");
         // Rendered in order, and "Other" reads as the fallback only when it comes last.
         assert_eq!(KNOWN_KINDS.last().map(|(id, _)| *id), Some(OTHER_KIND));
-        // Only `other` may have a blank brand — everything else renders its own name.
+        // Only `other` may have a blank brand - everything else renders its own name.
         assert!(KNOWN_KINDS.iter().all(|(id, brand)| *id == OTHER_KIND || !brand.is_empty()));
     }
 
@@ -622,7 +622,7 @@ mod tests {
         assert_eq!(cleaned, method("iban", "FR76", Some("Main")));
     }
 
-    /// An empty label is stored as `None`, not as `Some("")` — the wire format skips it, and
+    /// An empty label is stored as `None`, not as `Some("")` - the wire format skips it, and
     /// `method_display_name` falls back on the brand only when it is absent.
     #[test]
     fn an_empty_label_becomes_none() {
@@ -649,7 +649,7 @@ mod tests {
         );
     }
 
-    /// Each row saves on its own, so the row being saved must be judged alone — a neighbour the
+    /// Each row saves on its own, so the row being saved must be judged alone - a neighbour the
     /// user has not finished typing cannot be allowed to block it.
     #[test]
     fn a_row_is_validated_without_its_neighbours() {
