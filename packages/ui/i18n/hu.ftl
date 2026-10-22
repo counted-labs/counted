@@ -35,6 +35,7 @@ sync-error = Szinkronizálási hiba: { $reason }
 ### Errors
 
 error-network = A szerver nem érhető el. Ellenőrizd az internetkapcsolatot.
+error-rate-limited = A szerver túlterhelt. Próbáld újra egy kicsit később.
 error-generic = Valami hiba történt. Próbáld újra.
 
 error-invalid-email = Ez az e-mail-cím érvénytelen.
@@ -88,6 +89,7 @@ login-submitting = Bejelentkezés…
 login-password-placeholder = A jelszavad
 login-no-account = Még nincs fiókod?
 login-unverified = Az e-mail-címed még nincs megerősítve. Nézd meg a postaládád, vagy küldd el újra a linket.
+login-maybe-unverified = Most regisztráltál? Előbb erősítsd meg a címed az általunk küldött linkkel, vagy kérd újra.
 login-resend = Megerősítő link újraküldése
 login-resending = Küldés…
 login-resend-sent = E-mail elküldve - nézd meg a postaládád.
@@ -161,13 +163,12 @@ payment-method-copy-failed = Nem sikerült másolni - jelöld ki a szöveget és
 verify-email-checking = E-mail-cím megerősítése…
 verify-email-welcome = E-mail megerősítve - üdv a Countedben!
 verify-email-back-to-login = Vissza a bejelentkezéshez
+verify-email-intro = Add meg a jelszavad, hogy megerősítsd: ez a cím a tiéd.
+verify-email-submit = Címem megerősítése
 
 ### Project status
 
-project-close = Lezárás
 project-archive = Archiválás
-project-reopen = Újranyitás
-project-unarchive = Visszaállítás archívumból
 project-sheet-invite = Meghívás
 project-sheet-recurring = Ismétlődő
 project-sheet-edit = Projekt szerkesztése
@@ -350,6 +351,7 @@ missing-encryption-key = Hiányzik a titkosítási kulcs.
 missing-encryption-key-title = Hiányzik a titkosítási kulcs
 missing-encryption-key-hint = A használt link nem tartalmazza a projekt visszafejtéséhez szükséges kulcsot. Használd a teljes linket, amit a projekt létrehozója megosztott.
 project-locked-hint = Ezen az eszközön nincs meg a projekt kulcsa. Nyisd meg a megosztási linkjét a feloldáshoz.
+expenses-unreadable = Néhány tétel nem olvasható ezen az eszközön, és kimarad az összegekből. Frissítsd az alkalmazást, hogy lásd őket.
 project-unlock = Feloldás
 project-no-local-data-hint = Jelentkezz be a projekt adatainak első betöltéséhez.
 project-gone-title = Ez a projekt már nem létezik
@@ -722,6 +724,7 @@ friends-remove-confirm-message = { $email } többé nem lesz a barátaid közöt
 friends-no-key = Még nem áll készen
 friends-fingerprint = Biztonsági kód
 friends-fingerprint-hint = Két barát, akik ugyanazt a biztonsági kódot olvassák fel egymásnak, tudják, hogy senki nem áll közöttük - még a szerverünk sem.
+friends-key-mismatch = A szerver olyan nyilvános kulcsot küldött a fiókodhoz, amely nem illik a privát kulcsodhoz. A biztonsági kódod rejtve van, a meghívások ki vannak kapcsolva ezen az eszközön: lehet, hogy valaki manipulálja a szervert.
 friends-outgoing-title = Elküldve
 friends-outgoing-hint = Válaszra vár. Elfogadás után megjelennek a barátaid között.
 friends-withdraw = Mégse
@@ -876,6 +879,7 @@ occurrence-auto-next = Automatikusan hozzáadva egy ismétlődő kiadásból. K�
 occurrence-auto-stopped = Automatikusan hozzáadva egy azóta leállított ismétlődő kiadásból.
 occurrence-manage = Kezelés
 estimate-badge = Megerősítendő
+expense-pending = Függőben
 estimate-title = Az összeget meg kell erősíteni.
 estimate-body = Az előző összeggel került be. Add meg a valódit, amikor megtudod.
 estimate-confirm = Összeg megerősítése

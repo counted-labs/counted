@@ -13,8 +13,8 @@ use crate::common::{
     error_message, update_ls, CurrencyPicker, upsert_project, upsert_project_key, InviteRetry, LocalStorageState,
 };
 use crate::crypto::{
-    claim_token, claim_verifier, decrypt_json, encrypt_json, encrypt_padded_json, generate_key, key_to_fragment,
-    wrap_key,
+    claim_token, claim_verifier, decrypt_json, encrypt_padded_json, generate_key, key_to_fragment,
+    wrap_key, WrapUse,
 };
 use crate::friends::friends_service::{invite_each, my_private_key, Invitee};
 use crate::icons::{CloseIcon, ICON_HEADER};
@@ -145,7 +145,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 std::iter::once(me_val.clone()).chain(others.iter().map(|d| d.name.clone())).collect();
             let mut creatables: Vec<CreatableUser> = Vec::new();
             for user_name in &names {
-                let payload = match encrypt_json(&key, &UserPayload { name: user_name.clone(), removed: false }) {
+                let payload = match encrypt_padded_json(&key, &UserPayload { name: user_name.clone(), removed: false }) {
                     Ok(v) => v,
                     Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
                 };
@@ -188,7 +188,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 let _ = upsert_account_project(Json(UpsertAccountProject {
                     project_id,
                     user_id,
-                    key: account_key.and_then(|ak| wrap_key(&ak, &key)),
+                    key: account_key.and_then(|ak| wrap_key(&ak, WrapUse::Escrow(project_id), &key, account.typed_wraps)),
                     claim_label: None,
                     claim_token: Some(claim_token(&key).to_vec()),
                 }))
@@ -203,7 +203,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                     })
                     .collect();
                 if !invitees.is_empty() {
-                    let my_private = account_key.and_then(|ak| my_private_key(account, &ak));
+                    let my_private = account_key.and_then(|ak| my_private_key(account, &ak, ls_ctx.peek().raw_wraps_ok(account.id)));
                     let failed = invite_each(project_id, &invitees, my_private, &key).await;
                     if !failed.is_empty() {
                         invite_retry.set(Some(InviteRetry { project_id, invitees: failed }));

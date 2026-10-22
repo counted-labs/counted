@@ -40,8 +40,13 @@ hosts = ["counted.fr"]
 # This belongs at `<manifest>` level, which is where dx interpolates `[android.raw.manifest]`, so
 # unlike the `<provider>` - which must sit inside `<application>` and still needs the Makefile - it
 # reaches `dx serve` builds too.
+#
+# ACCESS_NETWORK_STATE: without it the Android WebView never fires `online`/`offline` and
+# `navigator.onLine` stays true in airplane mode, so `is_online` (app_contexts.rs) never turns false:
+# no « Hors ligne » bar and no offline queue.
 [android.raw]
 manifest = """
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 <queries>
     <intent>
         <action android:name="android.media.action.IMAGE_CAPTURE" />

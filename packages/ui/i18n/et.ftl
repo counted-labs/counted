@@ -35,6 +35,7 @@ sync-error = Sünkroonimise viga: { $reason }
 ### Errors
 
 error-network = Serveriga ei saa ühendust. Kontrolli oma internetiühendust.
+error-rate-limited = Server on hõivatud. Proovi hetke pärast uuesti.
 error-generic = Midagi läks valesti. Proovi uuesti.
 
 error-invalid-email = See e-posti aadress ei kehti.
@@ -88,6 +89,7 @@ login-submitting = Sisselogimine…
 login-password-placeholder = Sinu parool
 login-no-account = Pole veel kontot?
 login-unverified = Sinu e-posti aadress pole veel kinnitatud. Vaata postkasti või saada link uuesti.
+login-maybe-unverified = Registreerusid just? Kinnita esmalt oma aadress lingiga, mille sulle saatsime, või saada see uuesti.
 login-resend = Saada kinnituslink uuesti
 login-resending = Saatmine…
 login-resend-sent = Kiri saadetud - vaata postkasti.
@@ -161,13 +163,12 @@ payment-method-copy-failed = Kopeerimine ebaõnnestus - vali tekst ja kopeeri k�
 verify-email-checking = E-posti aadressi kinnitamine…
 verify-email-welcome = E-post kinnitatud - tere tulemast Countedisse!
 verify-email-back-to-login = Tagasi sisselogimisse
+verify-email-intro = Sisesta oma parool, et kinnitada, et see aadress on sinu oma.
+verify-email-submit = Kinnita minu aadress
 
 ### Project status
 
-project-close = Sulge
 project-archive = Arhiveeri
-project-reopen = Ava uuesti
-project-unarchive = Taasta arhiivist
 project-sheet-invite = Kutsu
 project-sheet-recurring = Korduvad
 project-sheet-edit = Muuda projekti
@@ -350,6 +351,7 @@ missing-encryption-key = Krüpteerimisvõti puudub.
 missing-encryption-key-title = Krüpteerimisvõti puudub
 missing-encryption-key-hint = Kasutatud link ei sisalda selle projekti dekrüpteerimiseks vajalikku võtit. Kasuta täielikku linki, mille projekti looja jagas.
 project-locked-hint = Sellel seadmel pole selle projekti võtit. Avamiseks ava selle jagamislink.
+expenses-unreadable = Mõnda kirjet ei saa sellel seadmel lugeda ja need pole summadesse arvestatud. Nende nägemiseks uuenda rakendust.
 project-unlock = Ava lukust
 project-no-local-data-hint = Selle projekti andmete esmakordseks laadimiseks logi sisse.
 project-gone-title = Seda projekti enam pole
@@ -722,6 +724,7 @@ friends-remove-confirm-message = { $email } ei ole enam sinu sõprade seas ja si
 friends-no-key = Pole veel valmis
 friends-fingerprint = Turvakood
 friends-fingerprint-hint = Kaks sõpra, kes loevad teineteisele sama turvakoodi, teavad, et keegi ei ole nende vahel - isegi mitte meie server.
+friends-key-mismatch = Server saatis sinu kontole avaliku võtme, mis ei sobi sinu privaatvõtmega. Sinu turvakood on peidetud ja kutsed on selles seadmes välja lülitatud: keegi võib serveriga manipuleerida.
 friends-outgoing-title = Saadetud
 friends-outgoing-hint = Ootab vastust. Näed neid oma sõprade seas, kui nad on kutse vastu võtnud.
 friends-withdraw = Tühista
@@ -876,6 +879,7 @@ occurrence-auto-next = Lisatud automaatselt korduvast kulust. Järgmine { $date 
 occurrence-auto-stopped = Lisatud automaatselt korduvast kulust, mis on vahepeal lõpetatud.
 occurrence-manage = Halda
 estimate-badge = Kinnitada
+expense-pending = Ootel
 estimate-title = Summa vajab kinnitamist.
 estimate-body = Lisatud eelmise summaga. Sisesta õige, kui see selgub.
 estimate-confirm = Kinnita summa

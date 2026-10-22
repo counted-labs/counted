@@ -1,13 +1,15 @@
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use shared::{
-    CreatableExpense, DeleteExpenseRequest, EditableExpense, EditableProject, EncryptedPair,
+    CreatableExpense, DeleteExpenseRequest, EditableExpense, EditableProject, EncryptedPair, Expense,
     HistoryContext, ProjectDto, ProjectPayload, ProjectStatus,
 };
 
-use crate::crypto::{decrypt_json, encrypt_padded_json};
+use crate::crypto::{decrypt_json, encrypt_json, encrypt_padded_json};
 use std::collections::VecDeque;
 use uuid::Uuid;
 
+use super::local_storage::project_key;
 use super::persist::{read_json, write_json};
 
 const QUEUE_KEY: &str = "counted_offline_queue";
@@ -15,8 +17,32 @@ const QUEUE_KEY: &str = "counted_offline_queue";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QueuedOp {
     pub id: Uuid,
+    /// Only in queues an older build wrote, which kept the name in clear.
+    #[serde(default)]
     pub label: String,
+    /// The expense or project name, sealed under the project key like the op itself: the queue is
+    /// a plain file or localStorage entry that outlives logout.
+    #[serde(default)]
+    pub sealed_label: Option<EncryptedPair>,
     pub op: OpKind,
+}
+
+impl QueuedOp {
+    /// Every op is queued from a page that holds its project's key, so the key is in the store.
+    pub fn new(id: Uuid, label: &str, op: OpKind) -> Self {
+        let sealed_label = project_key(op.project_id()).and_then(|k| encrypt_json(&k, &label).ok());
+        Self { id, label: String::new(), sealed_label, op }
+    }
+
+    /// Empty when the key is gone from this device since the op was queued.
+    pub fn label(&self) -> String {
+        match &self.sealed_label {
+            Some(sealed) => project_key(self.op.project_id())
+                .and_then(|k| decrypt_json::<String>(&k, sealed).ok())
+                .unwrap_or_default(),
+            None => self.label.clone(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,6 +55,18 @@ pub enum OpKind {
     /// overwrites anything written to the project in the meantime.
     UpdateProject(EditableProject),
     EditProject(ProjectEdit),
+}
+
+impl OpKind {
+    pub fn project_id(&self) -> Uuid {
+        match self {
+            OpKind::AddExpense(p) => p.project_id,
+            OpKind::EditExpense(p) => p.project_id,
+            OpKind::DeleteExpense(p) => p.project_id,
+            OpKind::UpdateProject(p) => p.id,
+            OpKind::EditProject(e) => e.project_id,
+        }
+    }
 }
 
 /// A project edit queued offline, kept as what the user changed rather than as a payload, so the
@@ -81,6 +119,32 @@ fn queue_file() -> std::path::PathBuf {
     super::persist::file_for(QUEUE_KEY)
 }
 
+/// The id an expense queued offline is listed under until its replay lands. No server row has it:
+/// `expenses.id` is a SERIAL, so it is never negative.
+pub fn is_pending_expense(id: i32) -> bool {
+    id < 0
+}
+
+/// The expenses queued offline for `project_id`, as rows the page lists like any other: the queued
+/// ciphertext carries its shares, so totals and balances count them before the replay. One leaves
+/// this list when the replay pops its op, and the refetch that follows brings the server's row.
+pub fn queued_expenses(queue: &VecDeque<QueuedOp>, project_id: Uuid, now: NaiveDateTime) -> Vec<Expense> {
+    queue
+        .iter()
+        .enumerate()
+        .filter_map(|(position, queued)| match &queued.op {
+            OpKind::AddExpense(c) if c.project_id == project_id => Some(Expense {
+                id: -(position as i32) - 1,
+                author_id: c.author_id,
+                project_id,
+                created_at: now,
+                payload: c.payload.clone(),
+            }),
+            _ => None,
+        })
+        .collect()
+}
+
 pub fn read_queue() -> VecDeque<QueuedOp> {
     read_json(QUEUE_KEY)
 }
@@ -103,6 +167,7 @@ mod tests {
         QueuedOp {
             id,
             label: label.to_string(),
+            sealed_label: None,
             op: OpKind::AddExpense(shared::CreatableExpense {
                 project_id: Uuid::nil(),
                 author_id: Some(1),
@@ -129,10 +194,30 @@ mod tests {
         }
     }
 
+    #[test]
+    fn only_this_projects_queued_adds_are_listed_and_under_pending_ids() {
+        let other = Uuid::new_v4();
+        let mut elsewhere = add_expense_op("elsewhere");
+        if let OpKind::AddExpense(c) = &mut elsewhere.op {
+            c.project_id = other;
+        }
+        let queue: VecDeque<QueuedOp> =
+            [add_expense_op("a"), edit_expense_op(), elsewhere, add_expense_op("b")].into();
+        let now = chrono::NaiveDate::from_ymd_opt(2026, 10, 17).unwrap().and_hms_opt(18, 42, 0).unwrap();
+
+        let rows = queued_expenses(&queue, Uuid::nil(), now);
+
+        assert_eq!(rows.iter().map(|e| e.id).collect::<Vec<_>>(), vec![-1, -4]);
+        assert!(rows.iter().all(|e| is_pending_expense(e.id) && e.project_id == Uuid::nil()));
+        assert_eq!(rows[0].payload, ep());
+        assert_eq!(queued_expenses(&queue, other, now).iter().map(|e| e.id).collect::<Vec<_>>(), vec![-3]);
+    }
+
     fn edit_expense_op() -> QueuedOp {
         QueuedOp {
             id: Uuid::new_v4(),
             label: "edit".into(),
+            sealed_label: None,
             op: OpKind::EditExpense(shared::EditableExpense {
                 id: 42,
                 project_id: Uuid::nil(),
@@ -149,6 +234,7 @@ mod tests {
         QueuedOp {
             id: Uuid::new_v4(),
             label: "delete".into(),
+            sealed_label: None,
             op: OpKind::DeleteExpense(shared::DeleteExpenseRequest {
                 id: 7,
                 project_id: Uuid::nil(),
@@ -161,6 +247,7 @@ mod tests {
         QueuedOp {
             id: Uuid::new_v4(),
             label: "project".into(),
+            sealed_label: None,
             op: OpKind::UpdateProject(shared::EditableProject {
                 id: Uuid::nil(),
                 payload: None,
@@ -184,6 +271,32 @@ mod tests {
 
         fn with_tmp_dir<F: FnOnce()>(suffix: &str, f: F) {
             with_data_dir(&format!("queue_{suffix}"), |_| f())
+        }
+
+        #[test]
+        fn a_queued_name_is_sealed_under_the_project_key() {
+            with_tmp_dir("sealed_label", || {
+                let project_id = Uuid::from_u128(7);
+                let key = crate::crypto::generate_key();
+                let mut state = crate::common::LocalStorageState::default();
+                crate::common::upsert_project(&mut state, project_id, None);
+                crate::common::upsert_project_key(&mut state, project_id, crate::crypto::key_to_fragment(&key));
+                crate::common::write_to_ls(&state);
+
+                let edit = ProjectEdit { project_id, name_description: None, status: Some(ProjectStatus::Closed), history: None };
+                let op = QueuedOp::new(Uuid::new_v4(), "Corse", OpKind::EditProject(edit));
+
+                assert!(!serde_json::to_string(&op).unwrap().contains("Corse"), "the queue holds no plaintext name");
+                assert_eq!(op.label(), "Corse", "and the conflict message still names it");
+            });
+        }
+
+        /// A queue written before the label was sealed must still load and still name its ops.
+        #[test]
+        fn a_queue_from_an_older_build_keeps_its_clear_label() {
+            let old = r#"{"id":"00000000-0000-0000-0000-000000000001","label":"Café","op":{"type":"delete_expense","id":3,"projectId":"00000000-0000-0000-0000-000000000002"}}"#;
+            let op: QueuedOp = serde_json::from_str(old).unwrap();
+            assert_eq!(op.label(), "Café");
         }
 
         #[test]
@@ -339,6 +452,7 @@ mod tests {
                 let op = QueuedOp {
                     id,
                     label: "uuid test".into(),
+                    sealed_label: None,
                     op: OpKind::DeleteExpense(shared::DeleteExpenseRequest {
                         id: 1,
                         project_id: Uuid::nil(),
@@ -472,7 +586,7 @@ mod project_edit_tests {
     #[test]
     fn a_queued_intent_round_trips_as_an_op() {
         let edit = rename("Corse", Some("Sous la tente"));
-        let op = QueuedOp { id: Uuid::new_v4(), label: "Corse".into(), op: OpKind::EditProject(edit.clone()) };
+        let op = QueuedOp { id: Uuid::new_v4(), label: "Corse".into(), sealed_label: None, op: OpKind::EditProject(edit.clone()) };
         let stored = serde_json::to_string(&op).unwrap();
         let back: QueuedOp = serde_json::from_str(&stored).unwrap();
         assert!(matches!(back.op, OpKind::EditProject(e) if e == edit));

@@ -136,6 +136,9 @@ pub struct ExpenseRowProps {
     pub estimate: bool,
     #[props(default)]
     pub income: bool,
+    /// Added offline and not yet sent: badged, and inert until the replay gives it a server id.
+    #[props(default)]
+    pub pending: bool,
     pub can_edit: bool,
     pub can_delete: bool,
     /// A tap or Enter/Space - navigation is the parent's job, so this row needs no router.
@@ -334,6 +337,9 @@ pub fn ExpenseRow(props: ExpenseRowProps) -> Element {
                     div { class: "flex flex-col items-end leading-tight",
                         if props.estimate {
                             span { class: "badge badge-warning badge-soft badge-xs mb-0.5", {tid!("estimate-badge")} }
+                        }
+                        if props.pending {
+                            span { class: "badge badge-warning badge-soft badge-xs mb-0.5", {tid!("expense-pending")} }
                         }
                         p { class: "text-sm font-semibold", if props.income { {crate::common::signed_amount(props.amount, &props.currency)} } else { {crate::common::amount(props.amount, &props.currency)} } }
                         if let Some((source_amount, source_currency)) = props.source.clone() {

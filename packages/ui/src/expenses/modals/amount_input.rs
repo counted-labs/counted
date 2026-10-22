@@ -3,9 +3,10 @@ use std::rc::Rc;
 
 use super::super::helpers::expense_form_helpers::{amount_field_text, is_expression, keeps_draft_on_blur};
 
-/// The draft of the amount field that currently has focus - what `AmountOperatorBar` writes into.
+/// The draft of the amount field that currently has focus - what `AmountOperatorBar` writes into -
+/// and the text it showed when it took focus, the bar's left operand until something is typed.
 /// `None` when no amount field is focused, which is also what hides the bar.
-pub type FocusedAmount = Signal<Option<Signal<Option<String>>>>;
+pub type FocusedAmount = Signal<Option<(Signal<Option<String>>, String)>>;
 
 /// `focus_on_mount`'s retry budget: 1s total, comfortably past daisyUI's 0.3s modal transition,
 /// and abandoned rather than looping forever if something else holds the focus.
@@ -121,13 +122,11 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
                     }
                 },
                 onfocus: move |_| {
-                    // Materialised so the bar always has a left operand to append to.
-                    if draft.peek().is_none() {
-                        draft.set(Some(shown.clone()));
-                    }
+                    // Not `draft`: a render scheduled here lands after the first keystroke on mobile
+                    // and writes back the text from before it.
                     focused.set(true);
                     if let Some(mut bar) = bar {
-                        bar.set(Some(draft));
+                        bar.set(Some((draft, shown.clone())));
                     }
                     spawn(crate::common::select_focused_input());
                 },
@@ -144,7 +143,7 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
                     // Moving between two amount fields blurs before it focuses, so this nets to
                     // the new field in the same render.
                     if let Some(mut bar) = bar {
-                        if bar.peek().is_some_and(|d| d == draft) {
+                        if bar.peek().as_ref().is_some_and(|(d, _)| *d == draft) {
                             bar.set(None);
                         }
                     }

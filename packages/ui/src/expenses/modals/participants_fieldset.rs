@@ -504,7 +504,7 @@ mod tests {
         dom.runtime().handle_event("blur", focus(), ids[FIELD_0]);
         let m = dom.render_immediate_to_vec();
         assert_eq!(*spy.borrow(), before, "blur may settle the text, never the numbers");
-        assert_eq!(value_writes(&m, ids[FIELD_0]), vec!["12.5".to_string()]);
+        assert_eq!(value_writes(&m, ids[FIELD_0]), vec!["12.50".to_string()]);
     }
 
     /// `ExpenseForm` provides the context and renders the bar below the footer; this mirrors that

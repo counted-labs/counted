@@ -1,0 +1,46 @@
+Counted es la app para repartir gastos entre amigos: 100 % europea, privada por diseño, con una misión medioambiental. Vacaciones, piso compartido, fin de semana, regalo de grupo: apuntad vuestros gastos y Counted te dice quién debe cuánto a quién, con el mínimo de transferencias.
+
+🔗 Sin necesidad de cuenta
+Crea un proyecto, envía el enlace. Eso es todo. Tus amigos se unen y participan sin registrarse. ¿Una cuenta? Nunca obligatoria. Sirve para recuperar tus proyectos en otro dispositivo, invitar a tus amigos desde la app y compartir tus datos de pago.
+
+🔒 Cifrado en tu móvil
+Nombres, importes, proyectos, historial: todo se cifra en tu móvil. Solo tú tienes la clave. Nadie puede leer tus cuentas, ni siquiera nosotros. Tu contraseña tampoco sale nunca de tu móvil.
+
+📷 Escaneo de recibos, en tu móvil
+Hazle una foto al recibo: el importe, la fecha y la categoría se rellenan solos. Todo ocurre en tu móvil. La foto no se guarda.
+
+🇪🇺 100 % europeo
+Servidores en Alemania, correos enviados desde Francia. Tus proyectos nunca salen de la Unión Europea.
+
+💸 Gratis, de verdad
+Sin anuncios, sin rastreadores, sin suscripción, sin versión de pago, sin límite de gastos ni de participantes. No recogemos nada, no vendemos tus datos. Ese no es nuestro modelo.
+
+✨ Todo para los gastos en grupo
+• Gastos, transferencias e ingresos, con varios pagadores y varios beneficiarios
+• Reparto a partes iguales, por partes o por importe exacto, comprobado al céntimo
+• El mínimo de transferencias para saldar las cuentas del grupo
+• Gastos recurrentes como el alquiler o las suscripciones: se apuntan una vez y se añaden cada vez que vencen
+• Más de 150 monedas, convertidas al tipo de cambio mensual de la Comisión Europea
+• Estadísticas por categoría, por persona y mes a mes
+• Historial de quién añadió, editó o eliminó qué
+• Búsqueda por nombre, nota o categoría, hecha en tu dispositivo
+• Con cuenta, un proyecto personal «Mis gastos»: lo que gastas por tu cuenta más tu parte en tus grupos, mes a mes
+• Mover un gasto de un proyecto a otro
+• Presupuestos mensuales por categoría sobre tu parte real, con un aviso al 80 % calculado en tu dispositivo
+• En la pantalla de inicio, lo que te deben y lo que debes en todos tus proyectos, calculado en tu dispositivo
+• Un acceso directo «Gasto personal» manteniendo pulsado el icono de la app
+• Sin conexión: consulta y apunta sin red
+• Exportación CSV y JSON con un toque
+• Datos de pago (IBAN, PayPal, Wero, Lydia, Revolut…) cifrados como todo lo demás
+• Importación desde Tricount: pega el enlace para compartir y se pasa todo
+• Web, Android e iOS: el mismo proyecto en todas partes, con el mismo enlace
+• 32 idiomas, incluidas las 24 lenguas oficiales de la UE
+
+🔔 Notificaciones sin Google
+Counted envía las notificaciones a través de UnifiedPush, sin ningún servicio de Google. Para recibirlas, instala un distribuidor como ntfy o Sunup. Sin él, la app funciona con normalidad, solo que sin notificaciones.
+
+🌱 Una misión
+Counted está hecho para ser eficiente y sencillo: sin anuncios, sin rastreadores. Los cálculos se hacen en tu dispositivo. Nos comprometemos a donar una parte de nuestros ingresos a causas medioambientales.
+
+¿Cómo funciona exactamente? (en inglés) counted.fr/en/privacy
+Comprueba tú mismo el código que ejecutas: counted.fr/en/verify

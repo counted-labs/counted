@@ -37,6 +37,7 @@ sync-error = Erreur de synchronisation : { $reason }
 ### Errors
 
 error-network = Impossible de contacter le serveur. Vérifiez votre connexion internet.
+error-rate-limited = Le serveur est très sollicité. Réessayez dans un instant.
 error-generic = Une erreur est survenue. Réessayez.
 
 error-invalid-email = Cette adresse e-mail n'est pas valide.
@@ -90,6 +91,7 @@ login-submitting = Connexion…
 login-password-placeholder = Votre mot de passe
 login-no-account = Pas encore de compte ?
 login-unverified = Votre e-mail n'est pas encore vérifié. Vérifiez votre boîte mail ou renvoyez le lien.
+login-maybe-unverified = Vous venez de vous inscrire ? Vérifiez d'abord votre adresse avec le lien reçu par e-mail, ou renvoyez-le.
 login-resend = Renvoyer le lien de vérification
 login-resending = Envoi…
 login-resend-sent = E-mail envoyé ! Vérifiez votre boîte mail.
@@ -164,13 +166,12 @@ payment-method-copy-failed = Impossible de copier - sélectionnez le texte et co
 verify-email-checking = Vérification de votre e-mail…
 verify-email-welcome = E-mail vérifié - bienvenue sur Counted !
 verify-email-back-to-login = Retourner à la connexion
+verify-email-intro = Saisissez votre mot de passe pour confirmer que cette adresse est bien la vôtre.
+verify-email-submit = Vérifier mon adresse
 
 ### Project status
 
-project-close = Clôturer
 project-archive = Archiver
-project-reopen = Réouvrir
-project-unarchive = Désarchiver
 project-sheet-invite = Inviter
 project-sheet-recurring = Récurrentes
 project-sheet-edit = Modifier le projet
@@ -353,6 +354,7 @@ missing-encryption-key = Clé de chiffrement manquante.
 missing-encryption-key-title = Clé de chiffrement manquante
 missing-encryption-key-hint = Le lien que vous avez utilisé ne contient pas la clé nécessaire pour déchiffrer ce projet. Utilisez le lien complet partagé par le créateur du projet.
 project-locked-hint = Cet appareil n’a pas la clé de ce projet. Ouvrez son lien de partage pour le déverrouiller.
+expenses-unreadable = Certaines entrées sont illisibles sur cet appareil et ne sont pas comptées dans les totaux. Mettez l’application à jour pour les voir.
 project-unlock = Déverrouiller
 project-no-local-data-hint = Connectez-vous pour charger les données de ce projet pour la première fois.
 project-gone-title = Ce projet n'existe plus
@@ -689,7 +691,7 @@ help-contact = Une autre question ? Écrivez-nous à
 
 ### Legal
 
-legal-updated = Dernière mise à jour : 18 octobre 2026
+legal-updated = Dernière mise à jour : 21 octobre 2026
 
 legal-publisher-title = 1. Éditeur du site
 legal-publisher-body = Counted (« le Service ») est édité à titre non professionnel par une personne physique, Jonathan Bosi.
@@ -780,7 +782,7 @@ privacy-collected-anon-def = lorsque vous ouvrez un projet sans être connecté 
 privacy-collected-invite-term = Empreinte de l'email d'un participant invité
 privacy-collected-invite-def = (SHA-256), enregistrée par les versions précédentes de l'application lorsque vous invitiez quelqu'un par email. Elle n'est plus collectée ; les empreintes déjà enregistrées disparaissent avec leur participant.
 privacy-collected-friends-term = Vos amis
-privacy-collected-friends-def = si vous utilisez la liste d'amis : avec quels comptes vous êtes amis, une empreinte (SHA-256) d'une adresse à qui vous avez envoyé une demande avant qu'elle n'ait de compte, et quel ami vous avez invité dans quel projet, et en tant que quel participant. Le nom que vous donnez à une demande et la clé de projet qu'une invitation transporte sont chiffrés sur votre appareil - la clé avec la clé publique de votre ami, que nous stockons en clair car elle est publique par nature - et le serveur ne peut lire ni l'un ni l'autre. La moitié privée de votre propre paire de clés est conservée chiffrée avec la clé de votre compte.
+privacy-collected-friends-def = si vous utilisez la liste d'amis : avec quels comptes vous êtes amis, une empreinte à clé secrète (HMAC-SHA256) d'une adresse à qui vous avez envoyé une demande avant qu'elle n'ait de compte - une demande non acceptée sous 30 jours est supprimée - et quel ami vous avez invité dans quel projet, et en tant que quel participant. Le nom que vous donnez à une demande et la clé de projet qu'une invitation transporte sont chiffrés sur votre appareil - la clé avec la clé publique de votre ami, que nous stockons en clair car elle est publique par nature - et le serveur ne peut lire ni l'un ni l'autre. La moitié privée de votre propre paire de clés est conservée chiffrée avec la clé de votre compte.
 privacy-collected-push-term = Jeton de notification
 privacy-collected-push-def = si vous autorisez les notifications dans l'application mobile : l'adresse que le service de notification de votre téléphone lui attribue (sur Android, avec deux clés publiques de chiffrement), rattachée à votre compte, ainsi que la langue de votre téléphone pour rédiger la notification dans cette langue. Supprimé à la déconnexion, lorsque le service de notification le signale comme invalide, et avec votre compte.
 privacy-collected-logs-term = Journaux techniques
@@ -908,6 +910,7 @@ friends-remove-confirm-message = { $email } ne sera plus dans vos amis, et vous 
 friends-no-key = Pas encore prêt
 friends-fingerprint = Code de sécurité
 friends-fingerprint-hint = Ce code vous permet de vérifier que vos communications sont chiffrées et de vous protéger contre les tentatives d’attaque de l’homme du milieu.
+friends-key-mismatch = Le serveur a envoyé pour votre compte une clé publique qui ne correspond pas à votre clé privée. Votre code de sécurité est masqué et les invitations sont désactivées sur cet appareil : quelqu'un modifie peut-être le serveur.
 friends-outgoing-title = Envoyées
 friends-outgoing-hint = En attente de réponse. Ils apparaîtront dans vos amis une fois la demande acceptée.
 friends-withdraw = Annuler
@@ -1062,6 +1065,7 @@ occurrence-auto-next = Ajoutée automatiquement par une dépense récurrente. Pr
 occurrence-auto-stopped = Ajoutée automatiquement par une dépense récurrente arrêtée depuis.
 occurrence-manage = Gérer
 estimate-badge = À confirmer
+expense-pending = En attente
 estimate-title = Montant à confirmer.
 estimate-body = Ajoutée avec le montant précédent. Saisissez le vrai montant quand il arrive.
 estimate-confirm = Confirmer le montant
@@ -1089,5 +1093,5 @@ home-remind = Relancer
 home-remind-message = Petit rappel : il reste des remboursements à régler sur { $project }.
 home-row-owed = on vous doit
 home-row-owe = vous devez
-home-row-settled = À jour
+home-row-settled = À l’équilibre
 home-totals-partial = Hors projets sans taux de change

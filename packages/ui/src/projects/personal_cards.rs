@@ -17,28 +17,23 @@ use crate::common::{
     CurrencyPicker, LocalStorageState,
 };
 use crate::crypto::{
-    claim_token, claim_verifier, decrypt_json, encrypt_json, encrypt_padded_json, generate_key, key_to_fragment, wrap_key,
+    claim_token, claim_verifier, decrypt_json, encrypt_padded_json, generate_key, key_to_fragment, wrap_key, WrapUse,
 };
 use crate::common::fx_cache::read_fx;
 use crate::expenses::budget_panel::money;
 use crate::expenses::helpers::budgets::Meter;
-use crate::expenses::helpers::my_spending::month_glance;
+use crate::expenses::helpers::my_spending::{month_glance, GroupLedger};
 use crate::preferences::uncounted_projects;
 use crate::icons::{ChartIcon, CloseIcon, LockIcon, UserIcon, WalletIcon, ICON_HEADER};
 use crate::participants::use_my_display_name;
 use crate::route::Route;
 use crate::tid;
 
-/// Whether `p` is a personal project, whatever its status. One per account: an archived one still
-/// counts, so the offer to create another never comes back.
+/// Whether `p` is the account's personal project, whatever its status. One per account: an
+/// archived one still counts, so the offer to create another never comes back. The account says
+/// which, never the payload (audit 2026-10-19 M3).
 pub fn is_personal_dto(p: &ProjectDto, state: &LocalStorageState) -> bool {
-    state
-        .projects
-        .iter()
-        .find(|lp| lp.project_id == p.id)
-        .and_then(key_of)
-        .and_then(|k| decrypt_json::<ProjectPayload>(&k, &p.payload).ok())
-        .is_some_and(|pp| pp.is_personal())
+    state.personal_project == Some(p.id)
 }
 
 /// The project, its one participant and the escrowed key, in the order the shared-project modal
@@ -49,6 +44,7 @@ async fn create_personal_project(
     me: String,
     account_key: Option<[u8; 32]>,
     ls_ctx: Signal<LocalStorageState>,
+    mut auth: Signal<Option<Account>>,
 ) -> Result<Uuid, String> {
     let key = generate_key();
     let mut payload = ProjectPayload { name, currency, description: None, status: Some(shared::ProjectStatus::Ongoing), extra: Default::default() };
@@ -65,7 +61,7 @@ async fn create_personal_project(
         upsert_project_key(state, project.id, key_to_fragment(&key));
     });
 
-    let me_payload = encrypt_json(&key, &UserPayload { name: me, removed: false })?;
+    let me_payload = encrypt_padded_json(&key, &UserPayload { name: me, removed: false })?;
     let users = add_user(Json(CreatableUserBatch::Multiple(vec![CreatableUser {
         payload: me_payload,
         project_id: project.id,
@@ -73,14 +69,24 @@ async fn create_personal_project(
     .await
     .map_err(|e| error_message(&e))?;
     let user_id = users.first().map(|u| u.id);
-    update_ls(ls_ctx, |state| upsert_project(state, project.id, user_id));
+    update_ls(ls_ctx, |state| {
+        upsert_project(state, project.id, user_id);
+        state.personal_project = Some(project.id);
+    });
+    let account = auth.peek().clone();
+    let typed = account.as_ref().is_some_and(|a| a.typed_wraps);
+    if let (Some(account), Some(ak)) = (account, account_key) {
+        if let Ok(written) = crate::preferences::remember_personal_project(account, ak, project.id).await {
+            auth.set(Some(written));
+        }
+    }
 
     // Escrowed, so the account's other devices open it without a link. A failure here is retried by
     // the projects page's reconciliation, as for any project.
     let _ = upsert_account_project(Json(UpsertAccountProject {
         project_id: project.id,
         user_id,
-        key: account_key.and_then(|ak| wrap_key(&ak, &key)),
+        key: account_key.and_then(|ak| wrap_key(&ak, WrapUse::Escrow(project.id), &key, typed)),
         claim_label: None,
         claim_token: Some(claim_token(&key).to_vec()),
     }))
@@ -125,6 +131,7 @@ pub fn PersonalCreateSheet(on_close: EventHandler<()>) -> Element {
     let nav = use_navigator();
     let ls_ctx = use_context::<Signal<LocalStorageState>>();
     let account_key_ctx = use_context::<Signal<Option<[u8; 32]>>>();
+    let auth_ctx = use_context::<Signal<Option<Account>>>();
     let is_online = use_context::<Signal<bool>>();
     let display_name = use_my_display_name();
     let mut name = use_signal(|| tid!("personal-default-name"));
@@ -149,7 +156,7 @@ pub fn PersonalCreateSheet(on_close: EventHandler<()>) -> Element {
         loading.set(true);
         error_msg.set(None);
         spawn(async move {
-            match create_personal_project(name_val, currency_val, me, account_key, ls_ctx).await {
+            match create_personal_project(name_val, currency_val, me, account_key, ls_ctx, auth_ctx).await {
                 Ok(project_id) => {
                     on_close.call(());
                     nav.push(Route::ExpensesPage { project_id });
@@ -249,7 +256,7 @@ pub fn PersonalCreateSheet(on_close: EventHandler<()>) -> Element {
 /// J3, P4: the personal project, pinned above the groups, with the month as Mes dépenses adds it
 /// up and, once ceilings are set, the budget left.
 #[component]
-pub fn PersonalCard(project: ProjectDto) -> Element {
+pub fn PersonalCard(project: ProjectDto, ledgers: Signal<Vec<GroupLedger>>) -> Element {
     let ls_ctx = use_context::<Signal<LocalStorageState>>();
     let auth_ctx = use_context::<Signal<Option<Account>>>();
     let account_key_ctx = use_context::<Signal<Option<[u8; 32]>>>();
@@ -268,7 +275,7 @@ pub fn PersonalCard(project: ProjectDto) -> Element {
             (Some(a), Some(k)) => uncounted_projects(a, &k),
             _ => Default::default(),
         };
-        month_glance(&ls_ctx.read(), project_id, &uncounted, read_fx().as_ref(), today)
+        month_glance(&ls_ctx.read(), project_id, &ledgers.read(), &uncounted, read_fx().as_ref(), today)
     });
     let (name, currency) = name.unwrap_or_default();
     let month = month_title(chrono::Datelike::month0(&today) as usize);
@@ -329,6 +336,7 @@ pub fn PersonalCard(project: ProjectDto) -> Element {
 mod tests {
     use super::*;
     use crate::common::test_fixtures::{make_project, test_key};
+    use crate::crypto::encrypt_json;
     use crate::common::LocalStorageProject;
 
     fn held(p: &ProjectDto, k: &[u8; 32], expenses: Option<Vec<shared::Expense>>) -> LocalStorageProject {
@@ -349,7 +357,11 @@ mod tests {
         payload.status = Some(shared::ProjectStatus::Archived);
         mine.payload = encrypt_json(&k, &payload).unwrap();
         let trip = make_project(&k, Uuid::new_v4(), "Corsica", "EUR");
-        let state = LocalStorageState { projects: vec![held(&mine, &k, None), held(&trip, &k, None)], ..Default::default() };
+        let state = LocalStorageState {
+            projects: vec![held(&mine, &k, None), held(&trip, &k, None)],
+            personal_project: Some(mine.id),
+            ..Default::default()
+        };
         assert!(is_personal_dto(&mine, &state));
         assert!(!is_personal_dto(&trip, &state));
         assert!(!is_personal_dto(&mine, &LocalStorageState::default()), "no key, no way to tell");

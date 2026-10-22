@@ -1,14 +1,14 @@
 use api::friends::invitations_controller::get_sent_invitations;
-use api::users::users_controller::{add_user, edit_user};
+use api::users::users_controller::{add_user, edit_users};
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use crate::tid;
-use shared::{Account, CreatableUser, CreatableUserBatch, EditableProject, EditableUser, HistoryContext, HistoryPayload, ProjectDto, ProjectPayload, User, UserPayload};
+use shared::{Account, CreatableUser, CreatableUserBatch, EditableProject, EditableUser, HistoryAction, HistoryContext, HistoryEntity, HistoryPayload, ProjectDto, ProjectPayload, User, UserPayload};
 use std::collections::VecDeque;
 use uuid::Uuid;
 
 use crate::common::{
-    error_message, identity_locked, is_user_gone_error, update_project_fresh, write_queue, Flash,
+    error_message, identity_locked, update_project_fresh, write_queue, Flash,
     InviteRetry, LocalStorageState, OpKind, ProjectEdit, ProjectKey, QueuedOp,
 };
 use std::collections::HashSet;
@@ -100,8 +100,9 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     let can_add_friend = auth_ctx().is_some() && account_key_ctx().is_some();
     let add_friend = move |(user_id, participant_name): (i32, String)| {
         let Some(account_key) = account_key_ctx() else { return };
+        let typed = auth_ctx().is_some_and(|a| a.typed_wraps);
         spawn(async move {
-            match crate::friends::friends_service::add_from_project(project_id, user_id, &participant_name, &account_key).await {
+            match crate::friends::friends_service::add_from_project(project_id, user_id, &participant_name, &account_key, typed).await {
                 Ok(()) => flash.set(Some(Flash::ok(tid!("friends-request-sent")))),
                 Err(e) => flash.set(Some(Flash::err(error_message(&e)))),
             }
@@ -151,7 +152,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             }
         }
 
-        let actor_user_id = ls_ctx()
+        let actor_user_id = ls_ctx.read()
             .projects
             .iter()
             .find(|p| p.project_id == project_id)
@@ -184,7 +185,16 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             diff.join(" • ")
         };
 
-        let history = encrypt_padded_json(&key, &HistoryPayload { summary, actor_user_id })
+        let history = encrypt_padded_json(
+            &key,
+            &HistoryPayload {
+                summary,
+                actor_user_id,
+                action: Some(HistoryAction::Updated),
+                entity: Some(HistoryEntity::Project),
+                entity_id: None,
+            },
+        )
             .ok()
             .map(|p| HistoryContext { actor_user_id: None, payload: p });
 
@@ -193,16 +203,11 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                 Ok(v) => v,
                 Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
             };
-            pending_ops.write().push_back(QueuedOp {
-                id: Uuid::new_v4(),
-                label: name_val.clone(),
-                op: OpKind::EditProject(ProjectEdit {
-                    project_id,
-                    name_description: Some(sealed),
-                    status: None,
-                    history,
-                }),
-            });
+            pending_ops.write().push_back(QueuedOp::new(
+                Uuid::new_v4(),
+                &name_val,
+                OpKind::EditProject(ProjectEdit { project_id, name_description: Some(sealed), status: None, history }),
+            ));
             write_queue(&pending_ops.read());
             // Warn about anything that can't be applied offline.
             let existing_ids: HashSet<i32> = current_existing.iter().map(|u| u.id).collect();
@@ -246,7 +251,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             if !current_new.is_empty() {
                 let mut creatables: Vec<CreatableUser> = Vec::new();
                 for d in &current_new {
-                    let payload = match encrypt_json(&key, &UserPayload { name: d.name.clone(), removed: false }) {
+                    let payload = match encrypt_padded_json(&key, &UserPayload { name: d.name.clone(), removed: false }) {
                         Ok(v) => v,
                         Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
                     };
@@ -292,7 +297,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                 let my_private = account
                     .as_ref()
                     .zip(account_key)
-                    .and_then(|(a, ak)| my_private_key(a, &ak));
+                    .and_then(|(a, ak)| my_private_key(a, &ak, ls_ctx.peek().raw_wraps_ok(a.id)));
                 let failed = invite_each(project_id, &invitees, my_private, &key).await;
                 if !failed.is_empty() {
                     invite_retry.set(Some(InviteRetry { project_id, invitees: failed }));
@@ -302,18 +307,21 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             // Removing and restoring both rewrite the payload's `removed`. Re-sending one that already
             // took is harmless, which is what makes a re-submit after a failure safe.
             // `u.removed` is what the server holds, the list each one sits in is what it should.
+            // The ids the server did not rewrite are participants already gone, as before.
             let changes = current_removed
                 .iter()
                 .map(|u| (u, true))
                 .chain(current_existing.iter().map(|u| (u, false)))
                 .filter(|(u, removed)| u.removed != *removed);
+            let mut edits = Vec::new();
             for (u, removed) in changes {
-                let payload = match encrypt_json(&key, &UserPayload { name: u.name.clone(), removed }) {
-                    Ok(p) => p,
+                match encrypt_padded_json(&key, &UserPayload { name: u.name.clone(), removed }) {
+                    Ok(payload) => edits.push(EditableUser { id: u.id, project_id, payload }),
                     Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
-                };
-                let write = edit_user(Json(EditableUser { id: u.id, project_id, payload })).await;
-                if let Err(e) = write.or_else(|e| if is_user_gone_error(&e) { Ok(()) } else { Err(e) }) {
+                }
+            }
+            if !edits.is_empty() {
+                if let Err(e) = edit_users(Json(edits)).await {
                     error_msg.set(Some(error_message(&e)));
                     loading.set(false);
                     return;
@@ -325,7 +333,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     };
 
     let stored_user_id = move || {
-        ls_ctx().projects.iter().find(|p| p.project_id == project_id).and_then(|p| p.user_id)
+        ls_ctx.read().projects.iter().find(|p| p.project_id == project_id).and_then(|p| p.user_id)
     };
     let my_id = stored_user_id();
     let me = existing_users().into_iter().find(|u| Some(u.id) == my_id);

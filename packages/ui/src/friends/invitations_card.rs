@@ -26,10 +26,18 @@ pub fn InvitationsCard(props: InvitationsCardProps) -> Element {
     let mut busy = use_signal(|| false);
     let mut version = use_signal(|| 0u64);
 
+    // Not `auth_ctx()`: every write to the account (a preference saved, a refill) would reload the
+    // card.
+    let opener = use_memo(move || {
+        let account = auth_ctx.read();
+        account.as_ref().map(|a| (a.id, account_key().and_then(|k| my_private_key(a, &k, ls_ctx.peek().raw_wraps_ok(a.id)))))
+    });
     let invitations = use_resource(move || {
         let _ = version();
-        let private = auth_ctx().zip(account_key()).and_then(|(a, k)| my_private_key(&a, &k));
-        let signed_in = auth_ctx().is_some();
+        let (signed_in, private) = match opener() {
+            Some((_, private)) => (true, private),
+            None => (false, None),
+        };
         async move {
             if !signed_in {
                 return Ok(vec![]);

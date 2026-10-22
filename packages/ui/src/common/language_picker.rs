@@ -25,7 +25,7 @@ pub fn LanguagePicker() -> Element {
         // cleared) the choice stays on this device like an anonymous one.
         if let Some(account) = auth_ctx() {
             if let Some(key) = account_enc_key_ctx() {
-                push_language(&account, key, code);
+                push_language(auth_ctx, &account, key, code);
             }
         }
     };

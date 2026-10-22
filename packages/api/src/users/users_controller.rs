@@ -14,6 +14,12 @@ pub async fn edit_user(Json(payload): Json<EditableUser>) -> Result<(), ServerFn
     crate::server::users::edit_user(payload).await
 }
 
+/// Several [`edit_user`]s of one project in one call. Returns the ids not rewritten.
+#[put("/api/v1/users/batch")]
+pub async fn edit_users(Json(payload): Json<Vec<EditableUser>>) -> Result<Vec<i32>, ServerFnError> {
+    crate::server::users::edit_users(payload).await
+}
+
 #[post("/api/v1/users")]
 pub async fn add_user(Json(payload): Json<CreatableUserBatch>) -> Result<Vec<User>, ServerFnError> {
     crate::server::users::add_user(payload).await

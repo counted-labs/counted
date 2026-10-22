@@ -443,7 +443,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                     }
 
                     if foreign {
-                        fieldset { class: "fieldset",
+                        fieldset { class: "fieldset px-5",
                             label { class: "fieldset-legend", r#for: "expense-rate", {tid!("expense-rate")} }
                             input {
                                 id: "expense-rate",
@@ -957,6 +957,19 @@ mod tests {
         let m = dom.render_immediate_to_vec();
         assert_eq!(*spy.borrow(), (payers, debtors), "blur may settle the text, never the numbers");
         assert_eq!(value_writes(&m, field), vec!["83.33".to_string()]);
+    }
+
+    /// On mobile every event is a round trip, so a render that focus schedules lands after the first
+    /// keystroke and writes back the text from before it: "900" became "0", and the form refused the
+    /// expense.
+    #[test]
+    fn focusing_the_total_rewrites_nothing() {
+        let (mut dom, _spy, ids) = harness();
+        let field = total(&ids);
+
+        dom.runtime().handle_event("focus", focus(), field);
+        let m = dom.render_immediate_to_vec();
+        assert!(value_writes(&m, field).is_empty(), "focus rewrote the field: {:?}", value_writes(&m, field));
     }
 
     /// The bar is below the footer and targets whatever amount field has focus - here, the total.

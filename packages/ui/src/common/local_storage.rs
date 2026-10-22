@@ -27,6 +27,26 @@ pub struct LocalStorageState {
     /// recovery path when the cookie is cleared. Applied post-mount, never on the first render.
     #[serde(default)]
     pub language: Option<String>,
+    /// This device's copy of `Preferences.personal_project`, so the pure helpers that see only
+    /// this state can tell the account's personal project without the account key.
+    #[serde(default)]
+    pub personal_project: Option<Uuid>,
+    /// Accounts this device has opened a typed key wrap for. Untyped wraps are refused for them
+    /// from then on, whatever the server serves (audit 2026-10-19 L1).
+    #[serde(default)]
+    pub typed_wrap_accounts: Vec<Uuid>,
+}
+
+impl LocalStorageState {
+    pub fn raw_wraps_ok(&self, account_id: Uuid) -> bool {
+        !self.typed_wrap_accounts.contains(&account_id)
+    }
+
+    pub fn saw_typed_wrap(&mut self, account_id: Uuid) {
+        if self.raw_wraps_ok(account_id) {
+            self.typed_wrap_accounts.push(account_id);
+        }
+    }
 }
 
 /// False server-side (non-wasm, non-mobile native).

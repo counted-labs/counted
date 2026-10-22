@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use super::dataset::Dataset;
 use crate::common::{error_message, update_ls, upsert_project, upsert_project_key, LocalStorageState};
-use crate::crypto::{claim_verifier, encrypt_json, encrypt_padded_json, generate_key, key_to_fragment};
+use crate::crypto::{claim_verifier, encrypt_padded_json, generate_key, key_to_fragment};
 use crate::expenses::helpers::expense_modal_helpers::with_shares;
 use crate::tid;
 
@@ -40,7 +40,7 @@ pub async fn seed_demo(ls_ctx: Signal<LocalStorageState>, data: &'static Dataset
         .iter()
         .map(|name| {
             Ok(CreatableUser {
-                payload: encrypt_json(&key, &UserPayload { name: name.to_string(), removed: false })?,
+                payload: encrypt_padded_json(&key, &UserPayload { name: name.to_string(), removed: false })?,
                 project_id: project.id,
             })
         })

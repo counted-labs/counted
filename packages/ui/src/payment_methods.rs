@@ -290,6 +290,7 @@ mod tests {
             payment_methods,
             public_key: None,
             private_key: None,
+            typed_wraps: false,
         }
     }
 

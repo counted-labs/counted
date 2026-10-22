@@ -5,7 +5,7 @@ use crate::tid;
 use shared::{Account as AccountData, UpsertAccountProject};
 
 use crate::common::{adopt_project_key, parse_share_link, LocalStorageState, NativeClipboardReader};
-use crate::crypto::{claim_token, wrap_key};
+use crate::crypto::{claim_token, wrap_key, WrapUse};
 use crate::icons::{CloseIcon, ICON_HEADER};
 use crate::route::Route;
 
@@ -71,7 +71,8 @@ pub fn JoinProjectModal(props: JoinProjectModalProps) -> Element {
         }
 
         let is_auth = auth_ctx().is_some();
-        let escrowed = account_key_ctx().and_then(|ak| wrap_key(&ak, &key));
+        let typed = auth_ctx().is_some_and(|a| a.typed_wraps);
+        let escrowed = account_key_ctx().and_then(|ak| wrap_key(&ak, WrapUse::Escrow(project_id), &key, typed));
         let token = claim_token(&key).to_vec();
         let on_close = props.on_close;
         spawn(async move {

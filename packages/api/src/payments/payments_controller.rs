@@ -1,5 +1,6 @@
+use dioxus::fullstack::Json;
 use dioxus::prelude::*;
-use shared::{Payment, ProjectSync};
+use shared::{BatchSync, Payment, ProjectSync};
 use uuid::Uuid;
 
 #[get("/api/v1/projects/{project_id}/expenses/{expense_id}/payments")]
@@ -29,4 +30,12 @@ pub async fn sync_project_data(
     known_version: i64,
 ) -> Result<ProjectSync, ServerFnError> {
     crate::server::payments::sync_project_data(project_id, known_version).await
+}
+
+/// [`sync_project_data`] for every project a device holds, in one request and one snapshot: the
+/// projects page and the charts read them all, and one request each tripped the proxy's burst
+/// limit. Deleted projects are left out; the rest come most recently updated first.
+#[post("/api/v1/projects/sync")]
+pub async fn sync_projects(Json(payload): Json<BatchSync>) -> Result<Vec<ProjectSync>, ServerFnError> {
+    crate::server::payments::sync_projects(payload).await
 }

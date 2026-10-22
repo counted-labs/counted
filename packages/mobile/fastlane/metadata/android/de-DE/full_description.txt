@@ -1,0 +1,46 @@
+Counted ist die App zum Teilen von Ausgaben mit Freunden: 100 % europäisch, von Grund auf privat, mit einer Mission für die Umwelt. Urlaub, WG, Wochenende, Gruppengeschenk: Tragt eure Ausgaben ein, und Counted sagt dir, wer wem wie viel schuldet, mit möglichst wenigen Überweisungen.
+
+🔗 Kein Konto nötig
+Projekt erstellen, Link schicken. Das war's. Deine Freunde machen mit, ohne sich zu registrieren. Ein Konto? Nie Pflicht. Damit findest du deine Projekte auf einem anderen Gerät wieder, lädst Freunde direkt aus der App ein und teilst deine Zahlungsdaten.
+
+🔒 Auf deinem Handy verschlüsselt
+Namen, Beträge, Projekte, Verlauf: alles wird auf deinem Handy verschlüsselt. Nur du hast den Schlüssel. Niemand kann deine Abrechnungen lesen, nicht einmal wir. Auch dein Passwort verlässt nie dein Handy.
+
+📷 Belege scannen, auf dem Handy
+Fotografiere den Beleg: Betrag, Datum und Kategorie füllen sich von selbst aus. Alles passiert auf deinem Handy. Das Foto wird nicht gespeichert.
+
+🇪🇺 100 % europäisch
+Server in Deutschland, E-Mails aus Frankreich. Deine Projekte verlassen nie die Europäische Union.
+
+💸 Wirklich kostenlos
+Keine Werbung, keine Tracker, kein Abo, keine Bezahlversion, kein Limit für Ausgaben oder Teilnehmende. Wir sammeln nichts, wir verkaufen deine Daten nicht. Das ist nicht unser Modell.
+
+✨ Alles für gemeinsame Ausgaben
+• Ausgaben, Überweisungen und Einnahmen, mit mehreren Zahlenden und mehreren Begünstigten
+• Zu gleichen Teilen, nach Anteilen oder nach genauem Betrag, auf den Cent geprüft
+• Möglichst wenige Überweisungen, um die Gruppe auszugleichen
+• Wiederkehrende Ausgaben wie Miete oder Abos: einmal eingetragen, bei jeder Fälligkeit hinzugefügt
+• Über 150 Währungen, umgerechnet zum Monatskurs der Europäischen Kommission
+• Statistiken nach Kategorie, nach Person und Monat für Monat
+• Ein Verlauf, wer was hinzugefügt, geändert oder gelöscht hat
+• Suche nach Name, Notiz oder Kategorie, direkt auf deinem Gerät
+• Mit Konto ein eigenes Projekt „Meine Ausgaben“: was du allein ausgibst plus dein Anteil an deinen Gruppen, Monat für Monat
+• Eine Ausgabe in ein anderes Projekt verschieben
+• Monatsbudgets pro Kategorie auf deinen echten Anteil, mit einer Warnung bei 80 %, berechnet auf deinem Gerät
+• Schon auf dem Startbildschirm: was dir geschuldet wird und was du schuldest, über alle Projekte, berechnet auf deinem Gerät
+• Ein Kurzbefehl „Eigene Ausgabe“ per langem Druck auf das App-Symbol
+• Offline: ohne Netz ansehen und eintragen
+• Export als CSV und JSON mit einem Tipp
+• Zahlungsdaten (IBAN, PayPal, Wero, Lydia, Revolut…) verschlüsselt wie alles andere
+• Tricount-Import: Freigabelink einfügen, alles wird übernommen
+• Web, Android und iOS: dasselbe Projekt überall, mit demselben Link
+• 32 Sprachen, darunter alle 24 Amtssprachen der EU
+
+🔔 Benachrichtigungen ohne Google
+Counted stellt Benachrichtigungen über UnifiedPush zu, ganz ohne Google-Dienste. Dafür installierst du einen Distributor wie ntfy oder Sunup. Ohne ihn funktioniert die App wie gewohnt, nur ohne Benachrichtigungen.
+
+🌱 Eine Mission
+Counted ist effizient und einfach gebaut: keine Werbung, keine Tracker. Die Berechnungen laufen auf deinem Gerät. Wir verpflichten uns, einen Teil unserer Einnahmen an Umweltprojekte zu geben.
+
+Wie funktioniert das genau? (auf Englisch) counted.fr/en/privacy
+Prüfe selbst den Code, den du ausführst: counted.fr/en/verify

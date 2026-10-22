@@ -35,6 +35,7 @@ sync-error = Samstillingarvilla: { $reason }
 ### Errors
 
 error-network = Næ ekki sambandi við þjóninn. Athugaðu nettenginguna þína.
+error-rate-limited = Þjónninn er upptekinn. Reyndu aftur eftir smástund.
 error-generic = Eitthvað fór úrskeiðis. Reyndu aftur.
 
 error-invalid-email = Þetta netfang er ekki gilt.
@@ -88,6 +89,7 @@ login-submitting = Skráir inn…
 login-password-placeholder = Lykilorðið þitt
 login-no-account = Ertu ekki með aðgang?
 login-unverified = Netfangið þitt hefur ekki enn verið staðfest. Athugaðu pósthólfið eða sendu tengilinn aftur.
+login-maybe-unverified = Varstu að skrá þig? Staðfestu fyrst netfangið með hlekknum sem við sendum þér, eða sendu hann aftur.
 login-resend = Senda staðfestingartengil aftur
 login-resending = Sendir…
 login-resend-sent = Tölvupóstur sendur - athugaðu pósthólfið þitt.
@@ -161,13 +163,12 @@ payment-method-copy-failed = Tókst ekki að afrita - veldu textann og afritaðu
 verify-email-checking = Staðfesti netfangið þitt…
 verify-email-welcome = Netfang staðfest - velkomin(n) í Counted!
 verify-email-back-to-login = Aftur í innskráningu
+verify-email-intro = Sláðu inn lykilorðið þitt til að staðfesta að þetta netfang sé þitt.
+verify-email-submit = Staðfesta netfangið mitt
 
 ### Project status
 
-project-close = Loka
 project-archive = Setja í geymslu
-project-reopen = Opna aftur
-project-unarchive = Taka úr geymslu
 project-sheet-invite = Bjóða
 project-sheet-recurring = Endurtekið
 project-sheet-edit = Breyta verkefni
@@ -350,6 +351,7 @@ missing-encryption-key = Dulkóðunarlykil vantar.
 missing-encryption-key-title = Dulkóðunarlykil vantar
 missing-encryption-key-hint = Tengillinn sem þú notaðir inniheldur ekki lykilinn sem þarf til að afkóða þetta verkefni. Notaðu allan tengilinn sem sá sem stofnaði það deildi.
 project-locked-hint = Þetta tæki hefur ekki lykil þessa verkefnis. Opnaðu deilitengil þess til að aflæsa því.
+expenses-unreadable = Ekki er hægt að lesa sumar færslur í þessu tæki og þær eru ekki taldar með í samtölum. Uppfærðu forritið til að sjá þær.
 project-unlock = Aflæsa
 project-no-local-data-hint = Skráðu þig inn til að hlaða gögnum þessa verkefnis í fyrsta sinn.
 project-gone-title = Þetta verkefni er ekki lengur til
@@ -722,6 +724,7 @@ friends-remove-confirm-message = { $email } verður ekki lengur meðal vina þin
 friends-no-key = Ekki tilbúið enn
 friends-fingerprint = Öryggiskóði
 friends-fingerprint-hint = Tveir vinir sem lesa sama öryggiskóðann hvor fyrir annan vita að enginn situr á milli þeirra - ekki einu sinni þjónninn okkar.
+friends-key-mismatch = Þjónninn sendi opinberan lykil fyrir aðganginn þinn sem passar ekki við einkalykilinn þinn. Öryggiskóðinn þinn er falinn og boð eru óvirk í þessu tæki: einhver gæti verið að eiga við þjóninn.
 friends-outgoing-title = Sendar
 friends-outgoing-hint = Bíður svars. Þú sérð þau meðal vina þinna þegar þau samþykkja.
 friends-withdraw = Hætta við
@@ -876,6 +879,7 @@ occurrence-auto-next = Bætt við sjálfkrafa af endurteknum kostnaði. Næst { 
 occurrence-auto-stopped = Bætt við sjálfkrafa af endurteknum kostnaði sem hefur síðan verið stöðvaður.
 occurrence-manage = Stjórna
 estimate-badge = Á eftir að staðfesta
+expense-pending = Í bið
 estimate-title = Upphæð á eftir að staðfesta.
 estimate-body = Bætt við með fyrri upphæð. Sláðu inn rétta upphæð þegar hún liggur fyrir.
 estimate-confirm = Staðfesta upphæð

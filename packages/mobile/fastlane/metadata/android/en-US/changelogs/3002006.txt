@@ -1,0 +1,6 @@
+• Expense page: "Paid by" and "For" in two linked cards, with how many people share it
+• Even-width tabs in the expense form
+• Long names are no longer cut off in reimbursements
+• The project list loads in one request: no more error right after signing in with several projects
+• Stronger security (email confirmation now asks for your password)
+• Visual and scrolling fixes

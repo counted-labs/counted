@@ -2,39 +2,41 @@ use api::account_projects::account_projects_controller::{
     batch_upsert_account_projects, get_account_projects,
 };
 use api::auth::auth_controller::me;
-use api::projects::projects_controller::get_projects_by_ids;
 use api::users::users_controller::get_users_by_project_id;
 use dioxus::core::Task;
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use crate::tid;
-use shared::{Account, BatchProject, EditableProject, ProjectDto, ProjectPayload, ProjectStatus};
+use shared::{Account, AccountProject, EditableProject, ProjectDto, ProjectPayload, ProjectStatus};
 use uuid::Uuid;
 
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 
 use crate::common::{
-    apply_pull, clear_user_id, copy_missing, copy_text, error_message, haptic, is_offline_error, key_of,
+    apply_pull, clear_user_id, copy_missing, copy_text, error_message, haptic, is_offline_error, is_rate_limited, key_of,
     leave_project_and_forget, left_elsewhere, mark_converted, mark_synced, pending,
     read_from_ls, remove_project, set_cached_projects_list, share_link_for, share_text, sleep, to_push, update_ls,
     update_project_fresh, write_queue, QUICK_ADD,
     write_to_ls,
-    ConfirmModal, DropdownButton, DropdownItem, Mascot, MascotPose, PageTitle,
-    Flash, Haptic, LocalStorageState, OpKind, ProjectEdit, ProjectKey, ProjectStatusItems, ProjectTile, PullToRefresh,
+    ConfirmModal, Mascot, MascotPose, PageTitle,
+    Flash, Haptic, LocalStorageState, OpKind, ProjectEdit, ProjectKey, ProjectTile, PullToRefresh,
     QueuedOp, SpeedDialAction, SpeedDialFab, LEAVE_CONFIRM_MESSAGE, LEAVE_CONFIRM_TITLE,
 };
 use crate::common::fx_cache::read_fx;
 use crate::crypto::decrypt_json;
+use crate::conversion::{conversion_plan, rows_verdicts, Verdict};
 use crate::decrypted::{project_status, status_edit};
-use crate::expenses::helpers::my_spending::{cached_ledgers, load_ledgers, GroupLedger};
+use crate::expenses::helpers::my_spending::{cached_ledgers, sync_all, synced_ledgers, GroupLedger};
 use crate::expenses::{EditProjectModal, OPEN_REIMBURSEMENTS};
 use crate::icons::{ChevronRightIcon, ImportIcon, LinkIcon, LockIcon, PlusIcon, UsersIcon, WalletIcon};
 use crate::payment_methods::refill_project_copies;
 use crate::projects::home::{row_subtitle, BalanceCard, RowBalance};
 use crate::projects::home_balances::{debts, glance, home_currency, totals, Debt, ProjectGlance};
 use crate::projects::personal::{personal_project, PersonalExpenseSheet};
+use crate::projects::project_row_sheet::ProjectRowSheet;
 use crate::projects::personal_cards::{is_personal_dto, PersonalCard, PersonalCreateCard, PersonalCreateSheet};
 use crate::projects::{AddProjectModal, ImportTricountModal, JoinProjectModal};
+use crate::friends::friends_service::my_private_key;
 use crate::friends::{InvitationsCard, NotificationsBell};
 use crate::route::Route;
 
@@ -50,6 +52,8 @@ fn has_archived(state: &LocalStorageState) -> bool {
 fn status_of(state: &LocalStorageState, p: &ProjectDto) -> ProjectStatus {
     project_status(state.projects.iter().find(|lp| lp.project_id == p.id).and_then(key_of).as_ref(), p)
 }
+
+const CONVERSION_PACE_MS: u32 = 1_000;
 
 #[component]
 pub fn ProjectsPage() -> Element {
@@ -71,6 +75,11 @@ pub fn ProjectsPage() -> Element {
     let mut show_join_project = use_signal(|| false);
     let mut show_personal_expense = use_signal(|| false);
     let mut show_personal_create = use_signal(|| false);
+
+    // What the account and the list's sync each answered, for the conversion further down. It needs
+    // both, and must not start before reconciliation has dropped the projects left elsewhere.
+    let account_answer: Signal<Option<Vec<AccountProject>>> = use_signal(|| None);
+    let mut verdicts: Signal<Option<Vec<Verdict>>> = use_signal(|| None);
 
     // Reconciliation, both directions. Reads `account_key_ctx` as well as `auth_ctx` so it re-runs
     // when either resolves - on a fresh login both are set before this page renders, but a session
@@ -112,9 +121,11 @@ pub fn ProjectsPage() -> Element {
             // A project claimed here that the account's shared payment methods never reached -
             // saved on a device without its key, or claimed since. Refilled from a `me()` made
             // now, never from `account` above: that one is as old as this session, and a copy
-            // derived from it could restore what another device has since withdrawn.
+            // derived from it could restore what another device has since withdrawn. An account
+            // with no methods has nothing to copy, and its projects stay "missing" for ever: it
+            // only decides whether to ask.
             if let Some(ak) = account_key {
-                if copy_missing(&read_from_ls(), &server) {
+                if account.payment_methods.is_some() && copy_missing(&read_from_ls(), &server) {
                     if let Ok(Some(fresh)) = me().await {
                         let _ = refill_project_copies(&fresh, &ak).await;
                         // Guarded: this effect reads `auth_ctx`, and a refill the server refused
@@ -127,8 +138,9 @@ pub fn ProjectsPage() -> Element {
                 }
             }
 
+            let own_private_key = account_key.and_then(|ak| my_private_key(&account, &ak, ls_ctx.peek().raw_wraps_ok(account.id)));
             update_ls(ls_ctx, |state| {
-                apply_pull(state, &server, account_key.as_ref(), account.id);
+                apply_pull(state, &server, account_key.as_ref(), account.id, own_private_key);
                 mark_synced(state, &accepted, account.id);
                 // The identity this device pushed is held by another account. Drop it locally so the
                 // "who am I?" picker reopens, and so `to_push` stops re-sending a claim that will be
@@ -147,50 +159,99 @@ pub fn ProjectsPage() -> Element {
                 }
             });
 
-            // The leak docs/plans/participant-links-encryption.md closes ties these expenses to this
-            // account's email, so its devices convert every project they hold, opened or not. One
-            // at a time, once per device and project.
-            let pending: Vec<(Uuid, [u8; 32])> = read_from_ls()
-                .projects
-                .iter()
-                .filter(|p| !p.converted)
-                .filter_map(|p| Some((p.project_id, key_of(p)?)))
-                .collect();
-            for (project_id, key) in pending {
-                if crate::conversion::convert(key, project_id).await.is_ok() {
-                    update_ls(ls_ctx, |state| mark_converted(state, project_id));
-                }
-            }
+            let mut account_answer = account_answer;
+            account_answer.set(Some(server));
         });
     });
 
-    let cached_list: Option<Vec<ProjectDto>> = ls_ctx().cached_projects_list.clone();
+    let cached_list: Option<Vec<ProjectDto>> = ls_ctx.read().cached_projects_list.clone();
 
     let resource_version = use_context::<Signal<u64>>();
 
+    // Every membership, archived or not: the toggle only filters what renders. Skipping the
+    // archived ones meant a project un-archived on another device stayed archived here.
+    // A memo, not `ls_ctx()` in the resource: every `update_ls` would re-send the batch, and the
+    // login sync writes once per converted project - enough to trip nginx's burst limit (429).
+    let project_ids = use_memo(move || ls_ctx.read().projects.iter().map(|p| p.project_id).collect::<Vec<Uuid>>());
+
+    // Every group's ledger: this device's cache at once, then what the resource's sync answers.
+    // Empty on the server render, so the first client render matches it.
+    let mut ledgers: Signal<Vec<GroupLedger>> = use_signal(Vec::new);
+    let mut synced = use_signal(|| false);
+    use_effect(move || ledgers.set(cached_ledgers(&read_from_ls(), Uuid::nil())));
+
     let mut projects = use_resource(move || {
-        let ls_ctx = ls_ctx;
         async move {
             let _v = resource_version();
-            // Every membership, archived or not: the toggle only filters what renders. Skipping the
-            // archived ones meant a project un-archived on another device stayed archived here.
-            let ids: Vec<Uuid> = ls_ctx().projects.iter().map(|p| p.project_id).collect();
+            let ids = project_ids();
             if ids.is_empty() {
                 return Ok(vec![]);
             }
-            let result = get_projects_by_ids(Json(BatchProject { ids })).await;
-            if let Ok(ref list) = result {
-                // read_from_ls() and no `ls_ctx.set()` - deliberately *not* `update_ls`: this
-                // closure reads `ls_ctx()` above, so refreshing the signal here would re-run the
-                // resource forever. Safe as a disk-only write only because the cached list is read
-                // back through `read_from_ls` (`has_archived` below) or the signal's own seed, and
-                // because every other writer now bases on disk too.
-                let mut state = read_from_ls();
-                set_cached_projects_list(&mut state, list.clone());
-                write_to_ls(&state);
-            }
-            result
+            // One request for the list and every group's balances: one per project tripped the
+            // proxy's burst limit on accounts with a few groups.
+            let result = sync_all(ids).await;
+            synced.set(true);
+            let (before, syncs) = result?;
+            ledgers.set(synced_ledgers(&before, &syncs, Uuid::nil()));
+            verdicts.set(Some(rows_verdicts(&before, &syncs)));
+            let list: Vec<ProjectDto> = syncs.into_iter().filter_map(|s| s.project).collect();
+            // read_from_ls() and no `ls_ctx.set()` - deliberately *not* `update_ls`: this
+            // closure reads `project_ids`, derived from `ls_ctx`, so refreshing the signal here
+            // could re-run the resource. Safe as a disk-only write only because the cached list is read
+            // back through `read_from_ls` (`has_archived` below) or the signal's own seed, and
+            // because every other writer now bases on disk too.
+            let mut state = read_from_ls();
+            set_cached_projects_list(&mut state, list.clone());
+            write_to_ls(&state);
+            Ok(list)
         }
+    });
+
+    // The leak docs/plans/participant-links-encryption.md closes ties these expenses to this
+    // account's email, so its devices convert every project they hold, opened or not - decided from
+    // what the list and the account already answered (`conversion_plan`), so a project with nothing
+    // left costs no request. The rest one at a time, paced: each is two to five requests, and back
+    // to back on a fast link they outrun nginx's 10 a second within a dozen projects.
+    let account_id = use_memo(move || auth_ctx.read().as_ref().map(|a| a.id));
+    let mut converting = use_signal(|| false);
+    let mut attempted: Signal<HashSet<Uuid>> = use_signal(HashSet::new);
+    use_effect(move || {
+        let Some(account) = account_id() else { return };
+        if converting() {
+            return;
+        }
+        let plan = {
+            let (verdicts, answer) = (verdicts.read(), account_answer.read());
+            let (Some(verdicts), Some(answer)) = (verdicts.as_ref(), answer.as_ref()) else { return };
+            conversion_plan(&read_from_ls(), verdicts, answer, &attempted.peek())
+        };
+        if !plan.mark.is_empty() {
+            update_ls(ls_ctx, |state| {
+                for project_id in &plan.mark {
+                    mark_converted(state, *project_id);
+                }
+            });
+        }
+        if plan.convert.is_empty() {
+            return;
+        }
+        attempted.write().extend(plan.convert.iter().map(|(id, _)| *id));
+        converting.set(true);
+        spawn(async move {
+            for (i, (project_id, key)) in plan.convert.into_iter().enumerate() {
+                if i > 0 {
+                    sleep(CONVERSION_PACE_MS).await;
+                }
+                if *account_id.peek() != Some(account) {
+                    break;
+                }
+                let held = read_from_ls().projects.iter().any(|p| p.project_id == project_id && key_of(p) == Some(key));
+                if held && crate::conversion::convert(key, project_id).await.is_ok() {
+                    update_ls(ls_ctx, |state| mark_converted(state, project_id));
+                }
+            }
+            converting.set(false);
+        });
     });
 
     // Personal projects are for accounts only: signed out, the shortcut never shows.
@@ -210,19 +271,6 @@ pub fn ProjectsPage() -> Element {
         }
     });
 
-    // Every group's ledger: this device's cache at once, then one conditional sync per project in
-    // place of the participant fetch each card used to make. Empty on the server render, so the
-    // first client render matches it.
-    let mut ledgers: Signal<Vec<GroupLedger>> = use_signal(Vec::new);
-    let mut synced = use_signal(|| false);
-    use_effect(move || {
-        let _ = projects.read();
-        ledgers.set(cached_ledgers(&read_from_ls(), Uuid::nil()));
-        spawn(async move {
-            ledgers.set(load_ledgers(Uuid::nil()).await);
-            synced.set(true);
-        });
-    });
     let currency = use_memo(move || home_currency(personal().map(|p| p.currency), &ledgers.read()));
     let home_totals = use_memo(move || totals(&ledgers.read(), &currency(), read_fx().as_ref()));
     let home_debts = use_memo(move || debts(&ledgers.read()));
@@ -344,8 +392,13 @@ pub fn ProjectsPage() -> Element {
                         }
                     }
                 },
-                Some(Err(e)) if is_offline_error(e) => {
-                    match &cached_list {
+                // A refused refresh is no reason to drop a list already saved: nginx's 429 means this
+                // client asked too fast, and `sync_all` has already retried once.
+                Some(Err(e)) if is_offline_error(e) || is_rate_limited(e) => {
+                    let rate_limited = is_rate_limited(e);
+                    // Disk as well as the signal: the resource saves the list to disk only, so after
+                    // a first sync in this session the signal can still hold none.
+                    match &cached_list.clone().or_else(|| read_from_ls().cached_projects_list) {
                         Some(list) => {
                             let filtered: Vec<ProjectDto> = list
                                 .iter()
@@ -356,12 +409,12 @@ pub fn ProjectsPage() -> Element {
                             let filtered: Vec<ProjectDto> =
                                 filtered.into_iter().filter(|p| Some(p.id) != mine.as_ref().map(|m| m.id)).collect();
                             rsx! {
-                                div { role: "alert",
+                                div { id: "projects-cached-banner", role: "alert",
                                     class: "alert alert-warning alert-soft text-sm",
-                                    {tid!("projects-offline-banner")}
+                                    if rate_limited { {tid!("error-rate-limited")} } else { {tid!("projects-offline-banner")} }
                                 }
                                 if let Some(project) = mine {
-                                    PersonalCard { project }
+                                    PersonalCard { project, ledgers }
                                 }
                                 if filtered.is_empty() {
                                     div { class: "flex flex-col items-center gap-2 py-12 text-base-content/70",
@@ -369,7 +422,7 @@ pub fn ProjectsPage() -> Element {
                                         span { class: "font-semibold", {tid!("projects-empty")} }
                                     }
                                 } else {
-                                    div { id: "projects-list", class: "shrink-0 rounded-[20px] bg-base-100 shadow-soft flex flex-col overflow-hidden",
+                                    div { id: "projects-list", class: "shrink-0 rounded-[20px] bg-base-100 shadow-soft flex flex-col",
                                         for (i, project) in filtered.into_iter().enumerate() {
                                             if i > 0 {
                                                 div { class: "h-px bg-base-200 ml-[70px]" }
@@ -380,6 +433,9 @@ pub fn ProjectsPage() -> Element {
                                 }
                             }
                         }
+                        None if rate_limited => rsx! {
+                            div { role: "alert", class: "alert alert-error", "{error_message(e)}" }
+                        },
                         None => rsx! {
                             div { class: "flex flex-col items-center gap-4 py-12 text-base-content/70",
                                 Mascot { pose: MascotPose::Offline }
@@ -406,7 +462,7 @@ pub fn ProjectsPage() -> Element {
                         .collect();
                     rsx! {
                         if let Some(project) = pinned {
-                            PersonalCard { project }
+                            PersonalCard { project, ledgers }
                         }
                         if filtered.is_empty() {
                             div { class: "flex flex-col items-center gap-2 py-12 text-base-content/70",
@@ -415,7 +471,7 @@ pub fn ProjectsPage() -> Element {
                             }
                             GroupCreateCard { on_create: move |_| show_add_project.set(true) }
                         } else {
-                            div { id: "projects-list", class: "shrink-0 rounded-[20px] bg-base-100 shadow-soft flex flex-col overflow-hidden",
+                            div { id: "projects-list", class: "shrink-0 rounded-[20px] bg-base-100 shadow-soft flex flex-col",
                                 for (i, project) in filtered.into_iter().enumerate() {
                                     if i > 0 {
                                         div { class: "h-px bg-base-200 ml-[70px]" }
@@ -539,12 +595,12 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
     let mut show_leave_confirm = use_signal(|| false);
     let mut show_unlock_modal = use_signal(|| false);
 
-    // `ls_ctx()`, not `read_from_ls()`: the signal is authoritative now that every writer goes
+    // `ls_ctx.read()`, not `read_from_ls()`: the signal is authoritative now that every writer goes
     // through `update_ls`, and reading it subscribes - so a key arriving (escrow unwrapped by the
     // account sync, or the unlock modal) re-renders this card instead of leaving it locked until a
-    // reload. It also stops a full store parse per card per render.
+    // reload. `.read()`, not `ls_ctx()`, which would clone every cached row per card per render.
     let stored_key: Option<[u8; 32]> =
-        ls_ctx().projects.iter().find(|p| p.project_id == project_id).and_then(key_of);
+        ls_ctx.read().projects.iter().find(|p| p.project_id == project_id).and_then(key_of);
 
     let mut key_ctx = use_context_provider(|| ProjectKey(Signal::new(stored_key))).0;
     // The provider's initializer runs once, so without this the context stays `None` after an
@@ -555,9 +611,9 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
         }
     });
 
-    // Long press anywhere opens the same menu as the `...` trigger, so the whole card is the
+    // Long press anywhere opens the same sheet as the `...` trigger, so the whole card is the
     // target rather than a 32px button.
-    let mut menu_open = use_signal(|| false);
+    let mut sheet_open = use_signal(|| false);
     let mut press_task: Signal<Option<Task>> = use_signal(|| None);
     let mut long_pressed = use_signal(|| false);
     let mut cancel_press = move || {
@@ -607,16 +663,16 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
             .and_then(|e| e.payload);
         let on_change = props.on_change;
         if !is_online() {
-            pending_ops.write().push_back(QueuedOp {
-                id: Uuid::new_v4(),
-                label: queue_label.clone(),
-                op: OpKind::EditProject(ProjectEdit {
+            pending_ops.write().push_back(QueuedOp::new(
+                Uuid::new_v4(),
+                &queue_label,
+                OpKind::EditProject(ProjectEdit {
                     project_id,
                     name_description: None,
                     status: Some(status.clone()),
                     history: None,
                 }),
-            });
+            ));
             write_queue(&pending_ops.read());
             update_ls(ls_ctx, |state| {
                 if let Some(ref mut list) = state.cached_projects_list {
@@ -652,7 +708,7 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
     rsx! {
         div {
             id: "project-card-{project_id}",
-            class: "relative flex items-center",
+            class: "relative flex items-center first:rounded-t-[20px] last:rounded-b-[20px] has-[>[role=button]:active]:bg-base-200",
             "data-synced": props.synced,
             // No `ontouchmove`: on mobile every dispatched event costs a *synchronous* XHR to
             // wry's custom protocol, so a ~60Hz listener blocks the main thread through every
@@ -666,7 +722,7 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
                     // is the only signal that the hold worked - the menu appears in the same frame.
                     haptic(Haptic::Medium);
                     long_pressed.set(true);
-                    menu_open.set(true);
+                    sheet_open.set(true);
                 });
                 press_task.set(Some(task));
             },
@@ -675,14 +731,14 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
             ontouchend: move |e| {
                 cancel_press();
                 // preventDefault on touchend suppresses the synthesised click; without it the
-                // click hits the menu's own `fixed inset-0` scrim and closes it instantly. Only
-                // touchend does this - pointerup would not.
+                // click hits the sheet's backdrop and closes it instantly. Only touchend does
+                // this - pointerup would not.
                 if long_pressed() {
                     e.prevent_default();
                 }
             },
             div {
-            class: if locked { "flex-1 min-w-0 flex items-center gap-3 ps-4 pe-3 py-3 cursor-pointer active:bg-base-200" } else { "flex-1 min-w-0 flex items-center gap-3 px-4 py-3 cursor-pointer active:bg-base-200" },
+            class: if locked { "flex-1 min-w-0 flex items-center gap-3 ps-4 pe-3 py-3 cursor-pointer" } else { "flex-1 min-w-0 flex items-center gap-3 px-4 py-3 cursor-pointer" },
             role: "button",
             tabindex: "0",
             // Locked opens the unlock modal instead: `ExpensesPage` would only reach
@@ -734,36 +790,29 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
             }
             // The row's actions open on a long press; the trigger stays in the tab order for the
             // keyboard and is drawn only for a locked row, whose actions have no other way in.
-            DropdownButton {
-                open: menu_open,
-                label: if locked { tid!("project-actions") } else { format!("{}, {display_name}", tid!("project-actions")) },
-                button_class: if locked { "btn btn-ghost btn-circle btn-sm relative z-50 me-4" } else { "sr-only focus:not-sr-only focus:me-4" },
-                if locked {
-                    DropdownItem {
-                        variant: "primary",
-                        label: tid!("project-unlock"),
-                        onclick: move |_| show_unlock_modal.set(true),
-                    }
-                } else {
-                    DropdownItem {
-                        variant: "primary",
-                        label: tid!("edit"),
-                        onclick: move |_| show_edit_modal.set(true),
-                    }
-                }
-                DropdownItem {
-                    variant: "error",
-                    label: tid!("leave"),
-                    onclick: move |_| show_leave_confirm.set(true),
-                }
-                // Hidden while locked: a status change writes an encrypted history
-                // entry, and this device has nothing to encrypt it with.
-                if !locked {
-                    ProjectStatusItems {
-                        status: project_status.clone(),
-                        on_apply: apply_status,
-                    }
-                }
+            button {
+                r#type: "button",
+                class: if locked { "btn btn-ghost btn-circle btn-sm me-4" } else { "sr-only focus:not-sr-only focus:me-4" },
+                aria_label: if locked { tid!("project-actions") } else { format!("{}, {display_name}", tid!("project-actions")) },
+                aria_haspopup: "dialog",
+                aria_expanded: sheet_open(),
+                onclick: move |_| {
+                    haptic(Haptic::Light);
+                    sheet_open.set(true);
+                },
+                "..."
+            }
+        }
+        if sheet_open() {
+            ProjectRowSheet {
+                title: if locked { tid!("missing-encryption-key-title") } else { display_name.clone() },
+                locked,
+                status: project_status.clone(),
+                on_close: move |_| sheet_open.set(false),
+                on_edit: move |_| show_edit_modal.set(true),
+                on_unlock: move |_| show_unlock_modal.set(true),
+                on_status: apply_status,
+                on_leave: move |_| show_leave_confirm.set(true),
             }
         }
         if show_unlock_modal() {

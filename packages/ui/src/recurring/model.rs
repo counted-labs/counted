@@ -68,11 +68,7 @@ pub struct Template {
 
 impl Template {
     pub fn expense_type(&self) -> ExpenseType {
-        match self.expense_type.as_str() {
-            "transfer" => ExpenseType::Transfer,
-            "gain" => ExpenseType::Gain,
-            _ => ExpenseType::Expense,
-        }
+        ExpenseType::parse(&self.expense_type).unwrap_or(ExpenseType::Expense)
     }
 
     pub fn conversion(&self) -> Option<(f64, &str, f64)> {

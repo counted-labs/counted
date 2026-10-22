@@ -1,9 +1,9 @@
 use dioxus::prelude::*;
 use crate::tid;
 
-use crate::auth::credentials::{password_error_key, sign_up};
+use crate::auth::credentials::{account_key, password_error_key, sign_up};
 use crate::common::{error_message, next_paint, read_from_ls, AppHeader, Mascot, MascotPose};
-use crate::crypto::{derive_account_key_v1, encrypt_json, generate_kdf_salt};
+use crate::crypto::{encrypt_padded_json, generate_kdf_salt};
 use crate::i18n::current_lang;
 use crate::icons::{LockIcon, ICON_INLINE};
 use crate::route::Route;
@@ -47,8 +47,15 @@ fn RegisterForm() -> Element {
             next_paint().await;
 
             let kdf_salt = generate_kdf_salt();
-            let account_key = derive_account_key_v1(&password_val, &kdf_salt);
-            let encrypted_display_name = match encrypt_json(&account_key, &display_name_val) {
+            let account_key = match account_key(&password_val, kdf_salt.to_vec()).await {
+                Ok(k) => k,
+                Err(e) => {
+                    error_msg.set(Some(error_message(&e)));
+                    loading.set(false);
+                    return;
+                }
+            };
+            let encrypted_display_name = match encrypt_padded_json(&account_key, &display_name_val) {
                 Ok(p) => p,
                 Err(e) => {
                     error_msg.set(Some(e));

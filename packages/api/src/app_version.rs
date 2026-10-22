@@ -40,6 +40,16 @@ pub fn outdated_payload() -> String {
     serde_json::json!({ "message": errors::CLIENT_OUTDATED, "code": 426 }).to_string()
 }
 
+/// Whether the floor already refuses every build below `version`, i.e. every client left reads
+/// what `version` introduced.
+pub fn floor_at_least(min: Option<&str>, version: &str) -> bool {
+    matches!((min.and_then(triple), triple(version)), (Some(m), Some(v)) if m >= v)
+}
+
+pub fn floor_reached(version: &str) -> bool {
+    floor_at_least(std::env::var(MIN_ENV).ok().as_deref(), version)
+}
+
 /// The decision for one request, from its path and headers. The axum layer that calls this lives
 /// in `packages/web` - the only crate that links `dioxus_server`, whose axum is the router's.
 pub fn refuses(path: &str, app_version: Option<&str>, user_agent: Option<&str>) -> bool {
@@ -94,6 +104,15 @@ mod tests {
         assert!(outdated(None, Some(""), Some("0.2.1")));
         assert!(!outdated(None, UA, Some("0.2.1")));
         assert!(!outdated(None, Some("curl/8.0"), Some("0.2.1")));
+    }
+
+    #[test]
+    fn a_floor_is_reached_at_or_above_the_version() {
+        assert!(floor_at_least(Some("3.2.6"), "3.2.6"));
+        assert!(floor_at_least(Some("3.3.0"), "3.2.6"));
+        assert!(!floor_at_least(Some("3.2.5"), "3.2.6"));
+        assert!(!floor_at_least(None, "3.2.6"));
+        assert!(!floor_at_least(Some("latest"), "3.2.6"));
     }
 
     #[test]

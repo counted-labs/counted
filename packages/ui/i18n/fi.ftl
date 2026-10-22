@@ -35,6 +35,7 @@ sync-error = Synkronointivirhe: { $reason }
 ### Errors
 
 error-network = Palvelimeen ei saada yhteyttä. Tarkista internetyhteytesi.
+error-rate-limited = Palvelin on kiireinen. Yritä hetken päästä uudelleen.
 error-generic = Jokin meni pieleen. Yritä uudelleen.
 
 error-invalid-email = Sähköpostiosoite ei kelpaa.
@@ -88,6 +89,7 @@ login-submitting = Kirjaudutaan…
 login-password-placeholder = Salasanasi
 login-no-account = Eikö sinulla ole vielä tiliä?
 login-unverified = Sähköpostiosoitettasi ei ole vielä vahvistettu. Tarkista postilaatikkosi tai lähetä linkki uudelleen.
+login-maybe-unverified = Rekisteröidyitkö juuri? Vahvista ensin osoitteesi lähettämällämme linkillä tai lähetä se uudelleen.
 login-resend = Lähetä vahvistuslinkki uudelleen
 login-resending = Lähetetään…
 login-resend-sent = Sähköposti lähetetty - tarkista postilaatikkosi.
@@ -161,13 +163,12 @@ payment-method-copy-failed = Kopiointi ei onnistunut - valitse teksti ja kopioi 
 verify-email-checking = Vahvistetaan sähköpostiosoitettasi…
 verify-email-welcome = Sähköposti vahvistettu - tervetuloa Countediin!
 verify-email-back-to-login = Takaisin kirjautumiseen
+verify-email-intro = Anna salasanasi vahvistaaksesi, että tämä osoite on sinun.
+verify-email-submit = Vahvista osoitteeni
 
 ### Project status
 
-project-close = Sulje
 project-archive = Arkistoi
-project-reopen = Avaa uudelleen
-project-unarchive = Palauta arkistosta
 project-sheet-invite = Kutsu
 project-sheet-recurring = Toistuvat
 project-sheet-edit = Muokkaa projektia
@@ -350,6 +351,7 @@ missing-encryption-key = Salausavain puuttuu.
 missing-encryption-key-title = Salausavain puuttuu
 missing-encryption-key-hint = Käyttämäsi linkki ei sisällä tämän projektin purkamiseen tarvittavaa avainta. Käytä projektin luojan jakamaa täydellistä linkkiä.
 project-locked-hint = Tällä laitteella ei ole tämän projektin avainta. Avaa sen jakolinkki avataksesi lukituksen.
+expenses-unreadable = Joitakin merkintöjä ei voi lukea tällä laitteella, eikä niitä lasketa summiin. Päivitä sovellus nähdäksesi ne.
 project-unlock = Avaa lukitus
 project-no-local-data-hint = Kirjaudu sisään ladataksesi tämän projektin tiedot ensimmäistä kertaa.
 project-gone-title = Projektia ei enää ole
@@ -722,6 +724,7 @@ friends-remove-confirm-message = { $email } ei ole enää kavereissasi, etkä si
 friends-no-key = Ei vielä valmis
 friends-fingerprint = Turvakoodi
 friends-fingerprint-hint = Kaksi kaveria, jotka lukevat toisilleen saman turvakoodin, tietävät, ettei kukaan ole heidän välissään - ei edes palvelimemme.
+friends-key-mismatch = Palvelin lähetti tilillesi julkisen avaimen, joka ei vastaa yksityistä avaintasi. Turvakoodisi on piilotettu ja kutsut ovat pois päältä tällä laitteella: joku saattaa peukaloida palvelinta.
 friends-outgoing-title = Lähetetyt
 friends-outgoing-hint = Odottaa vastausta. Näet heidät kavereissasi, kun he hyväksyvät.
 friends-withdraw = Peruuta
@@ -876,6 +879,7 @@ occurrence-auto-next = Lisätty automaattisesti toistuvasta kulusta. Seuraava { 
 occurrence-auto-stopped = Lisätty automaattisesti toistuvasta kulusta, joka on sittemmin lopetettu.
 occurrence-manage = Hallitse
 estimate-badge = Vahvistettava
+expense-pending = Odottaa
 estimate-title = Summa vahvistettava.
 estimate-body = Lisätty edellisellä summalla. Syötä oikea summa, kun se selviää.
 estimate-confirm = Vahvista summa

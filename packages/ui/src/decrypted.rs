@@ -144,10 +144,6 @@ pub fn project_name(key: &[u8; 32], p: &ProjectDto) -> String {
     decrypt_json::<ProjectPayload>(key, &p.payload).map(|pp| pp.name).unwrap_or_default()
 }
 
-pub fn project_currency(key: &[u8; 32], p: &ProjectDto) -> String {
-    decrypt_json::<ProjectPayload>(key, &p.payload).map(|pp| pp.currency).unwrap_or_default()
-}
-
 /// The payload's status when it carries one, else the `projects.status` column's.
 pub fn project_status(key: Option<&[u8; 32]>, p: &ProjectDto) -> ProjectStatus {
     key.and_then(|k| decrypt_json::<ProjectPayload>(k, &p.payload).ok())
@@ -183,12 +179,8 @@ fn decrypt_expense_and_shares(
     e: &Expense,
 ) -> Result<(DecryptedExpense, Option<Vec<DecryptedPayment>>), String> {
     let ep: ExpensePayload = decrypt_json(key, &e.payload)?;
-    let expense_type = match ep.expense_type.as_str() {
-        "expense" => ExpenseType::Expense,
-        "transfer" => ExpenseType::Transfer,
-        "gain" => ExpenseType::Gain,
-        other => return Err(format!("invalid expense type: {other}")),
-    };
+    let expense_type =
+        ExpenseType::parse(&ep.expense_type).ok_or_else(|| format!("invalid expense type: {}", ep.expense_type))?;
     let shares = ep.shares.map(|shares| {
         shares
             .into_iter()

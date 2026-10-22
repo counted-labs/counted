@@ -34,6 +34,7 @@ sync-error = Synchronisatiefout: { $reason }
 ### Errors
 
 error-network = Kan de server niet bereiken. Controleer je internetverbinding.
+error-rate-limited = De server heeft het druk. Probeer het zo opnieuw.
 error-generic = Er is iets misgegaan. Probeer het opnieuw.
 
 error-invalid-email = Dit e-mailadres is niet geldig.
@@ -74,6 +75,7 @@ login-submitting = Bezig met inloggen…
 login-password-placeholder = Je wachtwoord
 login-no-account = Nog geen account?
 login-unverified = Je e-mailadres is nog niet geverifieerd. Kijk in je inbox of laat de link opnieuw sturen.
+login-maybe-unverified = Net geregistreerd? Bevestig eerst je adres met de link die we je mailden, of stuur hem opnieuw.
 login-resend = Verificatielink opnieuw sturen
 login-resending = Bezig met verzenden…
 login-resend-sent = E-mail verzonden - kijk in je inbox.
@@ -141,13 +143,12 @@ payment-methods-key-missing = Log opnieuw in om je betaalgegevens te beheren.
 verify-email-checking = Je e-mailadres wordt geverifieerd…
 verify-email-welcome = E-mailadres geverifieerd - welkom bij Counted!
 verify-email-back-to-login = Terug naar inloggen
+verify-email-intro = Voer je wachtwoord in om te bevestigen dat dit adres van jou is.
+verify-email-submit = Mijn adres bevestigen
 
 ### Project status
 
-project-close = Afsluiten
 project-archive = Archiveren
-project-reopen = Heropenen
-project-unarchive = Uit archief halen
 project-sheet-invite = Uitnodigen
 project-sheet-recurring = Terugkerend
 project-sheet-edit = Project bewerken
@@ -327,6 +328,7 @@ missing-encryption-key = Versleutelsleutel ontbreekt.
 missing-encryption-key-title = Versleutelsleutel ontbreekt
 missing-encryption-key-hint = De link die je gebruikte bevat niet de sleutel om dit project te ontsleutelen. Gebruik de volledige link van degene die het heeft aangemaakt.
 project-locked-hint = Dit apparaat heeft de sleutel van dit project niet. Open de deellink om het te ontgrendelen.
+expenses-unreadable = Sommige items kunnen op dit apparaat niet worden gelezen en tellen niet mee in de totalen. Werk de app bij om ze te zien.
 project-unlock = Ontgrendelen
 project-no-local-data-hint = Log in om de gegevens van dit project voor het eerst te laden.
 project-gone-hint = Het is verwijderd toen de laatste deelnemer het verliet. De deellink werkt niet meer, ook niet als je hem opnieuw opent.
@@ -750,6 +752,7 @@ friends-remove-confirm-message = { $email } staat dan niet meer in je vrienden, 
 friends-no-key = Nog niet klaar
 friends-fingerprint = Veiligheidscode
 friends-fingerprint-hint = Twee vrienden die elkaar dezelfde veiligheidscode voorlezen weten dat er niemand tussen hen zit - zelfs onze server niet.
+friends-key-mismatch = De server stuurde voor je account een publieke sleutel die niet bij je privésleutel past. Je veiligheidscode is verborgen en uitnodigingen staan uit op dit apparaat: misschien knoeit iemand met de server.
 friends-outgoing-title = Verstuurd
 friends-outgoing-hint = Wacht op antwoord. Ze verschijnen bij je vrienden zodra ze accepteren.
 friends-withdraw = Annuleren
@@ -904,6 +907,7 @@ occurrence-auto-next = Automatisch toegevoegd door een terugkerende uitgave. Vol
 occurrence-auto-stopped = Automatisch toegevoegd door een terugkerende uitgave die inmiddels gestopt is.
 occurrence-manage = Beheren
 estimate-badge = Te bevestigen
+expense-pending = In afwachting
 estimate-title = Bedrag te bevestigen.
 estimate-body = Toegevoegd met het vorige bedrag. Vul het echte bedrag in zodra je het weet.
 estimate-confirm = Bedrag bevestigen

@@ -37,6 +37,7 @@ sync-error = Błąd synchronizacji: { $reason }
 ### Errors
 
 error-network = Nie można połączyć się z serwerem. Sprawdź połączenie z internetem.
+error-rate-limited = Serwer jest przeciążony. Spróbuj ponownie za chwilę.
 error-generic = Coś poszło nie tak. Spróbuj ponownie.
 
 error-invalid-email = Ten adres e-mail jest nieprawidłowy.
@@ -90,6 +91,7 @@ login-submitting = Logowanie…
 login-password-placeholder = Twoje hasło
 login-no-account = Nie masz jeszcze konta?
 login-unverified = Twój adres e-mail nie został jeszcze zweryfikowany. Sprawdź skrzynkę lub wyślij link ponownie.
+login-maybe-unverified = Dopiero się rejestrujesz? Najpierw potwierdź adres linkiem, który ci wysłaliśmy, albo wyślij go ponownie.
 login-resend = Wyślij link weryfikacyjny ponownie
 login-resending = Wysyłanie…
 login-resend-sent = E-mail wysłany - sprawdź skrzynkę.
@@ -163,13 +165,12 @@ payment-method-copy-failed = Nie udało się skopiować - zaznacz tekst i skopiu
 verify-email-checking = Weryfikacja adresu e-mail…
 verify-email-welcome = E-mail zweryfikowany - witaj w Counted!
 verify-email-back-to-login = Wróć do logowania
+verify-email-intro = Wpisz swoje hasło, aby potwierdzić, że ten adres należy do ciebie.
+verify-email-submit = Potwierdź mój adres
 
 ### Project status
 
-project-close = Zamknij
 project-archive = Archiwizuj
-project-reopen = Otwórz ponownie
-project-unarchive = Przywróć z archiwum
 project-sheet-invite = Zaproś
 project-sheet-recurring = Cykliczne
 project-sheet-edit = Edytuj projekt
@@ -354,6 +355,7 @@ missing-encryption-key = Brak klucza szyfrowania.
 missing-encryption-key-title = Brak klucza szyfrowania
 missing-encryption-key-hint = Użyty link nie zawiera klucza potrzebnego do odszyfrowania tego projektu. Użyj pełnego linku udostępnionego przez osobę, która go utworzyła.
 project-locked-hint = To urządzenie nie ma klucza do tego projektu. Otwórz jego link udostępniania, aby go odblokować.
+expenses-unreadable = Niektórych wpisów nie da się odczytać na tym urządzeniu i nie są wliczone do sum. Zaktualizuj aplikację, aby je zobaczyć.
 project-unlock = Odblokuj
 project-no-local-data-hint = Zaloguj się, aby po raz pierwszy wczytać dane tego projektu.
 project-gone-title = Ten projekt już nie istnieje
@@ -736,6 +738,7 @@ friends-remove-confirm-message = { $email } nie będzie już wśród Twoich znaj
 friends-no-key = Jeszcze niegotowe
 friends-fingerprint = Kod bezpieczeństwa
 friends-fingerprint-hint = Dwoje znajomych, którzy odczytają sobie ten sam kod bezpieczeństwa, wie, że nikt nie stoi między nimi - nawet nasz serwer.
+friends-key-mismatch = Serwer wysłał dla twojego konta klucz publiczny, który nie pasuje do twojego klucza prywatnego. Twój kod bezpieczeństwa jest ukryty, a zaproszenia są wyłączone na tym urządzeniu: ktoś może manipulować serwerem.
 friends-outgoing-title = Wysłane
 friends-outgoing-hint = Oczekiwanie na odpowiedź. Pojawią się wśród znajomych, gdy przyjmą zaproszenie.
 friends-withdraw = Anuluj
@@ -892,6 +895,7 @@ occurrence-auto-next = Dodany automatycznie przez wydatek cykliczny. Następny: 
 occurrence-auto-stopped = Dodany automatycznie przez wydatek cykliczny, który został już zakończony.
 occurrence-manage = Zarządzaj
 estimate-badge = Do potwierdzenia
+expense-pending = Oczekuje
 estimate-title = Kwota do potwierdzenia.
 estimate-body = Dodany z poprzednią kwotą. Wpisz prawdziwą, gdy ją poznasz.
 estimate-confirm = Potwierdź kwotę

@@ -80,6 +80,12 @@ fn latin_font_face_css() -> String {
         .replace("$J7", &FONT_JAKARTA_700.to_string())
 }
 
+/// dioxus-desktop's release script calls preventDefault on `contextmenu` from a bubbling listener
+/// on `document`, and on Android and iOS that default action is the text-selection toolbar. A
+/// capturing listener on `window` runs first and stops the event there.
+const KEEP_SELECTION_TOOLBAR: &str =
+    "window.addEventListener('contextmenu', e => e.stopImmediatePropagation(), true);";
+
 /// Stylesheets spliced into dioxus-desktop's index template before `</head>`, so they are
 /// render-blocking - `document::Link` only reaches the head after the first render, leaving the
 /// webview's first paint unstyled. This does not replace the template (docs/dioxus-overrides.md).
@@ -96,7 +102,7 @@ fn head_html() -> String {
         // in every session, and enough to make `boots without console errors` flake depending on
         // whether it lands before the spec attaches. `data:,` answers it without a request. No app
         // window ever shows an icon here, so there is nothing to supply instead.
-        r#"<link rel="icon" href="data:,"><link rel="stylesheet" href="{TAILWIND_CSS}"><link rel="stylesheet" href="{MAIN_CSS}"><style>{fonts}</style>"#,
+        r#"<link rel="icon" href="data:,"><link rel="stylesheet" href="{TAILWIND_CSS}"><link rel="stylesheet" href="{MAIN_CSS}"><style>{fonts}</style><script>{KEEP_SELECTION_TOOLBAR}</script>"#,
         fonts = font_face_css()
     )
 }
@@ -1060,12 +1066,16 @@ fn main() {
     push::install();
 
     let builder = dioxus::LaunchBuilder::new();
-    // Dioxus's release default `disable_context_menu = !debug_assertions` injects a global
-    // `contextmenu` -> preventDefault, which on Android/iOS also kills the native text-selection
-    // toolbar. Re-enable it.
+    // `disable_context_menu` is false only in debug builds: false is dioxus-desktop's debug mode,
+    // which calls `with_devtools(true)` - the socket the Android e2e suite attaches to - and with
+    // wry's `devtools` feature, which dioxus's defaults turn on, a release build would ship with
+    // WebView debugging on (audit 2026-10-19 M1). The `contextmenu` preventDefault that true
+    // injects would kill the native text-selection toolbar, so `head_html` stops that event
+    // before it reaches the listener.
     //
-    // Covers only deep links arriving BEFORE the UI exists - installed ahead of the event loop, so
-    // a cold-start link cannot race the first render. `DeepLinkListener` then takes over; dioxus
+    // The event handler covers only deep links arriving BEFORE the UI exists - installed ahead of
+    // the event loop, so a cold-start link cannot race the first render. `DeepLinkListener` then
+    // takes over; dioxus
     // dispatches registered wry handlers first, so without the stand-down both would handle the
     // same link. See packages/ui/src/common/deep_link.rs.
     #[cfg(any(target_os = "android", target_os = "ios"))]
@@ -1077,7 +1087,7 @@ fn main() {
             // system is in: the CSS picks `counted-dark` by media query, which this frame predates.
             .with_background_color(if system_is_dark() { (27, 34, 31, 255) } else { (244, 248, 246, 255) })
             .with_custom_head(head_html())
-            .with_disable_context_menu(false)
+            .with_disable_context_menu(cfg!(not(debug_assertions)))
             .with_custom_event_handler(|event, _| {
                 use dioxus::mobile::tao::event::Event;
                 if ui::common::deep_link_listener_active() {

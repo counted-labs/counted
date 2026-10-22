@@ -3,8 +3,8 @@ use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use crate::tid;
 use shared::{
-    EditableExpense, Expense, ExpensePayload, ExpenseType, ExpenseWithPayments, HistoryContext,
-    HistoryPayload, Payment, User,
+    EditableExpense, Expense, ExpensePayload, ExpenseType, ExpenseWithPayments, HistoryAction,
+    HistoryContext, HistoryEntity, HistoryPayload, Payment, User,
 };
 use std::collections::VecDeque;
 use uuid::Uuid;
@@ -61,11 +61,7 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
         decrypted_payload
             .as_ref()
             .map(|ep| {
-                let etype = match ep.expense_type.as_str() {
-                    "transfer" => ExpenseType::Transfer,
-                    "gain" => ExpenseType::Gain,
-                    _ => ExpenseType::Expense,
-                };
+                let etype = ExpenseType::parse(&ep.expense_type).unwrap_or(ExpenseType::Expense);
                 (ep.name.clone(), ep.date.clone(), ep.amount, etype, ep.category.clone())
             })
             .unwrap_or_else(|| {
@@ -243,15 +239,11 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
             let template = Template { extra: rule.payload.template.extra.clone(), ..template };
             let next = RecurringPayload { template, ..rule.payload.clone() };
             let summary = tid!("history-recurring-edited", name: next.template.name.clone());
-            edit_request(&key, project_id, &rule, &next, history(&key, actor_id, summary)).ok()
+            edit_request(&key, project_id, &rule, &next, history(&key, actor_id, summary, HistoryAction::Updated)).ok()
         });
 
         if !is_online() {
-            pending_ops.write().push_back(QueuedOp {
-                id: Uuid::new_v4(),
-                label: name_val,
-                op: OpKind::EditExpense(payload),
-            });
+            pending_ops.write().push_back(QueuedOp::new(Uuid::new_v4(), &name_val, OpKind::EditExpense(payload)));
             write_queue(&pending_ops.read());
             if rule_update.is_some() {
                 flash.set(Some(Flash::err(tid!("apply-rule-failed"))));
@@ -344,7 +336,13 @@ fn build_editable_expense(
             actor_user_id: None,
             payload: encrypt_padded_json(
                 key,
-                &HistoryPayload { summary: history_summary, actor_user_id: Some(actor_user_id) },
+                &HistoryPayload {
+                    summary: history_summary,
+                    actor_user_id: Some(actor_user_id),
+                    action: Some(HistoryAction::Updated),
+                    entity: Some(HistoryEntity::Expense),
+                    entity_id: Some(id),
+                },
             )?,
         }),
         None => None,
@@ -436,6 +434,7 @@ mod tests {
         assert_eq!(ee.author_id, None, "the author travels in the payload only");
         let hp: HistoryPayload = decrypt_json(&test_key(), &ee.history.unwrap().payload).unwrap();
         assert_eq!(hp.actor_user_id, Some(2));
+        assert_eq!((hp.action, hp.entity, hp.entity_id), (Some(HistoryAction::Updated), Some(HistoryEntity::Expense), Some(ee.id)));
     }
 
     #[test]

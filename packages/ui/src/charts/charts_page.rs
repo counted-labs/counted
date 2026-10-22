@@ -1,4 +1,3 @@
-use api::payments::payments_controller::sync_project_data;
 use api::projects::projects_controller::get_projects_by_ids;
 use api::users::users_controller::get_users_by_project_id;
 use chrono::{Datelike, Local, NaiveDate};
@@ -31,6 +30,7 @@ use crate::decrypted::{
     DecryptedUser,
 };
 use crate::expenses::helpers::export::{csv_field, CSV_BOM};
+use crate::expenses::helpers::my_spending::sync_all;
 use crate::route::Route;
 use crate::tid;
 
@@ -197,16 +197,24 @@ pub(crate) fn synced_rows(sync: ProjectSync, cached: &LocalStorageProject) -> Op
 }
 
 async fn load_data(project_filter: Option<Uuid>) -> ChartData {
-    let ls = read_from_ls();
+    let ids = read_from_ls()
+        .projects
+        .iter()
+        .map(|p| p.project_id)
+        .filter(|id| project_filter.is_none_or(|f| f == *id))
+        .collect();
     let mut data = ChartData::default();
+    let Ok((ls, syncs)) = sync_all(ids).await else {
+        return data;
+    };
     for p in ls.projects.iter().filter(|p| project_filter.is_none_or(|id| id == p.project_id)) {
         let Some(key) = key_of(p) else {
             continue;
         };
-        let Ok(sync) = sync_project_data(p.project_id, known_version(p)).await else {
+        let Some(sync) = syncs.iter().find(|s| s.project.as_ref().is_some_and(|d| d.id == p.project_id)) else {
             continue;
         };
-        let Some((expenses, payments)) = synced_rows(sync, p) else {
+        let Some((expenses, payments)) = synced_rows(sync.clone(), p) else {
             continue;
         };
         let (decrypted_expenses, decrypted): (_, Vec<DecryptedPayment>) =

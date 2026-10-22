@@ -79,6 +79,9 @@ pub fn FriendsPage() -> Element {
                         div { role: "alert", class: "alert alert-error text-sm", {crate::common::error_message(e)} }
                     },
                     Some(Ok(lists)) => rsx! {
+                        if lists.key_mismatch {
+                            div { role: "alert", class: "alert alert-error", {tid!("friends-key-mismatch")} }
+                        }
                         if !lists.incoming.is_empty() {
                             div { class: "card bg-base-100 shadow-soft",
                                 div { class: "card-body gap-2",

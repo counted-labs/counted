@@ -9,12 +9,13 @@ use api::payments::payments_controller::sync_project_data;
 use dioxus::prelude::*;
 use crate::tid;
 use shared::{Account, ProjectSync, NO_CACHED_VERSION};
+use std::collections::VecDeque;
 use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::common::{
-    adopt_project_key, ensure_membership, read_from_ls, set_project_cache, update_ls_if_changed,
-    ClaimOutcome, Flash, LocalStorageState, ProjectKey,
+    adopt_project_key, ensure_membership, project_key, queued_expenses, read_from_ls, set_project_cache,
+    update_ls_if_changed, ClaimOutcome, Flash, LocalStorageState, ProjectKey, QueuedOp,
 };
 use crate::expenses::helpers::expenses_page_helpers::{
     cached_data_version, decide, key_for_project, For, Outcome,
@@ -86,6 +87,7 @@ pub fn use_project_store() -> ProjectStore {
     let account_key_ctx = use_context::<Signal<Option<[u8; 32]>>>();
     let is_online = use_context::<Signal<bool>>();
     let flash_ctx = use_context::<Signal<Option<Flash>>>();
+    let pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
 
     // The context signal must start `None`: the URL fragment never reaches the server, so resolving
     // it during the first render is a hydration mismatch that crashes the interpreter.
@@ -142,6 +144,16 @@ pub fn use_project_store() -> ProjectStore {
             // Persisted before the membership write, which escrows whatever the store holds. A
             // fragment key that differs from the held one is kept only if it decrypts the project.
             let adopted = adopt_project_key(ls_ctx, id, k).await;
+            // A refused fragment key must not stay the one the page decrypts and encrypts with:
+            // rows would read as an empty project, and new ones would go up under a key the other
+            // members do not hold.
+            if !adopted && *active.peek() == Some(id) {
+                let held = project_key(id);
+                if held.is_some() && *key_ctx.peek() != held {
+                    let mut key_ctx = key_ctx;
+                    key_ctx.set(held);
+                }
+            }
             // Once stored, the key has no business in the address bar, the browser history or
             // whatever syncs it (docs/e2ee.md). A key that was refused stays, as the link was given.
             #[cfg(target_arch = "wasm32")]
@@ -183,10 +195,13 @@ pub fn use_project_store() -> ProjectStore {
         let _v = resource_version();
         let id = project_id?;
         // `peek`: this must not subscribe, or clearing the flag below would restart the fetch it
-        // was set to fix. The restart is always explicit.
+        // was set to fix. The restart is always explicit. The page's own rows claim first: the disk
+        // cannot for a project past the web cache ceiling, which was re-downloaded whole on every
+        // tab return.
+        let held = live.peek().as_ref().filter(|l| l.project_id == id).and_then(|l| l.version);
         let known = match *force_full_sync.peek() {
             true => NO_CACHED_VERSION,
-            false => cached_data_version(&read_from_ls(), id),
+            false => held.unwrap_or_else(|| cached_data_version(&read_from_ls(), id)),
         };
         Some(sync_project_data(id, known).await.map(|s| (id, s)))
     }));
@@ -216,7 +231,13 @@ pub fn use_project_store() -> ProjectStore {
                     rules: s.recurring.clone().unwrap_or_default(),
                     server_date: s.server_date,
                 });
-            (decide(resolved, cached, id), fresh_rules)
+            // `peek`: this effect writes `live` below.
+            let live = live.peek();
+            let held = live
+                .as_ref()
+                .filter(|l| l.project_id == id)
+                .and_then(|l| Some((&l.expenses[..], &l.payments[..], l.version?)));
+            (decide(resolved, cached, held, id), fresh_rules)
         };
 
         match fresh_rules {
@@ -307,9 +328,25 @@ pub fn use_project_store() -> ProjectStore {
     });
 
     // Nothing else may enter here: adding `ls_ctx` invalidates the memo on every load (the cache
-    // effect writes it) and pays for a second full decrypt.
-    let data: Memo<Arc<ProjectData>> =
-        use_memo(move || Arc::new(project_data::build(key_ctx(), live.read().as_ref())));
+    // effect writes it) and pays for a second full decrypt. The offline queue does, so an expense
+    // added offline is listed and counted at once; it changes only on an offline write or a replay,
+    // and the rows are copied only when the open project has queued adds.
+    let data: Memo<Arc<ProjectData>> = use_memo(move || {
+        let live = live.read();
+        let personal = ls_ctx.peek().personal_project;
+        let queued = live
+            .as_ref()
+            .map(|l| queued_expenses(&pending_ops.read(), l.project_id, chrono::Utc::now().naive_utc()))
+            .unwrap_or_default();
+        Arc::new(match live.as_ref() {
+            Some(l) if !queued.is_empty() => {
+                let mut with_queued = l.clone();
+                with_queued.expenses.extend(queued);
+                project_data::build(key_ctx(), Some(&with_queued), personal)
+            }
+            _ => project_data::build(key_ctx(), live.as_ref(), personal),
+        })
+    });
     let recurring_data: Memo<RecurringData> =
         use_memo(move || recurring_store::build(key_ctx(), recurring.read().as_ref()));
 

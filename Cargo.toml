@@ -105,6 +105,25 @@ opt-level = 3
 [profile.dev.package.zune-core]
 opt-level = 3
 
+# Argon2id runs twice per login, and a debug build runs it at `opt-level = 0`: 2.4 s a run against
+# 0.10 s with this block, on an x86_64 desktop (`kdf_timing` in crypto.rs), so a phone built by
+# `make android` sat on the login spinner for many seconds. No release twin, unlike the OCR block:
+# fat LTO re-optimises the whole program at the root's `"z"`/`"s"`, and measured the same with or
+# without it (0.22 s). Only `lto = false` let a per-package level through (0.12 s), and thin LTO
+# (0.17 s) costs 10 % of the wasm bundle - neither is worth it for a cost paid once per login.
+[profile.dev.package.argon2]
+opt-level = 3
+[profile.dev.package.blake2]
+opt-level = 3
+[profile.dev.package.chacha20]
+opt-level = 3
+[profile.dev.package.poly1305]
+opt-level = 3
+[profile.dev.package.curve25519-dalek]
+opt-level = 3
+[profile.dev.package.sha2]
+opt-level = 3
+
 [workspace.dependencies]
 dioxus = { version = "0.7.10" }
 

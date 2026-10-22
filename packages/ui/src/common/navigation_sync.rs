@@ -19,6 +19,12 @@ use crate::route::Route;
 /// tab reached by `replace` (or a cold-started deep link) should do. On the home page nothing is
 /// armed, `WebView.canGoBack()` is false, and the system finishes the Activity.
 ///
+/// The `history.back()` that disarms is a traversal, and it lands after any script that runs
+/// before it. A sheet closing as a route opens (creating a project) disarmed and re-armed at once,
+/// the push landed first, and the traversal then stepped back past it: armed on paper, nothing to
+/// go back to, and the next press closed the app. So nothing re-arms while that back is in flight;
+/// its own `popstate` runs `_syncBack` again.
+///
 /// An open sheet (any `.modal.modal-open`) arms it too, and the press closes the topmost sheet
 /// instead of navigating: it clicks that sheet's own `.modal-backdrop`, so the sheet closes exactly
 /// as a tap outside it does, unsaved-changes prompt included. A `MutationObserver` re-evaluates
@@ -53,6 +59,7 @@ pub fn NavigationSync() -> Element {
                         return open.length ? open[open.length - 1] : null; \
                     }; \
                     window._syncBack = function() { \
+                        if (window._dioxusSyntheticBack) { return; } \
                         const want = !!window._routeArmed || !!topSheet(); \
                         if (want && !window._dioxusBackArmed) { \
                             window._dioxusBackArmed = true; \
@@ -66,7 +73,11 @@ pub fn NavigationSync() -> Element {
                     new MutationObserver(function() { window._syncBack(); }) \
                         .observe(document.body, { childList: true, subtree: true }); \
                     window.addEventListener('popstate', function() { \
-                        if (window._dioxusSyntheticBack) { window._dioxusSyntheticBack = false; return; } \
+                        if (window._dioxusSyntheticBack) { \
+                            window._dioxusSyntheticBack = false; \
+                            window._syncBack(); \
+                            return; \
+                        } \
                         window._dioxusBackArmed = false; \
                         const sheet = topSheet(); \
                         const backdrop = sheet && Array.from(sheet.querySelectorAll('.modal-backdrop')) \

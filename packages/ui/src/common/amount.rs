@@ -37,9 +37,11 @@ pub fn comma_language() -> bool {
     decimal_comma(&current_lang())
 }
 
-/// What an amount field shows for a number it did not get from the keyboard: "12,5" in French.
+/// What an amount field shows for a number it did not get from the keyboard: "12,50" in French,
+/// "210" for a whole amount. Cents always take two places, as a price is written - a scanned 37.2
+/// read "37,2" and its shares "9,3".
 pub fn plain_number(value: f64, comma: bool) -> String {
-    let plain = value.to_string();
+    let plain = if value.fract() == 0.0 { value.to_string() } else { format!("{value:.2}") };
     if comma { plain.replace('.', ",") } else { plain }
 }
 
@@ -115,8 +117,9 @@ mod tests {
 
     #[test]
     fn a_field_number_takes_the_language_separator() {
-        assert_eq!(plain_number(12.5, true), "12,5");
-        assert_eq!(plain_number(12.5, false), "12.5");
+        assert_eq!(plain_number(12.5, true), "12,50");
+        assert_eq!(plain_number(12.5, false), "12.50");
+        assert_eq!(plain_number(83.33, false), "83.33");
         assert_eq!(plain_number(210.0, true), "210");
     }
 

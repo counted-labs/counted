@@ -5,7 +5,7 @@
 use api::expenses::expenses_controller::delete_expense;
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
-use shared::{DeleteExpenseRequest, ExpenseType, HistoryContext, HistoryPayload, ProjectStatus};
+use shared::{DeleteExpenseRequest, ExpenseType, HistoryAction, HistoryContext, HistoryEntity, HistoryPayload, ProjectStatus};
 use std::collections::VecDeque;
 use uuid::Uuid;
 
@@ -40,7 +40,13 @@ pub(crate) fn delete_expense_request(
 ) -> DeleteExpenseRequest {
     let history = encrypt_padded_json(
         key,
-        &HistoryPayload { summary: history_summary, actor_user_id: Some(actor_user_id) },
+        &HistoryPayload {
+            summary: history_summary,
+            actor_user_id: Some(actor_user_id),
+            action: Some(HistoryAction::Deleted),
+            entity: Some(HistoryEntity::Expense),
+            entity_id: Some(expense_id),
+        },
     )
     .ok()
     .map(|payload| HistoryContext { actor_user_id: None, payload });
@@ -64,11 +70,7 @@ pub(crate) fn run_delete_expense(
     on_done: impl FnOnce() + 'static,
 ) {
     if !is_online {
-        pending_ops.write().push_back(QueuedOp {
-            id: Uuid::new_v4(),
-            label,
-            op: OpKind::DeleteExpense(req),
-        });
+        pending_ops.write().push_back(QueuedOp::new(Uuid::new_v4(), &label, OpKind::DeleteExpense(req)));
         write_queue(&pending_ops.read());
         on_done();
         return;
@@ -130,5 +132,10 @@ mod tests {
         let payload = crate::crypto::decrypt_json::<HistoryPayload>(&key, &history.payload).unwrap();
         assert_eq!(payload.summary, "deleted: Pizza");
         assert_eq!(payload.actor_user_id, Some(3));
+        assert_eq!(
+            (payload.action, payload.entity, payload.entity_id),
+            (Some(HistoryAction::Deleted), Some(HistoryEntity::Expense), Some(7)),
+            "audit 2026-10-19 L5: what the columns say, inside the payload"
+        );
     }
 }

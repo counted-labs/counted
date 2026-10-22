@@ -1,8 +1,9 @@
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use shared::{
-    Account, EncryptedPair, Keypair, LoginPayload, LoginSalt, LoginSaltPayload, RegisterPayload,
-    ResendVerificationPayload, UpdatePaymentMethods, VerifyEmailPayload,
+    Account, Keypair, LoginPayload, LoginSalt, LoginSaltPayload, RegisterPayload,
+    ResendVerificationPayload, UpdatePaymentMethods, UpdatePreferences, VerifyEmailPayload,
+    VerifyEmailSaltPayload,
 };
 
 #[post("/api/v1/auth/register")]
@@ -29,6 +30,17 @@ pub async fn login(Json(payload): Json<LoginPayload>) -> Result<Account, ServerF
     crate::server::auth::login(payload).await
 }
 
+/// The login salt of the token's account, without consuming the token. The holder of a link owns
+/// the mailbox it was sent to, so this tells them nothing they could not already learn.
+#[post("/api/v1/auth/verify-email/salt")]
+pub async fn verify_email_salt(
+    Json(payload): Json<VerifyEmailSaltPayload>,
+) -> Result<LoginSalt, ServerFnError> {
+    crate::server::auth::verify_email_salt(payload).await
+}
+
+/// With a proof, a login that also consumes the token. Without one (builds before 3.2.6), the
+/// address is verified and no session is minted.
 #[post("/api/v1/auth/verify-email")]
 pub async fn verify_email(
     Json(payload): Json<VerifyEmailPayload>,
@@ -59,7 +71,7 @@ pub async fn delete_account() -> Result<(), ServerFnError> {
 /// Stores the caller's UI preferences. The body is opaque ciphertext produced with the account key;
 /// nothing on this side can read it, and nothing here tries.
 #[put("/api/v1/auth/preferences")]
-pub async fn update_preferences(Json(preferences): Json<EncryptedPair>) -> Result<(), ServerFnError> {
+pub async fn update_preferences(Json(preferences): Json<UpdatePreferences>) -> Result<(), ServerFnError> {
     crate::server::auth::update_preferences(preferences).await
 }
 
@@ -83,6 +95,12 @@ pub async fn update_payment_methods(
 #[put("/api/v1/auth/keypair")]
 pub async fn set_keypair(Json(keypair): Json<Keypair>) -> Result<(), ServerFnError> {
     crate::server::auth::set_keypair(keypair).await
+}
+
+/// The same private key, re-wrapped typed. Refused (409) unless `public_key` is the stored one.
+#[put("/api/v1/auth/keypair/wrap")]
+pub async fn rewrap_private_key(Json(keypair): Json<Keypair>) -> Result<(), ServerFnError> {
+    crate::server::auth::rewrap_private_key(keypair).await
 }
 
 #[get("/api/v1/auth/me")]

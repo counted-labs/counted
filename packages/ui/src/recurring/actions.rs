@@ -2,7 +2,7 @@ use api::recurring::recurring_controller::{delete_recurring_expense, edit_recurr
 use chrono::NaiveDate;
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
-use shared::DeleteRecurringExpenseRequest;
+use shared::{DeleteRecurringExpenseRequest, HistoryAction};
 use uuid::Uuid;
 
 use super::model::{DecryptedRule, RecurringPayload, Side, Template};
@@ -69,7 +69,7 @@ pub fn save_rule(
     on_done: impl FnOnce() + 'static,
 ) {
     let summary = tid!(change_key(&rule.payload, &payload), name: payload.template.name.clone());
-    let req = match edit_request(&key, project_id, &rule, &payload, history(&key, actor, summary)) {
+    let req = match edit_request(&key, project_id, &rule, &payload, history(&key, actor, summary, HistoryAction::Updated)) {
         Ok(r) => r,
         Err(e) => {
             flash.set(Some(Flash::err(e)));
@@ -100,7 +100,7 @@ pub fn stop_rule(
     let req = DeleteRecurringExpenseRequest {
         id: rule.id,
         project_id,
-        history: history(&key, actor, summary),
+        history: history(&key, actor, summary, HistoryAction::Deleted),
     };
     spawn(async move {
         if let Err(e) = delete_recurring_expense(Json(req)).await {

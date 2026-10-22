@@ -22,7 +22,7 @@ use super::local_storage::{
     clear_user_id, key_of, project_key, read_from_ls, remove_project, set_anon_member_id,
     update_ls, update_ls_if_changed, upsert_project, upsert_project_key, LocalStorageState,
 };
-use crate::crypto::{claim_label, claim_token, key_to_fragment, wrap_key};
+use crate::crypto::{claim_label, claim_token, key_to_fragment, wrap_key, WrapUse};
 use crate::decrypted::{decrypt_project, DecryptedUser};
 
 /// Whether `candidate` may become this device's key for a project. A key already held is replaced
@@ -106,7 +106,7 @@ pub async fn ensure_membership(
     // or a session from before the key was persisted): the membership still goes up unkeyed.
     // No payment-methods copy: its only writer is `payment_methods::refill_project_copies`.
     let (key, label) = match (account_key, project_key) {
-        (Some(ak), Some(pk)) => (wrap_key(&ak, &pk), claim_label(&account, &ak, &pk)),
+        (Some(ak), Some(pk)) => (wrap_key(&ak, WrapUse::Escrow(project_id), &pk, account.typed_wraps), claim_label(&account, &ak, &pk)),
         _ => (None, None),
     };
     let result = upsert_account_project(Json(UpsertAccountProject {

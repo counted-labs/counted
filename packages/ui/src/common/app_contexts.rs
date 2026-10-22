@@ -76,7 +76,7 @@ pub struct ProjectKey(pub Signal<Option<[u8; 32]>>);
 /// Compares against the stored choice rather than `current_lang()`: the latter subscribes to the
 /// locale signal, and this runs inside the effect that calls `me()` - which would then re-fetch the
 /// account on every language change.
-fn adopt_account_language(account: &Account, key: [u8; 32]) {
+fn adopt_account_language(auth: Signal<Option<Account>>, account: &Account, key: [u8; 32]) {
     let stored = read_from_ls().language;
     match crate::preferences::account_language(account, &key) {
         Some(code) => {
@@ -86,7 +86,7 @@ fn adopt_account_language(account: &Account, key: [u8; 32]) {
         }
         None => {
             if let Some(local) = stored {
-                crate::preferences::push_language(account, key, local);
+                crate::preferences::push_language(auth, account, key, local);
             }
         }
     }
@@ -121,7 +121,7 @@ pub fn use_app_contexts() {
     let _invite_retry: Signal<Option<InviteRetry>> = use_context_provider(|| Signal::new(None));
     let _accepted_invite: Signal<Option<AcceptedInvite>> =
         use_context_provider(|| Signal::new(None));
-    let _ls: Signal<LocalStorageState> = use_context_provider(|| Signal::new(ls_state));
+    let ls_ctx: Signal<LocalStorageState> = use_context_provider(|| Signal::new(ls_state));
     // No Signal<bool> for is_mobile: it would collide with is_online (contexts are keyed by type).
     // Always true on web; updated by DOM events on mobile native.
     // Mutation queue gate won't activate on web - offline writes fail with network errors.
@@ -181,8 +181,13 @@ pub fn use_app_contexts() {
                 Ok(account) => {
                     let account = match (account, account_enc_key()) {
                         (Some(a), Some(key)) => {
-                            adopt_account_language(&a, key);
-                            Some(crate::auth::credentials::ensure_keypair(a, &key).await)
+                            let a = crate::auth::credentials::ensure_keypair(a, &key).await;
+                            if crate::friends::friends_service::private_key_is_typed(&a, &key) {
+                                crate::common::update_ls_if_changed(ls_ctx, |state| state.saw_typed_wrap(a.id));
+                            }
+                            let a = crate::preferences::sync_personal_project(a, key, ls_ctx).await;
+                            adopt_account_language(auth, &a, key);
+                            Some(a)
                         }
                         (account, _) => account,
                     };

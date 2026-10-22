@@ -20,14 +20,14 @@ use super::amount_input::FocusedAmount;
 pub fn AmountOperatorBar() -> Element {
     let bar = use_context::<FocusedAmount>();
 
-    let Some(draft) = bar() else {
+    let Some((draft, _)) = bar() else {
         return rsx! {};
     };
     let expression = draft().filter(|d| is_expression(d));
 
     let tap = move |op: char| {
-        let Some(mut draft) = bar.peek().to_owned() else { return };
-        let shown = draft.peek().clone().unwrap_or_default();
+        let Some((mut draft, at_focus)) = bar.peek().to_owned() else { return };
+        let shown = draft.peek().clone().unwrap_or(at_focus);
         if let Some(next) = with_operator(&shown, op) {
             draft.set(Some(next));
         }
@@ -94,7 +94,7 @@ pub fn AmountOperatorBar() -> Element {
                 // Exactly what blur does, without dropping focus: the draft goes, the field shows
                 // the number the split already used.
                 onclick: move |_| {
-                    if let Some(mut draft) = bar.peek().to_owned() {
+                    if let Some((mut draft, _)) = bar.peek().to_owned() {
                         draft.set(None);
                     }
                 },

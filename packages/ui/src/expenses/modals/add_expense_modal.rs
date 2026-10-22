@@ -4,8 +4,8 @@ use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use crate::tid;
 use shared::{
-    CreatableExpense, ExpensePayload, ExpenseType, ExpenseWithPayments, HistoryContext,
-    HistoryPayload, User,
+    CreatableExpense, ExpensePayload, ExpenseType, ExpenseWithPayments, HistoryAction, HistoryContext,
+    HistoryEntity, HistoryPayload, User,
 };
 use std::collections::VecDeque;
 use uuid::Uuid;
@@ -216,7 +216,7 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
                 r.variable,
             );
             let summary = tid!("history-recurring-created", name: name_val.clone());
-            let history = history(&key, Some(author_id), summary);
+            let history = history(&key, Some(author_id), summary, HistoryAction::Created);
             let req = match create_request(&key, project_id, author_id, &new_payload(template, r, anchor), history) {
                 Ok(req) => req,
                 Err(e) => {
@@ -263,11 +263,7 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
             // The op's id rides inside the payload so every replay of it names the same write.
             let op_id = Uuid::new_v4();
             payload.client_op_id = Some(op_id);
-            pending_ops.write().push_back(QueuedOp {
-                id: op_id,
-                label: name_val,
-                op: OpKind::AddExpense(payload),
-            });
+            pending_ops.write().push_back(QueuedOp::new(op_id, &name_val, OpKind::AddExpense(payload)));
             write_queue(&pending_ops.read());
             on_created.call(None);
             on_close_submit.call(());
@@ -377,7 +373,13 @@ fn build_creatable_expense(
             actor_user_id: None,
             payload: encrypt_padded_json(
                 key,
-                &HistoryPayload { summary: history_summary, actor_user_id: Some(author_id) },
+                &HistoryPayload {
+                    summary: history_summary,
+                    actor_user_id: Some(author_id),
+                    action: Some(HistoryAction::Created),
+                    entity: Some(HistoryEntity::Expense),
+                    entity_id: None,
+                },
             )?,
         }),
         client_op_id: None,
@@ -494,6 +496,7 @@ mod tests {
         assert_eq!(ctx.actor_user_id, None);
         let hp: HistoryPayload = decrypt_json(&test_key(), &ctx.payload).unwrap();
         assert_eq!(hp.actor_user_id, Some(1));
+        assert_eq!((hp.action, hp.entity, hp.entity_id), (Some(HistoryAction::Created), Some(HistoryEntity::Expense), None));
     }
 
     #[test]

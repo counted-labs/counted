@@ -35,6 +35,7 @@ sync-error = Synkroniseringsfejl: { $reason }
 ### Errors
 
 error-network = Kan ikke nå serveren. Tjek din internetforbindelse.
+error-rate-limited = Serveren har travlt. Prøv igen om lidt.
 error-generic = Noget gik galt. Prøv igen.
 
 error-invalid-email = Den e-mailadresse er ikke gyldig.
@@ -88,6 +89,7 @@ login-submitting = Logger ind…
 login-password-placeholder = Din adgangskode
 login-no-account = Har du ikke en konto endnu?
 login-unverified = Din e-mailadresse er ikke bekræftet endnu. Tjek din indbakke, eller send linket igen.
+login-maybe-unverified = Har du lige oprettet en konto? Bekræft først din adresse med linket, vi sendte dig, eller send det igen.
 login-resend = Send bekræftelseslinket igen
 login-resending = Sender…
 login-resend-sent = E-mail sendt - tjek din indbakke.
@@ -161,13 +163,12 @@ payment-method-copy-failed = Kunne ikke kopiere - markér teksten, og kopiér de
 verify-email-checking = Bekræfter din e-mailadresse…
 verify-email-welcome = E-mail bekræftet - velkommen til Counted!
 verify-email-back-to-login = Tilbage til login
+verify-email-intro = Indtast din adgangskode for at bekræfte, at adressen er din.
+verify-email-submit = Bekræft min adresse
 
 ### Project status
 
-project-close = Luk
 project-archive = Arkivér
-project-reopen = Genåbn
-project-unarchive = Gendan fra arkiv
 project-sheet-invite = Inviter
 project-sheet-recurring = Tilbagevendende
 project-sheet-edit = Rediger projekt
@@ -350,6 +351,7 @@ missing-encryption-key = Krypteringsnøgle mangler.
 missing-encryption-key-title = Krypteringsnøgle mangler
 missing-encryption-key-hint = Det link, du brugte, indeholder ikke den nøgle, der skal til for at dekryptere projektet. Brug hele linket, som den, der oprettede det, delte.
 project-locked-hint = Denne enhed har ikke projektets nøgle. Åbn dets delelink for at låse det op.
+expenses-unreadable = Nogle poster kan ikke læses på denne enhed og tæller ikke med i summerne. Opdater appen for at se dem.
 project-unlock = Lås op
 project-no-local-data-hint = Log ind for at indlæse projektets data for første gang.
 project-gone-title = Dette projekt findes ikke længere
@@ -722,6 +724,7 @@ friends-remove-confirm-message = { $email } vil ikke længere være blandt dine 
 friends-no-key = Ikke klar endnu
 friends-fingerprint = Sikkerhedskode
 friends-fingerprint-hint = To venner, der læser den samme sikkerhedskode op for hinanden, ved, at ingen sidder imellem dem - ikke engang vores server.
+friends-key-mismatch = Serveren sendte en offentlig nøgle til din konto, der ikke passer til din private nøgle. Din sikkerhedskode er skjult, og invitationer er slået fra på denne enhed: nogen piller måske ved serveren.
 friends-outgoing-title = Sendt
 friends-outgoing-hint = Venter på svar. Du ser dem blandt dine venner, når de accepterer.
 friends-withdraw = Annuller
@@ -876,6 +879,7 @@ occurrence-auto-next = Tilføjet automatisk af en tilbagevendende udgift. Næste
 occurrence-auto-stopped = Tilføjet automatisk af en tilbagevendende udgift, der siden er stoppet.
 occurrence-manage = Administrer
 estimate-badge = Skal bekræftes
+expense-pending = Afventer
 estimate-title = Beløb skal bekræftes.
 estimate-body = Tilføjet med det forrige beløb. Indtast det rigtige, når det kommer.
 estimate-confirm = Bekræft beløb

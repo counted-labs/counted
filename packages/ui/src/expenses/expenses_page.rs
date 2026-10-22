@@ -116,7 +116,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
     };
 
     let stored_user_id = move || {
-        ls_ctx().projects.iter().find(|p| p.project_id == project_id).and_then(|p| p.user_id)
+        ls_ctx.read().projects.iter().find(|p| p.project_id == project_id).and_then(|p| p.user_id)
     };
 
     // One small DTO, not `ls_ctx()`, which would deep-clone every cached expense and payment per
@@ -164,6 +164,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
     }
 
     let key = key_ctx().unwrap();
+    let key_opens = store.data_for(project_id).is_some_and(|d| d.loaded && !d.project_unreadable);
 
     // Exports `live`, not the resource, so an export taken right after an edit contains it.
     let export_all = move |download: DownloadFn| {
@@ -210,7 +211,9 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                 // open, and true on dismiss - so the clipboard is only the fallback, never a second
                 // prompt after a shown sheet.
                 badge: personal.then(|| tid!("personal-badge")),
-                on_share: (!demo && !personal).then(|| EventHandler::new(move |_| {
+                // Only a key proven on this project's row: a server can file another account-key
+                // blob where the escrowed key belongs, and this would put it in a link.
+                on_share: (!demo && !personal && key_opens).then(|| EventHandler::new(move |_| {
                     let url = share_link_for(project_id, &key);
                     spawn(async move {
                         if share_text(&url).await {
@@ -283,7 +286,11 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
             // The store's decryption pass, but only once it is this project's - it still holds the
             // previous one until the new sync lands.
             match store.data_for(project_id).filter(|d| d.loaded) {
+                Some(d) if d.project_unreadable => rsx! {
+                    MissingKeyScreen {}
+                },
                 Some(d) => {
+                    let unreadable = d.unreadable_expenses > 0;
                     let summary = d.summary.clone();
                     let user_list = d.users.clone();
                     let pickable = pickable_users(Some(&key), &user_list, &[]);
@@ -305,6 +312,13 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                             div { role: "alert",
                                 class: "alert alert-warning alert-soft text-sm",
                                 {tid!("projects-offline-banner")}
+                            }
+                        }
+
+                        if unreadable {
+                            div { id: "unreadable-banner", role: "alert",
+                                class: "alert alert-warning alert-soft text-sm",
+                                {tid!("expenses-unreadable")}
                             }
                         }
 

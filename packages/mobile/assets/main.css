@@ -23,6 +23,10 @@ body {
 
 :root {
   --sat: env(safe-area-inset-top, 0px);
+  /* The offline banner is `fixed` over the top of the app (app_layout.rs): while it shows, everything
+     that clears the status bar clears it too, or it covers the page header. Its height is `py-1.5`
+     plus one `text-xs` line. */
+  --offline-bar: 0px;
   --sab: env(safe-area-inset-bottom, 0px);
   --sar: env(safe-area-inset-right, 0px);
   /* Dynamic Type. Overwritten as an inline property on documentElement by the iOS-only effect in
@@ -158,14 +162,18 @@ input[type="date"] {
    so it can never clobber a Tailwind margin utility on the page shells - main.css is
    unlayered and would otherwise win over anything in @layer utilities. */
 main {
-  padding-top: var(--sat);
+  padding-top: calc(var(--sat) + var(--offline-bar));
+}
+
+:root:has(.offline-banner) {
+  --offline-bar: 1.75rem;
 }
 
 /* padding-top: 0 overrides `p-4`'s top only - the status bar inset above is the gap, so
    stacking another 1rem on it just wastes vertical space. Left/right/bottom keep `p-4`. */
 .app-container {
   padding-top: 0;
-  height: calc(100dvh - var(--sat) - var(--sab) - 1rem);
+  height: calc(100dvh - var(--sat) - var(--offline-bar) - var(--sab) - 1rem);
   border-radius: 1.5rem;
 }
 
@@ -173,7 +181,7 @@ main {
    it the box stays as tall as a keyboard-less screen while the visible band has scrolled down, and
    the sheet's header leaves the top of the screen. See the variable's declaration above. */
 .modal-box {
-  max-height: calc(100dvh - var(--vvo) - var(--sat) - var(--sab) - 1rem);
+  max-height: calc(100dvh - var(--vvo) - var(--sat) - var(--offline-bar) - var(--sab) - 1rem);
 }
 
 /* Sheet presentation. DaisyUI's `modal-bottom` already slides the box up from the bottom edge and
@@ -395,7 +403,7 @@ main {
 
 .page-exiting {
   position: fixed;
-  top: var(--sat);
+  top: calc(var(--sat) + var(--offline-bar));
   left: 0;
   right: 0;
   bottom: 0;

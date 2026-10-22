@@ -73,6 +73,7 @@ pub fn error_key(e: &ServerFnError) -> &'static str {
     match e {
         // Server-side reqwest failures (Tricount import) arrive here with their own network text.
         ServerFnError::ServerError { message, .. } if is_network_error(message) => "error-network",
+        ServerFnError::ServerError { code: 429, .. } => "error-rate-limited",
         ServerFnError::ServerError { message, .. } => KEYS
             .iter()
             .find(|(sent, _)| sent == message)
@@ -101,14 +102,6 @@ pub fn is_project_gone_error(e: &ServerFnError) -> bool {
     )
 }
 
-/// True when the participant is already gone - for a removal, the outcome it asked for.
-pub fn is_user_gone_error(e: &ServerFnError) -> bool {
-    matches!(
-        e,
-        ServerFnError::ServerError { message, code, .. }
-            if *code == 404 && message == shared::errors::USER_NOT_FOUND
-    )
-}
 
 /// True when another account already claims the participant this device tried to become - drives
 /// dropping the local `user_id` and reopening the "who am I?" picker.
@@ -162,6 +155,14 @@ pub fn is_project_stale_error(e: &ServerFnError) -> bool {
     )
 }
 
+pub fn is_preferences_stale_error(e: &ServerFnError) -> bool {
+    matches!(
+        e,
+        ServerFnError::ServerError { message, code, .. }
+            if *code == 409 && message == shared::errors::PREFERENCES_STALE
+    )
+}
+
 pub fn is_payment_methods_stale_error(e: &ServerFnError) -> bool {
     matches!(
         e,
@@ -195,6 +196,19 @@ pub fn is_email_not_verified(e: &ServerFnError) -> bool {
 pub fn is_offline_error(e: &ServerFnError) -> bool {
     matches!(e, ServerFnError::Request(_)) || is_network_error(&e.to_string())
 }
+
+/// True when nginx's `limit_req` refused the request: the server is fine, this client asked too
+/// fast. Worth one delayed retry, and never a reason to drop data already on screen.
+pub fn is_rate_limited(e: &ServerFnError) -> bool {
+    matches!(e, ServerFnError::ServerError { code: 429, .. })
+}
+
+/// nginx's general zone drains at 10 requests a second, so two seconds empties a third of the burst.
+pub const RATE_LIMIT_RETRY_MS: u32 = 2_000;
+
+/// The gap between the requests of a loop that may run long: at nginx's drain rate, so however many
+/// it sends, the burst it started with never grows.
+pub const REQUEST_PACE_MS: u32 = 100;
 
 #[cfg(test)]
 mod tests {
@@ -251,15 +265,17 @@ mod tests {
         ServerFnError::ServerError { message: message.into(), code, details: None }
     }
 
-    // `ServerFnError::new` is a 500. Matching on the message alone would let an internal failure
-    // that happens to carry this text trigger the "project deleted" recovery.
+    // What the client decodes from nginx's `limit_req` page (dioxus-fullstack magic.rs): not JSON,
+    // so its body becomes the message.
     #[test]
-    fn test_user_gone_requires_both_the_message_and_a_404() {
-        assert!(is_user_gone_error(&with_code(shared::errors::USER_NOT_FOUND, 404)));
-        assert!(!is_user_gone_error(&with_code(shared::errors::USER_NOT_FOUND, 500)));
-        assert!(!is_user_gone_error(&with_code(shared::PROJECT_NOT_FOUND, 404)));
+    fn test_a_rate_limited_request_says_so_and_is_not_offline() {
+        let e = with_code("HTTP 429: <html><head><title>429 Too Many Requests</title></head></html>", 429);
+        assert_eq!(error_key(&e), "error-rate-limited");
+        assert!(!is_offline_error(&e));
     }
 
+    // `ServerFnError::new` is a 500. Matching on the message alone would let an internal failure
+    // that happens to carry this text trigger the "project deleted" recovery.
     #[test]
     fn test_project_gone_requires_both_the_message_and_a_404() {
         assert!(is_project_gone_error(&with_code(shared::PROJECT_NOT_FOUND, 404)));
@@ -303,7 +319,7 @@ mod tests {
     #[test]
     fn every_error_key_is_a_known_message() {
         let known = crate::i18n::locale_ids(crate::i18n::FALLBACK);
-        for key in KEYS.iter().map(|(_, k)| *k).chain(["error-network", "error-generic"]) {
+        for key in KEYS.iter().map(|(_, k)| *k).chain(["error-network", "error-rate-limited", "error-generic"]) {
             assert!(known.contains(key), "{key} is not defined in the fallback locale");
         }
     }

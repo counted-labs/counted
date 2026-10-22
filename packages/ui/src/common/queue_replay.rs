@@ -4,7 +4,8 @@ use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use std::collections::VecDeque;
 
-use super::error_utils::error_message;
+use super::error_utils::{error_message, is_rate_limited, RATE_LIMIT_RETRY_MS, REQUEST_PACE_MS};
+use super::sleep;
 use super::local_storage::project_key;
 use super::offline_queue::{write_queue, OpKind, QueuedOp};
 use super::project_write::update_project_fresh;
@@ -31,28 +32,23 @@ pub async fn replay_queue(
     mut pending_ops: Signal<VecDeque<QueuedOp>>,
     mut conflict_msg: Signal<Option<SyncFailure>>,
 ) -> bool {
+    let mut first = true;
     loop {
         let Some(queued) = pending_ops.read().front().cloned() else {
             return true;
         };
+        if !first {
+            sleep(REQUEST_PACE_MS).await;
+        }
+        first = false;
 
-        let result: Result<(), ServerFnError> = match queued.op.clone() {
-            OpKind::AddExpense(p) => add_expense(Json(p)).await.map(|_| ()),
-            OpKind::EditExpense(p) => edit_expense(Json(p)).await.map(|_| ()),
-            OpKind::DeleteExpense(p) => delete_expense(Json(p)).await.map(|_| ()),
-            OpKind::UpdateProject(p) => update_project_by_id(Json(p)).await.map(|_| ()),
-            // Rebuilt on the payload the server holds now, so a field written meanwhile - by
-            // another device or a newer build - survives the replay.
-            OpKind::EditProject(edit) => match project_key(edit.project_id) {
-                Some(key) => update_project_fresh(edit.project_id, |stored| edit.apply(&key, stored))
-                    .await
-                    .map(|_| ()),
-                None => Err(ServerFnError::ServerError {
-                    message: shared::PROJECT_NOT_FOUND.to_string(),
-                    code: 404,
-                    details: None,
-                }),
-            },
+        // nginx refuses before any of these endpoints runs, so the op was not applied.
+        let result = match replay(&queued.op).await {
+            Err(e) if is_rate_limited(&e) => {
+                sleep(RATE_LIMIT_RETRY_MS).await;
+                replay(&queued.op).await
+            }
+            result => result,
         };
 
         match result {
@@ -61,7 +57,7 @@ pub async fn replay_queue(
                 write_queue(&pending_ops.read());
             }
             Err(ref e) if is_conflict(e) => {
-                let label = queued.label.clone();
+                let label = queued.label();
                 conflict_msg.set(Some(match &queued.op {
                     OpKind::EditExpense(_) => SyncFailure::ConflictEdit(label),
                     OpKind::DeleteExpense(_) => SyncFailure::ConflictDelete(label),
@@ -75,6 +71,27 @@ pub async fn replay_queue(
                 return false;
             }
         }
+    }
+}
+
+async fn replay(op: &OpKind) -> Result<(), ServerFnError> {
+    match op.clone() {
+        OpKind::AddExpense(p) => add_expense(Json(p)).await.map(|_| ()),
+        OpKind::EditExpense(p) => edit_expense(Json(p)).await.map(|_| ()),
+        OpKind::DeleteExpense(p) => delete_expense(Json(p)).await.map(|_| ()),
+        OpKind::UpdateProject(p) => update_project_by_id(Json(p)).await.map(|_| ()),
+        // Rebuilt on the payload the server holds now, so a field written meanwhile - by
+        // another device or a newer build - survives the replay.
+        OpKind::EditProject(edit) => match project_key(edit.project_id) {
+            Some(key) => update_project_fresh(edit.project_id, |stored| edit.apply(&key, stored))
+                .await
+                .map(|_| ()),
+            None => Err(ServerFnError::ServerError {
+                message: shared::PROJECT_NOT_FOUND.to_string(),
+                code: 404,
+                details: None,
+            }),
+        },
     }
 }
 

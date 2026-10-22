@@ -1,7 +1,7 @@
 use chrono::NaiveDate;
 use shared::{
     CreatableExpense, CreatableRecurringExpense, EditableRecurringExpense, ExpensePayload,
-    HistoryContext, HistoryPayload, MaterializeRecurringRequest,
+    HistoryAction, HistoryContext, HistoryEntity, HistoryPayload, MaterializeRecurringRequest,
 };
 use uuid::Uuid;
 
@@ -10,14 +10,18 @@ use super::split::side_amounts;
 use crate::crypto::encrypt_padded_json;
 use crate::expenses::helpers::expense_modal_helpers::with_shares;
 
-/// A rule's history row. `None` without an actor to sign it, like an expense with no author.
-pub fn history(key: &[u8; 32], actor: Option<i32>, summary: String) -> Option<HistoryContext> {
+/// A rule's history row. `None` without an actor to sign it, like an expense with no author. The
+/// server files rule rows under the project.
+pub fn history(key: &[u8; 32], actor: Option<i32>, summary: String, action: HistoryAction) -> Option<HistoryContext> {
     let actor = actor?;
-    Some(HistoryContext {
-        actor_user_id: None,
-        payload: encrypt_padded_json(key, &HistoryPayload { summary, actor_user_id: Some(actor) })
-            .ok()?,
-    })
+    let payload = HistoryPayload {
+        summary,
+        actor_user_id: Some(actor),
+        action: Some(action),
+        entity: Some(HistoryEntity::Project),
+        entity_id: None,
+    };
+    Some(HistoryContext { actor_user_id: None, payload: encrypt_padded_json(key, &payload).ok()? })
 }
 
 pub fn create_request(
@@ -60,12 +64,15 @@ pub fn edit_request(
 }
 
 /// Claims `due` (consecutive, oldest first) and writes one expense per date. `summary` gives each
-/// occurrence's history line; it is passed in already translated so this stays pure.
+/// occurrence's history line; it is passed in already translated so this stays pure. `today` is the
+/// sync's server date, sent as `due_through` in place of the last occurrence's date, which would
+/// reveal the rule's schedule (audit 2026-10-19 M7).
 pub fn materialize_request(
     key: &[u8; 32],
     project_id: Uuid,
     rule: &DecryptedRule,
     due: &[(u32, NaiveDate)],
+    today: NaiveDate,
     actor_user_id: i32,
     summary: impl Fn(NaiveDate) -> String,
 ) -> Result<MaterializeRecurringRequest, String> {
@@ -112,7 +119,13 @@ pub fn materialize_request(
                     actor_user_id: None,
                     payload: encrypt_padded_json(
                         key,
-                        &HistoryPayload { summary: summary(*date), actor_user_id: Some(author) },
+                        &HistoryPayload {
+                            summary: summary(*date),
+                            actor_user_id: Some(author),
+                            action: Some(HistoryAction::Created),
+                            entity: Some(HistoryEntity::Expense),
+                            entity_id: None,
+                        },
                     )?,
                 }),
                 client_op_id: Some(super::schedule::occurrence_id(rule.payload.seed, *date)),
@@ -129,7 +142,7 @@ pub fn materialize_request(
         project_id,
         expected_version: rule.version,
         payload: encrypt_padded_json(key, &advanced)?,
-        due_through: last.1,
+        due_through: today,
         occurrences,
     })
 }
@@ -181,10 +194,10 @@ mod tests {
         let key = test_key();
         let r = rule(0);
         let due = [(0, d(2026, 8, 1)), (1, d(2026, 9, 1))];
-        let req = materialize_request(&key, Uuid::nil(), &r, &due, 2, |date| format!("auto {date}"))
+        let req = materialize_request(&key, Uuid::nil(), &r, &due, d(2026, 9, 20), 2, |date| format!("auto {date}"))
             .unwrap();
         assert_eq!(req.expected_version, 4);
-        assert_eq!(req.due_through, d(2026, 9, 1));
+        assert_eq!(req.due_through, d(2026, 9, 20), "the server date, not the rule's schedule");
         assert_eq!(req.occurrences.len(), 2);
 
         let advanced: RecurringPayload = decrypt_json(&key, &req.payload).unwrap();
@@ -207,7 +220,7 @@ mod tests {
     fn the_extra_cent_follows_the_occurrence_index() {
         let key = test_key();
         let due = [(1, d(2026, 9, 1))];
-        let req = materialize_request(&key, Uuid::nil(), &rule(1), &due, 2, |_| String::new()).unwrap();
+        let req = materialize_request(&key, Uuid::nil(), &rule(1), &due, d(2026, 12, 1), 2, |_| String::new()).unwrap();
         let occurrence: ExpensePayload = decrypt_json(&key, &req.occurrences[0].payload).unwrap();
         let amounts: Vec<f64> =
             occurrence.shares.unwrap().iter().filter(|s| s.is_debt).map(|s| s.amount).collect();
@@ -219,7 +232,7 @@ mod tests {
         let mut r = rule(0);
         r.author_id = None;
         let key = test_key();
-        let req = materialize_request(&key, Uuid::nil(), &r, &[(0, d(2026, 8, 1))], 2, |_| String::new())
+        let req = materialize_request(&key, Uuid::nil(), &r, &[(0, d(2026, 8, 1))], d(2026, 8, 1), 2, |_| String::new())
             .unwrap();
         let occurrence: ExpensePayload = decrypt_json(&key, &req.occurrences[0].payload).unwrap();
         assert_eq!(occurrence.author_id, Some(2));
@@ -228,8 +241,8 @@ mod tests {
     #[test]
     fn dates_that_skip_the_cursor_are_refused() {
         let r = rule(3);
-        assert!(materialize_request(&test_key(), Uuid::nil(), &r, &[(4, d(2026, 12, 1))], 2, |_| String::new()).is_err());
-        assert!(materialize_request(&test_key(), Uuid::nil(), &r, &[], 2, |_| String::new()).is_err());
+        assert!(materialize_request(&test_key(), Uuid::nil(), &r, &[(4, d(2026, 12, 1))], d(2026, 12, 1), 2, |_| String::new()).is_err());
+        assert!(materialize_request(&test_key(), Uuid::nil(), &r, &[], d(2026, 12, 1), 2, |_| String::new()).is_err());
     }
 
     #[test]
@@ -253,11 +266,12 @@ mod tests {
     #[test]
     fn a_rule_history_row_needs_an_actor() {
         let key = test_key();
-        assert!(history(&key, None, "Rent".to_string()).is_none());
-        let ctx = history(&key, Some(2), "Rent".to_string()).unwrap();
+        assert!(history(&key, None, "Rent".to_string(), HistoryAction::Created).is_none());
+        let ctx = history(&key, Some(2), "Rent".to_string(), HistoryAction::Updated).unwrap();
         assert_eq!(ctx.actor_user_id, None);
         let p: HistoryPayload = decrypt_json(&key, &ctx.payload).unwrap();
         assert_eq!(p.summary, "Rent");
         assert_eq!(p.actor_user_id, Some(2));
+        assert_eq!((p.action, p.entity), (Some(HistoryAction::Updated), Some(HistoryEntity::Project)));
     }
 }

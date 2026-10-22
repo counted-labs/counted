@@ -19,6 +19,8 @@ pub const CLIENT_OUTDATED: &str = "This version of the app is outdated. Please u
 pub const INVALID_LINK: &str = "Invalid link";
 pub const BATCH_TOO_LARGE: &str = "Batch size exceeds the maximum";
 pub const MIXED_PROJECT_BATCH: &str = "All participants in a batch must belong to the same project";
+/// Only a client bug sends one, so it has no message of its own.
+pub const DUPLICATE_BATCH_ITEM: &str = "An item appears twice in the same batch";
 pub const INVALID_PAYLOAD: &str = "Invalid encrypted payload";
 pub const PAYERS_REQUIRED: &str = "payers cannot be empty";
 pub const DEBTORS_REQUIRED: &str = "debtors cannot be empty";
@@ -75,6 +77,10 @@ pub const IDENTITY_TAKEN: &str = "Identity already claimed by another account";
 /// `PUT /auth/payment-methods` with an `expected_iv` that no longer matches the stored blob:
 /// another device saved in between, and the caller must reload before writing.
 pub const PAYMENT_METHODS_STALE: &str = "Payment methods were changed elsewhere";
+/// `PUT /auth/preferences` with an `expected_iv` that no longer matches the stored blob.
+pub const PREFERENCES_STALE: &str = "Preferences were changed elsewhere";
+/// `PUT /auth/keypair/wrap` for a public key that is not the stored one.
+pub const KEYPAIR_CHANGED: &str = "The account keypair is not the one presented";
 /// `PUT /projects` with an `expected_iv` that no longer matches the stored payload, or a conversion
 /// whose `expected_data_version` is behind.
 pub const PROJECT_STALE: &str = "Project was changed elsewhere";

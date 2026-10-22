@@ -149,6 +149,7 @@ mod tests {
                 payments,
                 version: None,
             }),
+            None,
         )
     }
 

@@ -10,10 +10,11 @@ use shared::{
     ProjectStatus, User, UserBalance, UserSummary,
 };
 use std::collections::{HashMap, HashSet};
+use uuid::Uuid;
 
 use crate::categories::{find_category, get_expense_category, parent_emoji};
 use crate::decrypted::{
-    decrypt_ledger, decrypt_user, project_currency, project_status, DecryptedExpense,
+    decrypt_ledger, decrypt_user, DecryptedExpense,
     DecryptedPayment,
 };
 use crate::expenses::tabs::expenses_tab::inconsistent_expense_ids;
@@ -97,6 +98,12 @@ pub struct ProjectData {
     pub personal: bool,
     /// The personal project's budgets; empty anywhere else.
     pub budgets: shared::Budgets,
+    /// Expenses whose payload would not open or parse, left out of every figure. Not zero means the
+    /// totals are partial, which the page has to say rather than present them as the whole project.
+    pub unreadable_expenses: usize,
+    /// The project row is here but its payload does not open under this key: the key is wrong,
+    /// and nothing the page could show would be the project.
+    pub project_unreadable: bool,
     /// False while the three body resources have produced neither live data nor a usable cache.
     /// The page shows its error/spinner instead of an empty project.
     pub loaded: bool,
@@ -127,6 +134,8 @@ impl Default for ProjectData {
             read_only: false,
             personal: false,
             budgets: Default::default(),
+            unreadable_expenses: 0,
+            project_unreadable: false,
             loaded: false,
             revision: 0,
         }
@@ -184,18 +193,22 @@ fn next_revision() -> u64 {
 }
 
 /// Rows whose ciphertext will not open are dropped - one corrupt row must not take the page down.
-pub fn build(key: Option<[u8; 32]>, live: Option<&LiveData>) -> ProjectData {
+/// `personal_project` is the account's "Mes dépenses", which alone puts a page in personal mode:
+/// the payload's `kind` is writable by every key holder (audit 2026-10-19 M3).
+pub fn build(key: Option<[u8; 32]>, live: Option<&LiveData>, personal_project: Option<Uuid>) -> ProjectData {
     let (Some(k), Some(live)) = (key, live) else {
         return ProjectData::default();
     };
     let (users, expenses, payments) = (&live.users, &live.expenses, &live.payments);
     let project = live.project.as_ref();
     let payload = project.and_then(|p| crate::crypto::decrypt_json::<shared::ProjectPayload>(&k, &p.payload).ok());
+    let personal = personal_project == Some(live.project_id);
 
     // Only the payments of expenses the page lists: the rest used to move balances by rows nobody
     // could see.
     let (decrypted, payments): (Vec<DecryptedExpense>, Vec<DecryptedPayment>) =
         decrypt_ledger(&k, expenses, payments);
+    let unreadable_expenses = expenses.len() - decrypted.len();
     let user_names: HashMap<i32, String> =
         users.iter().filter_map(|u| decrypt_user(&k, u).ok().map(|d| (d.id, d.name))).collect();
 
@@ -222,9 +235,11 @@ pub fn build(key: Option<[u8; 32]>, live: Option<&LiveData>) -> ProjectData {
 
     let summary = summary_from_payments(&payments);
 
-    let (currency, project_status) = project
-        .map(|p| (project_currency(&k, p), project_status(Some(&k), p)))
-        .unwrap_or_else(|| ("...".to_string(), ProjectStatus::Ongoing));
+    let (currency, project_status) = match (project, payload.as_ref()) {
+        (Some(p), Some(pp)) => (pp.currency.clone(), pp.status.clone().unwrap_or_else(|| p.status.clone())),
+        (Some(p), None) => (String::new(), p.status.clone()),
+        (None, _) => ("...".to_string(), ProjectStatus::Ongoing),
+    };
 
     ProjectData {
         project_id: Some(live.project_id),
@@ -240,8 +255,10 @@ pub fn build(key: Option<[u8; 32]>, live: Option<&LiveData>) -> ProjectData {
         currency,
         project_status,
         read_only: project.is_some_and(|p| p.read_only),
-        personal: payload.as_ref().is_some_and(|p| p.is_personal()),
-        budgets: payload.as_ref().filter(|p| p.is_personal()).map(|p| p.budgets()).unwrap_or_default(),
+        personal,
+        budgets: payload.as_ref().filter(|_| personal).map(|p| p.budgets()).unwrap_or_default(),
+        unreadable_expenses,
+        project_unreadable: project.is_some() && payload.is_none(),
         loaded: true,
         revision: next_revision(),
     }
@@ -293,7 +310,7 @@ mod tests {
     }
 
     fn built(l: &LiveData) -> ProjectData {
-        build(Some(test_key()), Some(l))
+        build(Some(test_key()), Some(l), None)
     }
 
     /// The tag is what stops A's rows rendering under B - see [`LiveData`].
@@ -315,7 +332,7 @@ mod tests {
             version: None,
         };
 
-        let built = build(Some(k), Some(&held));
+        let built = build(Some(k), Some(&held), None);
         assert!(built.loaded);
         assert_eq!(built.expenses.len(), 1);
         assert_eq!(built.project_id, Some(a), "the pass must name the project it decrypted");
@@ -329,11 +346,11 @@ mod tests {
     #[test]
     fn an_unloaded_pass_names_no_project() {
         assert_eq!(ProjectData::default().project_id, None);
-        assert_eq!(build(Some(test_key()), None).project_id, None);
+        assert_eq!(build(Some(test_key()), None, None).project_id, None);
     }
 
-    /// A wrong key drops every row, so `loaded` is the only thing left saying data was expected -
-    /// the page must not present that as an empty project.
+    /// A wrong key drops every row, and the page must not present that as an empty project: the
+    /// count of what did not open is what says so.
     #[test]
     fn a_wrong_key_drops_every_row_without_panicking() {
         let k = test_key();
@@ -343,12 +360,30 @@ mod tests {
             vec![expense(&k, 1, "Pizza", "2025-01-01")],
             vec![make_payment(&k, 1, 1, 7, false, 10.0)],
         );
-        let data = build(Some(other), Some(&l));
+        let data = build(Some(other), Some(&l), None);
         assert!(data.expenses.is_empty());
         assert!(data.payments.is_empty());
         assert!(data.user_names.is_empty());
         assert_eq!(data.global_total, 0.0);
         assert!(data.summary.summary.is_empty());
+        assert_eq!(data.unreadable_expenses, 1);
+    }
+
+    #[test]
+    fn a_project_row_that_does_not_open_is_unreadable_not_empty() {
+        let k = test_key();
+        let mut l = live(vec![], vec![], vec![]);
+        l.project = Some(crate::common::test_fixtures::make_project(&k, Uuid::nil(), "Trip", "EUR"));
+        assert!(!build(Some(k), Some(&l), None).project_unreadable);
+        assert!(build(Some([0x11u8; 32]), Some(&l), None).project_unreadable);
+        assert!(!build(Some(k), Some(&live(vec![], vec![], vec![])), None).project_unreadable, "no row, nothing to judge");
+    }
+
+    #[test]
+    fn a_readable_project_counts_nothing_unreadable() {
+        let k = test_key();
+        let l = live(vec![], vec![expense(&k, 1, "Pizza", "2025-01-01")], vec![]);
+        assert_eq!(build(Some(k), Some(&l), None).unreadable_expenses, 0);
     }
 
     /// Balances follow the rows the page shows. An expense that will not open is not listed, so
@@ -383,7 +418,7 @@ mod tests {
             vec![make_expense(&k, 1, "Pizza", 30.0, ExpenseType::Expense, "2025-01-01"), bad],
             vec![make_payment(&k, 1, 1, 7, false, 30.0)],
         );
-        let data = build(Some(k), Some(&l));
+        let data = build(Some(k), Some(&l), None);
         assert_eq!(data.expenses.len(), 1, "the readable row survives");
         assert_eq!(data.expenses[0].expense.id, 1);
         assert!((data.global_total - 30.0).abs() < 0.01);
@@ -395,7 +430,7 @@ mod tests {
     fn equality_is_reflexive() {
         let k = test_key();
         let l = live(vec![], vec![expense(&k, 1, "Pizza", "2025-01-01")], vec![]);
-        let data = build(Some(k), Some(&l));
+        let data = build(Some(k), Some(&l), None);
         #[allow(clippy::eq_op)]
         {
             assert!(data == data, "a value must equal itself, or every consumer sees a change");
@@ -408,13 +443,13 @@ mod tests {
     fn two_builds_are_never_equal() {
         let k = test_key();
         let l = live(vec![], vec![expense(&k, 1, "Pizza", "2025-01-01")], vec![]);
-        assert_ne!(build(Some(k), Some(&l)), build(Some(k), Some(&l)));
+        assert_ne!(build(Some(k), Some(&l), None), build(Some(k), Some(&l), None));
     }
 
     #[test]
     fn without_a_key_nothing_is_attempted() {
         let l = large_live();
-        let (data, n) = count_decrypts(|| build(None, Some(&l)));
+        let (data, n) = count_decrypts(|| build(None, Some(&l), None));
         assert_eq!(n, 0, "without a key nothing may be decrypted");
         assert!(!data.loaded, "and the page must not render an empty project as if it loaded");
     }
@@ -429,6 +464,34 @@ mod tests {
         assert_eq!(n, 6_010, "one decryption per row of data, not per row x payment: got {n}");
     }
 
+    /// An edit patches one row into `LiveData` and the memo rebuilds the whole page from it: the
+    /// rows that did not change must come back without being decrypted again.
+    #[test]
+    fn an_edit_decrypts_only_the_row_it_changed() {
+        let k = test_key();
+        let mut l = large_live();
+        let (_, cold) = count_decrypts(|| built(&l));
+        assert_eq!(cold, 6_010);
+
+        let id = l.expenses[0].id;
+        l.expenses[0] = make_expense(&k, id, "edited", 100.0, ExpenseType::Expense, "2025-01-01");
+        crate::crypto::DECRYPT_COUNT.with(|c| c.set(0));
+        let data = built(&l);
+        assert_eq!(crate::crypto::DECRYPT_COUNT.with(|c| c.get()), 1);
+        assert!(data.expenses.iter().any(|r| r.expense.id == id && r.expense.name == "edited"));
+    }
+
+    #[test]
+    #[ignore = "timing: cargo test -p ui --release -- --ignored --nocapture"]
+    fn build_timing() {
+        let l = large_live();
+        for pass in ["first", "second"] {
+            let t = std::time::Instant::now();
+            built(&l);
+            println!("build large_project, {pass} pass: {:?}", t.elapsed());
+        }
+    }
+
     fn expense(k: &[u8; 32], id: i32, name: &str, date: &str) -> Expense {
         make_expense(k, id, name, 10.0, ExpenseType::Expense, date)
     }
@@ -437,7 +500,7 @@ mod tests {
     fn the_emoji_comes_from_the_name() {
         let k = test_key();
         let data =
-            build(Some(k), Some(&live(vec![], vec![expense(&k, 1, "Pizza", "2025-01-01")], vec![])));
+            build(Some(k), Some(&live(vec![], vec![expense(&k, 1, "Pizza", "2025-01-01")], vec![])), None);
         assert_eq!(data.expenses[0].emoji, "🍕");
     }
 
@@ -446,11 +509,11 @@ mod tests {
     fn renaming_an_expense_updates_its_emoji() {
         let k = test_key();
         let before =
-            build(Some(k), Some(&live(vec![], vec![expense(&k, 1, "Taxi", "2025-01-01")], vec![])));
+            build(Some(k), Some(&live(vec![], vec![expense(&k, 1, "Taxi", "2025-01-01")], vec![])), None);
         assert_eq!(before.expenses[0].emoji, "🚕");
 
         let after =
-            build(Some(k), Some(&live(vec![], vec![expense(&k, 1, "Pizza", "2025-01-01")], vec![])));
+            build(Some(k), Some(&live(vec![], vec![expense(&k, 1, "Pizza", "2025-01-01")], vec![])), None);
         assert_eq!(after.expenses[0].emoji, "🍕", "a rename must re-derive the emoji");
     }
 
@@ -459,7 +522,7 @@ mod tests {
     fn a_picked_category_overrides_the_name() {
         let k = test_key();
         let e = make_expense_with_category(&k, 1, "Pizza", "Transport");
-        let data = build(Some(k), Some(&live(vec![], vec![e], vec![])));
+        let data = build(Some(k), Some(&live(vec![], vec![e], vec![])), None);
         assert_eq!(data.expenses[0].emoji, "🚕");
     }
 
@@ -468,7 +531,7 @@ mod tests {
     fn a_picked_category_matching_the_name_keeps_the_leaf_emoji() {
         let k = test_key();
         let e = make_expense_with_category(&k, 1, "Pizza", "Nourriture");
-        let data = build(Some(k), Some(&live(vec![], vec![e], vec![])));
+        let data = build(Some(k), Some(&live(vec![], vec![e], vec![])), None);
         assert_eq!(data.expenses[0].emoji, "🍕");
     }
 
@@ -476,7 +539,7 @@ mod tests {
     fn a_category_outside_the_chart_list_falls_back_to_the_name() {
         let k = test_key();
         let e = make_expense_with_category(&k, 1, "Pizza", "PasUneCategorie");
-        let data = build(Some(k), Some(&live(vec![], vec![e], vec![])));
+        let data = build(Some(k), Some(&live(vec![], vec![e], vec![])), None);
         assert_eq!(data.expenses[0].emoji, "🍕");
     }
 
@@ -485,7 +548,7 @@ mod tests {
     fn an_unparseable_date_falls_back_to_created_at_instead_of_vanishing() {
         let k = test_key();
         let expenses = vec![expense(&k, 1, "Pizza", "pas-une-date")];
-        let data = build(Some(k), Some(&live(vec![], expenses, vec![])));
+        let data = build(Some(k), Some(&live(vec![], expenses, vec![])), None);
         assert_eq!(data.expenses.len(), 1, "the row must still render");
         assert_eq!(data.expenses[0].date, data.expenses[0].expense.created_at.date());
     }
@@ -501,7 +564,7 @@ mod tests {
             make_payment(&k, 1, 1, 7, false, 30.0),
             make_payment(&k, 2, 2, 7, false, 50.0),
         ];
-        let data = build(Some(k), Some(&live(vec![], expenses, payments)));
+        let data = build(Some(k), Some(&live(vec![], expenses, payments)), None);
         assert_eq!(data.global_total, 30.0, "only Expense entries count toward the total");
         assert!(data.real_expense_ids.contains(&1));
         assert!(!data.real_expense_ids.contains(&2));
@@ -518,7 +581,7 @@ mod tests {
             make_payment(&k, 1, 1, 1, false, 25.0),
             make_payment(&k, 2, 2, 1, false, 12.5),
         ];
-        let data = build(Some(k), Some(&live(vec![], expenses, payments)));
+        let data = build(Some(k), Some(&live(vec![], expenses, payments)), None);
         assert!((data.global_total - 25.0).abs() < 0.01, "got {}", data.global_total);
         assert!(!data.real_expense_ids.contains(&2));
     }
@@ -534,7 +597,7 @@ mod tests {
             make_payment(&k, 1, 1, 7, true, 30.0),
             make_payment(&k, 2, 2, 7, true, 50.0),
         ];
-        let data = build(Some(k), Some(&live(vec![], expenses, payments)));
+        let data = build(Some(k), Some(&live(vec![], expenses, payments)), None);
         assert_eq!(data.user_total(7), 30.0);
     }
 
@@ -549,7 +612,7 @@ mod tests {
             make_payment(&k, 2, 1, 1, true, 100.0),
             make_payment(&k, 3, 1, 2, true, 100.0),
         ];
-        let data = build(Some(k), Some(&live(vec![], expenses, payments)));
+        let data = build(Some(k), Some(&live(vec![], expenses, payments)), None);
         assert!((data.user_total(1) - 100.0).abs() < 0.01, "got {}", data.user_total(1));
     }
 
@@ -564,7 +627,7 @@ mod tests {
             make_payment(&k, 1, 1, 1, true, 30.0),
             make_payment(&k, 2, 2, 1, true, 20.0),
         ];
-        let data = build(Some(k), Some(&live(vec![], expenses, payments)));
+        let data = build(Some(k), Some(&live(vec![], expenses, payments)), None);
         assert!((data.user_total(1) - 50.0).abs() < 0.01);
         assert_eq!(data.user_total(99), 0.0, "a user with no debt rows owes nothing");
         assert_eq!(ProjectData::default().user_total(1), 0.0);
@@ -575,14 +638,14 @@ mod tests {
         let k = test_key();
         let users = vec![make_user(&k, 7, "Alice"), make_user(&k, 8, "Bob")];
         let one = vec![make_payment(&k, 1, 1, 7, false, 10.0), make_payment(&k, 2, 1, 8, true, 10.0)];
-        let data = build(Some(k), Some(&live(users.clone(), vec![expense(&k, 1, "Pizza", "2025-01-01")], one)));
+        let data = build(Some(k), Some(&live(users.clone(), vec![expense(&k, 1, "Pizza", "2025-01-01")], one)), None);
         assert_eq!(data.payor_label(1), "Alice");
 
         let two = vec![
             make_payment(&k, 1, 1, 7, false, 5.0),
             make_payment(&k, 2, 1, 8, false, 5.0),
         ];
-        let data = build(Some(k), Some(&live(users, vec![expense(&k, 1, "Pizza", "2025-01-01")], two)));
+        let data = build(Some(k), Some(&live(users, vec![expense(&k, 1, "Pizza", "2025-01-01")], two)), None);
         assert_eq!(data.payor_label(1), "2 personnes");
         assert_eq!(data.payor_label(99), "inconnu", "an expense nobody paid");
     }
@@ -641,7 +704,7 @@ mod tests {
         bad.payload.ct = "not_valid_base64!!!".to_string();
         let payments = vec![make_payment(&k, 1, 1, 1, false, 20.0), bad];
         let expenses = vec![expense(&k, 1, "Pizza", "2025-01-01")];
-        let data = build(Some(k), Some(&live(vec![], expenses, payments)));
+        let data = build(Some(k), Some(&live(vec![], expenses, payments)), None);
         assert_eq!(data.payments.len(), 1, "the corrupt row must be dropped");
         assert!(data.summary.summary.contains_key(&1));
         assert!(!data.summary.summary.contains_key(&99));

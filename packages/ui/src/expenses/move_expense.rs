@@ -76,10 +76,18 @@ pub struct Destination {
 }
 
 /// The source first (shown, not pickable), then every project that can take an expense: held with
-/// its key, ongoing, not read-only. "Mes dépenses" comes last.
+/// its key, ongoing, not read-only. "Mes dépenses" comes last. A source the list cache does not hold
+/// yet - a project created moments ago - comes from its own cached copy.
 pub fn destinations(list: &[ProjectDto], state: &LocalStorageState, from: Uuid) -> Vec<Destination> {
+    let source = state
+        .projects
+        .iter()
+        .find(|lp| lp.project_id == from)
+        .and_then(|lp| lp.cached_project.as_ref())
+        .filter(|_| !list.iter().any(|p| p.id == from));
     let mut out: Vec<Destination> = list
         .iter()
+        .chain(source)
         .filter_map(|p| {
             let entry = state.projects.iter().find(|lp| lp.project_id == p.id)?;
             let key = key_of(entry)?;
@@ -88,7 +96,7 @@ pub fn destinations(list: &[ProjectDto], state: &LocalStorageState, from: Uuid) 
             let open = project_status(Some(&key), p) == ProjectStatus::Ongoing && !p.read_only;
             (current || open).then(|| Destination {
                 project_id: p.id,
-                personal: payload.is_personal(),
+                personal: state.personal_project == Some(p.id),
                 name: payload.name,
                 currency: payload.currency,
                 members: entry.cached_users.as_ref().map(|u| pickable_users(Some(&key), u, &[]).len()),
@@ -324,6 +332,7 @@ mod tests {
                 held(&archived, &k, None),
                 held(&demo, &k, None),
             ],
+            personal_project: Some(mine.id),
             ..Default::default()
         };
         let list = [source.clone(), mine.clone(), corsica.clone(), archived, demo, keyless];
@@ -333,6 +342,22 @@ mod tests {
         assert!(got[0].current);
         assert_eq!(got[1].members, Some(2));
         assert!(got[2].personal);
+    }
+
+    /// The project just created is in no list cache yet: the move banner must still name it.
+    #[test]
+    fn a_source_missing_from_the_list_cache_is_read_from_its_own_entry() {
+        let k = test_key();
+        let source = with(&k, "Offsite", |_| {});
+        let corsica = with(&k, "Corsica", |_| {});
+        let mut entry = held(&source, &k, None);
+        entry.cached_project = Some(source.clone());
+        let state = LocalStorageState { projects: vec![entry, held(&corsica, &k, None)], ..Default::default() };
+
+        let got = destinations(std::slice::from_ref(&corsica), &state, source.id);
+        let names: Vec<&str> = got.iter().map(|d| d.name.as_str()).collect();
+        assert_eq!(names, ["Offsite", "Corsica"]);
+        assert!(got[0].current);
     }
 
     #[test]

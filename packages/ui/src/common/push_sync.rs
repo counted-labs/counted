@@ -10,7 +10,7 @@ use dioxus::core::Task;
 use dioxus::{fullstack::Json, prelude::*};
 use shared::{Account, RegisterPushToken, UnregisterPushToken, VerifyPushToken};
 
-use super::{native_push, push::parse_push_token, push::take_push_proof, read_push_token, sleep};
+use super::{native_push, push::parse_push_token, push::take_push_proof, push::write_push_lang, read_push_token, sleep};
 use crate::i18n::current_lang;
 
 const TOKEN_POLL_MS: u32 = 1000;
@@ -38,6 +38,7 @@ pub fn use_push_registration() {
             return;
         }
         (push.request)();
+        let _ = write_push_lang(&lang);
         let task = spawn(async move {
             for _ in 0..TOKEN_POLL_ROUNDS {
                 // The server's verification push lands here, usually a second or two after the

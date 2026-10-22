@@ -1,15 +1,22 @@
 //! "Mes dépenses" (designs R1, R2, R5, R7): the personal project's own rows plus my share of every
 //! group this device holds, each group counted unless switched off in the encrypted preferences.
 
-use api::payments::payments_controller::sync_project_data;
+use api::payments::payments_controller::sync_projects;
+use dioxus::fullstack::{Json, ServerFnError};
 use chrono::{Datelike, NaiveDate};
-use shared::{Expense, ExpenseType, Payment, ProjectDto, ProjectPayload, User};
+use shared::{
+    BatchSync, Expense, ExpenseType, KnownProject, Payment, ProjectDto, ProjectPayload, ProjectSync, User,
+    NO_CACHED_VERSION,
+};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 use crate::charts::charts_page::{known_version, synced_rows};
 use crate::common::fx_cache::{cross_rate, CachedFx};
-use crate::common::{key_of, read_from_ls, LocalStorageProject, LocalStorageState};
+use crate::common::{
+    is_rate_limited, key_of, read_from_ls, set_project_cache, sleep, write_to_ls, LocalStorageProject, RATE_LIMIT_RETRY_MS,
+    LocalStorageState,
+};
 use crate::crypto::decrypt_json;
 use crate::decrypted::{pickable_users, DecryptedExpense};
 use crate::expenses::helpers::budgets::{budget_lines, spent_by_category, BudgetLine};
@@ -141,9 +148,11 @@ pub struct MonthGlance {
 }
 
 /// From this device's cache alone; `None` until the personal project has been opened here once.
+/// `ledgers` are the groups the projects page already decrypted, not rebuilt here on every write.
 pub fn month_glance(
     state: &LocalStorageState,
     personal: Uuid,
+    ledgers: &[GroupLedger],
     uncounted: &HashSet<Uuid>,
     fx: Option<&CachedFx>,
     today: NaiveDate,
@@ -160,9 +169,11 @@ pub fn month_glance(
             payments: p.cached_payments.clone().unwrap_or_default(),
             version: None,
         }),
+        Some(personal),
     );
     let month = first_of_month(today);
-    let shares = share_rows(&cached_ledgers(state, personal), uncounted, &data.currency, fx);
+    let mut shares = share_rows(ledgers, uncounted, &data.currency, fx);
+    shares.retain(|s| s.project_id != personal);
     let lines = budget_lines(&data.budgets, &spent_by_category(&data.expenses, &shares, month));
     let budget = (!lines.is_empty()).then(|| BudgetLine {
         category: "",
@@ -183,27 +194,84 @@ pub fn results_total(rows: &[&RowExpense], shares: &HashMap<i32, &ShareRow>) -> 
         .sum()
 }
 
-/// Every other project this device holds a key for, synced as the charts page syncs them. Offline,
-/// a group falls back to its cached rows.
-pub async fn load_ledgers(personal: Uuid) -> Vec<GroupLedger> {
-    let ls = read_from_ls();
-    let mut out = Vec::new();
-    for p in ls.projects.iter().filter(|p| p.project_id != personal) {
-        let (project, users, rows) = match sync_project_data(p.project_id, known_version(p)).await {
-            Ok(sync) => (
-                sync.project.clone().or_else(|| p.cached_project.clone()),
-                sync.users.clone().or_else(|| p.cached_users.clone()),
-                synced_rows(sync, p),
-            ),
-            Err(_) => (p.cached_project.clone(), p.cached_users.clone(), cached_rows(p)),
-        };
-        out.extend(ledger_of(p, project, users, rows));
+/// Every project in `ids` in one request, written back to the cache so the next call claims those
+/// versions and is answered "unchanged". Also returns the state the claims were made from: an
+/// "unchanged" answer means its cached rows, which a full web quota may since have dropped.
+pub async fn sync_all(ids: Vec<Uuid>) -> Result<(LocalStorageState, Vec<ProjectSync>), ServerFnError> {
+    let before = read_from_ls();
+    if ids.is_empty() {
+        return Ok((before, vec![]));
     }
-    sorted(out)
+    let projects = ids
+        .into_iter()
+        .map(|id| KnownProject {
+            id,
+            known_version: before.projects.iter().find(|p| p.project_id == id).map_or(NO_CACHED_VERSION, known_version),
+        })
+        .collect();
+    let request = BatchSync { projects };
+    let syncs = match sync_projects(Json(request.clone())).await {
+        Err(e) if is_rate_limited(&e) => {
+            sleep(RATE_LIMIT_RETRY_MS).await;
+            sync_projects(Json(request)).await?
+        }
+        result => result?,
+    };
+    let mut state = read_from_ls();
+    for sync in &syncs {
+        cache_sync(&mut state, sync);
+    }
+    write_to_ls(&state);
+    Ok((before, syncs))
 }
 
-/// The same groups from this device's cache alone, for the projects page, which makes no request
-/// per project.
+fn cache_sync(state: &mut LocalStorageState, sync: &ProjectSync) {
+    let Some(project) = sync.project.clone() else { return };
+    let id = project.id;
+    let Some(entry) = state.projects.iter_mut().find(|p| p.project_id == id) else { return };
+    let users = sync.users.clone().or_else(|| entry.cached_users.clone()).unwrap_or_default();
+    match (sync.expenses.clone(), sync.payments.clone()) {
+        (Some(expenses), Some(payments)) => {
+            set_project_cache(state, id, project, users, expenses, payments, Some(sync.data_version))
+        }
+        _ => {
+            entry.cached_project = Some(project);
+            entry.cached_users = Some(users);
+        }
+    }
+}
+
+/// Every other project this device holds a key for, in one request. Offline, a group falls back to
+/// its cached rows.
+pub async fn load_ledgers(personal: Uuid) -> Vec<GroupLedger> {
+    let ids = read_from_ls().projects.iter().map(|p| p.project_id).filter(|id| *id != personal).collect();
+    match sync_all(ids).await {
+        Ok((before, syncs)) => synced_ledgers(&before, &syncs, personal),
+        Err(_) => cached_ledgers(&read_from_ls(), personal),
+    }
+}
+
+/// The groups as `sync_all` answered them, each falling back to `state`'s cache where the server
+/// sent no rows or no longer has the project.
+pub fn synced_ledgers(state: &LocalStorageState, syncs: &[ProjectSync], personal: Uuid) -> Vec<GroupLedger> {
+    let ledgers = state
+        .projects
+        .iter()
+        .filter(|p| p.project_id != personal)
+        .filter_map(|p| match syncs.iter().find(|s| s.project.as_ref().is_some_and(|d| d.id == p.project_id)) {
+            Some(sync) => ledger_of(
+                p,
+                sync.project.clone(),
+                sync.users.clone().or_else(|| p.cached_users.clone()),
+                synced_rows(sync.clone(), p),
+            ),
+            None => ledger_of(p, p.cached_project.clone(), p.cached_users.clone(), cached_rows(p)),
+        })
+        .collect();
+    sorted(ledgers)
+}
+
+/// The same groups from this device's cache alone, for a first render before the sync answers.
 pub fn cached_ledgers(state: &LocalStorageState, personal: Uuid) -> Vec<GroupLedger> {
     let ledgers = state
         .projects
@@ -232,9 +300,6 @@ fn ledger_of(
     let key = key_of(p)?;
     let (project, (expenses, payments)) = (project?, rows?);
     let payload = decrypt_json::<ProjectPayload>(&key, &project.payload).ok()?;
-    if payload.is_personal() {
-        return None;
-    }
     let data = project_data::build(
         Some(key),
         Some(&LiveData {
@@ -245,6 +310,7 @@ fn ledger_of(
             payments,
             version: None,
         }),
+        None,
     );
     Some(GroupLedger {
         project_id: p.project_id,
@@ -277,6 +343,7 @@ mod tests {
                 payments,
                 version: None,
             }),
+            None,
         );
         GroupLedger { project_id, name: name.to_string(), me, members: 2, data }
     }
@@ -397,19 +464,49 @@ mod tests {
         let state = LocalStorageState { projects: vec![mine.clone(), trip], ..Default::default() };
         let today = day("2026-10-12");
 
-        let glance = month_glance(&state, personal_id, &HashSet::new(), None, today).unwrap();
+        let glance = month_glance(&state, personal_id, &cached_ledgers(&state, personal_id), &HashSet::new(), None, today).unwrap();
         assert!((glance.spent - 78.30).abs() < 1e-9);
         let budget = glance.budget.unwrap();
         assert_eq!(budget.limit, 100.0);
         let dinner_counts = if category_of(&dinner) == category_of(&courses) { 32.0 } else { 0.0 };
         assert!((budget.spent - (46.30 + dinner_counts)).abs() < 1e-9);
 
-        let uncounted = month_glance(&state, personal_id, &HashSet::from([group_id]), None, today).unwrap();
+        let uncounted = month_glance(&state, personal_id, &cached_ledgers(&state, personal_id), &HashSet::from([group_id]), None, today).unwrap();
         assert!((uncounted.spent - 46.30).abs() < 1e-9);
 
         let unopened = LocalStorageProject { cached_expenses: None, ..mine };
         let state = LocalStorageState { projects: vec![unopened], ..Default::default() };
-        assert_eq!(month_glance(&state, personal_id, &HashSet::new(), None, today), None);
+        assert_eq!(month_glance(&state, personal_id, &cached_ledgers(&state, personal_id), &HashSet::new(), None, today), None);
+    }
+
+    /// The projects page passes every ledger it holds, the personal project's own included.
+    #[test]
+    fn the_personal_project_is_not_counted_again_as_a_group() {
+        use crate::crypto::key_to_fragment;
+        let k = test_key();
+        let personal_id = Uuid::new_v4();
+        let personal = LocalStorageProject {
+            project_id: personal_id,
+            encryption_key: Some(key_to_fragment(&k)),
+            user_id: Some(7),
+            cached_project: Some(make_project(&k, personal_id, "Mes dépenses", "EUR")),
+            cached_users: Some(corsica(Some(7)).data.users.clone()),
+            cached_expenses: Some(vec![make_expense(&k, 1, "Courses", 128.0, ExpenseType::Expense, "2026-10-11")]),
+            cached_payments: Some(vec![
+                make_payment(&k, 1, 1, 8, false, 128.0),
+                make_payment(&k, 2, 1, 7, true, 32.0),
+                make_payment(&k, 3, 1, 8, true, 96.0),
+            ]),
+            ..Default::default()
+        };
+        let state = LocalStorageState { projects: vec![personal], ..Default::default() };
+        let page_ledgers = cached_ledgers(&state, Uuid::nil());
+        assert_eq!(page_ledgers.len(), 1);
+        let spent = |ledgers: &[GroupLedger]| {
+            month_glance(&state, personal_id, ledgers, &HashSet::new(), None, day("2026-10-12")).unwrap().spent
+        };
+
+        assert_eq!(spent(&page_ledgers), spent(&[]));
     }
 
     #[test]
@@ -465,5 +562,56 @@ mod tests {
         let by_id: HashMap<i32, &ShareRow> = shares.iter().map(|s| (s.row.expense.id, s)).collect();
         let rows: Vec<&RowExpense> = std::iter::once(&own).chain(shares.iter().map(|s| &s.row)).collect();
         assert_eq!(results_total(&rows, &by_id), 48.0);
+    }
+
+    fn held(id: Uuid) -> LocalStorageState {
+        LocalStorageState {
+            projects: vec![LocalStorageProject { project_id: id, ..Default::default() }],
+            ..Default::default()
+        }
+    }
+
+    fn answer(id: Uuid, version: i64, expenses: Option<Vec<Expense>>) -> ProjectSync {
+        let k = test_key();
+        ProjectSync {
+            data_version: version,
+            project: Some(make_project(&k, id, "Corse", "EUR")),
+            users: Some(vec![make_user(&k, 1, "Ana")]),
+            payments: expenses.as_ref().map(|_| vec![]),
+            expenses,
+            recurring: Some(vec![]),
+            server_date: None,
+        }
+    }
+
+    fn cafe() -> Vec<Expense> {
+        vec![make_expense(&test_key(), 1, "Café", 3.0, ExpenseType::Expense, "2026-10-01")]
+    }
+
+    #[test]
+    fn a_full_answer_is_cached_at_its_version() {
+        let id = Uuid::new_v4();
+        let mut state = held(id);
+        cache_sync(&mut state, &answer(id, 7, Some(cafe())));
+        assert_eq!(known_version(&state.projects[0]), 7);
+        assert_eq!(state.projects[0].cached_expenses.as_ref().map(Vec::len), Some(1));
+    }
+
+    #[test]
+    fn an_unchanged_answer_keeps_the_cached_rows_and_their_version() {
+        let id = Uuid::new_v4();
+        let mut state = held(id);
+        cache_sync(&mut state, &answer(id, 7, Some(cafe())));
+        cache_sync(&mut state, &answer(id, 7, None));
+        assert_eq!(known_version(&state.projects[0]), 7);
+        assert_eq!(state.projects[0].cached_expenses.as_ref().map(Vec::len), Some(1));
+    }
+
+    #[test]
+    fn a_project_this_device_does_not_hold_is_not_cached() {
+        let mut state = held(Uuid::new_v4());
+        cache_sync(&mut state, &answer(Uuid::new_v4(), 7, Some(cafe())));
+        assert_eq!(state.projects.len(), 1);
+        assert!(state.projects[0].cached_project.is_none());
     }
 }

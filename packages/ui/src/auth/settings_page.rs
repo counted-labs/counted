@@ -8,7 +8,7 @@ use crate::common::{
     AppHeader, AuthResolved, ConfirmModal, LanguagePicker, LocalStorageState, PullToRefresh,
 };
 use crate::auth::{LockedFeatureCard, PaymentMethodsCard};
-use crate::crypto::decrypt_json;
+use crate::crypto::{decrypt_json, forget_decrypted};
 use crate::icons::{DollarIcon, RightArrowIcon, UserIcon};
 use crate::route::Route;
 
@@ -27,6 +27,7 @@ fn clear_local_session(
     write_to_ls(&state);
     ls_ctx.set(state);
     remove_quarantined_ls();
+    forget_decrypted();
 
     account_enc_key_ctx.set(None);
     auth_ctx.set(None);

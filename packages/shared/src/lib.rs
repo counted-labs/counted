@@ -278,6 +278,15 @@ pub struct HistoryPayload {
     /// Replaces `project_history.actor_user_id` - see docs/plans/participant-links-encryption.md.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub actor_user_id: Option<i32>,
+    /// Replace the `action`, `entity` and `entity_id` columns, read first with the columns as
+    /// fallback (audit 2026-10-19 L5, phase B). `entity_id` is `None` on a creation: the id is the
+    /// server's to assign.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub action: Option<HistoryAction>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entity: Option<HistoryEntity>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub entity_id: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -453,6 +462,13 @@ pub const MAX_PARTICIPANTS: usize = 100;
 /// pads to 8 KiB; the rest is room for long names and descriptions.
 pub const MAX_PAYLOAD_LENGTH: usize = 65536;
 
+/// Ceiling on the account display name's ciphertext, in bytes. The name is padded (audit 2026-10-19
+/// L4): 128 characters escape to at most 768 bytes of JSON, so 1024 plus the 16-byte tag.
+pub const MAX_DISPLAY_NAME_LENGTH: usize = 1024 + 16;
+
+/// XChaCha20-Poly1305's nonce, the `iv` of every `EncryptedPair` a client writes.
+pub const NONCE_LENGTH: usize = 24;
+
 /// Worst case, from `ui::payment_methods`: 20 methods x ((40 kind + 140 value + 60 label) chars x
 /// 4 bytes for UTF-8 + ~48 bytes of JSON syntax incl. `"shared":true`) ~= 20,200 bytes, +16 for
 /// the Poly1305 tag, x 4/3 for base64 ~= 27,000. Control characters are rejected client-side
@@ -499,6 +515,10 @@ pub struct Account {
     /// The matching private key, encrypted with the account key. Same contract as `preferences`.
     #[serde(default)]
     pub private_key: Option<EncryptedPair>,
+    /// Every build older than [`TYPED_WRAPS_FROM`] is refused, so keys and friend labels are
+    /// written typed and the private key is re-wrapped. Set by the server from `MIN_APP_VERSION`.
+    #[serde(default)]
+    pub typed_wraps: bool,
 }
 
 /// `PUT /auth/keypair`. Write-once: the server keeps the first keypair an account presents.
@@ -699,6 +719,10 @@ pub struct Preferences {
     /// Groups whose share stays out of "Mes dépenses". Every group counts until switched off.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub uncounted_projects: Vec<Uuid>,
+    /// The account's "Mes dépenses". The account says which project it is, not the project: any
+    /// key holder can write `kind: personal` into a shared payload (audit 2026-10-19 M3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub personal_project: Option<Uuid>,
     #[serde(flatten)]
     pub extra: Unknown,
 }
@@ -764,6 +788,18 @@ pub struct UpdatePaymentMethods {
     #[serde(default)]
     pub shared: Vec<ProjectPaymentMethods>,
     #[serde(default)]
+    pub expected_iv: Option<String>,
+}
+
+/// `PUT /auth/preferences`. With `expected_iv`, the server writes only while that is still the
+/// stored blob's nonce, so a device left open cannot revert what another one switched since. A bare
+/// pair, from builds before 3.2.6, writes unconditionally.
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdatePreferences {
+    #[serde(flatten)]
+    pub preferences: EncryptedPair,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expected_iv: Option<String>,
 }
 
@@ -853,6 +889,17 @@ pub struct LoginPayload {
 #[serde(rename_all = "camelCase")]
 pub struct VerifyEmailPayload {
     pub token: String,
+    /// The login proof of the token's account. Builds before 3.2.6 send none: their address is
+    /// verified but no session is minted, since holding a link proves the mailbox, not the
+    /// credentials.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub proof: Option<Vec<u8>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct VerifyEmailSaltPayload {
+    pub token: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -921,6 +968,19 @@ pub struct BatchProject {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct KnownProject {
+    pub id: Uuid,
+    pub known_version: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct BatchSync {
+    pub projects: Vec<KnownProject>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "server", derive(FromRow))]
 pub struct AccountProject {
     pub project_id: Uuid,
@@ -939,15 +999,26 @@ pub struct AccountProject {
     /// `PUT /auth/payment-methods` from a fresh `me()` - see `ui::payment_methods::refill`.
     #[serde(default)]
     pub payment_methods_shared: bool,
+    /// Whether any history row of the project still holds `actor_user_id` or `actor_account_id`,
+    /// which only a conversion clears (docs/plans/participant-links-encryption.md). Lets a device
+    /// skip the history read and the conversion write for a project with nothing left to convert.
+    /// Account-only, unlike `ProjectSync`: `actor_account_id` never reaches any other reader.
+    /// `None` from a server predating it means "unknown", which converts as before.
+    #[serde(default)]
+    pub history_has_actors: Option<bool>,
 }
 
 /// Bytes the claim proof is made of. Shared so client and server agree on the lengths.
 pub const CLAIM_TOKEN_LENGTH: usize = 32;
 
-/// Base64 lengths the membership write accepts for the blobs it carries. A wrapped key is the
-/// 43-character fragment plus a 16-byte tag (80 chars) with a 24-byte nonce (32 chars); a claim
-/// label is one display name. Bounded per field so the row cannot be used as free storage.
-pub const MAX_WRAPPED_KEY_LENGTH: usize = 128;
+/// Base64 lengths the membership write accepts for the blobs it carries. An untyped wrapped key is
+/// the 43-character fragment plus a 16-byte tag (80 chars) with a 24-byte nonce (32 chars); a typed
+/// one adds its use and project id (about 160 chars); a claim label is one display name. Bounded
+/// per field so the row cannot be used as free storage.
+pub const MAX_WRAPPED_KEY_LENGTH: usize = 256;
+/// The first build that reads typed key wraps. Clients write them once `MIN_APP_VERSION` is at
+/// least this (audit 2026-10-19 L1).
+pub const TYPED_WRAPS_FROM: &str = "3.2.6";
 pub const MAX_CLAIM_LABEL_LENGTH: usize = 4096;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1138,6 +1209,16 @@ impl ExpenseType {
             ExpenseType::Gain => "gain",
         }
     }
+
+    /// `None` for a type this build does not know, which a newer one may have written.
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "expense" => Some(ExpenseType::Expense),
+            "transfer" => Some(ExpenseType::Transfer),
+            "gain" => Some(ExpenseType::Gain),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1256,7 +1337,8 @@ pub struct DeleteRecurringExpenseRequest {
 
 /// Claims the occurrences due up to `due_through` and writes them, in one transaction: the rule's
 /// cursor (inside `payload`) advances if and only if every occurrence is written. `due_through` is
-/// the only date the server sees, and only to refuse one past tomorrow.
+/// the client's server date (3.2.6 on; older builds sent the last occurrence's date), the only date
+/// the server sees, and only to refuse one past tomorrow.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MaterializeRecurringRequest {
@@ -1370,6 +1452,15 @@ mod tests {
         ExpensePayload, ExpenseShare, HashMap, HistoryAction, HistoryEntity, HistoryPayload,
         ProjectPayload, ProjectStatus, UserPayload, CURRENCIES, MAX_EXCHANGE_RATE,
     };
+
+    #[test]
+    fn an_expense_type_parses_back_from_its_wire_name_and_an_unknown_one_does_not() {
+        use super::ExpenseType;
+        for t in [ExpenseType::Expense, ExpenseType::Transfer, ExpenseType::Gain] {
+            assert_eq!(ExpenseType::parse(t.as_str()), Some(t));
+        }
+        assert_eq!(ExpenseType::parse("refund"), None);
+    }
 
     #[test]
     fn to_cents_quantises_plain_values() {
@@ -1627,13 +1718,29 @@ mod tests {
         assert_eq!(p.actor_user_id, Some(4));
     }
 
+    /// Audit 2026-10-19 L5: the payload names its row the way the columns do.
+    #[test]
+    fn a_history_payload_carries_its_row() {
+        let p = HistoryPayload {
+            summary: "s".into(),
+            actor_user_id: Some(1),
+            action: Some(HistoryAction::Deleted),
+            entity: Some(HistoryEntity::Expense),
+            entity_id: Some(7),
+        };
+        assert_eq!(
+            serde_json::to_string(&p).unwrap(),
+            r#"{"summary":"s","actorUserId":1,"action":"deleted","entity":"expense","entityId":7}"#
+        );
+    }
+
     /// Phase 1 of docs/plans/participant-links-encryption.md only reads the new fields: what it
     /// writes must stay byte-identical to the format every older client reads.
     #[test]
     fn payloads_without_the_new_fields_serialise_as_before() {
         let user = serde_json::to_string(&UserPayload { name: "Ann".into(), removed: false }).unwrap();
         assert_eq!(user, r#"{"name":"Ann"}"#);
-        let history = serde_json::to_string(&HistoryPayload { summary: "s".into(), actor_user_id: None }).unwrap();
+        let history = serde_json::to_string(&HistoryPayload { summary: "s".into(), actor_user_id: None, action: None, entity: None, entity_id: None }).unwrap();
         assert_eq!(history, r#"{"summary":"s"}"#);
         let project = ProjectPayload { name: "T".into(), currency: "EUR".into(), description: None, status: None, extra: Default::default() };
         assert_eq!(serde_json::to_string(&project).unwrap(), r#"{"name":"T","currency":"EUR"}"#);

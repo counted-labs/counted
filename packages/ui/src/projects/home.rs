@@ -128,7 +128,7 @@ pub fn row_subtitle(glance: &ProjectGlance, today: NaiveDate) -> String {
     parts.join(" · ")
 }
 
-/// The right side of a group's row: my balance and what it means, or "À jour".
+/// The right side of a group's row: my balance and what it means, or "À l’équilibre".
 #[component]
 pub fn RowBalance(balance: f64, currency: String) -> Element {
     if balance.abs() < 0.005 {

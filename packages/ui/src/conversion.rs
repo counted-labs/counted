@@ -8,13 +8,17 @@ use api::projects::projects_controller::convert_project as send_conversion;
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use shared::{
-    ConvertProject, ConvertedRow, ConvertedRule, Expense, ExpensePayload, ExpenseShare,
-    HistoryEntry, HistoryPayload, Payment, ProjectDto, ProjectPayload, ProjectStatus,
+    AccountProject, ConvertProject, ConvertedRow, ConvertedRule, Expense, ExpensePayload, ExpenseShare,
+    HistoryEntry, HistoryPayload, Payment, ProjectDto, ProjectPayload, ProjectStatus, ProjectSync,
     RecurringExpense, MAX_CONVERTED_EXPENSES, NO_CACHED_VERSION,
 };
+use std::collections::HashSet;
 use uuid::Uuid;
 
-use crate::common::{is_project_stale_error, is_recurring_stale_error, update_project_fresh};
+use crate::common::{
+    is_project_stale_error, is_recurring_stale_error, key_of, update_project_fresh, LocalStorageProject,
+    LocalStorageState,
+};
 use crate::crypto::{claim_token, decrypt_json, encrypt_padded_json};
 use crate::decrypted::{decrypt_payment, project_status, status_edit};
 use crate::recurring::model::RecurringPayload;
@@ -138,12 +142,18 @@ pub fn expense_batches(rows: Vec<ConvertedRow<i32>>) -> Vec<Vec<ConvertedRow<i32
 /// Each expense in the old format, rewritten with its shares and author inside. One whose rows
 /// will not all open is left as it is rather than rewritten with a part of its ledger.
 pub fn converted_expenses(key: &[u8; 32], expenses: &[Expense], payments: &[Payment]) -> Vec<ConvertedRow<i32>> {
-    expenses.iter().filter_map(|e| converted_expense(key, e, payments)).collect()
+    let mut by_expense: std::collections::HashMap<i32, Vec<&Payment>> = std::collections::HashMap::new();
+    for p in payments {
+        by_expense.entry(p.expense_id).or_default().push(p);
+    }
+    expenses
+        .iter()
+        .filter_map(|e| converted_expense(key, e, by_expense.get(&e.id).map_or(&[][..], |rows| rows)))
+        .collect()
 }
 
-fn converted_expense(key: &[u8; 32], e: &Expense, payments: &[Payment]) -> Option<ConvertedRow<i32>> {
+fn converted_expense(key: &[u8; 32], e: &Expense, rows: &[&Payment]) -> Option<ConvertedRow<i32>> {
     let mut payload: ExpensePayload = decrypt_json(key, &e.payload).ok()?;
-    let rows: Vec<&Payment> = payments.iter().filter(|p| p.expense_id == e.id).collect();
     if payload.shares.is_some() && e.author_id.is_none() && rows.is_empty() {
         return None;
     }
@@ -193,6 +203,106 @@ pub fn converted_history(key: &[u8; 32], entries: &[HistoryEntry]) -> Vec<Conver
             Some(ConvertedRow { id: h.id, payload: encrypt_padded_json(key, &payload).ok()? })
         })
         .collect()
+}
+
+/// What the list's batched sync says about a held project's rows. Worked out where the rows are at
+/// hand, so only this verdict waits for the account's answer.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Rows {
+    /// Something still in the format before docs/plans/participant-links-encryption.md.
+    Old,
+    /// Every row known, and none in the old format.
+    Clean,
+    /// Not known complete: no rows in the answer and no cache the version claim vouches for, or an
+    /// answer from a server that leaves the rules or the project out.
+    Unknown,
+    /// Read-only, or a key that does not open it: nothing this device can convert yet.
+    Unusable,
+}
+
+/// One verdict per project the sync answered for, with the key it was judged under - `None` when
+/// this device held none yet. A project missing from the answer no longer exists and gets none.
+/// A project, the key its rows were judged under, and the judgement.
+pub type Verdict = (Uuid, Option<[u8; 32]>, Rows);
+
+pub fn rows_verdicts(before: &LocalStorageState, syncs: &[ProjectSync]) -> Vec<Verdict> {
+    before
+        .projects
+        .iter()
+        .filter_map(|entry| {
+            let sync = syncs.iter().find(|s| s.project.as_ref().is_some_and(|p| p.id == entry.project_id))?;
+            let key = key_of(entry);
+            let rows = key.map_or(Rows::Unknown, |k| rows_verdict(&k, entry, sync));
+            Some((entry.project_id, key, rows))
+        })
+        .collect()
+}
+
+fn rows_verdict(key: &[u8; 32], entry: &LocalStorageProject, sync: &ProjectSync) -> Rows {
+    let (Some(project), Some(rules)) = (&sync.project, &sync.recurring) else { return Rows::Unknown };
+    if project.read_only || decrypt_json::<ProjectPayload>(key, &project.payload).is_err() {
+        return Rows::Unusable;
+    }
+    // Cached rows only under the version they were claimed at: anything else may be a web cache
+    // cut to its ceiling, and a row it dropped would stay in clear.
+    let rows = match (&sync.expenses, &sync.payments) {
+        (Some(expenses), Some(payments)) => Some((expenses.clone(), payments.clone())),
+        _ if entry.cached_data_version == Some(sync.data_version) => {
+            entry.cached_expenses.clone().zip(entry.cached_payments.clone())
+        }
+        _ => None,
+    };
+    match rows {
+        Some((expenses, payments)) if needs_conversion(key, project, &expenses, &payments, rules) => Rows::Old,
+        Some(_) => Rows::Clean,
+        None => Rows::Unknown,
+    }
+}
+
+/// What a signed-in device does about the projects it holds, with no request of its own.
+#[derive(Debug, Default, PartialEq)]
+pub struct ConversionPlan {
+    /// Nothing left to convert, the server's flag included: marked converted on the spot.
+    pub mark: Vec<Uuid>,
+    /// Through [`convert`], which reads everything again before it writes.
+    pub convert: Vec<(Uuid, [u8; 32])>,
+}
+
+/// Skipping a conversion takes both proofs: complete rows in the payload format, and the account's
+/// word that no history row still holds an actor (`history_has_actors`, which only the server can
+/// see for `actor_account_id`). Anything unknown converts as before. A project already marked is
+/// converted again only on evidence - a write replayed by an older build after the mark.
+pub fn conversion_plan(
+    held: &LocalStorageState,
+    verdicts: &[Verdict],
+    account: &[AccountProject],
+    attempted: &HashSet<Uuid>,
+) -> ConversionPlan {
+    let mut plan = ConversionPlan::default();
+    for &(project_id, judged_with, rows) in verdicts {
+        let Some(entry) = held.projects.iter().find(|p| p.project_id == project_id) else { continue };
+        let Some(key) = key_of(entry) else { continue };
+        if attempted.contains(&project_id) {
+            continue;
+        }
+        // A key that arrived or changed since - reconciliation's escrow - makes the rows unjudged.
+        let rows = if judged_with == Some(key) { rows } else { Rows::Unknown };
+        let flag = account.iter().find(|a| a.project_id == project_id).and_then(|a| a.history_has_actors);
+        let convert = match (entry.converted, rows, flag) {
+            (_, Rows::Unusable, _) => false,
+            (_, Rows::Old, _) | (_, Rows::Clean, Some(true)) => true,
+            (false, Rows::Clean, Some(false)) => {
+                plan.mark.push(project_id);
+                false
+            }
+            (false, _, _) => true,
+            (true, _, _) => false,
+        };
+        if convert {
+            plan.convert.push((project_id, key));
+        }
+    }
+    plan
 }
 
 #[cfg(test)]
@@ -267,7 +377,7 @@ mod tests {
             action: HistoryAction::Created,
             entity: HistoryEntity::Expense,
             entity_id: Some(1),
-            payload: encrypt_json(&key, &HistoryPayload { summary: "added".into(), actor_user_id: None }).unwrap(),
+            payload: encrypt_json(&key, &HistoryPayload { summary: "added".into(), actor_user_id: None, action: None, entity: None, entity_id: None }).unwrap(),
             created_at: chrono::NaiveDateTime::default(),
         };
         let converted = converted_history(&key, std::slice::from_ref(&entry));
@@ -298,6 +408,132 @@ mod tests {
         let mut frozen = closed;
         frozen.read_only = true;
         assert!(!needs_conversion(&key, &frozen, &[], &[], &[]), "a read-only project cannot be written");
+    }
+
+    fn ongoing(key: &[u8; 32], id: Uuid) -> ProjectDto {
+        let mut project = make_project(key, id, "Trip", "EUR");
+        let mut pp: ProjectPayload = decrypt_json(key, &project.payload).unwrap();
+        pp.status = Some(ProjectStatus::Ongoing);
+        project.payload = encrypt_json(key, &pp).unwrap();
+        project
+    }
+
+    fn entry(key: &[u8; 32], id: Uuid) -> LocalStorageProject {
+        LocalStorageProject {
+            project_id: id,
+            encryption_key: Some(crate::crypto::key_to_fragment(key)),
+            ..Default::default()
+        }
+    }
+
+    fn answer(project: ProjectDto, rows: Option<(Vec<Expense>, Vec<Payment>)>, version: i64) -> ProjectSync {
+        let (expenses, payments) = rows.map_or((None, None), |(e, p)| (Some(e), Some(p)));
+        ProjectSync {
+            data_version: version,
+            project: Some(project),
+            users: Some(vec![]),
+            expenses,
+            payments,
+            recurring: Some(vec![]),
+            server_date: None,
+        }
+    }
+
+    fn verdict(before: LocalStorageProject, sync: ProjectSync) -> Rows {
+        let state = LocalStorageState { projects: vec![before], ..Default::default() };
+        rows_verdicts(&state, &[sync])[0].2
+    }
+
+    #[test]
+    fn the_rows_verdict_trusts_only_complete_rows() {
+        let key = test_key();
+        let id = Uuid::new_v4();
+        let (e, rows) = v1_expense(&key);
+        let clean = Expense { author_id: None, ..make_expense(&key, 2, "Café", 3.0, ExpenseType::Expense, "2025-01-02") };
+
+        assert_eq!(verdict(entry(&key, id), answer(ongoing(&key, id), Some((vec![clean.clone()], vec![])), 4)), Rows::Clean);
+        assert_eq!(verdict(entry(&key, id), answer(ongoing(&key, id), Some((vec![e.clone()], rows.clone())), 4)), Rows::Old);
+
+        let claimed = LocalStorageProject {
+            cached_expenses: Some(vec![e]),
+            cached_payments: Some(rows),
+            cached_data_version: Some(4),
+            ..entry(&key, id)
+        };
+        assert_eq!(verdict(claimed.clone(), answer(ongoing(&key, id), None, 4)), Rows::Old, "unchanged: the claimed cache");
+        let truncated = LocalStorageProject { cached_data_version: None, ..claimed };
+        assert_eq!(verdict(truncated, answer(ongoing(&key, id), None, 4)), Rows::Unknown, "a cache no claim vouches for");
+
+        let mut no_rules = answer(ongoing(&key, id), Some((vec![clean.clone()], vec![])), 4);
+        no_rules.recurring = None;
+        assert_eq!(verdict(entry(&key, id), no_rules), Rows::Unknown, "an older server's answer");
+
+        let mut frozen = ongoing(&key, id);
+        frozen.read_only = true;
+        assert_eq!(verdict(entry(&key, id), answer(frozen, Some((vec![], vec![])), 4)), Rows::Unusable);
+        assert_eq!(
+            verdict(entry(&[9u8; 32], id), answer(ongoing(&key, id), Some((vec![], vec![])), 4)),
+            Rows::Unusable,
+            "a key that does not open the project"
+        );
+
+        let state = LocalStorageState { projects: vec![entry(&key, id)], ..Default::default() };
+        assert!(rows_verdicts(&state, &[]).is_empty(), "no answer for a project the server no longer has");
+    }
+
+    fn flagged(id: Uuid, flag: Option<bool>) -> Vec<AccountProject> {
+        vec![AccountProject {
+            project_id: id,
+            user_id: None,
+            key: None,
+            claim_verifier_seeded: true,
+            payment_methods_shared: false,
+            history_has_actors: flag,
+        }]
+    }
+
+    fn plan(converted: bool, rows: Rows, flag: Option<bool>) -> ConversionPlan {
+        let key = test_key();
+        let id = Uuid::nil();
+        let held = LocalStorageState { projects: vec![LocalStorageProject { converted, ..entry(&key, id) }], ..Default::default() };
+        conversion_plan(&held, &[(id, Some(key), rows)], &flagged(id, flag), &HashSet::new())
+    }
+
+    #[test]
+    fn a_conversion_is_skipped_only_on_both_proofs() {
+        let key = test_key();
+        let to_convert = ConversionPlan { mark: vec![], convert: vec![(Uuid::nil(), key)] };
+        let nothing = ConversionPlan::default();
+
+        assert_eq!(plan(false, Rows::Clean, Some(false)), ConversionPlan { mark: vec![Uuid::nil()], convert: vec![] });
+        assert_eq!(plan(false, Rows::Clean, Some(true)), to_convert, "history actors left");
+        assert_eq!(plan(false, Rows::Clean, None), to_convert, "an older server says nothing");
+        assert_eq!(plan(false, Rows::Old, Some(false)), to_convert);
+        assert_eq!(plan(false, Rows::Unknown, Some(false)), to_convert);
+        assert_eq!(plan(false, Rows::Unusable, None), nothing, "never marked, so a later key still converts it");
+
+        assert_eq!(plan(true, Rows::Old, Some(false)), to_convert, "an older build wrote after the mark");
+        assert_eq!(plan(true, Rows::Clean, Some(true)), to_convert);
+        assert_eq!(plan(true, Rows::Clean, None), nothing);
+        assert_eq!(plan(true, Rows::Unknown, Some(true)), nothing);
+    }
+
+    #[test]
+    fn a_plan_skips_a_project_left_converts_one_rekeyed_and_tries_once_per_session() {
+        let key = test_key();
+        let id = Uuid::nil();
+        let verdicts = [(id, Some(key), Rows::Clean)];
+        let flag = flagged(id, Some(false));
+        assert_eq!(conversion_plan(&LocalStorageState::default(), &verdicts, &flag, &HashSet::new()), ConversionPlan::default());
+
+        let escrowed = [3u8; 32];
+        let rekeyed = LocalStorageState { projects: vec![entry(&escrowed, id)], ..Default::default() };
+        let full_path = ConversionPlan { mark: vec![], convert: vec![(id, escrowed)] };
+        assert_eq!(conversion_plan(&rekeyed, &verdicts, &flag, &HashSet::new()), full_path, "judged under another key");
+        assert_eq!(conversion_plan(&rekeyed, &[(id, None, Rows::Unknown)], &flag, &HashSet::new()), full_path, "a key that arrived since");
+
+        let held = LocalStorageState { projects: vec![entry(&key, id)], ..Default::default() };
+        assert_eq!(conversion_plan(&held, &verdicts, &[], &HashSet::from([id])), ConversionPlan::default());
     }
 
     #[test]

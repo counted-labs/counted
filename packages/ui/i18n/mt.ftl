@@ -37,6 +37,7 @@ sync-error = Żball ta' sinkronizzazzjoni: { $reason }
 ### Errors
 
 error-network = Ma nistgħux nilħqu s-server. Iċċekkja l-konnessjoni tal-internet tiegħek.
+error-rate-limited = Is-server huwa okkupat. Erġa' pprova fi ftit.
 error-generic = Xi ħaġa marret ħażin. Jekk jogħġbok erġa' pprova.
 
 error-invalid-email = Dak l-indirizz tal-email mhux validu.
@@ -90,6 +91,7 @@ login-submitting = Qed tidħol…
 login-password-placeholder = Il-password tiegħek
 login-no-account = M'għandekx kont għadu?
 login-unverified = L-indirizz tal-email tiegħek għadu mhux ivverifikat. Iċċekkja l-inbox tiegħek, jew ibgħat il-link mill-ġdid.
+login-maybe-unverified = Għadek kif irreġistrajt? L-ewwel ivverifika l-indirizz tiegħek bil-link li bgħatnielek, jew erġa' ibagħtu.
 login-resend = Ibgħat il-link ta' verifika mill-ġdid
 login-resending = Qed jintbagħat…
 login-resend-sent = Email mibgħuta - iċċekkja l-inbox tiegħek.
@@ -163,13 +165,12 @@ payment-method-copy-failed = Ma setax jiġi kkupjat - agħżel it-test u kkupjah
 verify-email-checking = Qed jiġi vverifikat l-indirizz tal-email tiegħek…
 verify-email-welcome = Email ivverifikata - merħba f'Counted!
 verify-email-back-to-login = Lura għad-dħul
+verify-email-intro = Daħħal il-password tiegħek biex tikkonferma li dan l-indirizz huwa tiegħek.
+verify-email-submit = Ivverifika l-indirizz tiegħi
 
 ### Project status
 
-project-close = Agħlaq
 project-archive = Arkivja
-project-reopen = Erġa' iftaħ
-project-unarchive = Neħħi mill-arkivju
 project-sheet-invite = Stieden
 project-sheet-recurring = Rikorrenti
 project-sheet-edit = Editja l-proġett
@@ -354,6 +355,7 @@ missing-encryption-key = Iċ-ċavetta tal-kriptaġġ nieqsa.
 missing-encryption-key-title = Iċ-ċavetta tal-kriptaġġ nieqsa
 missing-encryption-key-hint = Il-link li użajt ma ġġorrx iċ-ċavetta meħtieġa biex tiddekripta dan il-proġett. Uża l-link sħiħa maqsuma minn min ħalqu.
 project-locked-hint = Dan l-apparat m'għandux iċ-ċavetta ta' dan il-proġett. Iftaħ il-link tal-qsim tiegħu biex tiftħu.
+expenses-unreadable = Xi entrati ma jistgħux jinqraw fuq dan l-apparat u mhumiex inklużi fit-totali. Aġġorna l-app biex tarahom.
 project-unlock = Iftaħ
 project-no-local-data-hint = Idħol biex tgħabbi d-data ta' dan il-proġett għall-ewwel darba.
 project-gone-title = Dan il-proġett m'għadux jeżisti
@@ -736,6 +738,7 @@ friends-remove-confirm-message = { $email } ma jibqax fost il-ħbieb tiegħek, u
 friends-no-key = Għadu mhux lest
 friends-fingerprint = Kodiċi ta' sigurtà
 friends-fingerprint-hint = Żewġ ħbieb li jaqraw lil xulxin l-istess kodiċi ta' sigurtà jafu li ħadd ma hemm bejniethom - lanqas is-server tagħna.
+friends-key-mismatch = Is-server bagħat ċavetta pubblika għall-kont tiegħek li ma taqbilx maċ-ċavetta privata tiegħek. Il-kodiċi tas-sigurtà tiegħek huwa moħbi u l-istediniet huma mitfija fuq dan l-apparat: forsi xi ħadd qed jbagħbas is-server.
 friends-outgoing-title = Mibgħuta
 friends-outgoing-hint = Qed tistenna tweġiba. Se tarahom fost il-ħbieb tiegħek ladarba jaċċettaw.
 friends-withdraw = Ikkanċella
@@ -892,6 +895,7 @@ occurrence-auto-next = Miżjuda awtomatikament minn spiża rikorrenti. Li jmiss 
 occurrence-auto-stopped = Miżjuda awtomatikament minn spiża rikorrenti li minn dak iż-żmien twaqqfet.
 occurrence-manage = Immaniġġja
 estimate-badge = Biex tiġi kkonfermata
+expense-pending = Pendenti
 estimate-title = Ammont biex jiġi kkonfermat.
 estimate-body = Miżjuda bl-ammont ta’ qabel. Daħħal l-ammont veru meta jasal.
 estimate-confirm = Ikkonferma l-ammont

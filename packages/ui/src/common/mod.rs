@@ -80,7 +80,7 @@ mod dropdown_button;
 pub use dropdown_button::{DropdownButton, DropdownItem};
 
 mod project_status_menu;
-pub use project_status_menu::{status_transitions, ProjectStatusItems};
+pub use project_status_menu::status_transitions;
 
 mod speed_dial_fab;
 pub use speed_dial_fab::{SpeedDialAction, SpeedDialFab};
@@ -163,9 +163,8 @@ mod error_utils;
 pub use error_utils::{
     error_key, error_message, is_claim_proof_error, is_client_outdated_error,
     is_email_not_verified, is_identity_taken_error, is_offline_error, is_participant_gone_error,
-    is_payment_methods_stale_error, is_project_gone_error, is_project_stale_error,
+    is_payment_methods_stale_error, is_preferences_stale_error, is_project_gone_error, is_project_stale_error, is_rate_limited, RATE_LIMIT_RETRY_MS, REQUEST_PACE_MS,
     is_recurring_stale_error,
-    is_user_gone_error,
 };
 
 mod membership;
@@ -190,7 +189,9 @@ mod currency_picker;
 pub use currency_picker::CurrencyPicker;
 
 pub mod offline_queue;
-pub use offline_queue::{read_queue, write_queue, OpKind, ProjectEdit, QueuedOp};
+pub use offline_queue::{
+    is_pending_expense, queued_expenses, read_queue, write_queue, OpKind, ProjectEdit, QueuedOp,
+};
 
 mod queue_replay;
 pub use queue_replay::{replay_queue, SyncFailure};

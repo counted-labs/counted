@@ -6,7 +6,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::common::{
-    format_date, haptic, Flash, Haptic, Mascot, MascotPose, ProjectKey,
+    format_date, haptic, is_pending_expense, Flash, Haptic, Mascot, MascotPose, ProjectKey,
     QueuedOp, ScanSource, SpeedDialAction, Toast,
 };
 use crate::decrypted::{payments_are_inconsistent, pickable_users, DecryptedExpense, DecryptedPayment};
@@ -225,6 +225,7 @@ mod tests {
                 payments: p.payments.clone(),
                 version: None,
             }),
+            None,
         )
     }
 
@@ -433,7 +434,7 @@ mod tests {
         let mut e = vec![exp(1, "Taxi")];
         let mut p = vec![pay(1, 1, 7)];
 
-        let before = project_data::build(Some(k), Some(&live_of(e.clone(), p.clone())));
+        let before = project_data::build(Some(k), Some(&live_of(e.clone(), p.clone())), None);
         assert_eq!(before.expenses[0].emoji, "🚕");
 
         let m = ExpenseMutation::Edited(ExpenseWithPayments {
@@ -442,7 +443,7 @@ mod tests {
         });
         assert!(apply_mutation(&mut e, &mut p, &m));
 
-        let after = project_data::build(Some(k), Some(&live_of(e.clone(), p.clone())));
+        let after = project_data::build(Some(k), Some(&live_of(e.clone(), p.clone())), None);
         assert_eq!(after.expenses[0].expense.name, "Pizza");
         assert_eq!(after.expenses[0].emoji, "🍕", "the emoji must follow the rename");
     }
@@ -459,6 +460,15 @@ mod tests {
                 assert!(w[0].expense.id > w[1].expense.id, "rows must run newest first");
             }
         }
+    }
+
+    #[test]
+    fn expenses_queued_offline_run_newest_first_above_the_sent_ones() {
+        let live = live_of(vec![exp(4, "a"), exp(-1, "b"), exp(5, "c"), exp(-2, "d")], vec![]);
+        let data = project_data::build(Some(test_key()), Some(&live), None);
+        let groups = group_expenses(&data, &ExpenseQuery::default(), Some(1));
+        let ids: Vec<i32> = groups.iter().flat_map(|(_, g)| g.iter().map(|r| r.expense.id)).collect();
+        assert_eq!(ids, vec![-2, -1, 5, 4]);
     }
 }
 
@@ -539,7 +549,7 @@ fn group_rows(rows: Vec<&RowExpense>) -> Groups {
     }
     let mut groups: Groups = map.into_iter().rev().collect();
     for (_, group) in &mut groups {
-        group.sort_by_key(|r| std::cmp::Reverse(r.expense.id));
+        group.sort_by_key(|r| std::cmp::Reverse((is_pending_expense(r.expense.id), r.expense.id.abs())));
     }
     groups
 }
@@ -1006,6 +1016,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                                     let subtitle = format!("{} {connector} {payor}", tid!(expense_type_label(&etype)));
                                     let delete_name = name.clone();
                                     let my_debt = my_debts.get(&expense_id).copied();
+                                    let pending = is_pending_expense(expense_id);
                                     rsx! {
                                         ExpenseRow {
                                             key: "{expense_id}",
@@ -1023,9 +1034,13 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                                             recurring: row.expense.recurring_id.is_some(),
                                             estimate: row.expense.estimate,
                                             income: row.expense.expense_type == ExpenseType::Gain,
-                                            can_edit: can_edit_expense(&project_status, read_only, &etype),
-                                            can_delete: can_delete_expense(&project_status, read_only),
+                                            pending,
+                                            can_edit: !pending && can_edit_expense(&project_status, read_only, &etype),
+                                            can_delete: !pending && can_delete_expense(&project_status, read_only),
                                             on_open: move |_| {
+                                                if pending {
+                                                    return;
+                                                }
                                                 nav.push(Route::PaymentPage {
                                                     project_id,
                                                     expense_id,

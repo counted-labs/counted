@@ -38,6 +38,7 @@ sync-error = Earráid sioncronaithe: { $reason }
 ### Errors
 
 error-network = Ní féidir an freastalaí a shroicheadh. Seiceáil do nasc idirlín.
+error-rate-limited = Tá an freastalaí gnóthach. Bain triail eile as i gceann nóiméid.
 error-generic = Chuaigh rud éigin amú. Bain triail eile as.
 
 error-invalid-email = Níl an seoladh ríomhphoist sin bailí.
@@ -91,6 +92,7 @@ login-submitting = Ag logáil isteach…
 login-password-placeholder = Do phasfhocal
 login-no-account = Níl cuntas agat fós?
 login-unverified = Níl do sheoladh ríomhphoist deimhnithe fós. Seiceáil do bhosca isteach, nó seol an nasc arís.
+login-maybe-unverified = Díreach cláraithe? Fíoraigh do sheoladh ar dtús leis an nasc a sheolamar chugat, nó seol arís é.
 login-resend = Seol an nasc deimhnithe arís
 login-resending = Á sheoladh…
 login-resend-sent = Ríomhphost seolta - seiceáil do bhosca isteach.
@@ -164,13 +166,12 @@ payment-method-copy-failed = Níorbh fhéidir cóipeáil - roghnaigh an téacs a
 verify-email-checking = Do sheoladh ríomhphoist á dheimhniú…
 verify-email-welcome = Ríomhphost deimhnithe - fáilte go Counted!
 verify-email-back-to-login = Ar ais go logáil isteach
+verify-email-intro = Cuir isteach do phasfhocal le deimhniú gur leatsa an seoladh seo.
+verify-email-submit = Fíoraigh mo sheoladh
 
 ### Project status
 
-project-close = Dún
 project-archive = Cartlannaigh
-project-reopen = Athoscail
-project-unarchive = Bain as an gcartlann
 project-sheet-invite = Tabhair cuireadh
 project-sheet-recurring = Athfhillteach
 project-sheet-edit = Cuir an tionscadal in eagar
@@ -356,6 +357,7 @@ missing-encryption-key = Eochair chriptithe ar iarraidh.
 missing-encryption-key-title = Eochair chriptithe ar iarraidh
 missing-encryption-key-hint = Ní iompraíonn an nasc a d'úsáid tú an eochair atá ag teastáil chun an tionscadal seo a dhíchriptiú. Úsáid an nasc iomlán a chomhroinn an té a chruthaigh é.
 project-locked-hint = Níl eochair an tionscadail seo ag an ngléas seo. Oscail a nasc comhroinnte chun é a dhíghlasáil.
+expenses-unreadable = Ní féidir roinnt iontrálacha a léamh ar an ngléas seo agus níl siad sna hiomláin. Nuashonraigh an aip chun iad a fheiceáil.
 project-unlock = Díghlasáil
 project-no-local-data-hint = Logáil isteach chun sonraí an tionscadail seo a lódáil den chéad uair.
 project-gone-title = Níl an tionscadal seo ann a thuilleadh
@@ -743,6 +745,7 @@ friends-remove-confirm-message = Ní bheidh { $email } i measc do chairde a thui
 friends-no-key = Níl sé réidh fós
 friends-fingerprint = Cód sábháilteachta
 friends-fingerprint-hint = Tá a fhios ag beirt chairde a léann an cód sábháilteachta céanna dá chéile nach bhfuil duine ar bith eatarthu - fiú ár bhfreastalaí.
+friends-key-mismatch = Sheol an freastalaí eochair phoiblí do do chuntas nach dtagann le d'eochair phríobháideach. Tá do chód sábháilteachta i bhfolach agus tá cuirí múchta ar an ngléas seo: b'fhéidir go bhfuil duine éigin ag cur isteach ar an bhfreastalaí.
 friends-outgoing-title = Seolta
 friends-outgoing-hint = Ag fanacht le freagra. Feicfidh tú iad i measc do chairde nuair a ghlacann siad leis.
 friends-withdraw = Cealaigh
@@ -900,6 +903,7 @@ occurrence-auto-next = Curtha leis go huathoibríoch ó chostas athfhillteach. A
 occurrence-auto-stopped = Curtha leis go huathoibríoch ó chostas athfhillteach atá stoptha ó shin.
 occurrence-manage = Bainistigh
 estimate-badge = Le deimhniú
+expense-pending = Ar feitheamh
 estimate-title = Suim le deimhniú.
 estimate-body = Curtha leis leis an tsuim roimhe seo. Cuir isteach an fíorshuim nuair a bheidh sí agat.
 estimate-confirm = Deimhnigh an tsuim

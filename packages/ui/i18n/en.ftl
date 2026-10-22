@@ -42,6 +42,7 @@ sync-error = Sync error: { $reason }
 # unrecognised renders `error-generic`, so raw server text never reaches the DOM.
 
 error-network = Can’t reach the server. Check your internet connection.
+error-rate-limited = The server is busy. Try again in a moment.
 error-generic = Something went wrong. Please try again.
 
 error-invalid-email = That email address isn’t valid.
@@ -95,6 +96,7 @@ login-submitting = Signing in…
 login-password-placeholder = Your password
 login-no-account = Don’t have an account yet?
 login-unverified = Your email address isn’t verified yet. Check your inbox, or send the link again.
+login-maybe-unverified = Just signed up? Verify your address first with the link we emailed you, or send it again.
 login-resend = Send the verification link again
 login-resending = Sending…
 login-resend-sent = Email sent - check your inbox.
@@ -169,13 +171,12 @@ payment-method-copy-failed = Could not copy - select the text and copy it by han
 verify-email-checking = Verifying your email address…
 verify-email-welcome = Email verified - welcome to Counted!
 verify-email-back-to-login = Back to sign in
+verify-email-intro = Enter your password to confirm this address is yours.
+verify-email-submit = Verify my address
 
 ### Project status
 
-project-close = Close
 project-archive = Archive
-project-reopen = Reopen
-project-unarchive = Unarchive
 project-sheet-invite = Invite
 project-sheet-recurring = Recurring
 project-sheet-edit = Edit project
@@ -361,6 +362,7 @@ missing-encryption-key = Missing encryption key.
 missing-encryption-key-title = Missing encryption key
 missing-encryption-key-hint = The link you used does not carry the key needed to decrypt this project. Use the full link shared by whoever created it.
 project-locked-hint = This device doesn’t have this project’s key. Open its share link to unlock it.
+expenses-unreadable = Some entries can’t be read on this device and are left out of the totals. Update the app to see them.
 project-unlock = Unlock
 project-no-local-data-hint = Sign in to load this project's data for the first time.
 project-gone-title = This project no longer exists
@@ -707,7 +709,7 @@ help-contact = Another question? Write to us at
 # to English per message until a translation has actually been reviewed. Do not machine-translate
 # this section.
 
-legal-updated = Last updated: 18 October 2026
+legal-updated = Last updated: 21 October 2026
 
 legal-publisher-title = 1. Publisher
 legal-publisher-body = Counted (“the Service”) is published in a non-professional capacity by an individual, Jonathan Bosi.
@@ -798,7 +800,7 @@ privacy-collected-anon-def = when you open a project without signing in: a rando
 privacy-collected-invite-term = Hash of an invited participant’s email
 privacy-collected-invite-def = (SHA-256), written by earlier versions of the app when you invited someone by email. It is no longer collected; the hashes already stored disappear with their participant.
 privacy-collected-friends-term = Your friends
-privacy-collected-friends-def = when you use the friends list: which accounts you are friends with, a hash (SHA-256) of an address you sent a request to before it had an account, and which friend you invited into which project, and as which participant of it. The name you give a request and the project key an invitation carries are encrypted on your device - the key with your friend’s public key, which we store in the clear because it is public by nature - and the server cannot read either. The private half of your own key pair is stored encrypted with your account key.
+privacy-collected-friends-def = when you use the friends list: which accounts you are friends with, a keyed hash (HMAC-SHA256) of an address you sent a request to before it had an account - a request not accepted within 30 days is deleted - and which friend you invited into which project, and as which participant of it. The name you give a request and the project key an invitation carries are encrypted on your device - the key with your friend’s public key, which we store in the clear because it is public by nature - and the server cannot read either. The private half of your own key pair is stored encrypted with your account key.
 privacy-collected-push-term = Notification token
 privacy-collected-push-def = if you allow notifications in the mobile app: the address your phone's push service gives it (on Android, with two public encryption keys), linked to your account, along with your phone's language so the notification is written in it. Deleted when you sign out, when the push service reports it is no longer valid, and with your account.
 privacy-collected-logs-term = Technical logs
@@ -926,6 +928,7 @@ friends-remove-confirm-message = { $email } will no longer be in your friends, a
 friends-no-key = Not ready yet
 friends-fingerprint = Safety code
 friends-fingerprint-hint = Two friends who read each other the same safety code know nobody sits between them - not even our server.
+friends-key-mismatch = The server sent a public key for your account that doesn't match your private key. Your safety code is hidden and invitations are off on this device: someone may be tampering with the server.
 friends-outgoing-title = Sent
 friends-outgoing-hint = Waiting for an answer. You’ll see them in your friends once they accept.
 friends-withdraw = Cancel
@@ -1080,6 +1083,7 @@ occurrence-auto-next = Added automatically from a recurring expense. Next on { $
 occurrence-auto-stopped = Added automatically from a recurring expense that has since stopped.
 occurrence-manage = Manage
 estimate-badge = To confirm
+expense-pending = Pending
 estimate-title = Amount to confirm.
 estimate-body = Added with the previous amount. Enter the real one when it arrives.
 estimate-confirm = Confirm amount

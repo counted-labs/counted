@@ -219,7 +219,7 @@ fn Tile(id: String, label: String, onclick: EventHandler<()>, children: Element)
 }
 
 #[component]
-fn Row(
+pub(crate) fn Row(
     #[props(into, default)] id: Option<String>,
     label: String,
     #[props(default)] danger: bool,

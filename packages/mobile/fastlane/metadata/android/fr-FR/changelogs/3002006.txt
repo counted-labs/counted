@@ -1,0 +1,7 @@
+• Page dépense : « Payé par » et « Pour » en deux cartes reliées, avec le nombre de personnes qui partagent
+• Onglets de même largeur dans le formulaire de dépense
+• Noms longs non coupés dans les remboursements
+• Accueil : un projet soldé affiche « À l’équilibre »
+• La liste des projets se charge en une requête : plus d’erreur juste après la connexion avec plusieurs projets
+• Sécurité renforcée (confirmation de l’e-mail par mot de passe)
+• Corrections visuelles et de défilement

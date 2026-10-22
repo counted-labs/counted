@@ -22,14 +22,15 @@ pub struct PersonalProject {
     pub user_id: Option<i32>,
 }
 
-/// The open personal project among `list`, decrypted with the keys this device holds. A closed or
-/// archived one takes no new expense, so it offers no shortcut either.
+/// The account's open personal project among `list`, decrypted with the keys this device holds.
+/// Which one it is comes from the account, never from the payload's `kind` (audit 2026-10-19
+/// M3). A closed or archived one takes no new expense, so it offers no shortcut either.
 pub fn personal_project(list: &[ProjectDto], state: &LocalStorageState) -> Option<PersonalProject> {
-    list.iter().find_map(|p| {
+    list.iter().filter(|p| state.personal_project == Some(p.id)).find_map(|p| {
         let entry = state.projects.iter().find(|lp| lp.project_id == p.id)?;
         let key = key_of(entry)?;
         let payload: ProjectPayload = decrypt_json(&key, &p.payload).ok()?;
-        (payload.is_personal() && project_status(Some(&key), p) == ProjectStatus::Ongoing).then_some(PersonalProject {
+        (project_status(Some(&key), p) == ProjectStatus::Ongoing).then_some(PersonalProject {
             project_id: p.id,
             key,
             currency: payload.currency,
@@ -121,6 +122,10 @@ mod tests {
         LocalStorageState { projects, ..Default::default() }
     }
 
+    fn mine_is(id: Uuid, projects: Vec<LocalStorageProject>) -> LocalStorageState {
+        LocalStorageState { personal_project: Some(id), ..state(projects) }
+    }
+
     #[test]
     fn no_personal_project_offers_nothing() {
         let k = test_key();
@@ -135,7 +140,7 @@ mod tests {
         let trip = make_project(&k, Uuid::new_v4(), "Corsica", "EUR");
         let mut mine = make_project(&k, Uuid::new_v4(), "Mes dépenses", "CHF");
         mark(&k, &mut mine, "personal", None);
-        let s = state(vec![held(&trip, &k, Some(1)), held(&mine, &k, Some(9))]);
+        let s = mine_is(mine.id, vec![held(&trip, &k, Some(1)), held(&mine, &k, Some(9))]);
         assert_eq!(
             personal_project(&[trip, mine.clone()], &s),
             Some(PersonalProject { project_id: mine.id, key: k, currency: "CHF".into(), user_id: Some(9) })
@@ -147,7 +152,21 @@ mod tests {
         let k = test_key();
         let mut mine = make_project(&k, Uuid::new_v4(), "Mes dépenses", "EUR");
         mark(&k, &mut mine, "personal", None);
-        assert_eq!(personal_project(&[mine], &state(vec![])), None);
+        assert_eq!(personal_project(&[mine.clone()], &mine_is(mine.id, vec![])), None);
+    }
+
+    /// Audit 2026-10-19 M3: a co-member who writes `kind: personal` into a shared project does not
+    /// make it where this account's personal expenses go.
+    #[test]
+    fn a_shared_project_marked_personal_is_not_the_shortcut_target() {
+        let k = test_key();
+        let mine = make_project(&k, Uuid::new_v4(), "Mes dépenses", "EUR");
+        let mut trip = make_project(&k, Uuid::new_v4(), "Corsica", "EUR");
+        mark(&k, &mut trip, "personal", None);
+        let held_both = vec![held(&mine, &k, Some(1)), held(&trip, &k, Some(2))];
+
+        assert_eq!(personal_project(&[trip.clone()], &state(held_both.clone())), None);
+        assert_eq!(personal_project(&[trip, mine.clone()], &mine_is(mine.id, held_both)).map(|p| p.project_id), Some(mine.id));
     }
 
     #[test]
@@ -156,7 +175,7 @@ mod tests {
         for status in [ProjectStatus::Closed, ProjectStatus::Archived] {
             let mut mine = make_project(&k, Uuid::new_v4(), "Mes dépenses", "EUR");
             mark(&k, &mut mine, "personal", Some(status));
-            assert_eq!(personal_project(&[mine.clone()], &state(vec![held(&mine, &k, Some(1))])), None);
+            assert_eq!(personal_project(&[mine.clone()], &mine_is(mine.id, vec![held(&mine, &k, Some(1))])), None);
         }
     }
 

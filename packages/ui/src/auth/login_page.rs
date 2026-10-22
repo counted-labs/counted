@@ -5,13 +5,10 @@ use crate::tid;
 use shared::{Account, ResendVerificationPayload};
 
 use crate::{
-    auth::credentials::sign_in,
-    common::{
-        error_key, error_message, is_email_not_verified, next_paint, read_from_ls, write_to_ls, AppHeader,
-        LocalStorageState,
-    },
-    crypto::key_to_fragment,
+    auth::credentials::{remember_account_key, sign_in},
+    common::{error_key, error_message, is_email_not_verified, next_paint, AppHeader, LocalStorageState},
     i18n::current_lang,
+    preferences::sync_personal_project,
     route::Route,
 };
 
@@ -61,12 +58,8 @@ fn LoginForm() -> Element {
 
             match sign_in(email_val, &password_val, lang).await {
                 Ok((account, account_key)) => {
-                    // Persist so the key survives a reload - the password is gone once the
-                    // session is restored from the cookie.
-                    let mut state = read_from_ls();
-                    state.account_key = Some(key_to_fragment(&account_key));
-                    write_to_ls(&state);
-                    ls_ctx.set(state);
+                    ls_ctx.set(remember_account_key(&account_key));
+                    let account = sync_personal_project(account, account_key, ls_ctx).await;
 
                     account_enc_key_ctx.set(Some(account_key));
                     auth_ctx.set(Some(account));
@@ -109,9 +102,15 @@ fn LoginForm() -> Element {
                 div { id: "login-error", role: "alert", class: "alert alert-error", "{err}" }
             }
 
-            if unverified() {
+            // An unverified address now fails like a wrong password (audit 2026-10-19 M6), so a
+            // refused login offers the link again too.
+            if unverified() || rejected() {
                 div { role: "alert", class: "alert alert-warning flex flex-col items-start gap-2",
-                    p { {tid!("login-unverified")} }
+                    if unverified() {
+                        p { {tid!("login-unverified")} }
+                    } else {
+                        p { {tid!("login-maybe-unverified")} }
+                    }
                     if resend_done() {
                         p { class: "text-sm font-medium", {tid!("login-resend-sent")} }
                     } else {

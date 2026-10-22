@@ -85,10 +85,12 @@ pub enum Outcome {
     Unusable,
 }
 
-/// What the one body resource adds up to, resolved against the offline cache.
+/// What the one body resource adds up to, resolved against the rows the page holds and the offline
+/// cache. `held` is the page's rows with the version they are complete at.
 pub fn decide(
     sync: Resolved<'_, ProjectSync>,
     cached: Option<&LocalStorageProject>,
+    held: Option<(&[Expense], &[Payment], i64)>,
     project_id: Uuid,
 ) -> Outcome {
     let cached_rows = || {
@@ -129,13 +131,25 @@ pub fn decide(
         (Some(expenses), Some(payments)) => {
             Outcome::Load { users, project, expenses, payments, version: Some(s.data_version) }
         }
-        // "Unchanged": the held rows are current - unless the cache was cleared since the claim,
-        // in which case believing the server strands the page on its skeleton.
-        _ => match cached_rows() {
-            Some((expenses, payments)) => {
-                Outcome::Load { users, project, expenses, payments, version: Some(s.data_version) }
-            }
-            None => Outcome::Refetch,
+        // "Unchanged": rows complete at that version are current - the page's own first, which is
+        // what spares a project past the web cache ceiling a full download on every refresh. The
+        // cache only under the version it claimed: past the ceiling it holds a truncated subset,
+        // and loading that as complete would hide the rest for good. Neither, and believing the
+        // server would strand the page on its skeleton.
+        _ => match held.filter(|(_, _, version)| *version == s.data_version) {
+            Some((expenses, payments, _)) => Outcome::Load {
+                users,
+                project,
+                expenses: expenses.to_vec(),
+                payments: payments.to_vec(),
+                version: Some(s.data_version),
+            },
+            None => match cached_rows().filter(|_| cached.and_then(|c| c.cached_data_version) == Some(s.data_version)) {
+                Some((expenses, payments)) => {
+                    Outcome::Load { users, project, expenses, payments, version: Some(s.data_version) }
+                }
+                None => Outcome::Refetch,
+            },
         },
     }
 }
@@ -311,14 +325,14 @@ mod tests {
 
     #[test]
     fn nothing_resolved_waits() {
-        assert_eq!(decide(None, None, pid()), Outcome::Wait);
+        assert_eq!(decide(None, None, None, pid()), Outcome::Wait);
     }
 
     // The whole point of the merged sync: one response carries the project and its participants,
     // so nothing else has to be fetched for the page to load.
     #[test]
     fn sync_carrying_rows_loads_them_and_claims_the_version() {
-        let out = decide(sync_ok(pid(), 7, true).as_ref(), None, pid());
+        let out = decide(sync_ok(pid(), 7, true).as_ref(), None, None, pid());
         let Outcome::Load { users, project, expenses, payments, version } = out else {
             panic!("expected Load, got {out:?}")
         };
@@ -334,7 +348,7 @@ mod tests {
     #[test]
     fn unchanged_with_a_cache_loads_the_cached_rows_and_still_claims_the_version() {
         let cache = full_cache();
-        let out = decide(sync_ok(pid(), 42, false).as_ref(), Some(&cache), pid());
+        let out = decide(sync_ok(pid(), 42, false).as_ref(), Some(&cache), None, pid());
         let Outcome::Load { users, project, expenses, version, .. } = out else {
             panic!("expected Load")
         };
@@ -347,14 +361,42 @@ mod tests {
     // Believing "unchanged" with no rows to show strands the page on its skeleton forever.
     #[test]
     fn unchanged_with_a_cleared_cache_refetches() {
-        let out = decide(sync_ok(pid(), 42, false).as_ref(), None, pid());
+        let out = decide(sync_ok(pid(), 42, false).as_ref(), None, None, pid());
         assert_eq!(out, Outcome::Refetch);
+    }
+
+    // A project past the web cache ceiling has no claim on disk; the page's own complete rows are
+    // what spare it a full download on every tab return.
+    #[test]
+    fn unchanged_with_held_rows_at_that_version_loads_them() {
+        let key = test_key();
+        let held = vec![make_expense(&key, 3, "Held", 1.0, ExpenseType::Expense, "2025-01-01")];
+        let truncated = LocalStorageProject { cached_data_version: None, ..full_cache() };
+        let out = decide(sync_ok(pid(), 42, false).as_ref(), Some(&truncated), Some((&held, &[], 42)), pid());
+        let Outcome::Load { expenses, version, .. } = out else { panic!("expected Load, got {out:?}") };
+        assert_eq!((expenses[0].id, version), (3, Some(42)), "the held rows, not the truncated cache");
+    }
+
+    // A local patch withdrew the held version mid-flight: the truncated disk cache must not stand in
+    // for the whole project under the answered version.
+    #[test]
+    fn unchanged_with_neither_held_nor_claimed_rows_at_that_version_refetches() {
+        let key = test_key();
+        let held = vec![make_expense(&key, 3, "Held", 1.0, ExpenseType::Expense, "2025-01-01")];
+        let truncated = LocalStorageProject { cached_data_version: None, ..full_cache() };
+        assert_eq!(decide(sync_ok(pid(), 42, false).as_ref(), Some(&truncated), None, pid()), Outcome::Refetch);
+        assert_eq!(
+            decide(sync_ok(pid(), 42, false).as_ref(), Some(&truncated), Some((&held, &[], 41)), pid()),
+            Outcome::Refetch
+        );
+        let other_claim = LocalStorageProject { cached_data_version: Some(41), ..full_cache() };
+        assert_eq!(decide(sync_ok(pid(), 42, false).as_ref(), Some(&other_claim), None, pid()), Outcome::Refetch);
     }
 
     #[test]
     fn offline_with_a_cache_loads_it_and_keeps_its_version() {
         let cache = LocalStorageProject { cached_data_version: Some(42), ..full_cache() };
-        let out = decide(Some(&Err(offline())), Some(&cache), pid());
+        let out = decide(Some(&Err(offline())), Some(&cache), None, pid());
         let Outcome::Load { users, expenses, version, .. } = out else { panic!("expected Load") };
         // Written back as it was read: `None` here withdrew the claim, and the next online open
         // re-downloaded the whole project.
@@ -365,7 +407,7 @@ mod tests {
 
     #[test]
     fn offline_with_no_cache_waits() {
-        let out = decide(Some(&Err(offline())), None, pid());
+        let out = decide(Some(&Err(offline())), None, None, pid());
         assert_eq!(out, Outcome::Wait);
     }
 
@@ -373,13 +415,13 @@ mod tests {
     #[test]
     fn a_server_error_never_falls_back_to_the_cache() {
         let cache = full_cache();
-        let out = decide(Some(&Err(boom())), Some(&cache), pid());
+        let out = decide(Some(&Err(boom())), Some(&cache), None, pid());
         assert_eq!(out, Outcome::Wait);
     }
 
     #[test]
     fn a_result_for_another_project_is_ignored() {
-        let out = decide(sync_ok(other_pid(), 7, true).as_ref(), None, pid());
+        let out = decide(sync_ok(other_pid(), 7, true).as_ref(), None, None, pid());
         assert_eq!(out, Outcome::Wait);
     }
 
@@ -388,7 +430,7 @@ mod tests {
     #[test]
     fn an_old_server_omitting_users_falls_back_to_the_cache() {
         let cache = full_cache();
-        let out = decide(legacy_sync(pid(), 7).as_ref(), Some(&cache), pid());
+        let out = decide(legacy_sync(pid(), 7).as_ref(), Some(&cache), None, pid());
         let Outcome::Load { users, project, expenses, .. } = out else { panic!("expected Load") };
         assert_eq!(users[0].id, 9, "participants come from the cache");
         assert_eq!(project.map(|p| p.id), Some(pid()));
@@ -400,16 +442,16 @@ mod tests {
     // so the page has to say so and offer a retry.
     #[test]
     fn an_old_server_omitting_users_with_no_cache_is_unusable() {
-        assert_eq!(decide(legacy_sync(pid(), 7).as_ref(), None, pid()), Outcome::Unusable);
+        assert_eq!(decide(legacy_sync(pid(), 7).as_ref(), None, None, pid()), Outcome::Unusable);
     }
 
     // Only a *resolved* response is unusable. Pending, offline and another project's result are
     // all still worth waiting on, and must never surface an error.
     #[test]
     fn nothing_resolved_is_never_unusable() {
-        assert_eq!(decide(None, None, pid()), Outcome::Wait);
-        assert_eq!(decide(Some(&Err(offline())), None, pid()), Outcome::Wait);
-        assert_eq!(decide(legacy_sync(other_pid(), 7).as_ref(), None, pid()), Outcome::Wait);
+        assert_eq!(decide(None, None, None, pid()), Outcome::Wait);
+        assert_eq!(decide(Some(&Err(offline())), None, None, pid()), Outcome::Wait);
+        assert_eq!(decide(legacy_sync(other_pid(), 7).as_ref(), None, None, pid()), Outcome::Wait);
     }
 
     #[test]

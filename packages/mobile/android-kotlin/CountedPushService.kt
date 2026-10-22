@@ -72,8 +72,10 @@ class CountedPushService : PushService() {
             data.optString("proof").ifEmpty { return }.let { PushToken.writeProof(this, it) }
             return
         }
-        val title = data.optString("title").ifEmpty { return }
-        val body = data.optString("body").ifEmpty { return }
+        // Rendered here from `kind`; the server's sentence only for a kind this build does not know.
+        val title = "Counted"
+        val lang = runCatching { File(filesDir, "push_lang").readText().trim() }.getOrDefault("en")
+        val body = PushTexts.body(data.optString("kind"), lang) ?: data.optString("body").ifEmpty { return }
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
@@ -114,5 +116,51 @@ class CountedPushService : PushService() {
     companion object {
         const val CHANNEL = "counted"
         const val TAG = "counted"
+    }
+}
+
+/// The four sentences a push may carry, in every locale the app ships. Rendered here from the
+/// push's `kind` in the in-app language (`push_lang`, written by `ui::common::push_sync`), so the
+/// server needs no language per device (audit 2026-10-19 L7). English for any other code.
+object PushTexts {
+    private val texts: Map<String, List<String>> = mapOf(
+        "en" to listOf("New friend request", "Your friend request was accepted", "You've been invited to a project", "One of your projects was closed"),
+        "bg" to listOf("Нова заявка за приятелство", "Заявката ти за приятелство беше приета", "Нова покана за проект", "Един от твоите проекти беше затворен"),
+        "bs" to listOf("Novi zahtjev za prijateljstvo", "Tvoj zahtjev za prijateljstvo je prihvaćen", "Nova pozivnica za projekat", "Jedan od tvojih projekata je zatvoren"),
+        "cs" to listOf("Nová žádost o přátelství", "Tvoje žádost o přátelství byla přijata", "Nová pozvánka do projektu", "Jeden z tvých projektů byl uzavřen"),
+        "da" to listOf("Ny venneanmodning", "Din venneanmodning blev accepteret", "Ny invitation til et projekt", "Et af dine projekter er blevet lukket"),
+        "de" to listOf("Neue Freundschaftsanfrage", "Deine Freundschaftsanfrage wurde angenommen", "Du wurdest zu einem Projekt eingeladen", "Eines deiner Projekte wurde abgeschlossen"),
+        "el" to listOf("Νέο αίτημα φιλίας", "Το αίτημα φιλίας σου έγινε αποδεκτό", "Νέα πρόσκληση σε έργο", "Ένα από τα έργα σου έκλεισε"),
+        "es" to listOf("Nueva solicitud de amistad", "Tu solicitud de amistad fue aceptada", "Te han invitado a un proyecto", "Uno de tus proyectos se ha cerrado"),
+        "et" to listOf("Uus sõbrakutse", "Sinu sõbrakutse võeti vastu", "Uus kutse projekti", "Üks sinu projektidest suleti"),
+        "fi" to listOf("Uusi kaveripyyntö", "Kaveripyyntösi hyväksyttiin", "Uusi kutsu projektiin", "Yksi projekteistasi suljettiin"),
+        "fr" to listOf("Nouvelle demande d'ami", "Votre demande d'ami a été acceptée", "Vous êtes invité à rejoindre un projet", "Un de vos projets a été clôturé"),
+        "ga" to listOf("Iarraidh chairdis nua", "Glacadh le d'iarraidh chairdis", "Cuireadh nua chuig tionscadal", "Dúnadh ceann de do thionscadail"),
+        "hr" to listOf("Novi zahtjev za prijateljstvo", "Tvoj zahtjev za prijateljstvo je prihvaćen", "Nova pozivnica za projekt", "Jedan od tvojih projekata je zatvoren"),
+        "hu" to listOf("Új barátkérelem", "Elfogadták a barátkérelmedet", "Új meghívó egy projektbe", "Az egyik projektedet lezárták"),
+        "is" to listOf("Ný vinabeiðni", "Vinabeiðni þín var samþykkt", "Nýtt boð í verkefni", "Einu af verkefnunum þínum var lokað"),
+        "it" to listOf("Nuova richiesta di amicizia", "La tua richiesta di amicizia è stata accettata", "Sei stato invitato a un progetto", "Uno dei tuoi progetti è stato chiuso"),
+        "lt" to listOf("Nauja draugystės užklausa", "Tavo draugystės užklausa priimta", "Naujas kvietimas į projektą", "Vienas iš tavo projektų uždarytas"),
+        "lv" to listOf("Jauns draudzības pieprasījums", "Tavs draudzības pieprasījums ir pieņemts", "Jauns ielūgums uz projektu", "Viens no taviem projektiem ir slēgts"),
+        "mk" to listOf("Ново барање за пријателство", "Твоето барање за пријателство е прифатено", "Нова покана за проект", "Еден од твоите проекти е затворен"),
+        "mt" to listOf("Talba ġdida ta' ħbiberija", "It-talba tiegħek ta' ħbiberija ġiet aċċettata", "Stedina ġdida għal proġett", "Wieħed mill-proġetti tiegħek ingħalaq"),
+        "nl" to listOf("Nieuw vriendschapsverzoek", "Je vriendschapsverzoek is geaccepteerd", "Je bent uitgenodigd voor een project", "Een van je projecten is afgesloten"),
+        "no" to listOf("Ny venneforespørsel", "Venneforespørselen din ble godtatt", "Ny invitasjon til et prosjekt", "Et av prosjektene dine ble lukket"),
+        "pl" to listOf("Nowe zaproszenie do znajomych", "Twoje zaproszenie do znajomych zostało przyjęte", "Nowe zaproszenie do projektu", "Jeden z twoich projektów został zamknięty"),
+        "pt" to listOf("Novo pedido de amizade", "O seu pedido de amizade foi aceite", "Foi convidado para um projeto", "Um dos seus projetos foi encerrado"),
+        "ro" to listOf("Cerere de prietenie nouă", "Cererea ta de prietenie a fost acceptată", "Invitație nouă la un proiect", "Unul dintre proiectele tale a fost închis"),
+        "sk" to listOf("Nová žiadosť o priateľstvo", "Tvoja žiadosť o priateľstvo bola prijatá", "Nová pozvánka do projektu", "Jeden z tvojich projektov bol uzavretý"),
+        "sl" to listOf("Nova prošnja za prijateljstvo", "Tvoja prošnja za prijateljstvo je bila sprejeta", "Novo povabilo v projekt", "Eden od tvojih projektov je bil zaprt"),
+        "sq" to listOf("Kërkesë e re miqësie", "Kërkesa jote për miqësi u pranua", "Ftesë e re në një projekt", "Një nga projektet e tua u mbyll"),
+        "sr" to listOf("Novi zahtev za prijateljstvo", "Tvoj zahtev za prijateljstvo je prihvaćen", "Nova pozivnica za projekat", "Jedan od tvojih projekata je zatvoren"),
+        "sv" to listOf("Ny vänförfrågan", "Din vänförfrågan har accepterats", "Ny inbjudan till ett projekt", "Ett av dina projekt har stängts"),
+        "tr" to listOf("Yeni arkadaşlık isteği", "Arkadaşlık isteğin kabul edildi", "Bir projeye yeni davet", "Projelerinden biri kapatıldı"),
+        "uk" to listOf("Новий запит у друзі", "Твій запит у друзі прийнято", "Нове запрошення до проєкту", "Один із твоїх проєктів закрито"),
+    )
+    private val kinds = listOf("friend_request", "friend_accepted", "project_invitation", "project_closed")
+
+    fun body(kind: String, lang: String): String? {
+        val index = kinds.indexOf(kind).takeIf { it >= 0 } ?: return null
+        return (texts[lang] ?: texts.getValue("en"))[index]
     }
 }

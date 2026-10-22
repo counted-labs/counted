@@ -94,7 +94,7 @@ pub fn AppLayout() -> Element {
         DeepLinkListener {}
         if !is_online() {
             div {
-                class: "fixed top-0 inset-x-0 z-[60] safe-top-banner flex items-center justify-center gap-2 \
+                class: "offline-banner fixed top-0 inset-x-0 z-[60] safe-top-banner flex items-center justify-center gap-2 \
                         bg-warning text-warning-content text-xs font-medium py-1.5 px-3",
                 role: "status",
                 aria_live: "polite",

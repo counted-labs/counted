@@ -16,8 +16,8 @@ use std::collections::{HashMap, HashSet};
 
 use crate::common::{error_message, update_ls, upsert_project, upsert_project_key, LocalStorageState, NativeClipboardReader};
 use crate::crypto::{
-    claim_token, claim_verifier, encrypt_json, encrypt_padded_json, generate_key, key_to_fragment,
-    wrap_key,
+    claim_token, claim_verifier, encrypt_padded_json, generate_key, key_to_fragment,
+    wrap_key, WrapUse,
 };
 use crate::expenses::helpers::expense_modal_helpers::with_shares;
 use crate::icons::{CloseIcon, ICON_HEADER};
@@ -74,6 +74,7 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
         error_msg.set(None);
 
         let is_auth = auth_ctx().is_some();
+        let typed = auth_ctx().is_some_and(|a| a.typed_wraps);
         let account_key = account_key_ctx();
 
         spawn(async move {
@@ -149,7 +150,7 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                 .iter()
                 .map(|m| {
                     Ok(CreatableUser {
-                        payload: encrypt_json(&enc_key, &UserPayload {
+                        payload: encrypt_padded_json(&enc_key, &UserPayload {
                             name: m.alias.display_name.clone(),
                             removed: false,
                         })?,
@@ -249,7 +250,7 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
             // is also what attaches the claim label. Nothing to claim here yet.
             if is_auth {
                 let _ = upsert_account_project(Json(UpsertAccountProject {
-                    key: account_key.and_then(|ak| wrap_key(&ak, &enc_key)),
+                    key: account_key.and_then(|ak| wrap_key(&ak, WrapUse::Escrow(project.id), &enc_key, typed)),
                     project_id: project.id,
                     user_id: None,
                     claim_label: None,

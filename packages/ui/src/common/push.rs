@@ -13,6 +13,8 @@ use shared::{PushPlatform, WebPushKeys};
 pub const TOKEN_FILE: &str = "push_token";
 /// Where Android's `CountedPushService` drops the proof from the server's verification push.
 pub const PROOF_FILE: &str = "push_proof";
+/// The in-app language, which Android's `CountedPushService` renders a push's `kind` in.
+pub const LANG_FILE: &str = "push_lang";
 
 pub struct NativePush {
     pub platform: PushPlatform,
@@ -92,6 +94,23 @@ pub fn write_push_token(token: &str) -> std::io::Result<()> {
     let tmp = path.with_extension("tmp");
     std::fs::write(&tmp, token)?;
     std::fs::rename(&tmp, &path)
+}
+
+/// Kept beside the token so a push arriving while the app sleeps is still in the in-app language,
+/// without the server keeping a language per device (audit 2026-10-19 L7).
+pub fn write_push_lang(lang: &str) -> std::io::Result<()> {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let path = super::persist::data_dir().join(LANG_FILE);
+        let tmp = path.with_extension("tmp");
+        std::fs::write(&tmp, lang)?;
+        std::fs::rename(&tmp, &path)
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = lang;
+        Ok(())
+    }
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]

@@ -59,7 +59,7 @@ pub fn UserSelectionModal(props: UserSelectionModalProps) -> Element {
     let on_close = props.on_close;
 
     // This device's current identity, so its own claim is never shown as locked against it.
-    let my_user_id = ls_ctx()
+    let my_user_id = ls_ctx.read()
         .projects
         .iter()
         .find(|p| p.project_id == project_id)

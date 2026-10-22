@@ -1,0 +1,46 @@
+O Counted é a app para dividir despesas entre amigos: 100 % europeia, privada por natureza, com uma missão ambiental. Férias, casa partilhada, fim de semana, prenda de grupo: registem as vossas despesas e o Counted diz-te quem deve quanto a quem, com o mínimo de transferências.
+
+🔗 Sem necessidade de conta
+Cria um projeto, envia o link. É só isso. Os teus amigos juntam-se e participam sem se registarem. Uma conta? Nunca obrigatória. Serve para encontrares os teus projetos noutro dispositivo, convidares amigos a partir da app e partilhares os teus dados de pagamento.
+
+🔒 Cifrado no teu telemóvel
+Nomes, valores, projetos, histórico: tudo é cifrado no teu telemóvel. Só tu tens a chave. Ninguém consegue ler as tuas contas, nem mesmo nós. A tua palavra-passe também nunca sai do teu telemóvel.
+
+📷 Leitura de recibos, no teu telemóvel
+Tira uma foto ao recibo: o valor, a data e a categoria preenchem-se sozinhos. Tudo acontece no teu telemóvel. A foto não é guardada.
+
+🇪🇺 100 % europeu
+Servidores na Alemanha, emails enviados a partir de França. Os teus projetos nunca saem da União Europeia.
+
+💸 Grátis, a sério
+Sem publicidade, sem rastreadores, sem subscrição, sem versão paga, sem limite de despesas ou participantes. Não recolhemos nada, não vendemos os teus dados. Esse não é o nosso modelo.
+
+✨ Tudo para as despesas em grupo
+• Despesas, transferências e receitas, com vários pagadores e vários beneficiários
+• Divisão em partes iguais, por partes ou por valor exato, verificada ao cêntimo
+• O mínimo de transferências para acertar as contas do grupo
+• Despesas recorrentes como a renda ou subscrições: registadas uma vez, adicionadas sempre que vencem
+• Mais de 150 moedas, convertidas à taxa mensal da Comissão Europeia
+• Estatísticas por categoria, por pessoa e mês a mês
+• Histórico de quem adicionou, editou ou eliminou o quê
+• Pesquisa por nome, nota ou categoria, feita no teu dispositivo
+• Com conta, um projeto pessoal «As minhas despesas»: o que gastas sozinho mais a tua parte nos teus grupos, mês a mês
+• Mover uma despesa de um projeto para outro
+• Orçamentos mensais por categoria sobre a tua parte real, com um aviso aos 80 % calculado no teu dispositivo
+• No ecrã inicial, o que te devem e o que deves em todos os projetos, calculado no teu dispositivo
+• Um atalho «Despesa pessoal» com um toque longo no ícone da app
+• Offline: consulta e regista sem rede
+• Exportação CSV e JSON num toque
+• Dados de pagamento (IBAN, PayPal, Wero, Lydia, Revolut…) cifrados como todo o resto
+• Importação do Tricount: cola o link de partilha e passa tudo
+• Web, Android e iOS: o mesmo projeto em todo o lado, com o mesmo link
+• 32 línguas, incluindo as 24 línguas oficiais da UE
+
+🔔 Notificações sem Google
+O Counted entrega as notificações através do UnifiedPush, sem nenhum serviço Google. Para as receberes, instala um distribuidor como o ntfy ou o Sunup. Sem ele, a app funciona normalmente, só que sem notificações.
+
+🌱 Uma missão
+O Counted foi feito para ser eficiente e simples: sem publicidade, sem rastreadores. Os cálculos correm no teu dispositivo. Comprometemo-nos a doar uma parte das nossas receitas a causas ambientais.
+
+Como funciona exatamente? (em inglês) counted.fr/en/privacy
+Verifica tu mesmo o código que executas: counted.fr/en/verify

@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use super::friend_checklist::FriendChecklist;
 use super::friends_service::{invite_each, invitee_emails, my_private_key, Invitee};
-use crate::common::{error_message, Flash};
+use crate::common::{error_message, Flash, LocalStorageState};
 use crate::route::Route;
 
 #[derive(PartialEq, Props, Clone)]
@@ -27,6 +27,7 @@ pub fn InviteFriendsModal(props: InviteFriendsModalProps) -> Element {
     let auth_ctx = use_context::<Signal<Option<Account>>>();
     let account_key = use_context::<Signal<Option<[u8; 32]>>>();
     let mut flash = use_context::<Signal<Option<Flash>>>();
+    let ls_ctx = use_context::<Signal<LocalStorageState>>();
     let preselected = props.preselected.clone();
     let selected: Signal<Vec<Uuid>> =
         use_signal(|| preselected.iter().map(|i| i.friend.account_id).collect());
@@ -37,7 +38,7 @@ pub fn InviteFriendsModal(props: InviteFriendsModalProps) -> Element {
         api::friends::friends_controller::get_friends().await.map(|v| v.friends)
     });
 
-    let my_private = auth_ctx().zip(account_key()).and_then(|(a, k)| my_private_key(&a, &k));
+    let my_private = auth_ctx().zip(account_key()).and_then(|(a, k)| my_private_key(&a, &k, ls_ctx.peek().raw_wraps_ok(a.id)));
     let project_id = props.project_id;
     let project_key = props.project_key;
     let on_close = props.on_close;

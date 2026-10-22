@@ -615,9 +615,9 @@ mod tests {
 
     #[test]
     fn amount_field_text_shows_a_value_changed_from_outside() {
-        assert_eq!(amount_field_text(None, 12.5, false), "12.5");
+        assert_eq!(amount_field_text(None, 12.5, false), "12.50");
         assert_eq!(amount_field_text(Some("7."), 15.0, false), "15");
-        assert_eq!(amount_field_text(None, 12.5, true), "12,5");
+        assert_eq!(amount_field_text(None, 12.5, true), "12,50");
     }
 
     #[test]

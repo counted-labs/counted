@@ -13,6 +13,15 @@ pub async fn invite(
     crate::server::friends::invitations::invite(project_id, payload).await
 }
 
+/// Several [`invite`]s into one project in one call. Returns the accounts not invited.
+#[post("/api/v1/projects/{project_id}/invitations/batch")]
+pub async fn invite_batch(
+    project_id: Uuid,
+    Json(payload): Json<Vec<CreatableProjectInvitation>>,
+) -> Result<Vec<Uuid>, ServerFnError> {
+    crate::server::friends::invitations::invite_batch(project_id, payload).await
+}
+
 #[get("/api/v1/projects/invitations")]
 pub async fn get_invitations() -> Result<Vec<ProjectInvitation>, ServerFnError> {
     crate::server::friends::invitations::get_invitations().await

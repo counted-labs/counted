@@ -19,39 +19,47 @@ struct DecryptedEntry {
     created_at: NaiveDateTime,
 }
 
+fn decrypt_history(
+    key: &[u8; 32],
+    history_list: &[shared::HistoryEntry],
+    names: Option<&std::collections::HashMap<i32, String>>,
+) -> Vec<DecryptedEntry> {
+    history_list
+        .iter()
+        .map(|e| {
+            let payload = decrypt_json::<HistoryPayload>(key, &e.payload).ok();
+            let actor_name = payload
+                .as_ref()
+                .and_then(|p| p.actor_user_id)
+                .or(e.actor_user_id)
+                .and_then(|id| names.and_then(|m| m.get(&id).cloned()))
+                .unwrap_or_else(|| "?".to_string());
+            let action = payload.as_ref().and_then(|p| p.action.clone()).unwrap_or_else(|| e.action.clone());
+            let summary = payload.map(|p| p.summary).unwrap_or_default();
+            DecryptedEntry { action, actor_name, summary, created_at: e.created_at }
+        })
+        .collect()
+}
+
 #[component]
 pub fn ProjectHistoryPage(project_id: Uuid) -> Element {
-    let key: Option<[u8; 32]> = project_key(project_id);
+    let key = use_memo(use_reactive!(|project_id| project_key(project_id)));
 
     // History is append-only and unbounded, so it stays its own fetch. The participant names come
     // from the project store, which is already decrypted - this page used to be the third place to
     // fetch and decrypt the same roster.
     let mut history = use_resource(move || async move { get_project_history(project_id).await });
     let store = use_context::<ProjectStore>();
-    let names = store.data_for(project_id).map(|d| d.user_names.clone());
-
-    let entries: Vec<DecryptedEntry> = match (key, &*history.read()) {
-        (Some(k), Some(Ok(history_list))) => history_list
-            .iter()
-            .map(|e| {
-                let payload = decrypt_json::<HistoryPayload>(&k, &e.payload).ok();
-                let actor_name = payload
-                    .as_ref()
-                    .and_then(|p| p.actor_user_id)
-                    .or(e.actor_user_id)
-                    .and_then(|id| names.as_ref().and_then(|m| m.get(&id).cloned()))
-                    .unwrap_or_else(|| "?".to_string());
-                let summary = payload.map(|p| p.summary).unwrap_or_default();
-                DecryptedEntry {
-                    action: e.action.clone(),
-                    actor_name,
-                    summary,
-                    created_at: e.created_at,
-                }
-            })
-            .collect(),
-        _ => vec![],
-    };
+    // A memo, not the body: the history is unbounded and the body re-runs on every sync state.
+    let entries = use_memo(use_reactive!(|project_id| {
+        let names = store.data_for(project_id).map(|d| d.user_names.clone());
+        match (key(), &*history.read()) {
+            (Some(k), Some(Ok(history_list))) => decrypt_history(&k, history_list, names.as_ref()),
+            _ => vec![],
+        }
+    }));
+    let key = key();
+    let entries = entries();
 
     let loading = history.read().is_none();
     let error: Option<String> =
