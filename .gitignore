@@ -1,3 +1,5 @@
 target/
 **/target/
 node_modules/
+security-tests/test-results/
+security-tests/results/

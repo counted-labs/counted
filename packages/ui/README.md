@@ -1,14 +1,9 @@
-# UI
+# ui
 
-This crate contains all shared components for the workspace. This is a great place to place any UI you would like to use in multiple platforms like a common `Button` or `Navbar` component.
+Every screen, component and hook of the app, shared by the web build (compiled to WASM) and the
+Android/iOS apps (native Rust in a WebView). One folder per feature (`projects/`, `expenses/`,
+`charts/`, `auth/`, …), plus `common/` for what they share, `crypto.rs` for the client-side
+encryption and `i18n.rs` with the Fluent messages in `i18n/`.
 
-```
-ui/
-├─ src/
-│  ├─ lib.rs # The entrypoint for the ui crate
-│  ├─ navbar.rs # The Navbar component that will be used in the layout of every platform's router
-```
-
-## Dependencies
-
-Since this crate is shared between multiple platforms, it should not pull in any platform specific dependencies. For example, if you want to use the `web_sys` crate in the web build of your app, you should not add it to this crate. Instead, you should add platform specific dependencies to the [web](../web/Cargo.toml), [desktop](../desktop/Cargo.toml), or [mobile](../mobile/Cargo.toml) crates.
+Code that differs per target is gated with `cfg(target_arch = "wasm32")` (web) or
+`cfg(target_os = "android" | "ios")`, not with Cargo features.

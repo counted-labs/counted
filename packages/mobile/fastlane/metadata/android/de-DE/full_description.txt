@@ -13,7 +13,7 @@ Fotografiere den Beleg: Betrag, Datum und Kategorie füllen sich von selbst aus.
 Server in Deutschland, E-Mails aus Frankreich. Deine Projekte verlassen nie die Europäische Union.
 
 💸 Wirklich kostenlos
-Keine Werbung, keine Tracker, kein Abo, keine Bezahlversion, kein Limit für Ausgaben oder Teilnehmende. Wir sammeln nichts, wir verkaufen deine Daten nicht. Das ist nicht unser Modell.
+Kostenlos, ohne Werbung, ohne Tracker, ohne Limit für Ausgaben oder Teilnehmende. Alles, was hier beschrieben ist, ist kostenlos und bleibt es. Wir sammeln nichts, wir verkaufen deine Daten nicht. Das ist nicht unser Modell.
 
 ✨ Alles für gemeinsame Ausgaben
 • Ausgaben, Überweisungen und Einnahmen, mit mehreren Zahlenden und mehreren Begünstigten
@@ -42,5 +42,5 @@ Counted stellt Benachrichtigungen über UnifiedPush zu, ganz ohne Google-Dienste
 🌱 Eine Mission
 Counted ist effizient und einfach gebaut: keine Werbung, keine Tracker. Die Berechnungen laufen auf deinem Gerät. Wir verpflichten uns, einen Teil unserer Einnahmen an Umweltprojekte zu geben.
 
-Wie funktioniert das genau? (auf Englisch) counted.fr/en/privacy
+Wie funktioniert das genau? counted.fr/de/encryption
 Prüfe selbst den Code, den du ausführst: counted.fr/en/verify

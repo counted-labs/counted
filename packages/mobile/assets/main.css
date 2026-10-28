@@ -310,6 +310,22 @@ main {
   }
 }
 
+/* The round header buttons (back, ⋯): the same material at button scale, with the lit top edge
+   iOS 26 draws on its glass controls. Unlayered, so it wins over the `bg-base-300` the button
+   carries for web and desktop, where this class is undefined. */
+.glass-button {
+  background-color: color-mix(in oklab, var(--color-base-300) 60%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.12), inset 0 0 0 1px oklch(100% 0 0 / 0.05);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-button {
+    background-color: var(--color-base-300);
+  }
+}
+
 /* Reduce Transparency. Both materials go opaque and drop the blur - the same end state as the
    @supports fallbacks above, so a device that lacks backdrop-filter and a user who asked for less
    transparency land in the same place.
@@ -324,6 +340,11 @@ main {
   .chrome-material,
   .nav-material.is-scrolled {
     background-color: var(--color-base-100);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .glass-button {
+    background-color: var(--color-base-300);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
@@ -699,15 +720,22 @@ main {
 }
 
 /* Dark mode (the `counted-dark` theme in tailwind.input.css). A shadow does not read on a dark
-   ground, so a card is told apart from the page by a hairline instead - the page and the card are
-   both base-100. The drop shadow stays for whatever floats over other content. A sheet is base-100
-   too, over a scrim that darkens the page by only a few percent: measured #121815 on #0B0E0D, an
-   edge the eye loses, so it takes the same hairline. */
+   ground, so the page sinks below base-100 and a card stands on its fill alone, the way iOS
+   grouped lists do - no outline. The page shells paint `bg-base-100` as a utility, which this
+   unlayered rule outranks. The drop shadow stays for whatever floats over other content. A sheet
+   is base-100 over a scrim that darkens the page by only a few percent: measured #121815 on
+   #0B0E0D, an edge the eye loses, so it keeps a hairline. */
 @media (prefers-color-scheme: dark) {
-  .modal-box,
+  .page-shell,
+  .app-container {
+    background-color: oklch(15% 0.008 165);
+  }
   .shadow-soft,
   .filter .btn,
   .ptr[data-plat="android"] .ptr-indicator {
+    box-shadow: 0 8px 18px -6px oklch(0% 0 0 / 0.5);
+  }
+  .modal-box {
     box-shadow:
       0 0 0 1px oklch(100% 0 0 / 0.08),
       0 8px 18px -6px oklch(0% 0 0 / 0.5);

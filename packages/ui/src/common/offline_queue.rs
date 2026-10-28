@@ -153,6 +153,10 @@ pub fn write_queue(queue: &VecDeque<QueuedOp>) {
     write_json(QUEUE_KEY, "offline queue", queue);
 }
 
+pub fn clear_queue() {
+    super::persist::remove_store(QUEUE_KEY);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

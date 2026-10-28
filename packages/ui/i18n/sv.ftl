@@ -131,6 +131,16 @@ account-delete-title = Ta bort mitt konto
 account-delete-warning = Omedelbar och permanent radering av ditt konto och dina uppgifter.
 account-delete-confirm-title = Ta bort konto
 account-delete-confirm-message = Ditt konto, dina sessioner och din projektlista tas bort permanent. Utan ditt lösenord blir den krypterade datan i ett delat projekt oläsbar för dig - det går inte att ångra.
+erase-device-open = Logga ut och rensa den här enheten
+erase-device-title = Rensa den här enheten?
+erase-device-body = Projekten, deras nycklar och cachen på den här enheten raderas, sedan avslutas din session. Dina projekt finns kvar i ditt konto: logga in igen för att få tillbaka dem.
+erase-device-checking = Kontrollerar att dina projekt finns i ditt konto…
+erase-device-pending = Ändringar som väntar på att skickas: { $count }. Anslut till internet igen och försök sedan på nytt.
+erase-device-unreachable = Kunde inte kontrollera att dina projekt finns i ditt konto. Kontrollera din anslutning och försök sedan på nytt.
+erase-device-at-risk = De här projekten finns inte i ditt konto och går förlorade. Vill du behålla dem, avbryt och kopiera först deras länk:
+erase-device-confirm = Rensa och logga ut
+erase-device-confirm-anyway = Rensa ändå
+erase-device-erasing = Rensar…
 
 settings-payment-methods = Betalningsuppgifter
 settings-payment-methods-hint = Hur du vill få tillbaka pengar. Krypterat med ditt konto.

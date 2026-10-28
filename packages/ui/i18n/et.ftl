@@ -131,6 +131,16 @@ account-delete-title = Kustuta minu konto
 account-delete-warning = Sinu konto ja andmete kohene ja jäädav kustutamine.
 account-delete-confirm-title = Konto kustutamine
 account-delete-confirm-message = Sinu konto, seansid ja projektide loend kustutatakse jäädavalt. Ilma paroolita muutuvad jagatud projekti krüpteeritud andmed sulle loetamatuks - seda ei saa tagasi võtta.
+erase-device-open = Logi välja ja tühjenda see seade
+erase-device-title = Kas tühjendada see seade?
+erase-device-body = Selle seadme projektid, nende võtmed ja vahemälu kustutatakse, seejärel sinu seanss lõpeb. Sinu projektid jäävad sinu kontole: logi uuesti sisse, et need tagasi saada.
+erase-device-checking = Kontrollin, kas sinu projektid on sinu kontol…
+erase-device-pending = Saatmata muudatusi: { $count }. Mine uuesti võrku ja proovi siis uuesti.
+erase-device-unreachable = Ei õnnestunud kontrollida, kas sinu projektid on sinu kontol. Kontrolli ühendust ja proovi siis uuesti.
+erase-device-at-risk = Need projektid ei ole sinu kontol ja lähevad kaotsi. Kui tahad need alles jätta, loobu ja kopeeri enne nende link:
+erase-device-confirm = Tühjenda ja logi välja
+erase-device-confirm-anyway = Tühjenda ikkagi
+erase-device-erasing = Tühjendan…
 
 settings-payment-methods = Makseandmed
 settings-payment-methods-hint = Kuidas soovid raha tagasi saada. Krüpteeritud sinu kontoga.

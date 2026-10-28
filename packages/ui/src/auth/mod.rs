@@ -1,4 +1,6 @@
 pub mod credentials;
+pub mod erase_device;
+pub mod erase_device_sheet;
 pub mod locked_feature_card;
 pub mod login_page;
 pub mod payment_methods_card;

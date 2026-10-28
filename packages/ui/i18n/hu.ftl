@@ -131,6 +131,16 @@ account-delete-title = Fiókom törlése
 account-delete-warning = A fiókod és az adataid azonnali és végleges törlése.
 account-delete-confirm-title = Fiók törlése
 account-delete-confirm-message = A fiókod, a munkameneteid és a projektlistád végleg törlődik. A jelszavad nélkül a megosztott projekt titkosított adatai olvashatatlanná válnak számodra - ez nem vonható vissza.
+erase-device-open = Kijelentkezés és az eszköz törlése
+erase-device-title = Törlöd ezt az eszközt?
+erase-device-body = Az eszközön lévő projektek, kulcsaik és a gyorsítótár törlődnek, majd a munkamenet véget ér. A projektjeid megmaradnak a fiókodban: jelentkezz be újra, hogy visszakapd őket.
+erase-device-checking = Ellenőrzöm, hogy a projektjeid a fiókodban vannak-e…
+erase-device-pending = Elküldésre váró módosítások: { $count }. Csatlakozz újra az internethez, és próbáld újra.
+erase-device-unreachable = Nem sikerült ellenőrizni, hogy a projektjeid a fiókodban vannak-e. Ellenőrizd a kapcsolatot, és próbáld újra.
+erase-device-at-risk = Ezek a projektek nincsenek a fiókodban, és elvesznek. Ha meg akarod tartani őket, szakítsd meg, és előbb másold ki a linkjüket:
+erase-device-confirm = Törlés és kijelentkezés
+erase-device-confirm-anyway = Törlés mégis
+erase-device-erasing = Törlés…
 
 settings-payment-methods = Fizetési adatok
 settings-payment-methods-hint = Hogyan szeretnéd visszakapni a pénzed. A fiókoddal titkosítva.

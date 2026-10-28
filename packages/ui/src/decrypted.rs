@@ -181,6 +181,10 @@ fn decrypt_expense_and_shares(
     let ep: ExpensePayload = decrypt_json(key, &e.payload)?;
     let expense_type =
         ExpenseType::parse(&ep.expense_type).ok_or_else(|| format!("invalid expense type: {}", ep.expense_type))?;
+    let share_amounts = ep.shares.iter().flatten().map(|s| s.amount);
+    if !std::iter::once(ep.amount).chain(share_amounts).all(shared::is_valid_amount) {
+        return Err("amount out of range".to_string());
+    }
     let shares = ep.shares.map(|shares| {
         shares
             .into_iter()
@@ -251,6 +255,9 @@ pub fn decrypt_expense_payments(key: &[u8; 32], e: &Expense, payments: &[Payment
 
 pub fn decrypt_payment(key: &[u8; 32], p: &Payment) -> Result<DecryptedPayment, String> {
     let pp: PaymentPayload = decrypt_json(key, &p.payload)?;
+    if !shared::is_valid_amount(pp.amount) {
+        return Err("amount out of range".to_string());
+    }
     Ok(DecryptedPayment {
         id: p.id,
         expense_id: p.expense_id,
@@ -501,6 +508,40 @@ mod tests {
         ct[0] ^= 0x01;
         e.payload.ct = STANDARD.encode(&ct);
         assert!(decrypt_expense(&key, &e).is_err());
+    }
+
+    #[test]
+    fn an_expense_whose_amount_is_out_of_range_is_unreadable() {
+        let key = test_key();
+        for amount in [1e300, f64::MAX, -shared::MAX_AMOUNT * 2.0] {
+            let e = make_expense(&key, 1, "x", amount, ExpenseType::Expense, "2025-01-01");
+            assert!(decrypt_expense(&key, &e).is_err(), "{amount}");
+        }
+    }
+
+    #[test]
+    fn an_expense_with_a_share_out_of_range_moves_no_balance() {
+        let key = test_key();
+        let mut e = make_expense(&key, 1, "x", 0.0, ExpenseType::Expense, "2025-01-01");
+        let mut ep: ExpensePayload = decrypt_json(&key, &e.payload).unwrap();
+        ep.shares = Some(vec![
+            shared::ExpenseShare { user_id: 1, amount: 1e300, is_debt: false },
+            shared::ExpenseShare { user_id: 1, amount: 1e300, is_debt: false },
+            shared::ExpenseShare { user_id: 2, amount: 0.02, is_debt: true },
+        ]);
+        e.payload = encrypt_json(&key, &ep).unwrap();
+
+        let (expenses, payments) = decrypt_ledger(&key, &[e], &[]);
+
+        assert!(expenses.is_empty());
+        assert!(payments.is_empty());
+    }
+
+    #[test]
+    fn a_payment_row_out_of_range_is_dropped() {
+        let key = test_key();
+        let p = make_payment(&key, 1, 10, 5, false, 1e300);
+        assert!(decrypt_payment(&key, &p).is_err());
     }
 
     #[test]

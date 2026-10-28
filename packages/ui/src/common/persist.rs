@@ -128,6 +128,16 @@ pub fn remove_quarantine(key: &str) {
     let _ = std::fs::remove_file(file_for(key).with_extension("json.corrupt"));
 }
 
+pub fn remove_store(key: &str) {
+    #[cfg(target_arch = "wasm32")]
+    if let Some(s) = web_storage() {
+        let _ = s.remove_item(key);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = std::fs::remove_file(file_for(key));
+    remove_quarantine(key);
+}
+
 /// `label` names the store in the serialization error log ("local storage" / "offline queue").
 ///
 /// A failed write is reported on every target. On web that matters more than it looks: localStorage

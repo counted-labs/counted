@@ -17,7 +17,7 @@ pub fn BackButtonArrow(props: BackButtonArrowProps) -> Element {
             // back through this - `aria-label` is translated copy and changes freely.
             id: "back-button",
             r#type: "button",
-            class: "btn btn-circle size-11 min-h-11 border-0 bg-base-300",
+            class: "btn btn-circle size-11 min-h-11 border-0 bg-base-300 glass-button",
             aria_label: tid!("back"),
             onclick: move |e| props.onclick.call(e),
             BackArrowIcon { size: ICON_HEADER }

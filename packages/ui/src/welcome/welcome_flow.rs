@@ -36,6 +36,18 @@ pub fn last_index(total: usize) -> usize {
     total.saturating_sub(1)
 }
 
+/// The site has the explainer in six languages; every other app language gets the English one.
+pub fn how_it_works_url(lang: &str) -> &'static str {
+    match lang {
+        "fr" => "https://counted.fr/encryption",
+        "nl" => "https://counted.fr/nl/encryption",
+        "de" => "https://counted.fr/de/encryption",
+        "es" => "https://counted.fr/es/encryption",
+        "it" => "https://counted.fr/it/encryption",
+        _ => "https://counted.fr/en/encryption",
+    }
+}
+
 #[derive(Clone, Copy, PartialEq)]
 pub struct WelcomeFlow {
     steps: &'static [WelcomeStep],
@@ -102,5 +114,12 @@ mod tests {
     fn skip_lands_on_the_last_step() {
         assert_eq!(last_index(4), 3);
         assert_eq!(last_index(3), 2);
+    }
+
+    #[test]
+    fn how_it_works_falls_back_to_english_outside_the_site_languages() {
+        assert_eq!(how_it_works_url("fr"), "https://counted.fr/encryption");
+        assert_eq!(how_it_works_url("de"), "https://counted.fr/de/encryption");
+        assert_eq!(how_it_works_url("pl"), "https://counted.fr/en/encryption");
     }
 }

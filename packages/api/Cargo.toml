@@ -57,14 +57,15 @@ rsa = { version = "0.9", features = ["pem"], optional = true }
 base64 = { version = "0.22", optional = true }
 rand = { version = "0.8", optional = true }
 hmac = { version = "0.12", optional = true }
-# Pure-Rust backend on purpose: aws-lc-rs needs cmake in the Docker builder and would move the
-# reproducible-build digest table for one ES256 and one RS256 signature.
-jsonwebtoken = { version = "11", default-features = false, features = ["use_pem", "rust_crypto"], optional = true }
 subtle = { version = "2.6", optional = true }
-# Web Push (RFC 8291 payload encryption, RFC 8292 VAPID). RustCrypto rather than the `web-push` /
-# `ece` crates, whose default backend is OpenSSL. p256 and hkdf are already in the tree through
-# jsonwebtoken; aes-gcm shares their aead/cipher versions.
-p256 = { version = "0.13", features = ["ecdh", "pem"], optional = true }
+# P-256 for push: the ES256 JWTs of APNs and VAPID, and the RFC 8291 key agreement. ring, already in
+# the binary through rustls, rather than RustCrypto's p256/jsonwebtoken: their crypto-bigint 0.5
+# carries RUSTSEC-2026-0387 (secret-dependent branches) with no fixed release on that line, and it
+# sat under the long-lived VAPID key that signs on every push. ring also needs no cmake, unlike
+# aws-lc-rs.
+ring = { version = "0.17", optional = true }
+# Web Push (RFC 8291 payload encryption). RustCrypto rather than the `web-push` / `ece` crates,
+# whose default backend is OpenSSL.
 hkdf = { version = "0.12", optional = true }
 aes-gcm = { version = "0.10", optional = true }
 dioxus-fullstack = { version = "0.7.10", optional = true }
@@ -82,9 +83,8 @@ server = [
 	"base64",
 	"rand",
 	"hmac",
-	"jsonwebtoken",
 	"subtle",
-	"p256",
+	"ring",
 	"hkdf",
 	"aes-gcm",
 	"dioxus-fullstack",

@@ -42,6 +42,10 @@ pub fn write_fx(value: &CachedFx) {
     persist::write_json(KEY, LABEL, value);
 }
 
+pub fn clear_fx() {
+    persist::remove_store(KEY);
+}
+
 /// Seconds since the Unix epoch. `chrono::Utc::now` works on wasm and native alike.
 pub fn now_seconds() -> i64 {
     chrono::Utc::now().timestamp()

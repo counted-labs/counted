@@ -132,6 +132,16 @@ account-delete-title = Obriši moj račun
 account-delete-warning = Trenutno i trajno brisanje tvog računa i tvojih podataka.
 account-delete-confirm-title = Obriši račun
 account-delete-confirm-message = Tvoj račun, sesije i lista projekata bit će trajno obrisani. Bez tvoje lozinke šifrovani podaci dijeljenog projekta postaju ti nečitljivi - to se ne može poništiti.
+erase-device-open = Odjavi se i izbriši ovaj uređaj
+erase-device-title = Izbrisati ovaj uređaj?
+erase-device-body = Projekti, njihovi ključevi i keš na ovom uređaju bit će izbrisani, a zatim će sesija biti završena. Tvoji projekti ostaju na tvom računu: ponovo se prijavi da ih vratiš.
+erase-device-checking = Provjeravam da li su tvoji projekti na tvom računu…
+erase-device-pending = Promjene koje čekaju slanje: { $count }. Ponovo se poveži na internet i pokušaj ponovo.
+erase-device-unreachable = Nije moguće provjeriti da li su tvoji projekti na tvom računu. Provjeri vezu i pokušaj ponovo.
+erase-device-at-risk = Ovi projekti nisu na tvom računu i bit će izgubljeni. Ako ih želiš zadržati, otkaži i prvo kopiraj njihov link:
+erase-device-confirm = Izbriši i odjavi se
+erase-device-confirm-anyway = Ipak izbriši
+erase-device-erasing = Brisanje…
 
 settings-payment-methods = Podaci za plaćanje
 settings-payment-methods-hint = Kako želiš da ti se vrati novac. Šifrovano s tvojim računom.

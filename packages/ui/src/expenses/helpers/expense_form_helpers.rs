@@ -94,7 +94,7 @@ pub fn parse_amount(raw: &str) -> Option<f64> {
     if s.is_empty() {
         return None;
     }
-    parse_plain(&s).or_else(|| evaluate_expression(&s))
+    parse_plain(&s).or_else(|| evaluate_expression(&s)).filter(|v| shared::is_valid_amount(*v))
 }
 
 fn parse_plain(s: &str) -> Option<f64> {
@@ -504,6 +504,14 @@ mod tests {
         assert_eq!(parse_amount("   "), None);
         assert_eq!(parse_amount("abc"), None);
         assert_eq!(parse_amount("-5"), None);
+    }
+
+    #[test]
+    fn parse_amount_refuses_more_than_the_largest_amount() {
+        assert_eq!(parse_amount("1000000000000"), Some(shared::MAX_AMOUNT));
+        assert_eq!(parse_amount("1000000000000.01"), None);
+        assert_eq!(parse_amount("1e300"), None);
+        assert_eq!(parse_amount("999999999999*10"), None);
     }
 
     #[test]

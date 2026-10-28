@@ -134,6 +134,16 @@ account-delete-title = Supprimer mon compte
 account-delete-warning = Suppression immédiate et définitive de votre compte et de vos informations.
 account-delete-confirm-title = Supprimer le compte
 account-delete-confirm-message = Votre compte, vos sessions et la liste de vos projets seront définitivement supprimés. Sans votre mot de passe, les données chiffrées d'un projet partagé deviennent illisibles pour vous - cette action est irréversible.
+erase-device-open = Se déconnecter et effacer cet appareil
+erase-device-title = Effacer cet appareil ?
+erase-device-body = Les projets, leurs clés et le cache de cet appareil seront effacés, puis votre session sera fermée. Vos projets restent sur votre compte : reconnectez-vous pour les retrouver.
+erase-device-checking = Vérification que vos projets sont sur votre compte…
+erase-device-pending = Modifications en attente d'envoi : { $count }. Reconnectez-vous à internet, puis réessayez.
+erase-device-unreachable = Impossible de vérifier que vos projets sont sur votre compte. Vérifiez votre connexion, puis réessayez.
+erase-device-at-risk = Ces projets ne sont pas sur votre compte et seront perdus. Pour les garder, annulez et copiez d'abord leur lien :
+erase-device-confirm = Effacer et se déconnecter
+erase-device-confirm-anyway = Effacer quand même
+erase-device-erasing = Effacement…
 
 settings-payment-methods = Coordonnées de paiement
 settings-payment-methods-hint = Comment vous souhaitez être remboursé. Chiffrées avec votre compte.

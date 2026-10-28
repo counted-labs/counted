@@ -1,0 +1,14 @@
+{
+  "name": "counted-security-tests",
+  "private": true,
+  "description": "Black-box security invariants of the Counted API, over HTTP only. See README.md.",
+  "scripts": {
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@types/node": "22.20.1",
+    "typescript": "5.9.3"
+  }
+}

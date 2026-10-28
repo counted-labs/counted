@@ -2,11 +2,15 @@ use api::auth::auth_controller::{delete_account, logout, me};
 use dioxus::prelude::*;
 use crate::tid;
 use shared::Account;
+use std::collections::VecDeque;
 
 use crate::common::{
-    error_message, flush_session, format_date, read_from_ls, remove_quarantined_ls, unregister_push, write_to_ls,
-    AppHeader, AuthResolved, ConfirmModal, LanguagePicker, LocalStorageState, PullToRefresh,
+    error_message, flush_session, format_date, haptic, read_from_ls, remove_quarantined_ls, unregister_push,
+    write_to_ls, AppHeader, AuthResolved, ConfirmModal, Haptic, LanguagePicker, LocalStorageState, PullToRefresh,
+    QueuedOp,
 };
+use crate::auth::erase_device::{check_erase, erase_device_stores, EraseCheck};
+use crate::auth::erase_device_sheet::EraseDeviceSheet;
 use crate::auth::{LockedFeatureCard, PaymentMethodsCard};
 use crate::crypto::{decrypt_json, forget_decrypted};
 use crate::icons::{DollarIcon, RightArrowIcon, UserIcon};
@@ -53,6 +57,9 @@ pub fn SettingsPage() -> Element {
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
     let mut show_delete_confirm = use_signal(|| false);
     let mut refreshing_me = use_signal(|| false);
+    let mut pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
+    let mut erase_check: Signal<Option<EraseCheck>> = use_signal(|| None);
+    let mut erasing = use_signal(|| false);
 
     let account = auth_ctx();
 
@@ -84,6 +91,42 @@ pub fn SettingsPage() -> Element {
         }
     };
 
+    let open_erase = move |_| {
+        haptic(Haptic::Light);
+        let Some(account) = auth_ctx() else { return };
+        erase_check.set(Some(EraseCheck::Checking));
+        let pending = pending_ops.read().len();
+        let account_key = account_enc_key_ctx();
+        spawn(async move {
+            let check = check_erase(account, account_key, pending).await;
+            if erase_check.peek().is_some() {
+                erase_check.set(Some(check));
+            }
+        });
+    };
+
+    let on_erase = move |_| {
+        spawn(async move {
+            erasing.set(true);
+            unregister_push().await;
+            match logout().await {
+                Ok(_) => {
+                    flush_session();
+                    erase_device_stores();
+                    pending_ops.set(VecDeque::new());
+                    clear_local_session(ls_ctx, account_enc_key_ctx, auth_ctx);
+                    erase_check.set(None);
+                    nav.push(Route::ProjectsPage {});
+                }
+                Err(e) => {
+                    error_msg.set(Some(error_message(&e)));
+                    erase_check.set(None);
+                    erasing.set(false);
+                }
+            }
+        });
+    };
+
     let on_delete = move |_| {
         show_delete_confirm.set(false);
         spawn(async move {
@@ -107,6 +150,7 @@ pub fn SettingsPage() -> Element {
             AppHeader {
                 title: tid!("settings-title"),
                 back_button_route: Route::ProjectsPage {},
+                back: false,
             }
 
             if let Some(err) = error_msg() {
@@ -174,6 +218,16 @@ pub fn SettingsPage() -> Element {
                                 } else {
                                     {tid!("account-logout")}
                                 }
+                            }
+                        }
+                        div { class: "flex justify-end",
+                            button {
+                                id: "erase-device-btn",
+                                r#type: "button",
+                                class: "btn btn-ghost btn-sm text-error",
+                                disabled: loading(),
+                                onclick: open_erase,
+                                {tid!("erase-device-open")}
                             }
                         }
                     }
@@ -280,6 +334,19 @@ pub fn SettingsPage() -> Element {
                     li {
                         Link { to: Route::LegalNoticePage {}, {tid!("nav-legal")} }
                     }
+                }
+            }
+
+            if let Some(check) = erase_check() {
+                EraseDeviceSheet {
+                    check,
+                    erasing: erasing(),
+                    on_close: move |_| {
+                        if !erasing() {
+                            erase_check.set(None);
+                        }
+                    },
+                    on_confirm: on_erase,
                 }
             }
 

@@ -42,7 +42,7 @@ pub async fn sign_in(
 ) -> Result<(Account, [u8; 32]), ServerFnError> {
     let salt = checked(login_salt(Json(LoginSaltPayload { email: email.clone() })).await?)?;
     let proof = login_proof(salt.auth_version, password, salt.salt).await?;
-    let account = login(Json(LoginPayload { email, proof, upgrade: None, lang: Some(lang) })).await?;
+    let account = login(Json(LoginPayload { email, proof, lang: Some(lang) })).await?;
     flush_session();
     let account_key = account_key_of(&account, password).await?;
     let account = ensure_keypair(account, &account_key).await;
@@ -57,7 +57,7 @@ pub async fn verify_and_sign_in(
 ) -> Result<(Account, [u8; 32]), ServerFnError> {
     let salt = checked(verify_email_salt(Json(VerifyEmailSaltPayload { token: token.clone() })).await?)?;
     let proof = login_proof(salt.auth_version, password, salt.salt).await?;
-    let account = verify_email(Json(VerifyEmailPayload { token, proof: Some(proof) })).await?;
+    let account = verify_email(Json(VerifyEmailPayload { token, proof })).await?;
     flush_session();
     let account_key = account_key_of(&account, password).await?;
     let account = ensure_keypair(account, &account_key).await;

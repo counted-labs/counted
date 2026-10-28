@@ -13,7 +13,7 @@ Hazle una foto al recibo: el importe, la fecha y la categoría se rellenan solos
 Servidores en Alemania, correos enviados desde Francia. Tus proyectos nunca salen de la Unión Europea.
 
 💸 Gratis, de verdad
-Sin anuncios, sin rastreadores, sin suscripción, sin versión de pago, sin límite de gastos ni de participantes. No recogemos nada, no vendemos tus datos. Ese no es nuestro modelo.
+Gratis, sin anuncios ni rastreadores, sin límite de gastos ni de participantes. Todo lo que se describe aquí es gratis y lo seguirá siendo. No recogemos nada, no vendemos tus datos. Ese no es nuestro modelo.
 
 ✨ Todo para los gastos en grupo
 • Gastos, transferencias e ingresos, con varios pagadores y varios beneficiarios
@@ -42,5 +42,5 @@ Counted envía las notificaciones a través de UnifiedPush, sin ningún servicio
 🌱 Una misión
 Counted está hecho para ser eficiente y sencillo: sin anuncios, sin rastreadores. Los cálculos se hacen en tu dispositivo. Nos comprometemos a donar una parte de nuestros ingresos a causas medioambientales.
 
-¿Cómo funciona exactamente? (en inglés) counted.fr/en/privacy
+¿Cómo funciona exactamente? counted.fr/es/encryption
 Comprueba tú mismo el código que ejecutas: counted.fr/en/verify

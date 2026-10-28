@@ -133,6 +133,16 @@ account-delete-title = Usuń moje konto
 account-delete-warning = Natychmiastowe i nieodwracalne usunięcie Twojego konta i Twoich danych.
 account-delete-confirm-title = Usuń konto
 account-delete-confirm-message = Twoje konto, sesje i lista projektów zostaną trwale usunięte. Bez Twojego hasła zaszyfrowane dane wspólnego projektu staną się dla Ciebie nieczytelne - tego nie da się cofnąć.
+erase-device-open = Wyloguj się i wyczyść to urządzenie
+erase-device-title = Wyczyścić to urządzenie?
+erase-device-body = Projekty, ich klucze i pamięć podręczna na tym urządzeniu zostaną usunięte, a potem sesja zostanie zakończona. Twoje projekty zostają na Twoim koncie: zaloguj się ponownie, aby je odzyskać.
+erase-device-checking = Sprawdzam, czy Twoje projekty są na Twoim koncie…
+erase-device-pending = Zmiany czekające na wysłanie: { $count }. Połącz się z internetem i spróbuj ponownie.
+erase-device-unreachable = Nie udało się sprawdzić, czy Twoje projekty są na Twoim koncie. Sprawdź połączenie i spróbuj ponownie.
+erase-device-at-risk = Tych projektów nie ma na Twoim koncie i zostaną utracone. Aby je zachować, anuluj i najpierw skopiuj ich link:
+erase-device-confirm = Wyczyść i wyloguj
+erase-device-confirm-anyway = Wyczyść mimo to
+erase-device-erasing = Czyszczenie…
 
 settings-payment-methods = Dane do płatności
 settings-payment-methods-hint = Jak chcesz otrzymywać zwroty. Zaszyfrowane z Twoim kontem.

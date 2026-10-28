@@ -219,7 +219,7 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                         DropdownButton {
                                             id: "expense-actions",
                                             label: tid!("expense-actions"),
-                                            button_class: "btn btn-circle size-11 min-h-11 border-0 bg-base-300 relative z-50",
+                                            button_class: "btn btn-circle size-11 min-h-11 border-0 bg-base-300 glass-button relative z-50",
                                             menu_class: "menu bg-base-100 rounded-xl w-64 px-0 py-1.5 shadow-lg absolute right-0 top-full mt-2 z-50 [&_button]:min-h-11 [&_button]:gap-2.5 [&_button]:text-[15px] [&_button]:font-medium",
                                             trigger: rsx! { MoreIcon { size: 24 } },
                                             if can_edit {

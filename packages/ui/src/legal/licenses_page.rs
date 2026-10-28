@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use crate::tid;
 
 use super::use_third_party_licenses::{use_third_party_licenses, Licenses};
-use crate::common::AppHeader;
+use crate::common::{AppHeader, APP_BASE_URL};
 use crate::route::Route;
 
 #[component]
@@ -10,6 +10,7 @@ pub fn LicensesPage() -> Element {
     let licenses = use_third_party_licenses();
 
     rsx! {
+        document::Link { rel: "canonical", href: format!("{APP_BASE_URL}{}", Route::LicensesPage {}) }
         div { class: "container app-container bg-base-100 overflow-auto p-4 max-w-md mx-auto flex flex-col gap-4",
             AppHeader {
                 title: tid!("legal-licenses-title"),

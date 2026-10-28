@@ -7,6 +7,9 @@ pub struct AppHeaderProps {
     title: String,
     sub_title: Option<String>,
     back_button_route: Route,
+    /// False on the dock's own pages, where the dock already is the way out.
+    #[props(default = true)]
+    back: bool,
     /// Pins the header to the top of the page's scroll container.
     #[props(default = false)]
     sticky: bool,
@@ -86,6 +89,7 @@ pub fn AppHeader(props: AppHeaderProps) -> Element {
         // lets a long one truncate instead of overflowing (e2e: web/tests/long-names.spec.ts).
         header { class: if props.sticky { "grid grid-cols-[1fr_auto_1fr] items-center w-full min-h-16 py-2 sticky top-0 z-20 bg-base-100 nav-material" } else { "grid grid-cols-[1fr_auto_1fr] items-center w-full min-h-16 py-2" },
             div { class: "flex items-center",
+                if props.back {
                 BackButtonArrow {
                     onclick: move |_| {
                         // `go_back` alone was a dead press on any page the dock reached by
@@ -103,6 +107,7 @@ pub fn AppHeader(props: AppHeaderProps) -> Element {
                         #[cfg(not(any(target_os = "android", target_os = "ios")))]
                         navigator().push(props.back_button_route.clone());
                     },
+                }
                 }
             }
             div { class: "flex flex-col items-center min-w-0 text-center",

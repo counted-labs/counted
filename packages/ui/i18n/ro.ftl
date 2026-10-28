@@ -132,6 +132,16 @@ account-delete-title = Șterge-mi contul
 account-delete-warning = Ștergerea imediată și definitivă a contului și a datelor tale.
 account-delete-confirm-title = Ștergere cont
 account-delete-confirm-message = Contul tău, sesiunile și lista de proiecte vor fi șterse definitiv. Fără parola ta, datele criptate ale unui proiect partajat devin ilizibile pentru tine - acest lucru nu poate fi anulat.
+erase-device-open = Deconectează-te și șterge acest dispozitiv
+erase-device-title = Ștergi acest dispozitiv?
+erase-device-body = Proiectele, cheile lor și memoria cache de pe acest dispozitiv vor fi șterse, apoi sesiunea se va încheia. Proiectele tale rămân în contul tău: conectează-te din nou ca să le recuperezi.
+erase-device-checking = Verific dacă proiectele tale sunt în contul tău…
+erase-device-pending = Modificări care așteaptă să fie trimise: { $count }. Reconectează-te la internet, apoi încearcă din nou.
+erase-device-unreachable = Nu am putut verifica dacă proiectele tale sunt în contul tău. Verifică-ți conexiunea, apoi încearcă din nou.
+erase-device-at-risk = Aceste proiecte nu sunt în contul tău și se vor pierde. Ca să le păstrezi, anulează și copiază mai întâi linkul lor:
+erase-device-confirm = Șterge și deconectează-te
+erase-device-confirm-anyway = Șterge oricum
+erase-device-erasing = Se șterge…
 
 settings-payment-methods = Detalii de plată
 settings-payment-methods-hint = Cum vrei să fii rambursat. Criptate cu contul tău.

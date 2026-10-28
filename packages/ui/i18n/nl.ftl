@@ -117,6 +117,16 @@ account-delete-title = Mijn account verwijderen
 account-delete-warning = Directe en definitieve verwijdering van je account en je gegevens.
 account-delete-confirm-title = Account verwijderen
 account-delete-confirm-message = Je account, je sessies en je projectenlijst worden definitief verwijderd. Zonder je wachtwoord worden de versleutelde gegevens van een gedeeld project onleesbaar voor je - dit kan niet ongedaan worden gemaakt.
+erase-device-open = Uitloggen en dit apparaat wissen
+erase-device-title = Dit apparaat wissen?
+erase-device-body = De projecten, hun sleutels en de cache op dit apparaat worden gewist, daarna eindigt je sessie. Je projecten blijven in je account: log opnieuw in om ze terug te krijgen.
+erase-device-checking = Controleren of je projecten in je account staan…
+erase-device-pending = Wijzigingen die nog verstuurd moeten worden: { $count }. Ga weer online en probeer het dan opnieuw.
+erase-device-unreachable = Kon niet controleren of je projecten in je account staan. Controleer je verbinding en probeer het dan opnieuw.
+erase-device-at-risk = Deze projecten staan niet in je account en gaan verloren. Wil je ze houden, annuleer dan en kopieer eerst hun link:
+erase-device-confirm = Wissen en uitloggen
+erase-device-confirm-anyway = Toch wissen
+erase-device-erasing = Wissen…
 
 settings-payment-methods = Betaalgegevens
 settings-payment-methods-hint = Hoe je terugbetaald wilt worden. Versleuteld met je account.

@@ -117,6 +117,16 @@ account-delete-title = Mein Konto löschen
 account-delete-warning = Sofortige und endgültige Löschung deines Kontos und deiner Daten.
 account-delete-confirm-title = Konto löschen
 account-delete-confirm-message = Dein Konto, deine Sitzungen und deine Projektliste werden endgültig gelöscht. Ohne dein Passwort sind die verschlüsselten Daten eines geteilten Projekts für dich nicht mehr lesbar - das lässt sich nicht rückgängig machen.
+erase-device-open = Abmelden und dieses Gerät löschen
+erase-device-title = Dieses Gerät löschen?
+erase-device-body = Die Projekte, ihre Schlüssel und der Cache auf diesem Gerät werden gelöscht, danach endet deine Sitzung. Deine Projekte bleiben in deinem Konto: Melde dich wieder an, um sie zurückzubekommen.
+erase-device-checking = Prüfe, ob deine Projekte in deinem Konto sind…
+erase-device-pending = Noch nicht gesendete Änderungen: { $count }. Geh wieder online und versuch es dann erneut.
+erase-device-unreachable = Konnte nicht prüfen, ob deine Projekte in deinem Konto sind. Prüf deine Verbindung und versuch es dann erneut.
+erase-device-at-risk = Diese Projekte sind nicht in deinem Konto und gehen verloren. Um sie zu behalten, brich ab und kopiere zuerst ihren Link:
+erase-device-confirm = Löschen und abmelden
+erase-device-confirm-anyway = Trotzdem löschen
+erase-device-erasing = Wird gelöscht…
 
 settings-payment-methods = Zahlungsdaten
 settings-payment-methods-hint = Wie du dein Geld zurückbekommen möchtest. Mit deinem Konto verschlüsselt.

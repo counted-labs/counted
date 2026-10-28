@@ -131,6 +131,16 @@ account-delete-title = Poista tilini
 account-delete-warning = Tilisi ja tietojesi välitön ja pysyvä poisto.
 account-delete-confirm-title = Poista tili
 account-delete-confirm-message = Tilisi, istuntosi ja projektilistasi poistetaan pysyvästi. Ilman salasanaasi jaetun projektin salatut tiedot muuttuvat sinulle lukukelvottomiksi - tätä ei voi perua.
+erase-device-open = Kirjaudu ulos ja tyhjennä tämä laite
+erase-device-title = Tyhjennetäänkö tämä laite?
+erase-device-body = Tämän laitteen projektit, niiden avaimet ja välimuisti poistetaan, minkä jälkeen istuntosi päättyy. Projektisi pysyvät tililläsi: kirjaudu uudelleen sisään saadaksesi ne takaisin.
+erase-device-checking = Tarkistetaan, että projektisi ovat tililläsi…
+erase-device-pending = Lähettämättömiä muutoksia: { $count }. Palaa verkkoon ja yritä sitten uudelleen.
+erase-device-unreachable = Ei voitu tarkistaa, että projektisi ovat tililläsi. Tarkista yhteys ja yritä sitten uudelleen.
+erase-device-at-risk = Nämä projektit eivät ole tililläsi, ja ne menetetään. Jos haluat säilyttää ne, peruuta ja kopioi ensin niiden linkki:
+erase-device-confirm = Tyhjennä ja kirjaudu ulos
+erase-device-confirm-anyway = Tyhjennä silti
+erase-device-erasing = Tyhjennetään…
 
 settings-payment-methods = Maksutiedot
 settings-payment-methods-hint = Miten haluat saada rahasi takaisin. Salattu tilisi avaimella.

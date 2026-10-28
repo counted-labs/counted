@@ -1,5 +1,9 @@
 pub mod api;
 pub mod balances;
+// The settlement before the 2026-10 rewrite, kept until no store serves it: a group on mixed
+// versions must see the same transfers (docs/plans/rust-correctness.md §2.4).
+#[cfg(test)]
+mod balances_v1;
 pub mod errors;
 pub mod view_models;
 
@@ -26,9 +30,21 @@ pub fn to_cents(amount: f64) -> i64 {
 }
 
 /// True when a side adds up to the total, to the cent. Quantised before summing, not after: a
-/// float sum of a hundred 0.01 rows drifts, a sum of a hundred `1i64` cannot.
+/// float sum of a hundred 0.01 rows drifts, a sum of a hundred `1i64` cannot. Checked: release
+/// builds wrap on overflow, and two saturated cents could wrap back onto the total.
 pub fn sums_to_total(total: f64, amounts: impl IntoIterator<Item = f64>) -> bool {
-    to_cents(total) == amounts.into_iter().map(to_cents).sum::<i64>()
+    amounts.into_iter().try_fold(0i64, |sum, amount| sum.checked_add(to_cents(amount)))
+        == Some(to_cents(total))
+}
+
+/// Above any real ledger, even in rials or dong, and 100 cents of it stay exact in an `f64`
+/// (2^53 is about 9e15).
+pub const MAX_AMOUNT: f64 = 1e12;
+
+/// Every amount entering the app goes through this: the form, and every decrypted payload, which
+/// any key holder can write.
+pub fn is_valid_amount(amount: f64) -> bool {
+    amount.is_finite() && amount.abs() <= MAX_AMOUNT
 }
 
 pub struct Currency {
@@ -630,11 +646,6 @@ pub struct SentInvitation {
     pub user_id: i32,
 }
 
-/// The locales push bodies are hand-written for (`api::server::push::texts`), *not* the shipped
-/// locales - those are `UI_LANGS`. A push token's `lang` is validated against this list; a code
-/// outside it would render an English body anyway.
-pub const SUPPORTED_LANGS: [&str; 7] = ["en", "fr", "es", "de", "it", "pt", "nl"];
-
 /// Every locale the app ships, by code - the same set as `ui::i18n::SUPPORTED`, which pairs them
 /// with endonyms and is asserted equal to this list in its tests. Lives here because `api` cannot
 /// depend on `ui` and needs a fixed list to bucket the aggregate language counters against.
@@ -668,9 +679,8 @@ pub enum PushPlatform {
     Android,
 }
 
-/// `PUT /push/token`. `lang` is the two-letter code the device already sends as the
-/// `counted_lang` cookie - the server renders the notification sentence from it, so the platform
-/// vendor sees a localised sentence and never a name, email or project name.
+/// `PUT /push/token`. Builds up to 3.2.6 also send `lang`, which is ignored: the devices render the
+/// sentence from the push's kind (audit 2026-10-19 L7).
 ///
 /// iOS: `token` is the APNs device token and `keys` is absent. Android: `token` is the RFC 8030
 /// push endpoint URL and `keys` the RFC 8291 receiver keys the payload is encrypted to.
@@ -679,7 +689,6 @@ pub enum PushPlatform {
 pub struct RegisterPushToken {
     pub platform: PushPlatform,
     pub token: String,
-    pub lang: String,
     #[serde(default)]
     pub keys: Option<WebPushKeys>,
 }
@@ -791,9 +800,9 @@ pub struct UpdatePaymentMethods {
     pub expected_iv: Option<String>,
 }
 
-/// `PUT /auth/preferences`. With `expected_iv`, the server writes only while that is still the
-/// stored blob's nonce, so a device left open cannot revert what another one switched since. A bare
-/// pair, from builds before 3.2.6, writes unconditionally.
+/// `PUT /auth/preferences`. The server writes only while `expected_iv` is still the stored blob's
+/// nonce, so a device left open cannot revert what another one switched since. A bare pair writes
+/// only while no blob is stored.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdatePreferences {
@@ -817,7 +826,8 @@ pub const MAX_PASSWORD_LENGTH: usize = 128;
 ///
 /// - `1`: accounts registered before the proof existed. Their stored Argon2id hash *was* the
 ///   server's own verification (`m=19456, t=2, p=1`, PHC salt), so the proof is that exact
-///   computation done client-side. Upgraded to `2` on the first successful login.
+///   computation done client-side. No account is left at it, and clients refuse it (audit
+///   2026-10-19 L2).
 /// - `2`: Argon2id with a client-generated salt and the `counted-login-v2` secret, so the proof is
 ///   structurally distinct from the account key even under a colliding salt.
 pub const AUTH_VERSION_LEGACY: i16 = 1;
@@ -860,15 +870,6 @@ pub struct LoginSalt {
     pub auth_version: i16,
 }
 
-/// A legacy account re-deriving under the current scheme, sent alongside its legacy proof so one
-/// successful login moves it off `AUTH_VERSION_LEGACY`.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct LoginUpgrade {
-    pub login_salt: Vec<u8>,
-    pub proof: Vec<u8>,
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginPayload {
@@ -877,8 +878,6 @@ pub struct LoginPayload {
     /// instead of failing on shape; the server never reads the field it sent.
     #[serde(default)]
     pub proof: Vec<u8>,
-    #[serde(default)]
-    pub upgrade: Option<LoginUpgrade>,
     /// The interface language at the time of the request. Feeds an aggregate daily counter only,
     /// never the account row. `default` so app builds predating the field still log in.
     #[serde(default)]
@@ -889,11 +888,10 @@ pub struct LoginPayload {
 #[serde(rename_all = "camelCase")]
 pub struct VerifyEmailPayload {
     pub token: String,
-    /// The login proof of the token's account. Builds before 3.2.6 send none: their address is
-    /// verified but no session is minted, since holding a link proves the mailbox, not the
-    /// credentials.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub proof: Option<Vec<u8>>,
+    /// The login proof of the token's account: holding a link proves the mailbox, not the
+    /// credentials. `default` so a build before 3.2.6, which sends none, is told it is outdated.
+    #[serde(default)]
+    pub proof: Vec<u8>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1448,10 +1446,27 @@ pub struct ReimbursementSuggestion {
 mod tests {
     use super::{
         Budgets,
-        convert_to_project, cross_rate, is_valid_rate, pad_json, sums_to_total, to_cents,
+        convert_to_project, cross_rate, is_valid_amount, is_valid_rate, pad_json, sums_to_total, to_cents, MAX_AMOUNT,
         ExpensePayload, ExpenseShare, HashMap, HistoryAction, HistoryEntity, HistoryPayload,
         ProjectPayload, ProjectStatus, UserPayload, CURRENCIES, MAX_EXCHANGE_RATE,
     };
+
+    /// What 3.2.6 sends to the endpoints whose fields phase C removed (audit 2026-10-19).
+    #[test]
+    fn the_requests_of_3_2_6_still_deserialise() {
+        let login: super::LoginPayload =
+            serde_json::from_str(r#"{"email":"a@b.c","proof":[1],"upgrade":null,"lang":"fr"}"#).unwrap();
+        assert_eq!(login.proof, vec![1]);
+
+        let push: super::RegisterPushToken =
+            serde_json::from_str(r#"{"platform":"ios","token":"ab","lang":"fr"}"#).unwrap();
+        assert_eq!(push.token, "ab");
+
+        let verify: super::VerifyEmailPayload = serde_json::from_str(r#"{"token":"t","proof":[1]}"#).unwrap();
+        assert_eq!(verify.proof, vec![1]);
+        let without: super::VerifyEmailPayload = serde_json::from_str(r#"{"token":"t"}"#).unwrap();
+        assert!(without.proof.is_empty(), "refused as outdated, not as a decode failure");
+    }
 
     #[test]
     fn an_expense_type_parses_back_from_its_wire_name_and_an_unknown_one_does_not() {
@@ -1524,6 +1539,23 @@ mod tests {
     fn sums_to_total_does_not_drift_over_many_rows() {
         let rows = vec![0.01; 100];
         assert!(sums_to_total(1.0, rows));
+    }
+
+    #[test]
+    fn sums_to_total_rejects_saturated_cents_that_would_wrap_onto_the_total() {
+        assert!(!sums_to_total(0.0, [1e300, 1e300, 0.02]));
+        assert!(!sums_to_total(0.0, [f64::NEG_INFINITY, f64::NEG_INFINITY]));
+    }
+
+    #[test]
+    fn an_amount_is_valid_only_when_finite_and_within_the_bound() {
+        assert!(is_valid_amount(0.0));
+        assert!(is_valid_amount(-12.5));
+        assert!(is_valid_amount(MAX_AMOUNT));
+        assert!(!is_valid_amount(MAX_AMOUNT * 1.01));
+        assert!(!is_valid_amount(-MAX_AMOUNT * 1.01));
+        assert!(!is_valid_amount(f64::NAN));
+        assert!(!is_valid_amount(f64::INFINITY));
     }
 
     #[test]

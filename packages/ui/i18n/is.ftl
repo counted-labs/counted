@@ -131,6 +131,16 @@ account-delete-title = Eyða aðganginum mínum
 account-delete-warning = Tafarlaus og varanleg eyðing aðgangsins þíns og gagnanna þinna.
 account-delete-confirm-title = Eyða aðgangi
 account-delete-confirm-message = Aðgangi þínum, lotum og verkefnalista verður eytt varanlega. Án lykilorðsins verða dulkóðuð gögn sameiginlegs verkefnis ólæsileg fyrir þig - þetta er ekki hægt að afturkalla.
+erase-device-open = Skrá út og hreinsa þetta tæki
+erase-device-title = Hreinsa þetta tæki?
+erase-device-body = Verkefnum, lyklum þeirra og skyndiminni á þessu tæki verður eytt og síðan verður lotunni lokað. Verkefnin þín verða áfram á aðganginum þínum: skráðu þig inn aftur til að fá þau aftur.
+erase-device-checking = Athuga hvort verkefnin þín séu á aðganginum þínum…
+erase-device-pending = Breytingar sem bíða sendingar: { $count }. Tengstu netinu aftur og reyndu svo aftur.
+erase-device-unreachable = Ekki tókst að athuga hvort verkefnin þín séu á aðganginum þínum. Athugaðu tenginguna og reyndu svo aftur.
+erase-device-at-risk = Þessi verkefni eru ekki á aðganginum þínum og munu glatast. Til að halda þeim skaltu hætta við og afrita fyrst tengilinn þeirra:
+erase-device-confirm = Hreinsa og skrá út
+erase-device-confirm-anyway = Hreinsa samt
+erase-device-erasing = Hreinsa…
 
 settings-payment-methods = Greiðsluupplýsingar
 settings-payment-methods-hint = Hvernig þú vilt fá endurgreitt. Dulkóðað með aðganginum þínum.

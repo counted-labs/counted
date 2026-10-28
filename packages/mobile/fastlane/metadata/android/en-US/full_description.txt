@@ -13,7 +13,7 @@ Take a photo of the receipt: amount, date and category fill in on their own. Eve
 Servers in Germany, emails sent from France. Your projects never leave the European Union.
 
 💸 Free, really
-No ads, no trackers, no subscription, no paid version, no cap on expenses or participants. We collect nothing, we do not sell your data. That is not our model.
+Free, with no ads, no trackers and no cap on expenses or participants. Everything described here is free and stays free. We collect nothing, we do not sell your data. That is not our model.
 
 ✨ Everything for shared expenses
 • Expenses, transfers and gains, with several payers and several beneficiaries
@@ -42,5 +42,5 @@ Counted delivers notifications through UnifiedPush, with no Google service. To g
 🌱 A mission
 Counted is built to be efficient and simple: no ads, no trackers. The maths runs on your device. We commit to giving a share of our revenue to environmental causes.
 
-How does it actually work? counted.fr/en/privacy
+How does it actually work? counted.fr/en/encryption
 Verify the code you run yourself: counted.fr/en/verify

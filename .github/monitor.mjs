@@ -91,6 +91,14 @@ for (const url of sitePages) {
 }
 console.log(`${sitePages.length} site pages checked`);
 
+const securityTxt = await getOrFail("/.well-known/security.txt");
+if (securityTxt) {
+	const expires = Date.parse(securityTxt.toString("utf8").match(/^Expires:\s*(\S+)\s*$/m)?.[1]);
+	const days = Math.floor((expires - Date.now()) / 86_400_000);
+	if (!(days >= 30)) fail(`/.well-known/security.txt: ${Number.isNaN(expires) ? "no valid Expires" : `Expires in ${days} days`}, renew it`);
+	else console.log(`security.txt expires in ${days} days`);
+}
+
 if (failures.length) {
 	console.log(`${failures.length} failure(s)`);
 	process.exit(1);

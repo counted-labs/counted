@@ -131,6 +131,16 @@ account-delete-title = Fshi llogarinë time
 account-delete-warning = Fshirje e menjëhershme dhe përgjithmonë e llogarisë dhe të dhënave të tua.
 account-delete-confirm-title = Fshi llogarinë
 account-delete-confirm-message = Llogaria jote, sesionet dhe lista e projekteve do të fshihen përgjithmonë. Pa fjalëkalimin tënd, të dhënat e enkriptuara të një projekti të ndarë bëhen të palexueshme për ty - kjo nuk mund të zhbëhet.
+erase-device-open = Dil dhe fshi këtë pajisje
+erase-device-title = Të fshihet kjo pajisje?
+erase-device-body = Projektet, çelësat e tyre dhe memoria e përkohshme në këtë pajisje do të fshihen, pastaj sesioni do të mbyllet. Projektet e tua mbeten në llogarinë tënde: hyr përsëri për t'i rikthyer.
+erase-device-checking = Po kontrolloj nëse projektet e tua janë në llogarinë tënde…
+erase-device-pending = Ndryshime që presin të dërgohen: { $count }. Lidhu përsëri me internetin dhe provo sërish.
+erase-device-unreachable = Nuk u arrit të kontrollohej nëse projektet e tua janë në llogarinë tënde. Kontrollo lidhjen dhe provo sërish.
+erase-device-at-risk = Këto projekte nuk janë në llogarinë tënde dhe do të humbasin. Për t'i mbajtur, anulo dhe kopjo fillimisht lidhjen e tyre:
+erase-device-confirm = Fshi dhe dil
+erase-device-confirm-anyway = Fshi gjithsesi
+erase-device-erasing = Po fshihet…
 
 settings-payment-methods = Të dhënat e pagesës
 settings-payment-methods-hint = Si dëshiron të të kthehen paratë. Të enkriptuara me llogarinë tënde.

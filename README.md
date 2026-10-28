@@ -5,8 +5,9 @@ app: every name, amount and project is encrypted on your device, and the server 
 it cannot read.
 
 Use it in the browser at [counted.fr](https://counted.fr), or install the app from the
-[App Store](https://apps.apple.com/app/id6772807915) or
-[Google Play](https://play.google.com/store/apps/details?id=fr.counted.app).
+[App Store](https://apps.apple.com/app/id6772807915),
+[Google Play](https://play.google.com/store/apps/details?id=fr.counted.app) or
+[F-Droid](https://f-droid.org/packages/fr.counted.app/).
 
 This repository exists so that claim can be **checked rather than believed**. The WASM bundle
 counted.fr serves is built from exactly these files, reproducibly, and its hashes are published at
@@ -69,6 +70,27 @@ curl -s https://counted.fr/SHA256SUMS.txt | cmp - SHA256SUMS.txt && echo served 
 
 It proves where the list comes from, not that the code is safe; the rebuild above is that proof.
 
+## The mobile apps
+
+| Store | What can be checked |
+| --- | --- |
+| [F-Droid](https://f-droid.org/packages/fr.counted.app/) | F-Droid rebuilds each `mobile-vX.Y.Z` tag from this repository and ships our signed APK only if its own build matches it, signature aside. The same APK is attached to the tag's GitHub release |
+| Google Play | Google re-signs the app with its own key, so a Play install cannot be compared with a build yet |
+| App Store | Each copy is encrypted for the device that installs it (FairPlay); nobody can compare it with a build. Team ID `UK936HFQ24`, bundle ID `fr.counted.app` |
+
+Signing certificate of the F-Droid and GitHub-release APK, package `fr.counted.app`, SHA-256:
+
+```
+D8:D4:02:6F:49:6F:3C:21:54:F1:38:E8:17:10:33:2E:A5:28:8A:AA:B8:56:7A:2F:8D:0E:71:3D:E1:D5:93:E8
+```
+
+Check an installed copy with [AppVerifier](https://github.com/soupslurpr/AppVerifier), or:
+
+```sh
+adb pull "$(adb shell pm path fr.counted.app | head -1 | cut -d: -f2)" counted.apk
+apksigner verify --print-certs counted.apk | grep SHA-256
+```
+
 ## Licence
 
 Copyright (C) 2022-2026 Jonathan Bosi.
@@ -90,4 +112,5 @@ reuse the artwork but must not present itself as Counted.
 - `packages/web/assets/counted.png`, `packages/desktop/assets/favicon.ico`
 
 **Contributions.** This repository is a one-way mirror, updated once per release. Pull requests
-are not merged. Report bugs and security issues to [contact@counted.fr](mailto:contact@counted.fr).
+are not merged. Report bugs to [contact@counted.fr](mailto:contact@counted.fr), and security issues as
+described in [SECURITY.md](SECURITY.md).

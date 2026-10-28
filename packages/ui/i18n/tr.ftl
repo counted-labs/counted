@@ -131,6 +131,16 @@ account-delete-title = Hesabımı sil
 account-delete-warning = Hesabın ve bilgilerin anında ve kalıcı olarak silinir.
 account-delete-confirm-title = Hesabı sil
 account-delete-confirm-message = Hesabın, oturumların ve proje listen kalıcı olarak silinecek. Şifren olmadan paylaşılan bir projenin şifreli verileri senin için okunamaz hale gelir - bu geri alınamaz.
+erase-device-open = Çıkış yap ve bu cihazı temizle
+erase-device-title = Bu cihaz temizlensin mi?
+erase-device-body = Bu cihazdaki projeler, anahtarları ve önbellek silinecek, ardından oturum kapatılacak. Projelerin hesabında kalır: geri almak için yeniden giriş yap.
+erase-device-checking = Projelerinin hesabında olup olmadığı kontrol ediliyor…
+erase-device-pending = Gönderilmeyi bekleyen değişiklikler: { $count }. Yeniden internete bağlan, sonra tekrar dene.
+erase-device-unreachable = Projelerinin hesabında olup olmadığı kontrol edilemedi. Bağlantını kontrol et, sonra tekrar dene.
+erase-device-at-risk = Bu projeler hesabında değil ve kaybolacak. Bunları saklamak için iptal et ve önce bağlantılarını kopyala:
+erase-device-confirm = Temizle ve çıkış yap
+erase-device-confirm-anyway = Yine de temizle
+erase-device-erasing = Temizleniyor…
 
 settings-payment-methods = Ödeme bilgileri
 settings-payment-methods-hint = Paranı nasıl geri almak istediğin. Hesabınla şifrelenir.

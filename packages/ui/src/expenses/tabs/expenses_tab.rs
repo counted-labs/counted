@@ -860,8 +860,9 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
             //
             // The padding/negative-margin pair stops the chips looking sliced off: `overflow-x-auto`
             // computes `overflow-y` to `auto` too, so the scroller clips `main.css`'s three-stop
-            // `shadow-soft` elevation (~18px below a chip, ~6px to the sides). The padding gives
-            // that room back, the negative margins take it out of the layout again.
+            // `shadow-soft` elevation (~18px below a chip, ~6px to the sides, and the top edge of
+            // any ring above). The padding gives that room back, the negative margins take it out
+            // of the layout again.
             if !personal {
             div { class: "flex items-start gap-2",
             SearchToggle {
@@ -877,7 +878,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                     shown.set(PAGE);
                 },
             }
-            div { role: "radiogroup", aria_label: tid!("expense-filter-group"), class: "flex flex-nowrap gap-2 overflow-x-auto grow min-w-0 px-2 -mx-2 pb-5 -mb-4",
+            div { role: "radiogroup", aria_label: tid!("expense-filter-group"), class: "flex flex-nowrap gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden grow min-w-0 px-2 -mx-2 pt-1 -mt-1 pb-5 -mb-4",
                 input {
                     class: "btn btn-sm whitespace-nowrap text-sm! font-medium border-0 shadow-soft bg-base-100 checked:bg-secondary checked:text-secondary-content",
                     r#type: "radio",
@@ -955,7 +956,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                         h2 { class: "divider divider-start text-xs text-base-content/70 font-medium my-1",
                             "{format_date(date)}"
                         }
-                        ul { class: "flex flex-col gap-1",
+                        ul { class: "flex flex-col gap-2",
                             for row in group {
                                 {
                                     let expense_id = row.expense.id;

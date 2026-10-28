@@ -1,10 +1,10 @@
 use dioxus::prelude::*;
 use crate::tid;
 
-use crate::route::Route;
+use crate::i18n::current_lang;
 
 use super::welcome_art::{Icon, LinkArt, PrivateArt, PromiseArt, ScanArt};
-use super::welcome_flow::{use_welcome_flow, WelcomeStep};
+use super::welcome_flow::{how_it_works_url, use_welcome_flow, WelcomeStep};
 
 const GLOBE_PATH: &str = "M21.75 12a9.75 9.75 0 1 1-19.5 0 9.75 9.75 0 0 1 19.5 0zM2.5 12h19M12 2.25c2.5 2.6 3.9 6.1 3.9 9.75S14.5 19.15 12 21.75c-2.5-2.6-3.9-6.1-3.9-9.75S9.5 4.85 12 2.25z";
 const NO_ADS_PATH: &str = "M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636";
@@ -93,9 +93,11 @@ pub fn WelcomePage() -> Element {
                         onclick: move |_| flow.finish(),
                         {tid!("welcome-start")}
                     }
-                    Link {
+                    a {
                         id: "welcome-how-it-works",
-                        to: Route::PrivacyPage {},
+                        href: how_it_works_url(&current_lang()),
+                        target: "_blank",
+                        rel: "noopener noreferrer",
                         class: "text-sm text-base-content/70 underline underline-offset-3",
                         {tid!("welcome-how-it-works")}
                     }

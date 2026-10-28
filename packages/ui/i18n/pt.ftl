@@ -117,6 +117,16 @@ account-delete-title = Eliminar a minha conta
 account-delete-warning = Eliminação imediata e definitiva da tua conta e dos teus dados.
 account-delete-confirm-title = Eliminar a conta
 account-delete-confirm-message = A tua conta, as tuas sessões e a lista dos teus projetos serão eliminadas definitivamente. Sem a tua palavra-passe, os dados cifrados de um projeto partilhado deixam de ser legíveis para ti - esta ação é irreversível.
+erase-device-open = Terminar sessão e apagar este dispositivo
+erase-device-title = Apagar este dispositivo?
+erase-device-body = Os projetos, as suas chaves e a cache deste dispositivo serão apagados e depois a sessão será terminada. Os teus projetos ficam na tua conta: inicia sessão de novo para os recuperares.
+erase-device-checking = A verificar se os teus projetos estão na tua conta…
+erase-device-pending = Alterações por enviar: { $count }. Volta a ligar-te à internet e tenta de novo.
+erase-device-unreachable = Não foi possível verificar se os teus projetos estão na tua conta. Verifica a ligação à internet e tenta de novo.
+erase-device-at-risk = Estes projetos não estão na tua conta e vão perder-se. Para os manter, cancela e copia primeiro a ligação de cada um:
+erase-device-confirm = Apagar e terminar sessão
+erase-device-confirm-anyway = Apagar mesmo assim
+erase-device-erasing = A apagar…
 
 settings-payment-methods = Dados de pagamento
 settings-payment-methods-hint = Como preferes ser reembolsado. Cifrados com a tua conta.

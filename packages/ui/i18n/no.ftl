@@ -131,6 +131,16 @@ account-delete-title = Slett kontoen min
 account-delete-warning = Umiddelbar og permanent sletting av kontoen din og dataene dine.
 account-delete-confirm-title = Slett konto
 account-delete-confirm-message = Kontoen din, øktene dine og prosjektlisten din slettes permanent. Uten passordet ditt blir de krypterte dataene i et delt prosjekt uleselige for deg - dette kan ikke angres.
+erase-device-open = Logg ut og slett denne enheten
+erase-device-title = Slette denne enheten?
+erase-device-body = Prosjektene, nøklene deres og hurtigbufferen på denne enheten slettes, deretter avsluttes økten din. Prosjektene dine blir værende i kontoen din: logg inn igjen for å få dem tilbake.
+erase-device-checking = Sjekker at prosjektene dine er i kontoen din…
+erase-device-pending = Endringer som venter på å bli sendt: { $count }. Koble til internett igjen, og prøv på nytt.
+erase-device-unreachable = Kunne ikke sjekke at prosjektene dine er i kontoen din. Sjekk tilkoblingen, og prøv på nytt.
+erase-device-at-risk = Disse prosjektene er ikke i kontoen din og går tapt. Vil du beholde dem, avbryt og kopier lenken deres først:
+erase-device-confirm = Slett og logg ut
+erase-device-confirm-anyway = Slett likevel
+erase-device-erasing = Sletter…
 
 settings-payment-methods = Betalingsopplysninger
 settings-payment-methods-hint = Hvordan du vil få penger tilbake. Kryptert med kontoen din.

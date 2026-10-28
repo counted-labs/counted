@@ -133,6 +133,16 @@ account-delete-title = Ištrinti mano paskyrą
 account-delete-warning = Tavo paskyra ir duomenys ištrinami nedelsiant ir visam laikui.
 account-delete-confirm-title = Ištrinti paskyrą
 account-delete-confirm-message = Tavo paskyra, sesijos ir projektų sąrašas bus ištrinti visam laikui. Be slaptažodžio bendro projekto užšifruoti duomenys taps tau neįskaitomi - to atšaukti negalima.
+erase-device-open = Atsijungti ir išvalyti šį įrenginį
+erase-device-title = Išvalyti šį įrenginį?
+erase-device-body = Šio įrenginio projektai, jų raktai ir talpykla bus ištrinti, tada sesija bus baigta. Tavo projektai lieka tavo paskyroje: vėl prisijunk, kad juos atgautum.
+erase-device-checking = Tikrinama, ar tavo projektai yra tavo paskyroje…
+erase-device-pending = Neišsiųsti pakeitimai: { $count }. Vėl prisijunk prie interneto ir bandyk dar kartą.
+erase-device-unreachable = Nepavyko patikrinti, ar tavo projektai yra tavo paskyroje. Patikrink ryšį ir bandyk dar kartą.
+erase-device-at-risk = Šių projektų nėra tavo paskyroje, ir jie bus prarasti. Jei nori juos išsaugoti, atšauk ir pirmiausia nukopijuok jų nuorodas:
+erase-device-confirm = Išvalyti ir atsijungti
+erase-device-confirm-anyway = Vis tiek išvalyti
+erase-device-erasing = Valoma…
 
 settings-payment-methods = Mokėjimo duomenys
 settings-payment-methods-hint = Kaip norėtum gauti pinigus atgal. Užšifruota su tavo paskyra.

@@ -13,7 +13,7 @@ Prenez le ticket en photo : montant, date et catégorie se remplissent automatiq
 Serveurs en Allemagne, emails envoyés depuis la France. Vos projets ne quittent jamais l'Union européenne.
 
 💸 Gratuit, vraiment
-Pas de pub ni de traqueur, pas d'abonnement, pas de version payante, pas de plafond de dépenses ni de participants. Nous ne collectons rien, nous ne vendons pas vos données. Ce n'est pas notre modèle.
+Gratuit, sans pub ni traqueur, sans plafond de dépenses ni de participants. Tout ce qui est décrit ici est gratuit et le restera. Nous ne collectons rien, nous ne vendons pas vos données. Ce n'est pas notre modèle.
 
 ✨ Tout pour les comptes entre amis
 • Dépenses, virements et gains, avec plusieurs payeurs et plusieurs bénéficiaires
@@ -42,5 +42,5 @@ Counted envoie ses notifications par UnifiedPush, sans service Google. Pour les 
 🌱 Une mission
 Counted est conçu pour être efficace et simple : pas de pub ni de traqueur. Les calculs sont effectués sur votre appareil. Nous nous engageons à reverser une part de nos revenus à des associations environnementales.
 
-Comment ça marche exactement ? counted.fr/privacy
+Comment ça marche exactement ? counted.fr/encryption
 Vérifiez vous-même le code que vous exécutez : counted.fr/verify

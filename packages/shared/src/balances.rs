@@ -1,7 +1,6 @@
 use crate::{round_currency, ReimbursementSuggestion, UserBalance, UserBalanceComputation};
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
-use std::ops::Sub;
 
 pub fn get_reimbursement_suggestions(
     mut balances: Vec<UserBalance>,
@@ -15,7 +14,7 @@ pub fn get_reimbursement_suggestions(
     balances.sort_by(|a, b| f64::total_cmp(&b.amount.abs(), &a.amount.abs()));
 
     let (mut unsolved_positive_balances_by_user, mut unsolved_negative_balances_by_user) =
-        get_unresolved_balances_by_user(&mut balances);
+        get_unresolved_balances_by_user(&balances);
 
     let equally_opposed = resolve_equally_opposed_balances(
         &mut unsolved_positive_balances_by_user,
@@ -39,220 +38,131 @@ fn resolve_remaining_balances(
 ) -> Vec<ReimbursementSuggestion> {
     let mut result: Vec<ReimbursementSuggestion> = Vec::new();
 
-    while !unsolved_positive_balances_by_user.is_empty()
-        && !unsolved_negative_balances_by_user.is_empty()
+    while let Some(MaxBalance { is_debt, user_id: max_user_id, remaining_amount }) =
+        get_max_balance(unsolved_positive_balances_by_user, unsolved_negative_balances_by_user)
     {
         let previous_lengths =
             unsolved_positive_balances_by_user.len() + unsolved_negative_balances_by_user.len();
 
-        let MaxBalance { is_debt, max_balance, opposite_balances: min_balances } = get_max_balance(
-            unsolved_positive_balances_by_user.clone(),
-            unsolved_negative_balances_by_user.clone(),
-        );
-        let (opposite_balances_used, remainder) =
-            solve_max_balance(max_balance.clone(), min_balances);
-
-        opposite_balances_used.iter().for_each(|(user_id, balance)| {
-            if is_debt {
-                result.push(ReimbursementSuggestion {
-                    amount: round_currency(balance.remaining_amount.abs()),
-                    user_id_debtor: max_balance.0,
-                    user_id_payer: *user_id,
-                });
-                unsolved_positive_balances_by_user.remove(user_id);
-            } else {
-                result.push(ReimbursementSuggestion {
-                    amount: round_currency(balance.remaining_amount.abs()),
-                    user_id_debtor: *user_id,
-                    user_id_payer: max_balance.0,
-                });
-                unsolved_negative_balances_by_user.remove(user_id);
-            }
-        });
-
-        let has_remainder = remainder.0 != 0;
-        if has_remainder {
-            let original_remainder_balance = if is_debt {
-                unsolved_positive_balances_by_user.get(&remainder.0).unwrap().remaining_amount.abs()
-            } else {
-                unsolved_negative_balances_by_user.get(&remainder.0).unwrap().remaining_amount.abs()
-            };
-            let amount_used = original_remainder_balance - remainder.1.remaining_amount.abs();
-
-            if is_debt {
-                result.push(ReimbursementSuggestion {
-                    amount: round_currency(amount_used),
-                    user_id_debtor: max_balance.0,
-                    user_id_payer: remainder.0,
-                });
-            } else {
-                result.push(ReimbursementSuggestion {
-                    amount: round_currency(amount_used),
-                    user_id_debtor: remainder.0,
-                    user_id_payer: max_balance.0,
-                });
-            }
-
-            if is_debt {
-                let value = unsolved_positive_balances_by_user.get_mut(&remainder.0);
-                value.unwrap().remaining_amount = remainder.1.remaining_amount;
-            } else {
-                let value = unsolved_negative_balances_by_user.get_mut(&remainder.0);
-                value.unwrap().remaining_amount = remainder.1.remaining_amount;
-            }
-            if is_debt {
-                unsolved_negative_balances_by_user.remove(&max_balance.0);
-            } else {
-                unsolved_positive_balances_by_user.remove(&max_balance.0);
-            }
-        } else if is_debt {
-            unsolved_negative_balances_by_user.remove(&max_balance.0);
+        let (own_balances, opposite_balances) = if is_debt {
+            (&mut *unsolved_negative_balances_by_user, &mut *unsolved_positive_balances_by_user)
         } else {
-            unsolved_positive_balances_by_user.remove(&max_balance.0);
+            (&mut *unsolved_positive_balances_by_user, &mut *unsolved_negative_balances_by_user)
+        };
+        let suggestion = |other_user_id: i32, amount: f64| {
+            let (user_id_debtor, user_id_payer) =
+                if is_debt { (max_user_id, other_user_id) } else { (other_user_id, max_user_id) };
+            ReimbursementSuggestion { amount: round_currency(amount), user_id_debtor, user_id_payer }
+        };
+
+        let (fully_compensated, remainder) = solve_max_balance(remaining_amount, opposite_balances);
+
+        for (user_id, remaining) in fully_compensated {
+            result.push(suggestion(user_id, remaining.abs()));
+            opposite_balances.remove(&user_id);
         }
 
-        let current_lengths =
-            unsolved_positive_balances_by_user.len() + unsolved_negative_balances_by_user.len();
-
-        if current_lengths == 0 {
-            break;
+        if let Some((user_id, new_remaining)) = remainder {
+            if let Some(balance) = opposite_balances.get_mut(&user_id) {
+                result.push(suggestion(user_id, balance.remaining_amount.abs() - new_remaining.abs()));
+                balance.remaining_amount = new_remaining;
+            }
         }
 
-        if previous_lengths == current_lengths {
-            break;
-        }
+        own_balances.remove(&max_user_id);
+
+        debug_assert!(
+            unsolved_positive_balances_by_user.len() + unsolved_negative_balances_by_user.len()
+                < previous_lengths
+        );
     }
 
     result
 }
 
+/// The opposite balances the max one pays off whole, by user, and the one it pays off in part
+/// with what that user has left.
 fn solve_max_balance(
-    max_balance: (i32, UserBalanceComputation),
-    min_balances: BTreeMap<i32, UserBalanceComputation>,
-) -> (BTreeMap<i32, UserBalanceComputation>, (i32, UserBalanceComputation)) {
-    let mut fully_compensated_balances = BTreeMap::new();
-    let mut remainder: (i32, UserBalanceComputation) =
-        (0, UserBalanceComputation { remaining_amount: 0.0, amount: 0.0 });
+    max_remaining_amount: f64,
+    opposite_balances: &BTreeMap<i32, UserBalanceComputation>,
+) -> (BTreeMap<i32, f64>, Option<(i32, f64)>) {
+    let mut fully_compensated = BTreeMap::new();
 
-    let mut max_balance_amount = max_balance.1.remaining_amount.abs();
-    let mut sorted_min_balances: Vec<_> = min_balances.into_iter().collect();
-    sorted_min_balances.sort_by(|(u1, b1), (u2, b2)| {
-        f64::total_cmp(&b2.remaining_amount.abs(), &b1.remaining_amount.abs()).then(u1.cmp(u2))
-    });
-    for min_balance in sorted_min_balances {
+    let mut max_balance_amount = max_remaining_amount.abs();
+    let mut sorted_opposite: Vec<(i32, f64)> =
+        opposite_balances.iter().map(|(id, b)| (*id, b.remaining_amount)).collect();
+    sorted_opposite
+        .sort_by(|(u1, a1), (u2, a2)| f64::total_cmp(&a2.abs(), &a1.abs()).then(u1.cmp(u2)));
+
+    for (user_id, remaining_amount) in sorted_opposite {
         if max_balance_amount.total_cmp(&0.0) != Ordering::Greater {
             break;
         }
 
-        let min_balance_amount = min_balance.1.remaining_amount.abs();
+        let min_balance_amount = remaining_amount.abs();
 
-        if max_balance_amount.total_cmp(&min_balance_amount) == Ordering::Greater {
-            fully_compensated_balances.insert(min_balance.0, min_balance.1.clone());
-            max_balance_amount = max_balance_amount.sub(min_balance_amount);
-            continue;
-        }
-
-        if max_balance_amount.total_cmp(&min_balance_amount) == Ordering::Equal {
-            fully_compensated_balances.insert(min_balance.0, min_balance.1.clone());
-            max_balance_amount = 0.0;
-            continue;
-        }
-
-        if max_balance_amount.total_cmp(&min_balance_amount) == Ordering::Less {
-            let new_remaining_amount = if min_balance.1.remaining_amount < 0.0 {
-                min_balance.1.remaining_amount + max_balance_amount
-            } else {
-                min_balance.1.remaining_amount - max_balance_amount
-            };
-
-            remainder = (
-                min_balance.0,
-                UserBalanceComputation {
-                    remaining_amount: round_currency(new_remaining_amount),
-                    amount: round_currency(min_balance.1.amount),
-                },
-            );
-            break;
+        match max_balance_amount.total_cmp(&min_balance_amount) {
+            Ordering::Greater => {
+                fully_compensated.insert(user_id, remaining_amount);
+                max_balance_amount -= min_balance_amount;
+            }
+            Ordering::Equal => {
+                fully_compensated.insert(user_id, remaining_amount);
+                max_balance_amount = 0.0;
+            }
+            Ordering::Less => {
+                let new_remaining_amount = if remaining_amount < 0.0 {
+                    remaining_amount + max_balance_amount
+                } else {
+                    remaining_amount - max_balance_amount
+                };
+                return (fully_compensated, Some((user_id, round_currency(new_remaining_amount))));
+            }
         }
     }
 
-    (fully_compensated_balances, remainder)
+    (fully_compensated, None)
 }
 
 fn get_max_balance(
-    sorted_unsolved_positive_balances_by_user: BTreeMap<i32, UserBalanceComputation>,
-    sorted_unsolved_negative_balances_by_user: BTreeMap<i32, UserBalanceComputation>,
-) -> MaxBalance {
-    let positive_max: Option<(i32, UserBalanceComputation)> =
-        sorted_unsolved_positive_balances_by_user
+    unsolved_positive_balances_by_user: &BTreeMap<i32, UserBalanceComputation>,
+    unsolved_negative_balances_by_user: &BTreeMap<i32, UserBalanceComputation>,
+) -> Option<MaxBalance> {
+    let pick = |balances: &BTreeMap<i32, UserBalanceComputation>| {
+        balances
             .iter()
             .max_by(|(u1, b1), (u2, b2)| {
                 f64::total_cmp(&b2.remaining_amount.abs(), &b1.remaining_amount.abs())
                     .then(u2.cmp(u1))
             })
-            .map(|(a, b)| (*a, b.clone()));
+            .map(|(id, b)| (*id, b.remaining_amount))
+    };
 
-    let negative_max: Option<(i32, UserBalanceComputation)> =
-        sorted_unsolved_negative_balances_by_user
-            .iter()
-            .max_by(|(u1, b1), (u2, b2)| {
-                f64::total_cmp(&b2.remaining_amount.abs(), &b1.remaining_amount.abs())
-                    .then(u2.cmp(u1))
-            })
-            .map(|(a, b)| (*a, b.clone()));
+    let (positive_user_id, positive_amount) = pick(unsolved_positive_balances_by_user)?;
+    let (negative_user_id, negative_amount) = pick(unsolved_negative_balances_by_user)?;
 
-    if positive_max.is_none() || negative_max.is_none() {
-        return MaxBalance {
-            is_debt: false,
-            max_balance: (0, UserBalanceComputation { remaining_amount: 0.0, amount: 0.0 }),
-            opposite_balances: BTreeMap::new(),
-        };
-    }
-
-    let positive_max_value = positive_max.unwrap();
-    let negative_max_value = negative_max.unwrap();
-
-    if positive_max_value.1.remaining_amount.abs() >= negative_max_value.1.remaining_amount.abs() {
-        MaxBalance {
-            is_debt: false,
-            max_balance: positive_max_value,
-            opposite_balances: sorted_unsolved_negative_balances_by_user,
-        }
+    Some(if positive_amount.abs() >= negative_amount.abs() {
+        MaxBalance { is_debt: false, user_id: positive_user_id, remaining_amount: positive_amount }
     } else {
-        MaxBalance {
-            is_debt: true,
-            max_balance: negative_max_value,
-            opposite_balances: sorted_unsolved_positive_balances_by_user,
-        }
-    }
+        MaxBalance { is_debt: true, user_id: negative_user_id, remaining_amount: negative_amount }
+    })
 }
 
 fn resolve_equally_opposed_balances(
     unsolved_positive_balances_by_user: &mut BTreeMap<i32, UserBalanceComputation>,
     unsolved_negative_balances_by_user: &mut BTreeMap<i32, UserBalanceComputation>,
 ) -> Vec<ReimbursementSuggestion> {
-    let mut resolved_users: Vec<(i32, i32)> = Vec::new();
-    // Mirrors the debtor ids in `resolved_users`. The membership test below sits two loops deep,
-    // so scanning a Vec there made this O(n³) - and it runs in WASM on every balance render.
-    let mut resolved_debtors: std::collections::HashSet<i32> = std::collections::HashSet::new();
     let mut result: Vec<ReimbursementSuggestion> = Vec::new();
 
-    let sorted_positive_ids: Vec<i32> = {
-        let mut entries: Vec<(i32, f64)> = unsolved_positive_balances_by_user
-            .iter()
-            .map(|(id, b)| (*id, b.remaining_amount))
-            .collect();
-        entries.sort_by(|(u1, a1), (u2, a2)| f64::total_cmp(&a2.abs(), &a1.abs()).then(u1.cmp(u2)));
-        entries.into_iter().map(|(id, _)| id).collect()
-    };
+    let mut sorted_positive: Vec<(i32, f64)> = unsolved_positive_balances_by_user
+        .iter()
+        .map(|(id, b)| (*id, b.remaining_amount))
+        .collect();
+    sorted_positive.sort_by(|(u1, a1), (u2, a2)| f64::total_cmp(&a2.abs(), &a1.abs()).then(u1.cmp(u2)));
 
-    for positive_user_id in sorted_positive_ids {
-        let balance_amount_val =
-            unsolved_positive_balances_by_user[&positive_user_id].remaining_amount;
-
+    for (positive_user_id, balance_amount_val) in sorted_positive {
         let matching_debtor_id = unsolved_negative_balances_by_user
             .iter()
-            .filter(|(debtor_id, _)| !resolved_debtors.contains(debtor_id))
             .find(|(_, b_amount)| {
                 b_amount.remaining_amount.abs().total_cmp(&balance_amount_val) == Ordering::Equal
             })
@@ -264,31 +174,16 @@ fn resolve_equally_opposed_balances(
                 user_id_debtor: resolved_user_id_debtor,
                 user_id_payer: positive_user_id,
             });
-
-            unsolved_positive_balances_by_user
-                .get_mut(&positive_user_id)
-                .unwrap()
-                .remaining_amount = 0.0;
-            unsolved_negative_balances_by_user
-                .get_mut(&resolved_user_id_debtor)
-                .unwrap()
-                .remaining_amount = 0.0;
-
-            resolved_users.push((positive_user_id, resolved_user_id_debtor));
-            resolved_debtors.insert(resolved_user_id_debtor);
+            unsolved_positive_balances_by_user.remove(&positive_user_id);
+            unsolved_negative_balances_by_user.remove(&resolved_user_id_debtor);
         }
     }
-
-    resolved_users.iter().for_each(|(payer_id, debtor_id)| {
-        unsolved_positive_balances_by_user.remove(payer_id);
-        unsolved_negative_balances_by_user.remove(debtor_id);
-    });
 
     result
 }
 
 fn get_unresolved_balances_by_user(
-    balances: &mut [UserBalance],
+    balances: &[UserBalance],
 ) -> (BTreeMap<i32, UserBalanceComputation>, BTreeMap<i32, UserBalanceComputation>) {
     let mut unsolved_positive: BTreeMap<i32, UserBalanceComputation> = Default::default();
     let mut unsolved_negative: BTreeMap<i32, UserBalanceComputation> = Default::default();
@@ -317,8 +212,8 @@ fn get_unresolved_balances_by_user(
 
 struct MaxBalance {
     is_debt: bool,
-    max_balance: (i32, UserBalanceComputation),
-    opposite_balances: BTreeMap<i32, UserBalanceComputation>,
+    user_id: i32,
+    remaining_amount: f64,
 }
 
 #[cfg(test)]
@@ -486,5 +381,154 @@ mod tests {
         assert_eq!(round_currency(3.333333333), 3.33);
         assert_eq!(round_currency(3.335), 3.34);
         assert_eq!(round_currency(42.5), 42.5);
+    }
+
+    #[test]
+    fn a_user_with_id_0_pays_their_share() {
+        let balances = vec![
+            UserBalance { amount: -147.61, user_id: 0 },
+            UserBalance { amount: -448.30, user_id: 1 },
+            UserBalance { amount: 595.91, user_id: 2 },
+        ];
+        let suggestions = get_reimbursement_suggestions(balances);
+        let paid_by_0: f64 =
+            suggestions.iter().filter(|s| s.user_id_debtor == 0).map(|s| s.amount).sum();
+        assert_eq!(paid_by_0, 147.61);
+    }
+
+    mod generated {
+        use super::*;
+        use crate::{balances_v1, to_cents};
+        use proptest::prelude::*;
+
+        fn closed_ledger(ids_from: i32, cents: Vec<i64>) -> Vec<UserBalance> {
+            let closing = -cents.iter().sum::<i64>();
+            cents
+                .into_iter()
+                .chain([closing])
+                .zip(ids_from..)
+                .map(|(c, user_id)| UserBalance { amount: c as f64 / 100.0, user_id })
+                .collect()
+        }
+
+        fn wide_ledger(ids_from: i32) -> impl Strategy<Value = Vec<UserBalance>> {
+            prop::collection::vec(-1_000_000_000i64..=1_000_000_000, 1..12)
+                .prop_map(move |cents| closed_ledger(ids_from, cents))
+        }
+
+        fn tied_ledger(ids_from: i32) -> impl Strategy<Value = Vec<UserBalance>> {
+            let amounts = vec![-300i64, -150, -100, -1, 0, 1, 100, 150, 300];
+            prop::collection::vec(prop::sample::select(amounts), 1..12)
+                .prop_map(move |cents| closed_ledger(ids_from, cents))
+        }
+
+        /// Balances summed in `f64` from cent-exact equal splits, as `summary_from_payments` does.
+        fn accumulated_ledger(ids_from: i32) -> impl Strategy<Value = Vec<UserBalance>> {
+            (2usize..10).prop_flat_map(move |users| {
+                prop::collection::vec((0..users, 1i64..10_000_000, 1u32..(1u32 << users)), 1..200)
+                    .prop_map(move |expenses| {
+                        let mut totals = vec![0.0f64; users];
+                        for (payer, cents, mask) in expenses {
+                            let debtors: Vec<usize> =
+                                (0..users).filter(|u| mask & (1 << u) != 0).collect();
+                            let n = debtors.len() as i64;
+                            totals[payer] += cents as f64 / 100.0;
+                            for (pos, debtor) in debtors.into_iter().enumerate() {
+                                let share = cents / n + i64::from((pos as i64) < cents % n);
+                                totals[debtor] -= share as f64 / 100.0;
+                            }
+                        }
+                        totals
+                            .into_iter()
+                            .zip(ids_from..)
+                            .map(|(amount, user_id)| UserBalance { amount, user_id })
+                            .collect()
+                    })
+            })
+        }
+
+        fn any_ledger(ids_from: i32) -> impl Strategy<Value = Vec<UserBalance>> {
+            prop_oneof![wide_ledger(ids_from), tied_ledger(ids_from), accumulated_ledger(ids_from)]
+        }
+
+        fn hostile_amount() -> impl Strategy<Value = f64> {
+            prop_oneof![
+                Just(f64::NAN),
+                Just(f64::INFINITY),
+                Just(f64::NEG_INFINITY),
+                Just(1e300),
+                Just(-1e300),
+                Just(-0.0),
+                Just(0.0),
+                Just(0.004),
+                Just(-0.004),
+                -1e6f64..1e6,
+            ]
+        }
+
+        fn assert_settles(balances: &[UserBalance]) -> Result<(), TestCaseError> {
+            let suggestions = get_reimbursement_suggestions(balances.to_vec());
+
+            let non_zero = balances.iter().filter(|b| to_cents(b.amount) != 0).count();
+            prop_assert!(suggestions.len() <= non_zero.saturating_sub(1));
+            for s in &suggestions {
+                prop_assert!(s.amount > 0.0 && round_currency(s.amount) == s.amount, "{:?}", s);
+                prop_assert_ne!(s.user_id_debtor, s.user_id_payer);
+            }
+
+            let cents_where = |keep: &dyn Fn(&ReimbursementSuggestion) -> bool| -> i64 {
+                suggestions.iter().filter(|s| keep(s)).map(|s| to_cents(s.amount)).sum()
+            };
+            for b in balances {
+                let received = cents_where(&|s| s.user_id_payer == b.user_id);
+                let paid = cents_where(&|s| s.user_id_debtor == b.user_id);
+                prop_assert_eq!(received - paid, to_cents(b.amount), "user {}", b.user_id);
+            }
+
+            let owed: i64 = balances.iter().map(|b| to_cents(b.amount)).filter(|c| *c > 0).sum();
+            prop_assert_eq!(cents_where(&|_| true), owed);
+            Ok(())
+        }
+
+        proptest! {
+            #![proptest_config(ProptestConfig::with_cases(2000))]
+
+            #[test]
+            fn every_user_settles_to_the_cent(balances in any_ledger(1)) {
+                assert_settles(&balances)?;
+            }
+
+            #[test]
+            fn every_user_settles_to_the_cent_with_ids_from_0(balances in any_ledger(0)) {
+                assert_settles(&balances)?;
+            }
+
+            #[test]
+            fn the_order_of_the_balances_does_not_matter(
+                (balances, shuffled) in any_ledger(1).prop_flat_map(|b| (Just(b.clone()), Just(b).prop_shuffle()))
+            ) {
+                prop_assert_eq!(get_reimbursement_suggestions(balances), get_reimbursement_suggestions(shuffled));
+            }
+
+            #[test]
+            fn same_transfers_as_the_previous_version(balances in any_ledger(1)) {
+                prop_assert_eq!(
+                    get_reimbursement_suggestions(balances.clone()),
+                    balances_v1::get_reimbursement_suggestions(balances)
+                );
+            }
+
+            #[test]
+            fn same_transfers_as_the_previous_version_on_hostile_input(
+                amounts in prop::collection::vec(hostile_amount(), 1..8)
+            ) {
+                let balances: Vec<UserBalance> =
+                    amounts.into_iter().zip(1..).map(|(amount, user_id)| UserBalance { amount, user_id }).collect();
+                prop_assert_eq!(
+                    format!("{:?}", get_reimbursement_suggestions(balances.clone())),
+                    format!("{:?}", balances_v1::get_reimbursement_suggestions(balances))
+                );
+            }
+        }
     }
 }

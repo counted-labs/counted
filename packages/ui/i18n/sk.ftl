@@ -133,6 +133,16 @@ account-delete-title = Odstrániť môj účet
 account-delete-warning = Okamžité a trvalé odstránenie tvojho účtu a tvojich údajov.
 account-delete-confirm-title = Odstrániť účet
 account-delete-confirm-message = Tvoj účet, relácie a zoznam projektov budú trvalo odstránené. Bez hesla sa pre teba šifrované dáta zdieľaného projektu stanú nečitateľnými - to sa nedá vrátiť späť.
+erase-device-open = Odhlásiť sa a vymazať toto zariadenie
+erase-device-title = Vymazať toto zariadenie?
+erase-device-body = Projekty, ich kľúče a vyrovnávacia pamäť na tomto zariadení sa vymažú a potom sa relácia ukončí. Tvoje projekty zostávajú na tvojom účte: prihlás sa znova a získaš ich späť.
+erase-device-checking = Overujem, či sú tvoje projekty na tvojom účte…
+erase-device-pending = Zmeny čakajúce na odoslanie: { $count }. Pripoj sa znova na internet a skús to znova.
+erase-device-unreachable = Nepodarilo sa overiť, či sú tvoje projekty na tvojom účte. Skontroluj pripojenie a skús to znova.
+erase-device-at-risk = Tieto projekty nie sú na tvojom účte a stratia sa. Ak si ich chceš ponechať, zruš to a najprv skopíruj ich odkaz:
+erase-device-confirm = Vymazať a odhlásiť
+erase-device-confirm-anyway = Napriek tomu vymazať
+erase-device-erasing = Mazanie…
 
 settings-payment-methods = Platobné údaje
 settings-payment-methods-hint = Ako chceš dostávať peniaze späť. Šifrované s tvojím účtom.

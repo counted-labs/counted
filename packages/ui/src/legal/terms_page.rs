@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use crate::tid;
 
-use crate::common::{AppHeader, MailLink};
+use crate::common::{AppHeader, MailLink, APP_BASE_URL};
 use crate::route::Route;
 
 /// Terms of use, extracted to keys but translated only into `fr` and `en` - see
@@ -9,6 +9,7 @@ use crate::route::Route;
 #[component]
 pub fn TermsPage() -> Element {
     rsx! {
+        document::Link { rel: "canonical", href: format!("{APP_BASE_URL}{}", Route::TermsPage {}) }
         div { class: "container app-container bg-base-100 overflow-auto p-4 max-w-md mx-auto flex flex-col gap-4",
             AppHeader {
                 title: tid!("nav-terms"),

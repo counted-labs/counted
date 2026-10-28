@@ -4437,6 +4437,9 @@
   .pl-4 {
     padding-left: calc(var(--spacing) * 4);
   }
+  .pl-5 {
+    padding-left: calc(var(--spacing) * 5);
+  }
   .pl-11 {
     padding-left: calc(var(--spacing) * 11);
   }
@@ -4982,6 +4985,9 @@
     -webkit-user-select: none;
     user-select: none;
   }
+  .\[scrollbar-width\:none\] {
+    scrollbar-width: none;
+  }
   .input-primary {
     &, &:focus, &:focus-within {
       --input-color: var(--color-primary);
@@ -5217,6 +5223,11 @@
     & button {
       --tw-font-weight: var(--font-weight-medium);
       font-weight: var(--font-weight-medium);
+    }
+  }
+  .\[\&\:\:-webkit-scrollbar\]\:hidden {
+    &::-webkit-scrollbar {
+      display: none;
     }
   }
   .\[\&\:\:-webkit-search-cancel-button\]\:hidden {

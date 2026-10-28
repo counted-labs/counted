@@ -132,6 +132,16 @@ account-delete-title = Dzēst manu kontu
 account-delete-warning = Tava konta un datu tūlītēja un neatgriezeniska dzēšana.
 account-delete-confirm-title = Dzēst kontu
 account-delete-confirm-message = Tavs konts, sesijas un projektu saraksts tiks neatgriezeniski dzēsti. Bez paroles kopīgā projekta šifrētie dati tev kļūs nelasāmi - to nevar atsaukt.
+erase-device-open = Izrakstīties un notīrīt šo ierīci
+erase-device-title = Notīrīt šo ierīci?
+erase-device-body = Šīs ierīces projekti, to atslēgas un kešatmiņa tiks dzēsti, pēc tam sesija tiks beigta. Tavi projekti paliek tavā kontā: piesakies vēlreiz, lai tos atgūtu.
+erase-device-checking = Pārbauda, vai tavi projekti ir tavā kontā…
+erase-device-pending = Nenosūtītas izmaiņas: { $count }. Atjauno savienojumu un mēģini vēlreiz.
+erase-device-unreachable = Neizdevās pārbaudīt, vai tavi projekti ir tavā kontā. Pārbaudi savienojumu un mēģini vēlreiz.
+erase-device-at-risk = Šie projekti nav tavā kontā un tiks zaudēti. Lai tos paturētu, atcel un vispirms nokopē to saites:
+erase-device-confirm = Notīrīt un izrakstīties
+erase-device-confirm-anyway = Tomēr notīrīt
+erase-device-erasing = Notīra…
 
 settings-payment-methods = Maksājumu dati
 settings-payment-methods-hint = Kā vēlies saņemt naudu atpakaļ. Šifrēti ar tavu kontu.

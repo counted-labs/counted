@@ -139,6 +139,16 @@ account-delete-title = Delete my account
 account-delete-warning = Immediate and permanent deletion of your account and your data.
 account-delete-confirm-title = Delete account
 account-delete-confirm-message = Your account, your sessions and your list of projects will be permanently deleted. Without your password, the encrypted data of a shared project becomes unreadable to you - this cannot be undone.
+erase-device-open = Sign out and erase this device
+erase-device-title = Erase this device?
+erase-device-body = The projects, their keys and the cache on this device will be erased, then your session will end. Your projects stay in your account: sign in again to get them back.
+erase-device-checking = Checking that your projects are in your account…
+erase-device-pending = Changes waiting to be sent: { $count }. Go back online, then try again.
+erase-device-unreachable = Could not check that your projects are in your account. Check your connection, then try again.
+erase-device-at-risk = These projects are not in your account and will be lost. To keep them, cancel and copy their link first:
+erase-device-confirm = Erase and sign out
+erase-device-confirm-anyway = Erase anyway
+erase-device-erasing = Erasing…
 
 settings-payment-methods = Payment details
 settings-payment-methods-hint = How you would like to be paid back. Encrypted with your account.

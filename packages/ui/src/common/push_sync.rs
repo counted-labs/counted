@@ -3,7 +3,7 @@
 //! The token arrives asynchronously after the OS permission prompt, through the file the platform
 //! layer writes (see `push`), so registration polls that file for a short while after each request
 //! rather than waiting on a callback. Registration is idempotent server-side, which lets the effect
-//! re-run on every sign-in and language change without bookkeeping beyond "what did we last send".
+//! re-run on every sign-in without bookkeeping beyond "what did we last send".
 
 use api::push::push_controller::{register_push_token, unregister_push_token, verify_push_token};
 use dioxus::core::Task;
@@ -19,7 +19,7 @@ const TOKEN_POLL_ROUNDS: u32 = 30;
 /// Mounted once, from `use_app_contexts`. A no-op wherever no platform push is installed.
 pub fn use_push_registration() {
     let auth = use_context::<Signal<Option<Account>>>();
-    let mut registered: Signal<Option<(String, String)>> = use_signal(|| None);
+    let mut registered: Signal<Option<String>> = use_signal(|| None);
     let mut polling: Signal<Option<Task>> = use_signal(|| None);
 
     use_effect(move || {
@@ -48,17 +48,11 @@ pub fn use_push_registration() {
                     let _ = verify_push_token(Json(VerifyPushToken { token, proof })).await;
                 }
                 if let Some(raw) = read_push_token() {
-                    let sent = (raw.clone(), lang.clone());
-                    if registered.peek().as_ref() != Some(&sent) {
+                    if registered.peek().as_ref() != Some(&raw) {
                         let (token, keys) = parse_push_token(&raw);
-                        let payload = RegisterPushToken {
-                            platform: push.platform,
-                            token,
-                            lang: lang.clone(),
-                            keys,
-                        };
+                        let payload = RegisterPushToken { platform: push.platform, token, keys };
                         if register_push_token(Json(payload)).await.is_ok() {
-                            registered.set(Some(sent));
+                            registered.set(Some(raw));
                         }
                     }
                 }

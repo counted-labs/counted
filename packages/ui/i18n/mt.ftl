@@ -133,6 +133,16 @@ account-delete-title = Ħassar il-kont tiegħi
 account-delete-warning = Tħassir immedjat u permanenti tal-kont u d-data tiegħek.
 account-delete-confirm-title = Ħassar il-kont
 account-delete-confirm-message = Il-kont, is-sessjonijiet u l-lista tal-proġetti tiegħek se jitħassru b'mod permanenti. Mingħajr il-password tiegħek, id-data kriptata ta' proġett maqsum issir ma tinqarax għalik - dan ma jistax jitreġġa' lura.
+erase-device-open = Oħroġ u ħassar dan l-apparat
+erase-device-title = Tħassar dan l-apparat?
+erase-device-body = Il-proġetti, iċ-ċwievet tagħhom u l-cache fuq dan l-apparat se jitħassru, imbagħad is-sessjoni se tingħalaq. Il-proġetti tiegħek jibqgħu fil-kont tiegħek: idħol mill-ġdid biex terġa' tiksibhom.
+erase-device-checking = Qed niċċekkja li l-proġetti tiegħek jinsabu fil-kont tiegħek…
+erase-device-pending = Bidliet li qed jistennew jintbagħtu: { $count }. Erġa' kkonnettja mal-internet u erġa' pprova.
+erase-device-unreachable = Ma stajtx niċċekkja li l-proġetti tiegħek jinsabu fil-kont tiegħek. Iċċekkja l-konnessjoni u erġa' pprova.
+erase-device-at-risk = Dawn il-proġetti mhumiex fil-kont tiegħek u se jintilfu. Biex iżżommhom, ikkanċella u l-ewwel ikkopja l-link tagħhom:
+erase-device-confirm = Ħassar u oħroġ
+erase-device-confirm-anyway = Ħassar xorta waħda
+erase-device-erasing = Qed jitħassar…
 
 settings-payment-methods = Dettalji tal-ħlas
 settings-payment-methods-hint = Kif tixtieq titħallas lura. Kriptati mal-kont tiegħek.

@@ -39,8 +39,7 @@ pub async fn verify_email_salt(
     crate::server::auth::verify_email_salt(payload).await
 }
 
-/// With a proof, a login that also consumes the token. Without one (builds before 3.2.6), the
-/// address is verified and no session is minted.
+/// A login that also consumes the token. A request without a proof is refused as outdated.
 #[post("/api/v1/auth/verify-email")]
 pub async fn verify_email(
     Json(payload): Json<VerifyEmailPayload>,

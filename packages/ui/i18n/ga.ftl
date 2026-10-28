@@ -134,6 +134,16 @@ account-delete-title = Scrios mo chuntas
 account-delete-warning = Scriosadh láithreach agus buan ar do chuntas agus ar do shonraí.
 account-delete-confirm-title = Scrios cuntas
 account-delete-confirm-message = Scriosfar do chuntas, do sheisiúin agus do liosta tionscadal go buan. Gan do phasfhocal, éiríonn sonraí criptithe tionscadail chomhroinnte doléite duit - ní féidir é seo a chealú.
+erase-device-open = Logáil amach agus glan an gléas seo
+erase-device-title = An gléas seo a ghlanadh?
+erase-device-body = Scriosfar na tionscadail, a n-eochracha agus an taisce ar an ngléas seo, agus ansin cuirfear deireadh leis an seisiún. Fanann do thionscadail i do chuntas: logáil isteach arís chun iad a fháil ar ais.
+erase-device-checking = Ag seiceáil go bhfuil do thionscadail i do chuntas…
+erase-device-pending = Athruithe atá ag fanacht le seoladh: { $count }. Téigh ar líne arís, agus ansin bain triail eile as.
+erase-device-unreachable = Níorbh fhéidir a sheiceáil go bhfuil do thionscadail i do chuntas. Seiceáil do nasc, agus ansin bain triail eile as.
+erase-device-at-risk = Níl na tionscadail seo i do chuntas agus caillfear iad. Chun iad a choinneáil, cealaigh agus cóipeáil a nasc ar dtús:
+erase-device-confirm = Glan agus logáil amach
+erase-device-confirm-anyway = Glan mar sin féin
+erase-device-erasing = Á ghlanadh…
 
 settings-payment-methods = Sonraí íocaíochta
 settings-payment-methods-hint = Conas ba mhaith leat go n-aisíocfaí thú. Criptithe le do chuntas.

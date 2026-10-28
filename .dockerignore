@@ -8,3 +8,4 @@ packages/ocr/tests
 Dockerfile*
 .dockerignore
 .github
+security-tests

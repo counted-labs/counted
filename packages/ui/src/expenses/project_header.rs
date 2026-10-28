@@ -77,7 +77,7 @@ pub fn ProjectHeader(props: ProjectHeaderProps) -> Element {
                 button {
                     id: "project-actions",
                     r#type: "button",
-                    class: "btn btn-circle size-11 min-h-11 bg-base-300 border-0",
+                    class: "btn btn-circle size-11 min-h-11 bg-base-300 glass-button border-0",
                     aria_label: tid!("project-actions"),
                     aria_haspopup: "dialog",
                     aria_expanded: sheet_open(),
