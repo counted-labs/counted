@@ -52,6 +52,17 @@ fn open(cipher: &impl Aead<NonceSize = U24>, pair: &EncryptedPair) -> Result<Vec
     cipher.decrypt(&iv.into(), ct.as_ref()).map_err(|e| format!("decrypt: {e}"))
 }
 
+/// Bytes in, bytes out, with no parsing: what a key rotation re-seals, so a row survives byte for
+/// byte whatever its plaintext (docs/plans/key-lifecycle.md §8.3).
+pub fn encrypt_bytes(key: &[u8; 32], plaintext: &[u8]) -> Result<EncryptedPair, String> {
+    seal(&XChaCha20Poly1305::new(key.into()), plaintext)
+}
+
+/// `Err` means the AEAD tag did not check: the one thing a rotation counts as junk.
+pub fn decrypt_bytes(key: &[u8; 32], pair: &EncryptedPair) -> Result<Vec<u8>, String> {
+    open(&XChaCha20Poly1305::new(key.into()), pair)
+}
+
 pub fn encrypt(key: &[u8; 32], plaintext: &str) -> Result<EncryptedPair, String> {
     seal(&XChaCha20Poly1305::new(key.into()), plaintext.as_bytes())
 }
@@ -132,6 +143,17 @@ pub fn encrypt_padded_json<T: Serialize>(key: &[u8; 32], value: &T) -> Result<En
     encrypt(key, &shared::pad_json(json))
 }
 
+/// For a blob whose base64 ciphertext the server caps at `max_ct_b64`: padded like
+/// [`encrypt_padded_json`] as far as the cap allows, never truncated, so whatever fitted unpadded
+/// still fits.
+pub fn encrypt_padded_json_within<T: Serialize>(key: &[u8; 32], value: &T, max_ct_b64: usize) -> Result<EncryptedPair, String> {
+    let mut json = serde_json::to_string(value).map_err(|e| e.to_string())?;
+    let largest_fitting = (max_ct_b64 / 4 * 3).saturating_sub(16);
+    let target = json.len().max(256).next_power_of_two().min(largest_fitting).max(json.len());
+    json.push_str(&" ".repeat(target - json.len()));
+    encrypt(key, &json)
+}
+
 pub fn decrypt_json<T: DeserializeOwned>(key: &[u8; 32], pair: &EncryptedPair) -> Result<T, String> {
     serde_json::from_str(&decrypt(key, pair)?).map_err(|e| e.to_string())
 }
@@ -151,6 +173,10 @@ struct KeyWrap {
     use_: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     project: Option<Uuid>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    account: Option<Uuid>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    epoch: Option<i32>,
     key: String,
 }
 
@@ -170,15 +196,59 @@ pub struct Unwrapped {
 }
 
 /// A project key or the private key, encrypted under the account key - see `docs/e2ee.md`, "Key
-/// escrow". Untyped, it is the bare fragment builds before 3.2.6 write and read; typed, a
-/// [`KeyWrap`] they cannot read, so it is written only once the server says they are refused
-/// (`Account.typed_wraps`).
-pub fn wrap_key(account_key: &[u8; 32], use_: WrapUse, key: &[u8; 32], typed: bool) -> Option<EncryptedPair> {
-    if !typed {
-        return encrypt(account_key, &key_to_fragment(key)).ok();
-    }
+/// escrow". Always a typed [`KeyWrap`], whatever `Account.typed_wraps` says: every build the server
+/// still serves reads it, and a server-held switch would let a hostile server keep wraps untyped.
+pub fn wrap_key(account_key: &[u8; 32], use_: WrapUse, key: &[u8; 32]) -> Option<EncryptedPair> {
     let (use_, project) = use_.parts();
-    encrypt_json(account_key, &KeyWrap { use_: use_.to_string(), project, key: key_to_fragment(key) }).ok()
+    encrypt_json(account_key, &KeyWrap { use_: use_.to_string(), project, account: None, epoch: None, key: key_to_fragment(key) }).ok()
+}
+
+/// The account's ML-KEM seed under the master key (docs/plans/key-lifecycle.md §7), strictly typed.
+pub fn wrap_kem_seed(amk: &[u8; 32], seed: &[u8; crate::hybrid::KEM_SEED_LENGTH]) -> Option<EncryptedPair> {
+    let wrap = KeyWrap { use_: "account-kem".into(), project: None, account: None, epoch: None, key: URL_SAFE_NO_PAD.encode(seed) };
+    encrypt_json(amk, &wrap).ok()
+}
+
+pub fn open_kem_seed(amk: &[u8; 32], wrapped: &EncryptedPair) -> Option<[u8; crate::hybrid::KEM_SEED_LENGTH]> {
+    let wrap: KeyWrap = serde_json::from_str(&decrypt(amk, wrapped).ok()?).ok()?;
+    if wrap.use_ != "account-kem" || wrap.project.is_some() {
+        return None;
+    }
+    URL_SAFE_NO_PAD.decode(&wrap.key).ok()?.try_into().ok()
+}
+
+/// The master key under the recovery key's `rk_key` (docs/plans/key-lifecycle.md §6.1), typed with
+/// the account. No epoch: restoring a retired generation brings its recovery wrap back as it was.
+pub fn wrap_recovery(rk_key: &[u8; 32], account: Uuid, amk: &[u8; 32]) -> Option<EncryptedPair> {
+    let wrap = KeyWrap { use_: "amk-recovery".into(), project: None, account: Some(account), epoch: None, key: key_to_fragment(amk) };
+    encrypt_json(rk_key, &wrap).ok()
+}
+
+pub fn open_recovery(rk_key: &[u8; 32], account: Uuid, wrapped: &EncryptedPair) -> Option<[u8; 32]> {
+    let wrap: KeyWrap = serde_json::from_str(&decrypt(rk_key, wrapped).ok()?).ok()?;
+    let matches = wrap.use_ == "amk-recovery" && wrap.project.is_none() && wrap.account == Some(account);
+    matches.then(|| key_from_fragment(&wrap.key).ok()).flatten()
+}
+
+/// The account master key under the password-derived key (docs/plans/key-lifecycle.md §3).
+pub fn wrap_amk(pw_key: &[u8; 32], account: Uuid, epoch: i32, amk: &[u8; 32]) -> Option<EncryptedPair> {
+    let wrap = KeyWrap { use_: "amk".into(), project: None, account: Some(account), epoch: Some(epoch), key: key_to_fragment(amk) };
+    encrypt_json(pw_key, &wrap).ok()
+}
+
+/// Strictly typed, unlike [`open_wrap`]: no untyped fallback, and only for the account and epoch the
+/// server serves. Otherwise a hostile server could serve an old untyped escrow blob, holding a key
+/// it knows, as the master key.
+pub fn open_amk(pw_key: &[u8; 32], account: Uuid, epoch: i32, wrapped: &EncryptedPair) -> Option<[u8; 32]> {
+    let wrap: KeyWrap = serde_json::from_str(&decrypt(pw_key, wrapped).ok()?).ok()?;
+    let matches = wrap.use_ == "amk" && wrap.project.is_none() && wrap.account == Some(account) && wrap.epoch == Some(epoch);
+    matches.then(|| key_from_fragment(&wrap.key).ok()).flatten()
+}
+
+/// The bare fragment builds before 3.2.6 wrote, for tests of the rows they left.
+#[cfg(test)]
+pub fn wrap_key_untyped(account_key: &[u8; 32], _use: WrapUse, key: &[u8; 32]) -> Option<EncryptedPair> {
+    encrypt(account_key, &key_to_fragment(key)).ok()
 }
 
 /// A typed wrap opens only for the use it names; an untyped one for any use.
@@ -231,8 +301,19 @@ pub fn public_key_of(private: &[u8; 32]) -> Vec<u8> {
     crypto_box::SecretKey::from_bytes(*private).public_key().to_bytes().to_vec()
 }
 
+/// `crypto_box` does not reject what libsodium does: a key of small order yields one of at most 8
+/// shared secrets and leaks the sender's private scalar mod 8. Such a point is one that [8]P sends
+/// to the identity, which the ladder encodes as u = 0.
+fn has_small_order(public: &[u8; 32]) -> bool {
+    use curve25519_dalek::{montgomery::MontgomeryPoint, scalar::Scalar};
+    (MontgomeryPoint(*public) * Scalar::from(8u8)).to_bytes() == [0u8; 32]
+}
+
 fn chacha_box(my_private: &[u8; 32], their_public: &[u8]) -> Option<crypto_box::ChaChaBox> {
     let public = crypto_box::PublicKey::from_slice(their_public).ok()?;
+    if has_small_order(public.as_bytes()) {
+        return None;
+    }
     Some(crypto_box::ChaChaBox::new(&public, &crypto_box::SecretKey::from_bytes(*my_private)))
 }
 
@@ -324,6 +405,7 @@ mod tests {
             public_key: None,
             private_key: None,
             typed_wraps: false,
+            ..Default::default()
         }
     }
 
@@ -369,6 +451,61 @@ mod tests {
     fn a_wrong_account_key_produces_no_label() {
         let account = account_with_name(&generate_key(), "Jonathan");
         assert!(claim_label(&account, &generate_key(), &generate_key()).is_none());
+    }
+
+    #[test]
+    fn a_master_key_wrap_opens_only_for_its_account_and_epoch() {
+        let (pw_key, amk, account) = (generate_key(), generate_key(), Uuid::new_v4());
+        let wrapped = wrap_amk(&pw_key, account, 2, &amk).unwrap();
+
+        assert_eq!(open_amk(&pw_key, account, 2, &wrapped), Some(amk));
+        assert_eq!(open_amk(&pw_key, account, 1, &wrapped), None, "another epoch");
+        assert_eq!(open_amk(&pw_key, Uuid::new_v4(), 2, &wrapped), None, "another account");
+        assert_eq!(open_amk(&generate_key(), account, 2, &wrapped), None, "another password");
+    }
+
+    /// Plan §3, proof U1: an escrow blob, typed or untyped, holding a key the server knows must
+    /// never open as the master key.
+    #[test]
+    fn no_other_wrap_opens_as_the_master_key() {
+        let (pw_key, known, account) = (generate_key(), generate_key(), Uuid::new_v4());
+        let untyped = wrap_key_untyped(&pw_key, WrapUse::Escrow(account), &known).unwrap();
+        let escrow = wrap_key(&pw_key, WrapUse::Escrow(account), &known).unwrap();
+        let private = wrap_key(&pw_key, WrapUse::PrivateKey, &known).unwrap();
+
+        for blob in [untyped, escrow, private] {
+            assert_eq!(open_amk(&pw_key, account, 1, &blob), None);
+        }
+    }
+
+    #[test]
+    fn a_recovery_wrap_opens_for_its_account_only() {
+        let (rk, amk, account) = (generate_key(), generate_key(), Uuid::new_v4());
+        let wrapped = wrap_recovery(&rk, account, &amk).unwrap();
+        assert_eq!(open_recovery(&rk, account, &wrapped), Some(amk));
+        assert_eq!(open_recovery(&rk, Uuid::new_v4(), &wrapped), None);
+        assert_eq!(open_amk(&rk, account, 0, &wrapped), None);
+        assert_eq!(open_recovery(&rk, account, &wrap_amk(&rk, account, 1, &amk).unwrap()), None);
+    }
+
+    #[test]
+    fn a_kem_seed_wrap_opens_as_nothing_else() {
+        let (amk, seed) = (generate_key(), crate::hybrid::generate_kem_seed());
+        let wrapped = wrap_kem_seed(&amk, &seed).unwrap();
+
+        assert_eq!(open_kem_seed(&amk, &wrapped), Some(seed));
+        assert_eq!(open_kem_seed(&generate_key(), &wrapped), None);
+        assert_eq!(open_wrap(&amk, WrapUse::PrivateKey, &wrapped), None);
+        assert_eq!(open_kem_seed(&amk, &wrap_key(&amk, WrapUse::PrivateKey, &generate_key()).unwrap()), None);
+    }
+
+    #[test]
+    fn a_master_key_wrap_does_not_open_as_another_use() {
+        let (pw_key, amk, account) = (generate_key(), generate_key(), Uuid::new_v4());
+        let wrapped = wrap_amk(&pw_key, account, 1, &amk).unwrap();
+
+        assert_eq!(open_wrap(&pw_key, WrapUse::PrivateKey, &wrapped), None);
+        assert_eq!(open_wrap(&pw_key, WrapUse::Escrow(account), &wrapped), None);
     }
 
     #[test]
@@ -584,8 +721,8 @@ mod tests {
     fn the_private_key_round_trips_through_the_account_key() {
         let account_key = generate_key();
         let (_, private) = generate_keypair();
-        for typed in [false, true] {
-            let wrapped = wrap_key(&account_key, WrapUse::PrivateKey, &private, typed).unwrap();
+        for wrap in [wrap_key, wrap_key_untyped] {
+            let wrapped = wrap(&account_key, WrapUse::PrivateKey, &private).unwrap();
             assert_eq!(unwrap_key(&account_key, WrapUse::PrivateKey, &wrapped, true), Some(private));
             assert_eq!(unwrap_key(&generate_key(), WrapUse::PrivateKey, &wrapped, true), None);
         }
@@ -598,7 +735,7 @@ mod tests {
         let account_key = generate_key();
         let (a, b) = (Uuid::new_v4(), Uuid::new_v4());
         let project_key = generate_key();
-        let escrow = wrap_key(&account_key, WrapUse::Escrow(a), &project_key, true).unwrap();
+        let escrow = wrap_key(&account_key, WrapUse::Escrow(a), &project_key).unwrap();
 
         assert_eq!(unwrap_key(&account_key, WrapUse::Escrow(a), &escrow, false), Some(project_key));
         assert_eq!(unwrap_key(&account_key, WrapUse::Escrow(b), &escrow, true), None);
@@ -609,7 +746,7 @@ mod tests {
     fn an_untyped_wrap_opens_until_the_device_has_seen_a_typed_one() {
         let account_key = generate_key();
         let key = generate_key();
-        let raw = wrap_key(&account_key, WrapUse::PrivateKey, &key, false).unwrap();
+        let raw = wrap_key_untyped(&account_key, WrapUse::PrivateKey, &key).unwrap();
 
         assert_eq!(open_wrap(&account_key, WrapUse::PrivateKey, &raw), Some(Unwrapped { key, typed: false }));
         assert_eq!(unwrap_key(&account_key, WrapUse::PrivateKey, &raw, true), Some(key));
@@ -711,6 +848,55 @@ mod tests {
         assert!(back.removed && back.name == "Al");
     }
 
+    /// libsodium's `has_small_order` list (`crypto_scalarmult/curve25519/ref10`): 0, 1, the two
+    /// points of order 8, and p - 1, p, p + 1; each also with the ignored top bit set.
+    #[test]
+    fn a_small_order_public_key_boxes_and_opens_nothing() {
+        let mut blacklist = vec![[0u8; 32], { let mut k = [0u8; 32]; k[0] = 1; k }];
+        blacklist.push([
+            0xe0, 0xeb, 0x7a, 0x7c, 0x3b, 0x41, 0xb8, 0xae, 0x16, 0x56, 0xe3, 0xfa, 0xf1, 0x9f, 0xc4, 0x6a,
+            0xda, 0x09, 0x8d, 0xeb, 0x9c, 0x32, 0xb1, 0xfd, 0x86, 0x62, 0x05, 0x16, 0x5f, 0x49, 0xb8, 0x00,
+        ]);
+        blacklist.push([
+            0x5f, 0x9c, 0x95, 0xbc, 0xa3, 0x50, 0x8c, 0x24, 0xb1, 0xd0, 0xb1, 0x55, 0x9c, 0x83, 0xef, 0x5b,
+            0x04, 0x44, 0x5c, 0xc4, 0x58, 0x1c, 0x8e, 0x86, 0xd8, 0x22, 0x4e, 0xdd, 0xd0, 0x9f, 0x11, 0x57,
+        ]);
+        for low in [0xec, 0xed, 0xee] {
+            let mut k = [0xffu8; 32];
+            (k[0], k[31]) = (low, 0x7f);
+            blacklist.push(k);
+        }
+        let with_top_bit: Vec<[u8; 32]> = blacklist.iter().map(|k| { let mut k = *k; k[31] |= 0x80; k }).collect();
+
+        let (_, mine) = generate_keypair();
+        let project_key = generate_key();
+        for bad in blacklist.iter().chain(&with_top_bit) {
+            assert!(has_small_order(bad), "{bad:02x?}");
+            assert_eq!(box_project_key(&mine, bad, &project_key), None);
+        }
+        for _ in 0..32 {
+            assert!(!has_small_order(&generate_keypair().0.try_into().unwrap()));
+        }
+    }
+
+    /// Below the cap the buckets are `pad_json`'s; the bucket the cap cuts holds every length up to
+    /// it; past the cap nothing is added, so the server refuses exactly what it refused unpadded.
+    #[test]
+    fn a_capped_blob_pads_to_its_bucket_and_never_past_the_cap() {
+        let key = test_key();
+        let cap = 4096;
+        let plain_len = |text: &str| {
+            let pair = encrypt_padded_json_within(&key, &text.to_string(), cap).unwrap();
+            assert_eq!(decrypt_json::<String>(&key, &pair).unwrap(), text);
+            (pair.ct.len(), STANDARD.decode(pair.ct).unwrap().len() - 16)
+        };
+        assert_eq!(plain_len("a").1, 256);
+        assert_eq!(plain_len(&"a".repeat(300)).1, 512);
+        assert_eq!(plain_len(&"a".repeat(2100)).1, 3056);
+        assert_eq!(plain_len(&"a".repeat(3054)), (cap, 3056));
+        assert_eq!(plain_len(&"a".repeat(3100)).1, 3102);
+    }
+
     /// Every wrap written before typed wraps is in this format, and still opens where raw wraps are allowed.
     #[test]
     fn a_stored_wrap_still_opens() {
@@ -725,6 +911,47 @@ mod tests {
     #[test]
     fn a_fingerprint_is_unchanged() {
         assert_eq!(key_fingerprint(&[0u8; 32]), "MZUH VLPY MK6X O3EP");
+    }
+
+    /// Known answers for the typed wraps (SPEC §16): each pair opens only through the function and
+    /// purpose it was written for. A change that breaks one makes stored wraps unreadable.
+    #[test]
+    fn stored_typed_wraps_still_open() {
+        let project = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+        let account = Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
+        let pair = |ct: &str, iv: &str| EncryptedPair { ct: ct.into(), iv: iv.into() };
+
+        let escrow = pair(
+            "4EgoMjw6glRbGcADHVhU/+gkku6+Ro3JrxFUK4ecPoK87ID40NRoeEdXiUN6rTVR19oKvdoR+/6BRCthI2t7AfKMthCFwp4uyCx42Z56WHj00aPcMZNP7T0dj/XUgjGesMRunQvZ4Utq5+LxnRoBsPwmb7nCn2t6zrEGMa1BOB1kTX1llg==",
+            "eFBoH53JsWeknt68EbKTgQIccez8Or4J",
+        );
+        assert_eq!(unwrap_key(&[7u8; 32], WrapUse::Escrow(project), &escrow, false), Some([9u8; 32]));
+        assert_eq!(unwrap_key(&[7u8; 32], WrapUse::PrivateKey, &escrow, true), None, "an escrow row is no private key");
+
+        let private = pair(
+            "+MWeqSq7YI3bZMMAl+ZXBjKMk0aW+M+MYBBtt3dFPiKtB2XfqD+ZPLNfdv55BsVTeMihStYuaM66vKeRcCpbwdQTArm7IRzgpqLCgBVb2oet8iva1oYKcg==",
+            "FsvOOstyX/DDggzcFwNVBpUDFtLPcPSI",
+        );
+        assert_eq!(unwrap_key(&[7u8; 32], WrapUse::PrivateKey, &private, false), Some([9u8; 32]));
+
+        let amk = pair(
+            "xb/BOCpqw2zNvrInTfvUJN770eHJN7SE98Cz01p0zsPkrd48l/t4CMlPM8//LhXJzfOAzz5ag3fY+Nkla1CB9MwsQHyRxdcOnBQbQzdBgYXU1I0680R05ks0btwlDTWSBeAjGwWFgO/AKqghWLGVYGx83BDmvLUqsL7wnS9n6fKs1AceHs8UcO0B484=",
+            "j9A9HhA57ntuS+Sx2HGUo9NoU44KFcsg",
+        );
+        assert_eq!(open_amk(&[7u8; 32], account, 1, &amk), Some([9u8; 32]));
+        assert_eq!(open_amk(&[7u8; 32], account, 2, &amk), None, "another epoch");
+
+        let recovery = pair(
+            "/K2Bfcg8Dm4DBQsep1jzC8TsTQkV+qRQydmDeU20SpjdSObcaNBqTlNrEFJ3jAlg7wBqUPDoDzKcu7fXYjYEYL3L+OTPKSVbpr+74vU1kYflNDcLjbgJLurDvlHakh4Bp6t4D7F0EtsDN3QmyjM6M0qnOWIkO/ua/npw8h1Fr5/wmkX7OeSI2Qukfg==",
+            "b+9DTnEXIF3segtubW/ohw6O1nVTqp9n",
+        );
+        assert_eq!(open_recovery(&[7u8; 32], account, &recovery), Some([9u8; 32]));
+
+        let kem = pair(
+            "cyUY9NDec3e+y7oXyzeyK6JXGVngewz8lRc5e+BHU/BEd9izvss0ctSVod321pZ9M6ctRzsId73nyD06x81YJ1jx1k3tn7e7vagHlqpE0WgWGWxRP0Rg54Sf3yQ2Nm8VC5FB9jB169O0622wxq6/FT6BPsB8mxunq+8x8HMKbrVvydU/",
+            "R0pZGQ7YYkGUZhQs9cUqzUdBWEndopkT",
+        );
+        assert_eq!(open_kem_seed(&[7u8; 32], &kem), Some([7u8; 64]));
     }
 
     #[test]

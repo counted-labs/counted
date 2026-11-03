@@ -76,6 +76,7 @@ pub(crate) fn run_delete_expense(
         return;
     }
     spawn(async move {
+        crate::common::project_token::scope(req.project_id);
         match delete_expense(Json(req)).await {
             Ok(()) => on_done(),
             Err(e) => flash.set(Some(Flash::err(error_message(&e)))),

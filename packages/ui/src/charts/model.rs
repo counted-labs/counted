@@ -232,7 +232,7 @@ pub fn auto_bucket(from: NaiveDate, to: NaiveDate) -> Bucket {
 pub fn bucket_start(date: NaiveDate, bucket: Bucket) -> NaiveDate {
     match bucket {
         Bucket::Day => date,
-        Bucket::Week => date - Duration::days(date.weekday().num_days_from_monday() as i64),
+        Bucket::Week => date.checked_sub_signed(Duration::days(date.weekday().num_days_from_monday() as i64)).unwrap_or(NaiveDate::MIN),
         Bucket::Month => date.with_day(1).unwrap_or(date),
     }
 }

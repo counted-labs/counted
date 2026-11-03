@@ -32,6 +32,10 @@ Gratis, sin anuncios ni rastreadores, sin límite de gastos ni de participantes.
 • Sin conexión: consulta y apunta sin red
 • Exportación CSV y JSON con un toque
 • Datos de pago (IBAN, PayPal, Wero, Lydia, Revolut…) cifrados como todo lo demás
+• Cambia la contraseña sin perder nada; si la olvidas, una clave de recuperación te lo devuelve todo
+• Contraseña filtrada o móvil perdido: nuevas claves de cuenta y sesión cerrada en los demás dispositivos
+• Admins del proyecto: quitar a alguien cambia la clave del proyecto, y su enlace antiguo ya no abre nada
+• Los miembros con cuenta reciben la nueva clave solos, con cifrado poscuántico; los demás, un enlace nuevo
 • Importación desde Tricount: pega el enlace para compartir y se pasa todo
 • Web, Android e iOS: el mismo proyecto en todas partes, con el mismo enlace
 • 32 idiomas, incluidas las 24 lenguas oficiales de la UE

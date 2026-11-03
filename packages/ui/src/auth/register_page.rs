@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use crate::tid;
 
-use crate::auth::credentials::{account_key, password_error_key, sign_up};
+use crate::auth::credentials::{account_key, nfc, password_error_key, sign_up};
 use crate::common::{error_message, next_paint, read_from_ls, AppHeader, Mascot, MascotPose};
 use crate::crypto::{encrypt_padded_json, generate_kdf_salt};
 use crate::i18n::current_lang;
@@ -47,7 +47,7 @@ fn RegisterForm() -> Element {
             next_paint().await;
 
             let kdf_salt = generate_kdf_salt();
-            let account_key = match account_key(&password_val, kdf_salt.to_vec()).await {
+            let account_key = match account_key(&nfc(&password_val), kdf_salt.to_vec()).await {
                 Ok(k) => k,
                 Err(e) => {
                     error_msg.set(Some(error_message(&e)));
@@ -167,7 +167,7 @@ fn RegisterForm() -> Element {
                         class: "input w-full",
                         r#type: "password",
                         required: true,
-                        minlength: "8",
+                        minlength: "{shared::MIN_PASSWORD_LENGTH}",
                         maxlength: "128",
                         placeholder: tid!("register-password-placeholder"),
                         autocomplete: "new-password",

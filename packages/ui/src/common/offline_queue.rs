@@ -145,6 +145,12 @@ pub fn queued_expenses(queue: &VecDeque<QueuedOp>, project_id: Uuid, now: NaiveD
         .collect()
 }
 
+/// A project taken off this device takes its queued ops with it (D15): they would replay under a
+/// key it no longer lists.
+pub fn drop_project_ops(queue: &mut VecDeque<QueuedOp>, project_id: Uuid) {
+    queue.retain(|op| op.op.project_id() != project_id);
+}
+
 pub fn read_queue() -> VecDeque<QueuedOp> {
     read_json(QUEUE_KEY)
 }
@@ -215,6 +221,18 @@ mod tests {
         assert!(rows.iter().all(|e| is_pending_expense(e.id) && e.project_id == Uuid::nil()));
         assert_eq!(rows[0].payload, ep());
         assert_eq!(queued_expenses(&queue, other, now).iter().map(|e| e.id).collect::<Vec<_>>(), vec![-3]);
+    }
+
+    #[test]
+    fn removing_a_project_from_the_list_drops_only_its_queued_ops() {
+        let other = Uuid::new_v4();
+        let mut elsewhere = add_expense_op("elsewhere");
+        if let OpKind::AddExpense(c) = &mut elsewhere.op {
+            c.project_id = other;
+        }
+        let mut queue: VecDeque<QueuedOp> = [add_expense_op("a"), elsewhere, edit_expense_op()].into();
+        drop_project_ops(&mut queue, Uuid::nil());
+        assert_eq!(queue.iter().map(|op| op.op.project_id()).collect::<Vec<_>>(), vec![other]);
     }
 
     fn edit_expense_op() -> QueuedOp {

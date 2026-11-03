@@ -168,7 +168,8 @@ async fn load_projects() -> Vec<ProjectInfo> {
     if ids.is_empty() {
         return vec![];
     }
-    let Ok(encrypted) = get_projects_by_ids(Json(BatchProject { ids })).await else {
+    let tokens = crate::common::project_token::tokens(&ids);
+    let Ok(encrypted) = get_projects_by_ids(Json(BatchProject { ids, tokens })).await else {
         return vec![];
     };
     encrypted
@@ -239,6 +240,7 @@ async fn load_users(project: Option<Uuid>) -> Vec<DecryptedUser> {
     let Some(key) = project_key(pid) else {
         return vec![];
     };
+    crate::common::project_token::scope(pid);
     let Ok(users) = get_users_by_project_id(pid).await else {
         return vec![];
     };
@@ -577,6 +579,49 @@ pub fn ChartsPage() -> Element {
     }
 }
 
+#[cfg(any(test, fuzzing))]
+pub(crate) fn exercise_hostile(expenses: Vec<Expense>, payments: Vec<shared::Payment>, users: Vec<shared::User>, me: i32, from: Option<NaiveDate>, to: Option<NaiveDate>) {
+    use super::model::{aggregate_by_category, expenses_in_category, folded_category, percent};
+    use crate::common::test_fixtures::TEST_KEY;
+
+    let (expenses, payments) = decrypt_ledger(&TEST_KEY, &expenses, &payments);
+    let users: Vec<DecryptedUser> = users.iter().filter_map(|u| decrypt_user(&TEST_KEY, u).ok()).collect();
+    let today = NaiveDate::from_ymd_opt(2026, 11, 1).unwrap();
+    let group = in_projects(&filter_by_date_range(&expenses, from, to), &HashSet::from([Uuid::nil()]));
+    let my_share = sum_by_expense(&payments, me, true);
+    let my_paid = sum_by_expense(&payments, me, false);
+    let mine = with_my_share(&group, &my_share);
+    let from = from.or_else(|| earliest_date(&group)).unwrap_or(today);
+    let to = to.unwrap_or(today).max(from);
+
+    let total = total_spend(&group);
+    let _ = (expense_count(&group), per_person(total, users.len()), sum_over(&group, &my_paid), percent(total_spend(&mine), total));
+    let auto = auto_bucket(from, to);
+    for bucket in [Bucket::Day, Bucket::Week, Bucket::Month] {
+        let _ = bucket_count(from, to, bucket);
+        let starts = bucket_starts(from, to, bucket);
+        assert!(starts.len() <= MAX_BUCKETS);
+        let spend = sum_by_bucket(&group, &starts, bucket);
+        let _ = (label_every(starts.len(), 12), peak(&spend));
+        let _ = (running_total(&spend), average(&spend));
+        let _ = balance_by_bucket(&expenses, &payments, me, &starts, auto);
+    }
+    for set in [&group, &mine] {
+        let slices = fold_categories(&aggregate_by_category(set));
+        for (category, _) in &slices {
+            let _ = expenses_in_category(set, category, &slices);
+        }
+        for e in set.iter() {
+            let _ = folded_category(e, &slices);
+        }
+    }
+    let _ = category_shares(&group, &my_share);
+    let _ = paid_vs_share(&group, &payments);
+    let project = ProjectInfo { id: Uuid::nil(), name: "p".into(), currency: "EUR".into(), my_user_id: Some(me) };
+    let _ = totals_by_project(&mine, &[project]);
+    let _ = export_csv_string(&group, &users);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -604,6 +649,7 @@ mod tests {
             expenses: rows,
             recurring: None,
             server_date: None,
+            rotated: None,
         }
     }
 
@@ -730,6 +776,30 @@ mod tests {
         let csv = export_csv_string(&[e], &[]);
         for part in ["2025-06-15", "Dîner", "45.50", "expense"] {
             assert!(csv.contains(part), "{part} in {csv}");
+        }
+    }
+    #[test]
+    fn an_expense_dated_at_the_calendar_floor_charts_by_week() {
+        let key = test_key();
+        let expenses = vec![make_row(&key, 1, "x", 1.0, ExpenseType::Expense, "-262143-01-01")];
+        let (expenses, _) = decrypt_ledger(&key, &expenses, &[]);
+        let from = earliest_date(&expenses).expect("the date parses");
+        let to = NaiveDate::from_ymd_opt(2026, 11, 1).unwrap();
+        assert!(bucket_count(from, to, Bucket::Week) > MAX_BUCKETS);
+        assert!(bucket_starts(from, to, Bucket::Week).len() <= MAX_BUCKETS);
+    }
+
+    mod hostile_payloads {
+        use crate::common::hostile;
+        use proptest::prelude::*;
+
+        proptest! {
+            #![proptest_config(ProptestConfig::with_cases(300))]
+
+            #[test]
+            fn any_ledger_charts(expenses in hostile::expenses(), payments in hostile::payments(), users in hostile::users(), me in hostile::id(), from in proptest::option::of(hostile::date()), to in proptest::option::of(hostile::date())) {
+                crate::charts::charts_page::exercise_hostile(expenses, payments, users, me, from, to);
+            }
         }
     }
 }

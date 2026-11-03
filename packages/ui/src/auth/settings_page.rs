@@ -1,4 +1,4 @@
-use api::auth::auth_controller::{delete_account, logout, me};
+use api::auth::auth_controller::{logout, me};
 use dioxus::prelude::*;
 use crate::tid;
 use shared::Account;
@@ -6,9 +6,10 @@ use std::collections::VecDeque;
 
 use crate::common::{
     error_message, flush_session, format_date, haptic, read_from_ls, remove_quarantined_ls, unregister_push,
-    write_to_ls, AppHeader, AuthResolved, ConfirmModal, Haptic, LanguagePicker, LocalStorageState, PullToRefresh,
-    QueuedOp,
+    write_to_ls, AppHeader, AuthResolved, Haptic, LanguagePicker, LocalStorageState, PullToRefresh,
+    QueuedOp, ThemePicker,
 };
+use crate::auth::delete_account_sheet::DeleteAccountSheet;
 use crate::auth::erase_device::{check_erase, erase_device_stores, EraseCheck};
 use crate::auth::erase_device_sheet::EraseDeviceSheet;
 use crate::auth::{LockedFeatureCard, PaymentMethodsCard};
@@ -28,6 +29,8 @@ fn clear_local_session(
 ) {
     let mut state = read_from_ls();
     state.account_key = None;
+    state.account_key_owner = None;
+    state.account_key_epoch = None;
     write_to_ls(&state);
     ls_ctx.set(state);
     remove_quarantined_ls();
@@ -127,21 +130,10 @@ pub fn SettingsPage() -> Element {
         });
     };
 
-    let on_delete = move |_| {
+    let on_deleted = move |_| {
         show_delete_confirm.set(false);
-        spawn(async move {
-            loading.set(true);
-            match delete_account().await {
-                Ok(_) => {
-                    clear_local_session(ls_ctx, account_enc_key_ctx, auth_ctx);
-                    nav.push(Route::ProjectsPage {});
-                }
-                Err(e) => {
-                    error_msg.set(Some(error_message(&e)));
-                    loading.set(false);
-                }
-            }
-        });
+        clear_local_session(ls_ctx, account_enc_key_ctx, auth_ctx);
+        nav.push(Route::ProjectsPage {});
     };
 
     rsx! {
@@ -172,6 +164,7 @@ pub fn SettingsPage() -> Element {
                             }
                         }
                     }
+                    ThemePicker {}
                 }
             }
 
@@ -181,6 +174,8 @@ pub fn SettingsPage() -> Element {
             if !auth_resolved().0 {
                 div { class: "skeleton h-48 w-full", aria_hidden: "true" }
             } else if let Some(account) = account {
+                crate::auth::recovery_ui::PendingResetBanner {}
+                crate::auth::keypair_banner::KeypairMismatchBanner {}
                 div { class: "card bg-base-100 shadow-soft",
                     div { class: "card-body gap-2",
                         ul { class: "list",
@@ -231,6 +226,10 @@ pub fn SettingsPage() -> Element {
                             }
                         }
                     }
+                }
+
+                if account.key_lifecycle {
+                    crate::auth::security_card::SecurityCard { account: account.clone() }
                 }
 
                 Link {
@@ -351,12 +350,9 @@ pub fn SettingsPage() -> Element {
             }
 
             if show_delete_confirm() {
-                ConfirmModal {
-                    title: tid!("account-delete-confirm-title"),
-                    message: tid!("account-delete-confirm-message"),
-                    confirm_label: tid!("delete"),
-                    on_cancel: move |_| show_delete_confirm.set(false),
-                    on_confirm: on_delete,
+                DeleteAccountSheet {
+                    on_close: move |_| show_delete_confirm.set(false),
+                    on_deleted,
                 }
             }
         }

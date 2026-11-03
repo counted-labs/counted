@@ -14,6 +14,7 @@ use shared::{
 };
 use std::collections::{HashMap, HashSet};
 
+use crate::common::creator_proof::{keep_creator_secret, new_creator_proof};
 use crate::common::{error_message, update_ls, upsert_project, upsert_project_key, LocalStorageState, NativeClipboardReader};
 use crate::crypto::{
     claim_token, claim_verifier, encrypt_padded_json, generate_key, key_to_fragment,
@@ -74,7 +75,6 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
         error_msg.set(None);
 
         let is_auth = auth_ctx().is_some();
-        let typed = auth_ctx().is_some_and(|a| a.typed_wraps);
         let account_key = account_key_ctx();
 
         spawn(async move {
@@ -124,10 +124,13 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                 }
             };
 
+            let demo = crate::common::persist::is_demo();
+            let (creator_secret, creator_verifier) = new_creator_proof(!is_auth && !demo);
             let project = match add_project(Json(CreatableProject {
                 payload: project_payload,
                 claim_verifier: Some(claim_verifier(&enc_key).to_vec()),
-                demo: crate::common::persist::is_demo(),
+                demo,
+                creator_verifier,
             }))
             .await
             {
@@ -144,6 +147,7 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
             update_ls(ls_ctx, |state| {
                 upsert_project(state, project.id, None);
                 upsert_project_key(state, project.id, key_fragment);
+                keep_creator_secret(state, project.id, creator_secret);
             });
 
             let creatables: Vec<CreatableUser> = match members
@@ -170,6 +174,7 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
             let created_users = if creatables.is_empty() {
                 vec![]
             } else {
+                crate::common::project_token::scope_key(Some(&enc_key));
                 match add_user(Json(CreatableUserBatch::Multiple(creatables))).await {
                     Ok(u) => u,
                     Err(e) => {
@@ -239,6 +244,7 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
             }
 
             if !expenses_batch.is_empty() {
+                crate::common::project_token::scope_key(Some(&enc_key));
                 if let Err(e) = batch_add_expenses(Json(expenses_batch)).await {
                     error_msg.set(Some(error_message(&e)));
                     loading.set(false);
@@ -249,14 +255,16 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
             // user_id is None - the user identifies themselves later via UserSelectionModal, which
             // is also what attaches the claim label. Nothing to claim here yet.
             if is_auth {
-                let _ = upsert_account_project(Json(UpsertAccountProject {
-                    key: account_key.and_then(|ak| wrap_key(&ak, WrapUse::Escrow(project.id), &enc_key, typed)),
+                let escrowed = upsert_account_project(Json(UpsertAccountProject {
+                    key: account_key.and_then(|ak| wrap_key(&ak, WrapUse::Escrow(project.id), &enc_key)),
                     project_id: project.id,
                     user_id: None,
                     claim_label: None,
                     claim_token: Some(claim_token(&enc_key).to_vec()),
+                    amk_epoch: crate::auth::account_key::held_amk_epoch(),
                 }))
                 .await;
+                crate::auth::account_key::note(&escrowed);
             }
 
             props.on_close.call(());

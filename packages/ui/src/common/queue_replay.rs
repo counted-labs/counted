@@ -76,10 +76,22 @@ pub async fn replay_queue(
 
 async fn replay(op: &OpKind) -> Result<(), ServerFnError> {
     match op.clone() {
-        OpKind::AddExpense(p) => add_expense(Json(p)).await.map(|_| ()),
-        OpKind::EditExpense(p) => edit_expense(Json(p)).await.map(|_| ()),
-        OpKind::DeleteExpense(p) => delete_expense(Json(p)).await.map(|_| ()),
-        OpKind::UpdateProject(p) => update_project_by_id(Json(p)).await.map(|_| ()),
+        OpKind::AddExpense(p) => {
+            crate::common::project_token::scope(p.project_id);
+            add_expense(Json(p)).await.map(|_| ())
+        }
+        OpKind::EditExpense(p) => {
+            crate::common::project_token::scope(p.project_id);
+            edit_expense(Json(p)).await.map(|_| ())
+        }
+        OpKind::DeleteExpense(p) => {
+            crate::common::project_token::scope(p.project_id);
+            delete_expense(Json(p)).await.map(|_| ())
+        }
+        OpKind::UpdateProject(p) => {
+            crate::common::project_token::scope(p.id);
+            update_project_by_id(Json(p)).await.map(|_| ())
+        }
         // Rebuilt on the payload the server holds now, so a field written meanwhile - by
         // another device or a newer build - survives the replay.
         OpKind::EditProject(edit) => match project_key(edit.project_id) {

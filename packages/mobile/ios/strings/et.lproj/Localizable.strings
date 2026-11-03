@@ -3,3 +3,4 @@
 "push.friend_accepted" = "Sinu sõbrakutse võeti vastu";
 "push.project_invitation" = "Uus kutse projekti";
 "push.project_closed" = "Üks sinu projektidest suleti";
+"push.key_changed" = "Ühe sinu projekti võti muutus";

@@ -1,5 +1,6 @@
 //! Encrypted fixtures shared by the test modules. Every builder takes the key explicitly so a
 //! test can encrypt with one key and assert that a different one fails.
+#![cfg_attr(not(test), allow(dead_code))]
 
 use chrono::NaiveDateTime;
 use shared::{
@@ -40,7 +41,10 @@ pub(crate) fn make_project(key: &[u8; 32], id: Uuid, name: &str, currency: &str)
         .unwrap(),
         status: ProjectStatus::Ongoing,
         created_at: NaiveDateTime::default(),
-        owner_account_id: None,
+        has_admin: false,
+        key_lifecycle: false,
+        key_epoch: 0,
+        has_creator_proof: false,
         read_only: false,
     }
 }
@@ -139,7 +143,7 @@ pub(crate) fn make_payment(
 ///
 /// The value is returned so assertions can run *after* cleanup - a failing assertion then
 /// cannot leave the temp dir or the env var behind for the next test.
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 pub(crate) fn with_data_dir<T>(suffix: &str, f: impl FnOnce(&std::path::Path) -> T) -> T {
     let _guard = super::env_lock();
     let dir = std::env::temp_dir().join(format!("counted_test_{suffix}"));

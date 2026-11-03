@@ -3,3 +3,4 @@
 "push.friend_accepted" = "Tavo draugystės užklausa priimta";
 "push.project_invitation" = "Naujas kvietimas į projektą";
 "push.project_closed" = "Vienas iš tavo projektų uždarytas";
+"push.key_changed" = "Vieno tavo projekto raktas pasikeitė";

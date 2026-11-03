@@ -465,6 +465,11 @@ pub struct ProjectSync {
     /// The server's UTC date: the one clock every member's materialization is measured against.
     #[serde(default)]
     pub server_date: Option<NaiveDate>,
+    /// Set, with nothing else, for a project whose key changed since the token this device sent
+    /// (D17): the device switches through a box or its escrow, or shows the project as lost.
+    /// Clients before it find no `project` and skip the entry.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rotated: Option<Uuid>,
 }
 
 /// Sent by a client with nothing cached - no real version can be negative, so it never matches.
@@ -492,6 +497,10 @@ pub const NONCE_LENGTH: usize = 24;
 /// the row into free storage. The same cap bounds every per-project copy, which is a subset.
 pub const MAX_PAYMENT_METHODS_LENGTH: usize = 32768;
 
+/// Ceiling on the encrypted `Preferences` blob's `ct` and `iv`, in base64 characters. Here so the
+/// client pads up to it and no further.
+pub const MAX_PREFERENCES_LENGTH: usize = 4096;
+
 /// Ceiling on how many projects one account may hold, and so on how many ids a client may ask
 /// about in one batch. A membership row keeps a project alive and there is no way for the real
 /// members to evict a stranger, so this bounds how much of other people's data one account can pin.
@@ -508,7 +517,7 @@ pub struct ExpenseWithPayments {
     pub payments: Vec<Payment>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Account {
     pub id: Uuid,
@@ -535,6 +544,63 @@ pub struct Account {
     /// written typed and the private key is re-wrapped. Set by the server from `MIN_APP_VERSION`.
     #[serde(default)]
     pub typed_wraps: bool,
+    /// How many times the account master key changed. At 0 the master key is the password-derived
+    /// key itself (docs/plans/key-lifecycle.md §3).
+    #[serde(default)]
+    pub amk_epoch: i32,
+    /// The master key under the password-derived key, typed with the account id and `amk_epoch`.
+    /// `None` at epoch 0.
+    #[serde(default)]
+    pub amk_wrap: Option<EncryptedPair>,
+    /// Every build older than [`KEY_LIFECYCLE_FROM`] is refused, so an account may leave epoch 0:
+    /// password change, recovery key and key rotation are offered. Set by the server.
+    #[serde(default)]
+    pub key_lifecycle: bool,
+    /// ML-KEM-768 encapsulation key, the post-quantum half of the account's hybrid keypair. `None`
+    /// until a build that makes one has started with the account's master key.
+    #[serde(default)]
+    pub kem_public_key: Option<Vec<u8>>,
+    /// Its 64-byte seed, a typed wrap under the master key.
+    #[serde(default)]
+    pub kem_private_key: Option<EncryptedPair>,
+    /// Whether a recovery key is in effect (docs/plans/key-lifecycle.md §6.1).
+    #[serde(default)]
+    pub has_recovery_key: bool,
+    /// When a requested recovery-key replacement takes effect. Until then the current key works,
+    /// and cancels it.
+    #[serde(default)]
+    pub recovery_pending_at: Option<NaiveDateTime>,
+    /// When a reset requested without the recovery key takes effect (plan §6.3).
+    #[serde(default)]
+    pub pending_reset_at: Option<NaiveDateTime>,
+    /// How many resets retired this account's memberships. A device that sees it move pushes its
+    /// projects back rather than forgetting them as left elsewhere.
+    #[serde(default)]
+    pub membership_epoch: i32,
+}
+
+/// `PUT /auth/kem-key`. Write-once, like the X25519 keypair.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct KemKeypair {
+    pub public_key: Vec<u8>,
+    pub private_key: EncryptedPair,
+    #[serde(default)]
+    pub amk_epoch: Option<i32>,
+}
+
+/// ML-KEM-768 encapsulation key and ciphertext sizes (FIPS 203).
+pub const KEM_PUBLIC_KEY_LENGTH: usize = 1184;
+pub const KEM_CIPHERTEXT_LENGTH: usize = 1088;
+
+/// A hybrid X25519 + ML-KEM-768 box (docs/plans/key-lifecycle.md §7).
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct HybridBox {
+    pub ephemeral: Vec<u8>,
+    pub kem_ct: Vec<u8>,
+    pub nonce: Vec<u8>,
+    pub ct: Vec<u8>,
 }
 
 /// `PUT /auth/keypair`. Write-once: the server keeps the first keypair an account presents.
@@ -543,6 +609,244 @@ pub struct Account {
 pub struct Keypair {
     pub public_key: Vec<u8>,
     pub private_key: EncryptedPair,
+    /// The master-key epoch the private key was wrapped under. A missing value reads as 0.
+    #[serde(default)]
+    pub amk_epoch: Option<i32>,
+}
+
+/// The first build that reads the account master key and sends `amk_epoch` on every account-key
+/// write. No account leaves epoch 0 before `MIN_APP_VERSION` reaches it.
+pub const KEY_LIFECYCLE_FROM: &str = "3.2.9";
+
+/// `POST /auth/account/delete`: the password's proof, as a login sends it, so a session alone (any
+/// script on the origin, an unlocked device) cannot erase the account (security review 2026-11-02 L3).
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteAccount {
+    pub proof: Vec<u8>,
+}
+
+/// `PUT /auth/password` (docs/plans/key-lifecycle.md §4, §5). The proof is derived with the
+/// unchanged `login_salt`; `amk_wrap` holds the master key under the new password-derived key, at
+/// `expected_amk_epoch`, plus one when `rotation` is set.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ChangePassword {
+    pub current_proof: Vec<u8>,
+    pub new_proof: Vec<u8>,
+    pub new_kdf_salt: Vec<u8>,
+    pub amk_wrap: EncryptedPair,
+    pub expected_amk_epoch: i32,
+    /// Required at epoch 0: every account blob re-encrypted under a new random master key.
+    #[serde(default)]
+    pub rotation: Option<AccountRotation>,
+    /// A compromise rotation's new recovery key: a replacement, effective 72 hours later.
+    #[serde(default)]
+    pub recovery: Option<RecoverySetup>,
+}
+
+/// Every account-key blob under a new master key. `escrow` and `friend_labels` must name exactly
+/// the account's current rows; `wrap: None` marks one that did not open under the old key. What
+/// the rotation supersedes is retired, never overwritten (plan §5).
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AccountRotation {
+    pub display_name: EncryptedPair,
+    #[serde(default)]
+    pub preferences: Option<EncryptedPair>,
+    #[serde(default)]
+    pub payment_methods: Option<EncryptedPair>,
+    /// The private key re-wrapped, or a new one when `keypair` is set. `None` when it did not
+    /// open: the account then has no keypair until the next sign-in seeds one.
+    #[serde(default)]
+    pub private_key: Option<EncryptedPair>,
+    pub escrow: Vec<RotatedWrap>,
+    pub friend_labels: Vec<RotatedWrap>,
+    /// The ML-KEM seed re-wrapped, or a new one with `new_keypair`. `None` drops the ML-KEM key,
+    /// which the next app start makes again.
+    #[serde(default)]
+    pub kem_private_key: Option<EncryptedPair>,
+    /// A compromise rotation (plan §5): both halves of the keypair replaced. Friends see their code
+    /// for this account change.
+    #[serde(default)]
+    pub new_keypair: Option<NewPublicKeys>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct NewPublicKeys {
+    pub public_key: Vec<u8>,
+    pub kem_public_key: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RotatedWrap {
+    pub id: Uuid,
+    #[serde(default)]
+    pub wrap: Option<EncryptedPair>,
+}
+
+/// A recovery key's wrap of the master key and `SHA-256(recovery_auth)` (plan §6.1).
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct RecoverySetup {
+    pub recovery_wrap: EncryptedPair,
+    pub recovery_verifier: Vec<u8>,
+}
+
+/// `PUT /auth/recovery-key`. A first key takes effect at once; a replacement 72 hours later. At
+/// epoch 0 the account first moves to a random master key: `rotation` and `amk_wrap` (under the
+/// unchanged password) are then required.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SetRecoveryKey {
+    pub current_proof: Vec<u8>,
+    pub expected_amk_epoch: i32,
+    pub setup: RecoverySetup,
+    #[serde(default)]
+    pub rotation: Option<AccountRotation>,
+    #[serde(default)]
+    pub amk_wrap: Option<EncryptedPair>,
+}
+
+/// The auth secret derived from a recovery key: `HKDF-SHA256(key, salt = account id,
+/// info = "counted-recovery-auth-v1")`. The server compares its SHA-256 with the stored verifier.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RecoveryAuth {
+    pub recovery_auth: Vec<u8>,
+}
+
+pub const RECOVERY_AUTH_LENGTH: usize = 32;
+pub const RESET_TOKEN_LENGTH: usize = 64;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ForgotPassword {
+    pub email: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ResetToken {
+    pub token: String,
+}
+
+/// What the holder of a reset link learns: they own the mailbox, so nothing here is news to them.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RecoveryStart {
+    pub account_id: Uuid,
+    pub login_salt: Vec<u8>,
+    pub amk_epoch: i32,
+    pub has_recovery_key: bool,
+    pub pending_reset_at: Option<NaiveDateTime>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RecoveryWrapRequest {
+    pub token: String,
+    pub recovery_auth: Vec<u8>,
+}
+
+/// The recovery wrap and what checks the master key it opens: the private key and its public
+/// half. `generation` is set when the key opens a retired generation (plan §5): recovering then
+/// restores it.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RecoveryWrap {
+    pub recovery_wrap: EncryptedPair,
+    pub generation: Option<i32>,
+    pub public_key: Option<Vec<u8>>,
+    pub private_key: Option<EncryptedPair>,
+}
+
+/// `POST /auth/recovery/complete`: a new password over the recovered master key, at
+/// `expected_amk_epoch`, plus one when a retired generation is restored.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CompleteRecovery {
+    pub token: String,
+    pub recovery_auth: Vec<u8>,
+    pub new_proof: Vec<u8>,
+    pub new_kdf_salt: Vec<u8>,
+    pub amk_wrap: EncryptedPair,
+    pub expected_amk_epoch: i32,
+    #[serde(default)]
+    pub generation: Option<i32>,
+}
+
+/// `POST /auth/reset/request`: a fresh account under a new master key, applied 72 hours later
+/// (plan §6.3). `amk_wrap` is typed with the current epoch plus one.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RequestReset {
+    pub token: String,
+    pub new_proof: Vec<u8>,
+    pub new_kdf_salt: Vec<u8>,
+    pub amk_wrap: EncryptedPair,
+    pub display_name: EncryptedPair,
+    pub private_key: EncryptedPair,
+    pub kem_private_key: EncryptedPair,
+    pub keys: NewPublicKeys,
+}
+
+/// `POST /auth/reset/cancel`: the proof of the password, or the recovery key, in place when the
+/// reset was requested, which must have been 72 hours old by then.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CancelReset {
+    pub email: String,
+    #[serde(default)]
+    pub proof: Option<Vec<u8>>,
+    #[serde(default)]
+    pub recovery_auth: Option<Vec<u8>>,
+}
+
+/// A retired generation's password proof, for what that generation holds.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RetiredProof {
+    pub email: String,
+    pub proof: Vec<u8>,
+}
+
+/// What a reset retired, served after its password's proof: enough to open its master key and
+/// check it.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RetiredGeneration {
+    pub account_id: Uuid,
+    pub generation: i32,
+    pub amk_epoch: i32,
+    pub current_amk_epoch: i32,
+    pub kdf_salt: Vec<u8>,
+    pub amk_wrap: Option<EncryptedPair>,
+    pub display_name: EncryptedPair,
+    pub public_key: Option<Vec<u8>>,
+    pub private_key: Option<EncryptedPair>,
+}
+
+/// `POST /auth/reset/undo`: the retired generation becomes current again, its master key wrapped
+/// under its own password at the current epoch plus one.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct UndoReset {
+    pub email: String,
+    pub proof: Vec<u8>,
+    pub generation: i32,
+    pub amk_wrap: EncryptedPair,
+}
+
+/// `GET /auth/rotation-set`: the account's escrow rows and friend labels as stored, which a
+/// rotation must cover exactly.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct RotationSet {
+    pub escrow: Vec<RotatedWrap>,
+    pub friend_labels: Vec<RotatedWrap>,
 }
 
 pub const PUBLIC_KEY_LENGTH: usize = 32;
@@ -562,6 +866,10 @@ pub const MAX_FRIEND_LABEL_LENGTH: usize = 1024;
 pub struct FriendRequestByEmail {
     pub email: String,
     pub label: EncryptedPair,
+    /// The master-key epoch the blob was written under (docs/plans/key-lifecycle.md §3). A missing
+    /// value reads as 0, so an older client is refused once the account has left epoch 0.
+    #[serde(default)]
+    pub amk_epoch: Option<i32>,
 }
 
 /// `POST /friends/requests/from-project`: the claimed participant `user_id` of a project the caller
@@ -572,6 +880,10 @@ pub struct FriendRequestFromProject {
     pub project_id: Uuid,
     pub user_id: i32,
     pub label: EncryptedPair,
+    /// The master-key epoch the blob was written under (docs/plans/key-lifecycle.md §3). A missing
+    /// value reads as 0, so an older client is refused once the account has left epoch 0.
+    #[serde(default)]
+    pub amk_epoch: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -778,6 +1090,11 @@ pub struct PaymentMethods {
 pub struct ProjectPaymentMethods {
     pub project_id: Uuid,
     pub payment_methods: EncryptedPair,
+    /// The project's claim token (docs/plans/key-lifecycle.md §8.2): once enforced, a copy whose
+    /// token does not match is dropped, so a device not yet switched to a new key writes nothing
+    /// unreadable into a project now under it.
+    #[serde(default)]
+    pub token: Option<Vec<u8>>,
 }
 
 /// Body of `PUT /api/v1/auth/payment-methods`. `account` is flattened so the bare `{ct, iv}` an
@@ -798,6 +1115,10 @@ pub struct UpdatePaymentMethods {
     pub shared: Vec<ProjectPaymentMethods>,
     #[serde(default)]
     pub expected_iv: Option<String>,
+    /// The master-key epoch the blob was written under (docs/plans/key-lifecycle.md §3). A missing
+    /// value reads as 0, so an older client is refused once the account has left epoch 0.
+    #[serde(default)]
+    pub amk_epoch: Option<i32>,
 }
 
 /// `PUT /auth/preferences`. The server writes only while `expected_iv` is still the stored blob's
@@ -810,6 +1131,10 @@ pub struct UpdatePreferences {
     pub preferences: EncryptedPair,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expected_iv: Option<String>,
+    /// The master-key epoch the blob was written under (docs/plans/key-lifecycle.md §3). A missing
+    /// value reads as 0, so an older client is refused once the account has left epoch 0.
+    #[serde(default)]
+    pub amk_epoch: Option<i32>,
 }
 
 /// Byte lengths the auth endpoints accept. Shared so the client that produces them and the server
@@ -818,7 +1143,7 @@ pub const LOGIN_SALT_LENGTH: usize = 16;
 pub const LOGIN_PROOF_LENGTH: usize = 32;
 /// Password bounds, enforced on the client only: the server never sees the password, so the
 /// length is not its to check.
-pub const MIN_PASSWORD_LENGTH: usize = 8;
+pub const MIN_PASSWORD_LENGTH: usize = 12;
 pub const MAX_PASSWORD_LENGTH: usize = 128;
 
 /// How the login proof is derived from the password. The server only ever holds a hash of the
@@ -913,13 +1238,21 @@ pub struct ProjectDto {
     pub payload: EncryptedPair,
     pub status: ProjectStatus,
     pub created_at: NaiveDateTime,
-    /// Server-side only. An account id is stable across projects, so returning it to every holder
-    /// of a project UUID would let two leaked share links prove the same person is in both - the
-    /// exact correlation `anonymous_project_members.member_id` is per-project to prevent. The
-    /// server still needs it for the ownership handover in `leave_project`, so the field stays and
-    /// only the wire drops it.
-    #[serde(skip_serializing, default)]
-    pub owner_account_id: Option<Uuid>,
+    /// Whether an account member holds the admin role (docs/plans/key-lifecycle.md §8.7). A group
+    /// without one cannot change its key: the actions say so instead of offering an account.
+    #[serde(default)]
+    pub has_admin: bool,
+    /// `MIN_APP_VERSION` has reached `KEY_LIFECYCLE_FROM`, as `Account.key_lifecycle`: the
+    /// group's security actions show only then. Here too, so a device without an account knows.
+    #[serde(default)]
+    pub key_lifecycle: bool,
+    /// How many times the key changed. A device writes its member key entry again when it moves.
+    #[serde(default)]
+    pub key_epoch: i32,
+    /// The project still holds its creator's proof (D9): nobody claimed it yet, so a device
+    /// without the secret says only the creator can become admin.
+    #[serde(default)]
+    pub has_creator_proof: bool,
     /// The public demo. Enforced by triggers in the database; the client only hides the controls.
     #[serde(default)]
     pub read_only: bool,
@@ -936,6 +1269,10 @@ pub struct CreatableProject {
     /// A visitor's throwaway copy from `/demo`: never owned, never a member, swept after 24h.
     #[serde(default)]
     pub demo: bool,
+    /// Base64 `SHA-256` of the creator secret (D9), from a creator without an account. Ignored
+    /// for a demo or a signed-in creator, who is admin already.
+    #[serde(default)]
+    pub creator_verifier: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -962,6 +1299,10 @@ pub struct EditableProject {
 #[serde(rename_all = "camelCase")]
 pub struct BatchProject {
     pub ids: Vec<Uuid>,
+    /// Each project's claim token, in the order of `ids` (docs/plans/key-lifecycle.md §8.2). Once
+    /// enforced, a project with a verifier is dropped from the answer unless its token matches.
+    #[serde(default)]
+    pub tokens: Vec<Option<Vec<u8>>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -969,6 +1310,9 @@ pub struct BatchProject {
 pub struct KnownProject {
     pub id: Uuid,
     pub known_version: i64,
+    /// The project's claim token, as in `BatchProject`.
+    #[serde(default)]
+    pub token: Option<Vec<u8>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1004,6 +1348,9 @@ pub struct AccountProject {
     /// `None` from a server predating it means "unknown", which converts as before.
     #[serde(default)]
     pub history_has_actors: Option<bool>,
+    /// This account administers the project: it may change the key and remove members.
+    #[serde(default)]
+    pub admin: bool,
 }
 
 /// Bytes the claim proof is made of. Shared so client and server agree on the lengths.
@@ -1037,6 +1384,10 @@ pub struct UpsertAccountProject {
     /// none. The server compares hashes and stores hashes, never the token.
     #[serde(default)]
     pub claim_token: Option<Vec<u8>>,
+    /// The master-key epoch the blob was written under (docs/plans/key-lifecycle.md §3). A missing
+    /// value reads as 0, so an older client is refused once the account has left epoch 0.
+    #[serde(default)]
+    pub amk_epoch: Option<i32>,
 }
 
 /// What the login-time reconciliation actually managed to write.
@@ -1064,6 +1415,34 @@ pub struct BatchUpsertResult {
 pub struct JoinProject {
     pub project_id: Uuid,
     pub member_id: Uuid,
+}
+
+/// `POST /projects/admins`: an admin gives the role to the account that claimed `user_id`.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct GrantAdmin {
+    pub project_id: Uuid,
+    pub user_id: i32,
+}
+
+/// `POST /projects/admins/revoke`: an admin takes the role from the account that claimed `user_id`.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RevokeAdmin {
+    pub project_id: Uuid,
+    pub user_id: i32,
+}
+
+/// Bytes of the creator secret (D9), sent base64 to `POST /projects/creator/claim`.
+pub const CREATOR_SECRET_LENGTH: usize = 32;
+
+/// `POST /projects/creator/claim`: the signed-in creator proves they made the project.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ClaimCreator {
+    pub project_id: Uuid,
+    /// Base64 of the secret whose `SHA-256` the project was created with.
+    pub secret: String,
 }
 
 /// `member_id` is set when this device joined anonymously. The account side is read from the
@@ -1095,6 +1474,9 @@ pub struct User {
     /// claimant shares nothing, or when there is no claimant.
     #[serde(default)]
     pub payment_methods: Option<EncryptedPair>,
+    /// The claimant administers the project, so the locked admin actions can name who to ask.
+    #[serde(default)]
+    pub admin: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -1161,8 +1543,9 @@ pub struct HistoryEntry {
     pub id: i64,
     pub project_id: Uuid,
     pub actor_user_id: Option<i32>,
-    /// Server-side only, for the same reason as `ProjectDto::owner_account_id`: it is a stable
-    /// cross-project identifier and every history read is open to any project-UUID holder.
+    /// Server-side only: an account id is a stable cross-project identifier, so two leaked share
+    /// links would prove the same person is in both, and every history read is open to any
+    /// project-UUID holder.
     #[serde(skip_serializing, default)]
     pub actor_account_id: Option<Uuid>,
     pub action: HistoryAction,
@@ -1737,7 +2120,7 @@ mod tests {
 
     #[test]
     fn pad_json_doubles_from_256() {
-        assert_eq!(pad_json("{}".to_string()).len(), 256);
+        assert_eq!(pad_json("{}".to_string()), format!("{{}}{}", " ".repeat(254)));
         assert_eq!(pad_json("x".repeat(256)).len(), 256);
         assert_eq!(pad_json("x".repeat(257)).len(), 512);
         assert_eq!(pad_json("x".repeat(3000)).len(), 4096);
@@ -1867,4 +2250,137 @@ mod tests {
         assert_eq!(e.author_id, Some(3));
         assert_eq!(e.shares, Some(vec![ExpenseShare { user_id: 3, amount: 2.0, is_debt: false }]));
     }
+}
+
+/// The sets of ciphertext a project rotation re-encrypts (docs/plans/key-lifecycle.md §8.3), in the
+/// order a rotation reads them. `claim_labels` and `payment_methods` are the members' own rows of
+/// `account_projects`, under the project key.
+pub const ROTATION_TABLES: [&str; 8] =
+    ["projects", "users", "expenses", "payments", "recurring_expenses", "project_history", "claim_labels", "payment_methods"];
+
+/// Rows per page of `POST /projects/rotation/rows`, and per staged batch.
+pub const ROTATION_PAGE: usize = 200;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct StartRotation {
+    pub project_id: Uuid,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RotationStarted {
+    pub rotation_id: Uuid,
+    /// The epoch the new key will have.
+    pub key_epoch: i32,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RotationRow {
+    pub id: String,
+    pub payload: EncryptedPair,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ReadRotationRows {
+    pub project_id: Uuid,
+    pub rotation_id: Uuid,
+    pub table: String,
+    #[serde(default)]
+    pub after: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct StageRotationRows {
+    pub project_id: Uuid,
+    pub rotation_id: Uuid,
+    pub table: String,
+    pub rows: Vec<RotationRow>,
+}
+
+/// An account member as the rotater sees it: who to box the new key to. Account ids and public
+/// keys reach the group's admins only.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RotationMember {
+    pub account_id: Uuid,
+    pub user_id: Option<i32>,
+    pub public_key: Option<Vec<u8>>,
+    pub kem_public_key: Option<Vec<u8>>,
+    /// `{"use":"member-key","account":..,"x25519":..,"kem":..}` under the project key, written by that member.
+    pub member_key: Option<EncryptedPair>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct BoxedRotationKey {
+    pub to_account_id: Uuid,
+    pub sealed: HybridBox,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct QuarantinedRow {
+    pub table: String,
+    pub id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CommitRotation {
+    pub project_id: Uuid,
+    pub rotation_id: Uuid,
+    /// `SHA-256` of the new key's claim token.
+    pub new_verifier: Vec<u8>,
+    /// The new key wrapped under the rotater's master key, typed for this project.
+    pub escrow: EncryptedPair,
+    #[serde(default)]
+    pub amk_epoch: Option<i32>,
+    /// The rotater's own directory entry, under the new key.
+    #[serde(default)]
+    pub member_key: Option<EncryptedPair>,
+    #[serde(default)]
+    pub boxes: Vec<BoxedRotationKey>,
+    /// Account members whose membership goes in the same transaction as the key.
+    #[serde(default)]
+    pub remove: Vec<Uuid>,
+    /// Rows that did not open under the old key: left as they are, listed for the id check.
+    #[serde(default)]
+    pub quarantine: Vec<QuarantinedRow>,
+    /// The key change, or the removal, under the new key (D16), written in the commit.
+    #[serde(default)]
+    pub history: Option<HistoryContext>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct AbortRotation {
+    pub project_id: Uuid,
+    pub rotation_id: Uuid,
+}
+
+/// A new project key boxed to this account by the admin who rotated it.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RotationBox {
+    pub project_id: Uuid,
+    pub key_epoch: i32,
+    pub sealed: HybridBox,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectRef {
+    pub project_id: Uuid,
+}
+
+/// `PUT /account/projects/member-key`: this account's directory entry for the project.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SetMemberKey {
+    pub project_id: Uuid,
+    pub member_key: EncryptedPair,
 }

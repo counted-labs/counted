@@ -470,6 +470,51 @@ mod tests {
         let ids: Vec<i32> = groups.iter().flat_map(|(_, g)| g.iter().map(|r| r.expense.id)).collect();
         assert_eq!(ids, vec![-2, -1, 5, 4]);
     }
+
+    #[test]
+    fn a_server_id_at_the_i32_bounds_sorts_without_overflow() {
+        let live = live_of(vec![exp(i32::MIN, "a"), exp(i32::MAX, "b"), exp(-1, "c")], vec![]);
+        let data = project_data::build(Some(test_key()), Some(&live), None);
+        let groups = group_expenses(&data, &ExpenseQuery::default(), Some(1));
+        let ids: Vec<i32> = groups.iter().flat_map(|(_, g)| g.iter().map(|r| r.expense.id)).collect();
+        assert_eq!(ids, vec![i32::MIN, -1, i32::MAX]);
+    }
+
+    mod hostile_payloads {
+        use crate::common::hostile;
+        use proptest::prelude::*;
+
+        proptest! {
+            #![proptest_config(ProptestConfig::with_cases(500))]
+
+            #[test]
+            fn any_ledger_renders_and_settles(expenses in hostile::expenses(), payments in hostile::payments(), users in hostile::users(), me in hostile::id()) {
+                crate::expenses::tabs::expenses_tab::exercise_hostile(expenses, payments, users, me);
+            }
+
+            #[test]
+            fn any_plaintext_under_the_key_is_refused_or_read(plain in any::<String>()) {
+                crate::decrypted::decode_hostile(&plain);
+            }
+        }
+    }
+}
+
+/// Any key holder writes the plaintext every member's page decodes and sums: whatever it holds,
+/// the page renders, a panic freezing the wasm app for everyone in the project.
+#[cfg(any(test, fuzzing))]
+pub(crate) fn exercise_hostile(expenses: Vec<Expense>, payments: Vec<Payment>, users: Vec<shared::User>, me: i32) {
+    use crate::common::test_fixtures::{make_project, TEST_KEY};
+    use crate::expenses::helpers::project_data;
+
+    let live = LiveData { project_id: Uuid::nil(), project: Some(make_project(&TEST_KEY, Uuid::nil(), "p", "EUR")), users, expenses, payments, version: None };
+    let data = project_data::build(Some(TEST_KEY), Some(&live), None);
+    let _ = group_expenses(&data, &ExpenseQuery::default(), Some(me));
+    let _ = inconsistent_expense_ids(&data.expenses.iter().map(|r| r.expense.clone()).collect::<Vec<_>>(), &data.payments);
+    let _ = my_debt_by_expense(&data.payments, me);
+    assert!(data.global_total.is_finite());
+    assert!(data.summary.summary.values().all(|b| b.is_finite()));
+    assert!(data.summary.reimbursement_suggestions.iter().all(|s| s.amount.is_finite()));
 }
 
 /// Translation keys, not labels: the tests below assert on these without a Dioxus runtime, and
@@ -537,7 +582,7 @@ type Groups = Vec<(chrono::NaiveDate, Vec<RowExpense>)>;
 
 /// Date descending, each day by id descending. Reads the page's single decryption pass and the
 /// date already parsed on [`RowExpense`], so a filter tap costs no crypto and no parsing.
-#[cfg(test)]
+#[cfg(any(test, fuzzing))]
 fn group_expenses(data: &ProjectData, query: &ExpenseQuery, stored_user_id: Option<i32>) -> Groups {
     group_rows(query.select(data, stored_user_id, category_label))
 }
@@ -549,7 +594,7 @@ fn group_rows(rows: Vec<&RowExpense>) -> Groups {
     }
     let mut groups: Groups = map.into_iter().rev().collect();
     for (_, group) in &mut groups {
-        group.sort_by_key(|r| std::cmp::Reverse((is_pending_expense(r.expense.id), r.expense.id.abs())));
+        group.sort_by_key(|r| std::cmp::Reverse((is_pending_expense(r.expense.id), r.expense.id.unsigned_abs())));
     }
     groups
 }

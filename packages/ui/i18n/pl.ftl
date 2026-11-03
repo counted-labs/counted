@@ -10,6 +10,12 @@ retry = Spróbuj ponownie
 delete = Usuń
 back = Wstecz
 language = Język
+theme = Motyw
+theme-light = Jasny
+theme-dark = Ciemny
+theme-system = Systemowy
+theme-hint-device = Zapisany tylko na tym urządzeniu.
+theme-hint-system = Dopasowuje się do wyglądu tego urządzenia.
 
 ### Navigation
 
@@ -42,7 +48,7 @@ error-generic = Coś poszło nie tak. Spróbuj ponownie.
 
 error-invalid-email = Ten adres e-mail jest nieprawidłowy.
 error-invalid-password = To hasło jest nieprawidłowe.
-error-password-too-short = Hasło musi mieć co najmniej 8 znaków.
+error-password-too-short = Hasło musi mieć co najmniej 12 znaków.
 error-client-outdated = Ta wersja aplikacji jest nieaktualna. Zaktualizuj ją, aby się zalogować.
 error-invalid-link = Ten link jest nieprawidłowy.
 error-batch-too-large = Zbyt wiele elementów naraz.
@@ -99,8 +105,8 @@ login-resend-sent = E-mail wysłany - sprawdź skrzynkę.
 register-submit = Utwórz konto
 register-submitting = Tworzenie…
 register-have-account = Masz już konto?
-register-password-placeholder = Co najmniej 8 znaków
-register-password-warning = Zapisz swoje hasło. Jeśli je zapomnisz, konta nie da się odzyskać.
+register-password-placeholder = Co najmniej 12 znaków
+register-password-warning = Zapisz swoje hasło: nigdy go nie widzimy i nie możemy ci go zwrócić.
 register-check-email-title = Sprawdź pocztę
 register-email-sent = E-mail wysłany
 register-email-sent-hint = Kliknij link w wiadomości, aby aktywować konto.
@@ -698,8 +704,8 @@ help-encryption-zero-term = Zero dostępu
 help-encryption-zero-def = - szyfrujesz dane przed wysłaniem, a serwer przechowuje wyłącznie szyfrogram. Nie mamy jak go odczytać.
 help-encryption-see = Szczegóły znajdziesz w
 help-forgot-password-q = Co się stanie, jeśli zapomnę hasła?
-help-forgot-password-warning = Twoje dane zostaną bezpowrotnie utracone.
-help-forgot-password-a = Klucz szyfrowania jest wyprowadzany z Twojego hasła, więc reset nie jest możliwy: nikt - łącznie z nami - nie odszyfruje Twoich projektów bez niego. Przechowuj je bezpiecznie, najlepiej w menedżerze haseł.
+help-forgot-password-warning = Nikt nie odzyska go za Ciebie.
+help-forgot-password-a = Twoje hasło chroni Twoje klucze szyfrowania i nigdy nie jest do nas wysyłane: nikt - łącznie z nami - nie odszyfruje Twoich projektów za Ciebie. Przechowuj je bezpiecznie, najlepiej w menedżerze haseł.
 help-archive-delete-q = Jak zarchiwizować lub usunąć projekt?
 help-archive-delete-a = Na ekranie projektu otwórz menu i wybierz
 help-archive-delete-b = aby go ukryć, zachowując go. Projekt jest usuwany na dobre, gdy opuści go ostatni członek.
@@ -746,9 +752,12 @@ friends-remove = Usuń
 friends-remove-confirm-title = Usuń znajomego
 friends-remove-confirm-message = { $email } nie będzie już wśród Twoich znajomych, a Ty wśród jego. Każde z was może później wysłać nowe zaproszenie.
 friends-no-key = Jeszcze niegotowe
+friends-key-changed = Kod zmieniony
+friends-key-changed-hint = Kod bezpieczeństwa znajomego się zmienił. Dzieje się tak, gdy zabezpiecza on konto, albo gdy jego klucz został podmieniony. Zaproszenia z nim są zablokowane, dopóki nie odczytacie sobie nowego kodu osobiście lub przez telefon i nie dotkniesz „Kod się zgadza”.
 friends-fingerprint = Kod bezpieczeństwa
 friends-fingerprint-hint = Dwoje znajomych, którzy odczytają sobie ten sam kod bezpieczeństwa, wie, że nikt nie stoi między nimi - nawet nasz serwer.
 friends-key-mismatch = Serwer wysłał dla twojego konta klucz publiczny, który nie pasuje do twojego klucza prywatnego. Twój kod bezpieczeństwa jest ukryty, a zaproszenia są wyłączone na tym urządzeniu: ktoś może manipulować serwerem.
+keypair-mismatch = Klucze, które serwer przysłał dla twojego konta, nie zgadzają się z tymi na tym urządzeniu. Zaproszenia i zmiany klucza są tu wyłączone, dopóki się nie zgodzą: ktoś może manipulować serwerem.
 friends-outgoing-title = Wysłane
 friends-outgoing-hint = Oczekiwanie na odpowiedź. Pojawią się wśród znajomych, gdy przyjmą zaproszenie.
 friends-withdraw = Anuluj
@@ -935,3 +944,180 @@ home-row-owed = należy ci się
 home-row-owe = jesteś winien
 home-row-settled = Rozliczone
 home-totals-partial = Bez projektów bez kursu wymiany
+error-account-key-changed = Klucz twojego konta zmienił się na innym urządzeniu. Zaloguj się ponownie, aby kontynuować.
+settings-security = Bezpieczeństwo
+settings-change-password = Zmień hasło
+settings-change-password-hint = Twoje projekty i dane pozostają bez zmian. Twoje inne urządzenia zostaną wylogowane.
+change-password-title = Zmień swoje hasło
+change-password-current = Obecne hasło
+change-password-new = Nowe hasło
+change-password-confirm = Potwierdź nowe hasło
+change-password-mismatch = Dwa nowe hasła nie są takie same.
+change-password-submit = Zmień hasło
+change-password-submitting = Zmieniam…
+change-password-done = Hasło zmienione. Twoje inne urządzenia zostały wylogowane.
+error-rotation-incomplete = Twoje konto zmieniło się w międzyczasie. Spróbuj ponownie.
+error-key-lifecycle-unavailable = Jeszcze niedostępne: najpierw wszyscy potrzebują najnowszej wersji aplikacji.
+settings-compromised = Ktoś może znać moje hasło
+settings-compromised-hint = Nowe hasło, nowe klucze i wylogowanie wszystkich innych urządzeń.
+settings-compromised-open = Zabezpiecz moje konto
+compromised-title = Zabezpiecz swoje konto
+compromised-body = Twoje hasło i klucze konta zostaną zastąpione, a wszystkie inne urządzenia wylogowane. Twoi znajomi zobaczą zmianę twojego kodu bezpieczeństwa: porównajcie go ponownie.
+compromised-keeps = Osoba, która miała twoje hasło, zachowa wszystko, co już zostało otwarte: projekty, które dotąd dało się przeczytać.
+compromised-submit = Zastąp hasło i klucze
+compromised-done = Twoje konto jest zabezpieczone. Poproś znajomych o porównanie nowego kodu bezpieczeństwa.
+friends-new-fingerprint = Nowy kod:
+friends-code-matches = Kod się zgadza
+friends-code-trusted = Kod potwierdzony.
+settings-recovery-key = Klucz odzyskiwania
+settings-recovery-key-none = Bez niego zapomniane hasło kosztuje cię ustawienia, dane płatności i kody znajomych, a odzyskanie trwa 3 dni.
+settings-recovery-key-set = Utworzony. Jeśli zapomnisz hasła, odzyskasz nim konto z całą zawartością.
+settings-recovery-key-pending = Nowy klucz zastąpi go { $when }. To nie ty? Anuluj obecnym kluczem.
+recovery-key-create = Utwórz
+recovery-key-replace = Zastąp
+recovery-key-cancel-replacement = Anuluj nowy klucz
+recovery-key-title = Twój klucz odzyskiwania
+recovery-key-body = Zapisz go lub zachowaj tam, gdzie tylko ty masz dostęp. Counted nie może pokazać go ponownie ani odzyskać za ciebie.
+recovery-key-copy = Kopiuj
+recovery-key-copied = Skopiowano
+recovery-key-save = Zapisz jako plik
+recovery-key-print = Drukuj
+recovery-key-next = Dalej
+recovery-key-confirm-body = Aby sprawdzić kopię, wpisz grupę { $n } klucza.
+recovery-key-confirm-wrong = Ta grupa się nie zgadza. Spójrz jeszcze raz na kopię.
+recovery-key-password-body = Wpisz hasło, aby zapisać klucz na koncie.
+recovery-key-submit = Zapisz klucz
+recovery-key-done = Klucz odzyskiwania zapisany.
+recovery-key-replacement-done = Nowy klucz zapisany. Zastąpi obecny za 72 godziny; do tego czasu obecny nadal działa.
+recovery-key-field = Klucz odzyskiwania
+recovery-key-file-intro = Klucz odzyskiwania Counted
+recovery-key-cancel-done = Nowy klucz został anulowany.
+compromised-new-key = Zapisz teraz nowy klucz odzyskiwania: zastąpi stary za 72 godziny, a do tego czasu stary nadal działa.
+pending-reset-title = Poproszono o zresetowanie twojego konta
+pending-reset-body = Wejdzie w życie { $when }: wtedy przepadną ustawienia, dane płatności i kody znajomych, a urządzenia będą musiały zalogować się ponownie. To nie ty? Anuluj obecnym hasłem.
+pending-reset-cancel = Anuluj reset
+pending-reset-cancelled = Reset został anulowany.
+login-forgot = Nie pamiętasz hasła?
+forgot-title = Nie pamiętasz hasła
+forgot-body = Wpisz swój e-mail. Jeśli ma konto, wyślemy link do wyboru nowego hasła.
+forgot-submit = Wyślij link
+forgot-sent = Jeśli ten adres ma konto, link jest w drodze. Wygaśnie za 24 godziny.
+reset-title = Odzyskaj swoje konto
+reset-with-key-body = Wpisz klucz odzyskiwania i nowe hasło: wszystko wróci tak, jak było.
+reset-submit-key = Odzyskaj moje konto
+reset-no-key = Nie mam klucza odzyskiwania
+reset-without-key-title = Zresetuj bez klucza odzyskiwania
+reset-without-key-body = Twoje konto zacznie od nowa z nowym hasłem za 72 godziny. Projekty wrócą z twoich urządzeń i linków udostępniania; ustawienia, dane płatności i kody znajomych nie. Do tego czasu obecne hasło działa i może anulować reset.
+reset-name = Twoje imię
+reset-submit-request = Zresetuj moje konto
+reset-requested = Gotowe. Nowe hasło zadziała od { $when }. Do tego czasu obecne hasło działa i może to anulować.
+reset-pending-already = Reset już czeka do { $when }. Nowa prośba zaczyna 72 godziny od nowa.
+recovered-done = Odzyskano konto. Inne urządzenia zostały wylogowane.
+login-reset-undoable = To hasło zostało zastąpione resetem w ciągu ostatnich 30 dni. Jeśli o to nie prosiłeś, cofnij to: konto wróci takie, jakie było.
+login-undo-reset = Cofnij reset
+reset-undone = Reset został cofnięty. Konto jest takie jak wcześniej.
+error-reset-pending = Nowe hasło zadziała, gdy reset wejdzie w życie, 72 godziny po prośbie.
+error-account-disabled = To konto usunięto wkrótce po resecie i czeka na wymazanie. Poprzednie hasło nadal może cofnąć reset.
+error-recovery-key-invalid = Ten klucz odzyskiwania nie otwiera tego konta.
+error-project-key-required = Ten projekt wymaga swojego klucza. Otwórz go ponownie z linku udostępniania.
+names-or = { $first } lub { $last }
+participants-admin-badge = Admin
+edit-project-admins = Admini: { $count }
+edit-project-succession = Jeśli projekt zostanie bez admina, rolę przejmuje osoba z kontem, która należy do niego najdłużej.
+member-sheet-account = Członek z kontem
+member-actions = Działania: { $name }
+member-make-admin = Nadaj rolę admina
+member-make-admin-hint = Zyska możliwość zmiany klucza projektu i usuwania osób.
+member-made-admin = { $name } ma teraz rolę admina.
+group-security = Bezpieczeństwo projektu
+group-security-admin = Bezpieczeństwo projektu · masz rolę admina
+group-rotate = Zmień klucz projektu
+group-rotate-hint = Jeśli link do projektu wyciekł: osoby ze starym linkiem stracą dostęp do projektu.
+group-remove = Usuń kogoś z projektu
+group-remove-hint = Odbiera dostęp i jednocześnie zmienia klucz.
+group-admins-only = Tylko dla adminów.
+group-admins-only-account = Tylko dla adminów, którzy mają konto.
+group-ask-admin = Poproś admina projektu: { $names }.
+group-ask-admins = Poproś adminów projektu: { $names }.
+group-ask-an-admin = Poproś jednego z adminów projektu.
+group-with-account = Z kontem
+group-free = Za darmo
+group-sign-in-hint = Admin projektu ({ $names }) może potem nadać ci tę rolę.
+group-sign-in-hint-any = Admin projektu może potem nadać ci tę rolę.
+group-no-admin = Ten projekt nie ma admina, więc jego klucza nie można zmienić.
+group-hide = Ukryj kogoś
+group-hide-hint = Ukrywa tę osobę na listach bez odbierania dostępu: link i klucz nadal działają.
+group-recreate-hint = Ten projekt nie ma admina. Aby kogoś usunąć, utwórz nowy projekt.
+group-recreate = Utwórz nowy projekt
+group-no-admin-yet = Ten projekt nie ma jeszcze admina.
+group-creator-hint = Tylko ty możesz zostać adminem tego projektu, zakładając konto.
+group-creator-elsewhere-hint = Adminem projektu może zostać tylko osoba, która go utworzyła, zakładając konto. W przeciwnym razie utwórz nowy projekt, aby kogoś usunąć.
+member-revoke-admin = Odbierz rolę admina
+member-revoke-admin-hint = Straci możliwość zmiany klucza projektu i usuwania osób.
+member-revoked-admin = { $name } nie ma już roli admina.
+member-step-down = Przestań być adminem
+member-step-down-hint = Stracisz możliwość zmiany klucza projektu i usuwania osób.
+member-stepped-down = Nie masz już roli admina.
+member-remove = Usuń z projektu
+member-remove-hint = Zmienia klucz projektu: { $name } nie przeczyta już niczego nowego.
+member-hide = Ukryj na listach
+error-user-not-admin = Ta osoba nie jest adminem.
+error-creator-proof-invalid = To urządzenie nie utworzyło tego projektu.
+error-project-has-admin = Ten projekt ma już admina.
+error-not-project-admin = Tylko admini projektu mogą to zrobić.
+error-user-not-claimed = Ta osoba nie ma konta, więc nie może być adminem.
+error-project-key-rotated = Klucz projektu się zmienił. Poproś członka o nowy link.
+error-project-rotating = Klucz projektu jest właśnie zmieniany. Spróbuj ponownie za chwilę.
+error-rotation-expired = Zmiana klucza trwała zbyt długo i została anulowana. Zacznij od nowa.
+error-rotation-rows-changed = Projekt zmienił się podczas zmiany klucza. Zacznij od nowa.
+project-rotated-title = Nie masz już dostępu do tego projektu
+project-rotated-body = Klucz tego projektu został zmieniony przez admina. Poproś admina o nowy link.
+project-rotated-open-link = Otwórz link
+rotation-remove-title = Usunąć { $name } z projektu?
+rotation-rotate-title = Zmienić klucz projektu?
+rotation-remove-body = Usunięcie członka oznacza wygenerowanie nowego klucza. Nowy link trzeba będzie udostępnić osobom bez konta.
+rotation-rotate-body = Osoby ze starym linkiem stracą dostęp do projektu. Nowy link trzeba będzie udostępnić osobom bez konta.
+rotation-boxed =
+    { $count ->
+        [0] Klucz nie zostanie automatycznie wysłany do nikogo innego
+        [one] Klucz zostanie automatycznie wysłany do { $count } członka
+        [few] Klucz zostanie automatycznie wysłany do { $count } członków
+        [many] Klucz zostanie automatycznie wysłany do { $count } członków
+       *[other] Klucz zostanie automatycznie wysłany do { $count } członka
+    }
+rotation-by-link-title = Osoby, którym musisz wysłać nowy link
+rotation-by-link-hint = Te osoby nie mają konta. Wyślesz im link zaraz potem.
+rotation-names-and = { $first } i { $last }
+rotation-names-and-others =
+    { $names } i { $count ->
+        [one] { $count } inna osoba
+        [few] { $count } inne osoby
+        [many] { $count } innych osób
+       *[other] { $count } innej osoby
+    }
+rotation-confirm-remove = Usuń i zmień klucz
+rotation-confirm-rotate = Zmień klucz
+rotation-done-title = Nowy klucz działa
+rotation-done-removed = { $name } nie należy już do projektu.
+rotation-done-rotated = Klucz projektu został zmieniony.
+rotation-done-boxed =
+    { $count ->
+        [0] Klucz nie został automatycznie wysłany do nikogo innego.
+        [one] Klucz został automatycznie wysłany do { $count } członka.
+        [few] Klucz został automatycznie wysłany do { $count } członków.
+        [many] Klucz został automatycznie wysłany do { $count } członków.
+       *[other] Klucz został automatycznie wysłany do { $count } członka.
+    }
+rotation-new-link =
+    { $count ->
+        [0] Nowy link do projektu
+        [one] Nowy link do wysłania · { $count } osoba bez konta
+        [few] Nowy link do wysłania · { $count } osoby bez konta
+        [many] Nowy link do wysłania · { $count } osób bez konta
+       *[other] Nowy link do wysłania · { $count } osoby bez konta
+    }
+rotation-link-renewed = Link został odnowiony.
+rotation-done = Gotowe
+history-key-changed = Zmieniono klucz projektu
+history-member-removed = { $name } nie należy już do projektu
+project-rotated-row-hint = Klucz został zmieniony. Poproś o nowy link.

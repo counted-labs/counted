@@ -106,6 +106,7 @@ pub fn use_recurring_materializer(
                     release(&mut claimed, &mut queue, job.claim);
                     break;
                 }
+                crate::common::project_token::scope(job.request.project_id);
                 match materialize_recurring_expense(Json(job.request)).await {
                     Ok(()) => {
                         added += job.count;

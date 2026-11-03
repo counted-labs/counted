@@ -18,6 +18,7 @@ It does not prove that nothing else is broken.
 | A2 | A third account can neither withdraw nor accept a friend request between two others |
 | A5 | An unverified account gets no session: not from login, not with a wrong password, and the verification link alone is refused (400); the link with the password verifies and signs in |
 | A6 | A deleted account's session opens nothing, and its credentials no longer sign in |
+| A7 | Deleting an account needs the password's proof: a wrong proof is refused and the account stays; once the server's floor is `KEY_LIFECYCLE_FROM`, the session-only route is refused too |
 | B1 | No endpoint lists projects |
 | B2 | Holding project A's id gives nothing in project B: B's expenses, participants and payment rows cannot be read, edited or deleted through A |
 | B3 | Claiming a participant, or converting a project, needs proof of the project key |
@@ -41,7 +42,8 @@ Against a local stack with Mailpit, never against production:
 
 ```sh
 npm ci
-BASE_URL=http://127.0.0.1:8080 MAILPIT_URL=http://127.0.0.1:8025 npx playwright test
+eval "$(make -s -C .. e2e-env)"   # BASE_URL and MAILPIT_URL of this worktree's stack
+npx playwright test
 ```
 
 `results/security-tests.json` holds the outcome of each test.

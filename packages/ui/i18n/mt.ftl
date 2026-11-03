@@ -10,6 +10,12 @@ retry = Erġa' pprova
 delete = Ħassar
 back = Lura
 language = Lingwa
+theme = Tema
+theme-light = Ċar
+theme-dark = Skur
+theme-system = Sistema
+theme-hint-device = Issejvjat fuq dan l-apparat biss.
+theme-hint-system = Isegwi d-dehra ta' dan l-apparat.
 
 ### Navigation
 
@@ -42,7 +48,7 @@ error-generic = Xi ħaġa marret ħażin. Jekk jogħġbok erġa' pprova.
 
 error-invalid-email = Dak l-indirizz tal-email mhux validu.
 error-invalid-password = Dik il-password mhix valida.
-error-password-too-short = Il-password trid tkun tal-anqas 8 karattri.
+error-password-too-short = Il-password trid tkun tal-anqas 12-il karattru.
 error-client-outdated = Din il-verżjoni tal-app skadiet. Aġġornaha biex tidħol.
 error-invalid-link = Din il-link mhix valida.
 error-batch-too-large = Wisq elementi f'daqqa.
@@ -99,8 +105,8 @@ login-resend-sent = Email mibgħuta - iċċekkja l-inbox tiegħek.
 register-submit = Oħloq kont
 register-submitting = Qed jinħoloq…
 register-have-account = Diġà għandek kont?
-register-password-placeholder = Tal-anqas 8 karattri
-register-password-warning = Ikteb il-password tiegħek. Jekk tinsieha, il-kont tiegħek ma jistax jiġi rkuprat.
+register-password-placeholder = Tal-anqas 12-il karattru
+register-password-warning = Ikteb il-password tiegħek: aħna qatt ma narawha u ma nistgħux nagħtuhielek lura.
 register-check-email-title = Iċċekkja l-email tiegħek
 register-email-sent = Email mibgħuta
 register-email-sent-hint = Ikklikkja l-link fl-inbox tiegħek biex tattiva l-kont.
@@ -698,8 +704,8 @@ help-encryption-zero-term = L-ebda aċċess
 help-encryption-zero-def = - int tikkripta d-data qabel tibgħatha, u s-server jaħżen biss test kriptat. M'għandna l-ebda mod kif naqrawh.
 help-encryption-see = Għad-dettalji, ara
 help-forgot-password-q = X'jiġri jekk ninsa l-password tiegħi?
-help-forgot-password-warning = Id-data tiegħek tintilef b'mod permanenti.
-help-forgot-password-a = Iċ-ċavetta tal-kriptaġġ hija derivata mill-password tiegħek, għalhekk l-ebda reset mhu possibbli: ħadd - lanqas aħna - ma jista' jiddekripta l-proġetti tiegħek mingħajrha. Żommha sigura, idealment f'password manager.
+help-forgot-password-warning = Ħadd ma jista' jirkupraha għalik.
+help-forgot-password-a = Il-password tiegħek tipproteġi ċ-ċwievet tal-kriptaġġ tiegħek u qatt ma tintbagħtilna: ħadd - lanqas aħna - ma jista' jiddekripta l-proġetti tiegħek minflokok. Żommha sigura, idealment f'password manager.
 help-archive-delete-q = Kif narkivja jew inħassar proġett?
 help-archive-delete-a = Mill-iskrin tal-proġett, iftaħ il-menu u agħżel
 help-archive-delete-b = biex taħbih waqt li żżommu. Proġett jitħassar għal kollox ladarba l-aħħar membru tiegħu jitilqu.
@@ -746,9 +752,12 @@ friends-remove = Neħħi
 friends-remove-confirm-title = Neħħi ħabib
 friends-remove-confirm-message = { $email } ma jibqax fost il-ħbieb tiegħek, u int ma tibqax fost tiegħu. Kull wieħed minnkom jista' jibgħat talba ġdida aktar tard.
 friends-no-key = Għadu mhux lest
+friends-key-changed = Il-kodiċi nbidel
+friends-key-changed-hint = Il-kodiċi tas-sigurtà ta' ħabib inbidel. Dan jiġri meta jipproteġi l-kont tiegħu, jew jekk iċ-ċavetta tiegħu ġiet sostitwita. L-istediniet miegħu huma mblukkati sakemm taqraw il-kodiċi l-ġdid lil xulxin, wiċċ imb wiċċ jew bit-telefon, u tagħfas "Il-kodiċi jaqbel".
 friends-fingerprint = Kodiċi ta' sigurtà
 friends-fingerprint-hint = Żewġ ħbieb li jaqraw lil xulxin l-istess kodiċi ta' sigurtà jafu li ħadd ma hemm bejniethom - lanqas is-server tagħna.
 friends-key-mismatch = Is-server bagħat ċavetta pubblika għall-kont tiegħek li ma taqbilx maċ-ċavetta privata tiegħek. Il-kodiċi tas-sigurtà tiegħek huwa moħbi u l-istediniet huma mitfija fuq dan l-apparat: forsi xi ħadd qed jbagħbas is-server.
+keypair-mismatch = Iċ-ċwievet li s-server bagħat għall-kont tiegħek ma jaqblux ma' dawk fuq dan l-apparat. L-istediniet u l-bidliet taċ-ċavetta huma mitfija hawn sakemm jaqblu: xi ħadd jista' jkun qed ibagħbas is-server.
 friends-outgoing-title = Mibgħuta
 friends-outgoing-hint = Qed tistenna tweġiba. Se tarahom fost il-ħbieb tiegħek ladarba jaċċettaw.
 friends-withdraw = Ikkanċella
@@ -935,3 +944,174 @@ home-row-owed = għandek tieħu
 home-row-owe = għandek tagħti
 home-row-settled = Imħallas
 home-totals-partial = Mingħajr proġetti mingħajr rata tal-kambju
+error-account-key-changed = Iċ-ċavetta tal-kont tiegħek inbidlet fuq apparat ieħor. Erġa' idħol biex tkompli.
+settings-security = Sigurtà
+settings-change-password = Biddel il-password
+settings-change-password-hint = Il-proġetti u d-data tiegħek jibqgħu kif inhuma. L-apparati l-oħra tiegħek joħorġu mill-kont.
+change-password-title = Biddel il-password tiegħek
+change-password-current = Password attwali
+change-password-new = Password ġdida
+change-password-confirm = Ikkonferma l-password il-ġdida
+change-password-mismatch = Iż-żewġ passwords il-ġodda ma jaqblux.
+change-password-submit = Biddel il-password
+change-password-submitting = Qed tinbidel…
+change-password-done = Il-password inbidlet. L-apparati l-oħra tiegħek ħarġu mill-kont.
+error-rotation-incomplete = Il-kont tiegħek inbidel sadanittant. Erġa' pprova.
+error-key-lifecycle-unavailable = Għadu mhux disponibbli: l-ewwel kulħadd jeħtieġ l-aħħar verżjoni tal-app.
+settings-compromised = Xi ħadd jista' jkun jaf il-password tiegħi
+settings-compromised-hint = Password ġdida, ċwievet ġodda, u l-apparati l-oħra kollha joħorġu mill-kont.
+settings-compromised-open = Ipproteġi l-kont tiegħi
+compromised-title = Ipproteġi l-kont tiegħek
+compromised-body = Il-password u ċ-ċwievet tal-kont tiegħek jinbidlu, u l-apparati l-oħra kollha joħorġu mill-kont. Il-ħbieb tiegħek se jaraw il-kodiċi tas-sigurtà tiegħek jinbidel: erġgħu qabbluh.
+compromised-keeps = Dak li diġà nfetaħ bil-password tiegħek ma jistax jittieħed lura: il-proġetti li setgħu jinqraw s'issa.
+compromised-submit = Ibdel il-password u ċ-ċwievet
+compromised-done = Il-kont tiegħek huwa protett. Itlob lill-ħbieb tiegħek iqabblu l-kodiċi l-ġdid tas-sigurtà tiegħek.
+friends-new-fingerprint = Kodiċi ġdid:
+friends-code-matches = Il-kodiċi jaqbel
+friends-code-trusted = Il-kodiċi kkonfermat.
+settings-recovery-key = Ċavetta ta' rkupru
+settings-recovery-key-none = Mingħajrha, password minsija tiswielek il-preferenzi, id-dettalji tal-ħlas u l-kodiċijiet tal-ħbieb, u tieħu 3 ijiem.
+settings-recovery-key-set = Maħluqa. Jekk tinsa l-password, terġa' tagħtik il-kont b'kollox fih.
+settings-recovery-key-pending = Ċavetta ġdida tieħu postha fi { $when }. Ma kontx int? Ikkanċellaha biċ-ċavetta attwali.
+recovery-key-create = Oħloq
+recovery-key-replace = Ibdel
+recovery-key-cancel-replacement = Ikkanċella ċ-ċavetta l-ġdida
+recovery-key-title = Iċ-ċavetta ta' rkupru tiegħek
+recovery-key-body = Iktibha jew issejvjaha f'post fejn tista' tilħaqha int biss. Counted ma tistax turiha mill-ġdid jew tirkuprahielek.
+recovery-key-copy = Ikkopja
+recovery-key-copied = Ikkopjata
+recovery-key-save = Issejvja bħala fajl
+recovery-key-print = Ipprintja
+recovery-key-next = Kompli
+recovery-key-confirm-body = Biex tiċċekkja l-kopja, ikteb il-grupp { $n } taċ-ċavetta.
+recovery-key-confirm-wrong = Dak il-grupp ma jaqbilx. Erġa' ħares lejn il-kopja.
+recovery-key-password-body = Daħħal il-password biex tissejvja ċ-ċavetta fil-kont.
+recovery-key-submit = Issejvja ċ-ċavetta
+recovery-key-done = Iċ-ċavetta ta' rkupru ġiet issejvjata.
+recovery-key-replacement-done = Iċ-ċavetta l-ġdida ġiet issejvjata. Tieħu post l-attwali fi 72 siegħa; sa dakinhar l-attwali għadha taħdem.
+recovery-key-field = Ċavetta ta' rkupru
+recovery-key-file-intro = Ċavetta ta' rkupru ta' Counted
+recovery-key-cancel-done = Iċ-ċavetta l-ġdida ġiet ikkanċellata.
+compromised-new-key = Issejvja ċ-ċavetta l-ġdida ta' rkupru issa: tieħu post il-qadima fi 72 siegħa, u sa dakinhar il-qadima għadha taħdem.
+pending-reset-title = Intalab reset tal-kont tiegħek
+pending-reset-body = Jidħol fis-seħħ fi { $when }: imbagħad jintilfu l-preferenzi, id-dettalji tal-ħlas u l-kodiċijiet tal-ħbieb, u l-apparati jridu jerġgħu jidħlu. Ma kontx int? Ikkanċellah bil-password attwali.
+pending-reset-cancel = Ikkanċella r-reset
+pending-reset-cancelled = Ir-reset ġie kkanċellat.
+login-forgot = Insejt il-password?
+forgot-title = Insejt il-password
+forgot-body = Daħħal l-email tiegħek. Jekk għandha kont, nibagħtu link biex tagħżel password ġdida.
+forgot-submit = Ibgħat il-link
+forgot-sent = Jekk dan l-indirizz għandu kont, link qiegħed fi triqtu. Jiskadi fi 24 siegħa.
+reset-title = Ikseb lura l-kont tiegħek
+reset-with-key-body = Daħħal iċ-ċavetta ta' rkupru u password ġdida: kollox jerġa' lura kif kien.
+reset-submit-key = Irkupra l-kont tiegħi
+reset-no-key = M'għandix iċ-ċavetta ta' rkupru
+reset-without-key-title = Irrisettja mingħajr iċ-ċavetta ta' rkupru
+reset-without-key-body = Il-kont tiegħek jerġa' jibda b'password ġdida fi 72 siegħa. Il-proġetti jiġu lura mill-apparati tiegħek u mil-links tal-qsim; il-preferenzi, id-dettalji tal-ħlas u l-kodiċijiet tal-ħbieb le. Sa dakinhar il-password attwali għadha taħdem u tista' tikkanċella r-reset.
+reset-name = Ismek
+reset-submit-request = Irrisettja l-kont tiegħi
+reset-requested = Lest. Il-password il-ġdida taħdem minn { $when }. Sa dakinhar il-password attwali għadha taħdem u tista' tikkanċellah.
+reset-pending-already = Diġà hemm reset pendenti sa { $when }. Talba ġdida terġa' tibda t-72 siegħa.
+recovered-done = Il-kont tiegħek reġa' lura. L-apparati l-oħra ħarġu mill-kont.
+login-reset-undoable = Din il-password ġiet mibdula b'reset fl-aħħar 30 jum. Jekk ma tlabtux, ħassru: il-kont jerġa' lura kif kien.
+login-undo-reset = Ħassar ir-reset
+reset-undone = Ir-reset tħassar. Il-kont huwa kif kien.
+error-reset-pending = Din il-password il-ġdida taħdem meta r-reset jidħol fis-seħħ, 72 siegħa wara t-talba.
+error-account-disabled = Dan il-kont tħassar ftit wara reset u qed jistenna li jitħassar għal kollox. Il-password ta' qabel għadha tista' tħassar ir-reset.
+error-recovery-key-invalid = Din iċ-ċavetta ta' rkupru ma tiftaħx dan il-kont.
+error-project-key-required = Dan il-proġett jeħtieġ iċ-ċavetta tiegħu. Erġa' iftħu mil-link tal-qsim.
+names-or = { $first } jew { $last }
+participants-admin-badge = Admin
+edit-project-admins = Admins: { $count }
+edit-project-succession = Jekk il-proġett jibqa' mingħajr admin, ir-rwol jgħaddi lill-membru b'kont li ilu l-aktar fil-proġett.
+member-sheet-account = Membru b'kont
+member-actions = Azzjonijiet: { $name }
+member-make-admin = Agħti r-rwol ta' admin
+member-make-admin-hint = Ir-rwol jagħti s-setgħa li tinbidel iċ-ċavetta tal-proġett u li jitneħħa xi ħadd.
+member-made-admin = Ir-rwol ta' admin issa huwa ta' { $name }.
+group-security = Sigurtà tal-proġett
+group-security-admin = Sigurtà tal-proġett · għandek ir-rwol ta' admin
+group-rotate = Ibdel iċ-ċavetta tal-proġett
+group-rotate-hint = Jekk il-link tal-proġett inkixef: min għandu l-link il-qadim jitlef l-aċċess għall-proġett.
+group-remove = Neħħi lil xi ħadd mill-proġett
+group-remove-hint = Ineħħi l-aċċess u jibdel iċ-ċavetta fl-istess ħin.
+group-admins-only = Għall-admins biss.
+group-admins-only-account = Għall-admins biss, li għandhom kont.
+group-ask-admin = Staqsi lil { $names }, l-admin tal-proġett.
+group-ask-admins = Staqsi lil { $names }, l-admins tal-proġett.
+group-ask-an-admin = Staqsi lil wieħed mill-admins tal-proġett.
+group-with-account = B'kont
+group-free = B'xejn
+group-sign-in-hint = Imbagħad ir-rwol jista' jingħatalek minn admin tal-proġett, { $names }.
+group-sign-in-hint-any = Imbagħad ir-rwol jista' jingħatalek minn admin tal-proġett.
+group-no-admin = Dan il-proġett m'għandux admin, għalhekk iċ-ċavetta tiegħu ma tistax tinbidel.
+group-hide = Aħbi lil xi ħadd
+group-hide-hint = Jaħbi lill-persuna mil-listi mingħajr ma jneħħi l-aċċess: il-link u ċ-ċavetta għadhom jaħdmu.
+group-recreate-hint = Dan il-proġett m'għandux admin. Biex tneħħi lil xi ħadd, oħloq proġett ġdid.
+group-recreate = Oħloq proġett ġdid
+group-no-admin-yet = Dan il-proġett għad m'għandux admin.
+group-creator-hint = Int biss tista' ssir admin ta' dan il-proġett, billi toħloq kont.
+group-creator-elsewhere-hint = Il-persuna li ħolqot il-proġett biss tista' ssir l-admin tiegħu, billi toħloq kont. Inkella, oħloq proġett ġdid biex tneħħi lil xi ħadd.
+member-revoke-admin = Neħħi r-rwol ta' admin
+member-revoke-admin-hint = It-tibdil taċ-ċavetta tal-proġett u t-tneħħija ta' xi ħadd ma jibqgħux possibbli.
+member-revoked-admin = Ir-rwol ta' admin m'għadux ta' { $name }.
+member-step-down = Ieqaf milli tkun admin
+member-step-down-hint = Ma tibqax tista' tibdel iċ-ċavetta tal-proġett jew tneħħi lil xi ħadd.
+member-stepped-down = M'għadx għandek ir-rwol ta' admin.
+member-remove = Neħħi mill-proġett
+member-remove-hint = Jibdel iċ-ċavetta tal-proġett: xejn ġdid ma jibqa' jinqara minn { $name }.
+member-hide = Aħbi mil-listi
+error-user-not-admin = Dan il-membru mhuwiex admin.
+error-creator-proof-invalid = Dan l-apparat ma ħoloqx dan il-proġett.
+error-project-has-admin = Dan il-proġett diġà għandu admin.
+error-not-project-admin = L-admins tal-proġett biss jistgħu jagħmlu dan.
+error-user-not-claimed = Din il-persuna m'għandhiex kont, għalhekk ma tistax tkun admin.
+error-project-key-rotated = Iċ-ċavetta tal-proġett inbidlet. Itlob il-link il-ġdid lil membru.
+error-project-rotating = Iċ-ċavetta tal-proġett qed tinbidel. Erġa' pprova fi ftit.
+error-rotation-expired = Dan it-tibdil taċ-ċavetta dam wisq u ġie kkanċellat. Erġa' ibda.
+error-rotation-rows-changed = Il-proġett inbidel waqt it-tibdil taċ-ċavetta. Erġa' ibda.
+project-rotated-title = M'għadx għandek aċċess għal dan il-proġett
+project-rotated-body = Iċ-ċavetta ta' dan il-proġett inbidlet mill-admin. Itlob il-link il-ġdid lill-admin.
+project-rotated-open-link = Iftaħ link
+rotation-remove-title = Tneħħi lil { $name } mill-proġett?
+rotation-rotate-title = Tibdel iċ-ċavetta tal-proġett?
+rotation-remove-body = Li tneħħi membru jfisser li tinħoloq ċavetta ġdida. Il-link il-ġdid ikollok taqsmu mal-persuni li m’għandhomx kont.
+rotation-rotate-body = Min għandu l-link il-qadim jitlef l-aċċess għall-proġett. Il-link il-ġdid ikollok taqsmu mal-persuni li m’għandhomx kont.
+rotation-boxed =
+    { $count ->
+        [0] L-ebda membru ieħor mhu se jirċievi ċ-ċavetta awtomatikament
+        [one] { $count } membru se jirċievi ċ-ċavetta awtomatikament
+        [few] { $count } membri se jirċievu ċ-ċavetta awtomatikament
+        [many] { $count } membru se jirċievu ċ-ċavetta awtomatikament
+       *[other] { $count } membru se jirċievu ċ-ċavetta awtomatikament
+    }
+rotation-by-link-title = Persuni li jkollok tibgħatilhom il-link il-ġdid
+rotation-by-link-hint = Dawn il-persuni m’għandhomx kont. Tibgħatilhom il-link eżatt wara.
+rotation-names-and = { $first } u { $last }
+rotation-names-and-others = { $names } u { $count } oħra
+rotation-confirm-remove = Neħħi u ibdel iċ-ċavetta
+rotation-confirm-rotate = Ibdel iċ-ċavetta
+rotation-done-title = Iċ-ċavetta l-ġdida hija attiva
+rotation-done-removed = { $name } mhux aktar parti mill-proġett.
+rotation-done-rotated = Iċ-ċavetta tal-proġett inbidlet.
+rotation-done-boxed =
+    { $count ->
+        [0] L-ebda membru ieħor ma rċieva ċ-ċavetta awtomatikament.
+        [one] { $count } membru rċieva ċ-ċavetta awtomatikament.
+        [few] { $count } membri rċivew ċ-ċavetta awtomatikament.
+        [many] { $count } membru rċivew ċ-ċavetta awtomatikament.
+       *[other] { $count } membru rċivew ċ-ċavetta awtomatikament.
+    }
+rotation-new-link =
+    { $count ->
+        [0] Link ġdid tal-proġett
+        [one] Link ġdid biex tibgħat · { $count } persuna mingħajr kont
+        [few] Link ġdid biex tibgħat · { $count } persuni mingħajr kont
+        [many] Link ġdid biex tibgħat · { $count } persuna mingħajr kont
+       *[other] Link ġdid biex tibgħat · { $count } persuna mingħajr kont
+    }
+rotation-link-renewed = Il-link ġie mġedded b’suċċess.
+rotation-done = Lest
+history-key-changed = Iċ-ċavetta tal-proġett inbidlet
+history-member-removed = { $name } mhux aktar parti mill-proġett
+project-rotated-row-hint = Iċ-ċavetta inbidlet. Itlob il-link il-ġdid.

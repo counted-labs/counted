@@ -243,6 +243,7 @@ pub fn finish_move(
         return;
     }
     spawn(async move {
+        crate::common::project_token::scope(req.project_id);
         match delete_expense(Json(req)).await {
             Ok(()) => flash.set(Some(Flash::ok(done))),
             Err(_) => flash.set(Some(Flash::err(stuck))),

@@ -3,6 +3,7 @@ use crate::tid;
 use shared::ProjectStatus;
 
 use crate::common::status_transitions;
+use crate::expenses::group_security::{GroupSecurity, GroupSecuritySection};
 use crate::icons::{
     ArchiveIcon, CloseIcon, DownloadIcon, HistoryIcon, LockIcon, LogOutIcon, PencilIcon, RepeatIcon,
     ShareIcon, SmartphoneIcon, UndoIcon, UserPlusIcon, WalletIcon, ICON_HEADER,
@@ -33,6 +34,9 @@ pub struct ProjectActionsSheetProps {
     /// R5, on the personal project: the groups it counts.
     #[props(default)]
     pub on_counted_groups: Option<EventHandler<()>>,
+    /// The admin actions (docs/plans/key-lifecycle.md §8.7), in whichever state applies.
+    #[props(default)]
+    pub security: Option<GroupSecurity>,
 }
 
 /// The project page's actions, as a bottom sheet. Every entry closes the sheet, then calls out.
@@ -185,6 +189,9 @@ pub fn ProjectActionsSheet(props: ProjectActionsSheetProps) -> Element {
                             {tid!("open-in-app")}
                         }
                     }
+                }
+                if let Some(security) = props.security.clone() {
+                    GroupSecuritySection { security, on_close }
                 }
                 div { class: "bg-base-200 rounded-box overflow-hidden",
                     Row {

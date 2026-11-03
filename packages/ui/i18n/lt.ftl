@@ -10,6 +10,12 @@ retry = Bandyti dar kartą
 delete = Ištrinti
 back = Atgal
 language = Kalba
+theme = Tema
+theme-light = Šviesi
+theme-dark = Tamsi
+theme-system = Sistemos
+theme-hint-device = Išsaugota tik šiame įrenginyje.
+theme-hint-system = Atitinka šio įrenginio išvaizdą.
 
 ### Navigation
 
@@ -42,7 +48,7 @@ error-generic = Kažkas nepavyko. Bandyk dar kartą.
 
 error-invalid-email = Šis el. pašto adresas negalioja.
 error-invalid-password = Šis slaptažodis negalioja.
-error-password-too-short = Slaptažodį turi sudaryti bent 8 simboliai.
+error-password-too-short = Slaptažodį turi sudaryti bent 12 simbolių.
 error-client-outdated = Ši programėlės versija pasenusi. Atnaujink ją, kad galėtum prisijungti.
 error-invalid-link = Ši nuoroda negalioja.
 error-batch-too-large = Per daug elementų vienu metu.
@@ -99,8 +105,8 @@ login-resend-sent = Laiškas išsiųstas - patikrink pašto dėžutę.
 register-submit = Sukurti paskyrą
 register-submitting = Kuriama…
 register-have-account = Jau turi paskyrą?
-register-password-placeholder = Bent 8 simboliai
-register-password-warning = Užsirašyk slaptažodį. Jei jį pamirši, paskyros atkurti nepavyks.
+register-password-placeholder = Bent 12 simbolių
+register-password-warning = Užsirašyk slaptažodį: mes jo niekada nematome ir negalime tau jo grąžinti.
 register-check-email-title = Patikrink el. paštą
 register-email-sent = Laiškas išsiųstas
 register-email-sent-hint = Spustelėk nuorodą pašto dėžutėje, kad aktyvuotum paskyrą.
@@ -698,8 +704,8 @@ help-encryption-zero-term = Nulinė prieiga
 help-encryption-zero-def = - duomenis užšifruoji prieš išsiųsdamas, o serveris saugo tik šifruotą tekstą. Neturime jokios galimybės jo perskaityti.
 help-encryption-see = Išsamiau žr.
 help-forgot-password-q = Kas nutiks, jei pamiršiu slaptažodį?
-help-forgot-password-warning = Tavo duomenys bus prarasti visam laikui.
-help-forgot-password-a = Šifravimo raktas išvedamas iš tavo slaptažodžio, todėl atstatyti neįmanoma: niekas - net mes - negali iššifruoti tavo projektų be jo. Saugok jį saugiai, geriausia slaptažodžių tvarkyklėje.
+help-forgot-password-warning = Niekas negali jo atkurti už tave.
+help-forgot-password-a = Tavo slaptažodis saugo tavo šifravimo raktus ir niekada mums nesiunčiamas: niekas - net mes - negali iššifruoti tavo projektų už tave. Saugok jį saugiai, geriausia slaptažodžių tvarkyklėje.
 help-archive-delete-q = Kaip archyvuoti arba ištrinti projektą?
 help-archive-delete-a = Projekto ekrane atidaryk meniu ir pasirink
 help-archive-delete-b = kad paslėptum jį išsaugodamas. Projektas ištrinamas visam laikui, kai iš jo išeina paskutinis narys.
@@ -746,9 +752,12 @@ friends-remove = Pašalinti
 friends-remove-confirm-title = Pašalinti draugą
 friends-remove-confirm-message = { $email } nebebus tarp tavo draugų, o tu – tarp jo. Bet kuris iš jūsų vėliau galės išsiųsti naują prašymą.
 friends-no-key = Dar neparuošta
+friends-key-changed = Kodas pasikeitė
+friends-key-changed-hint = Draugo saugos kodas pasikeitė. Taip nutinka, kai jis apsaugo savo paskyrą, arba jei jo raktas buvo pakeistas. Kvietimai su juo užblokuoti, kol vienas kitam perskaitysite naują kodą gyvai ar telefonu ir paliesi „Kodas sutampa“.
 friends-fingerprint = Saugos kodas
 friends-fingerprint-hint = Du draugai, perskaitę vienas kitam tą patį saugos kodą, žino, kad tarp jų nėra nieko - net mūsų serverio.
 friends-key-mismatch = Serveris tavo paskyrai atsiuntė viešąjį raktą, kuris neatitinka tavo privataus rakto. Tavo saugos kodas paslėptas, o kvietimai šiame įrenginyje išjungti: galbūt kažkas klastoja serverį.
+keypair-mismatch = Raktai, kuriuos serveris atsiuntė tavo paskyrai, nesutampa su esančiais šiame įrenginyje. Kvietimai ir rakto keitimai čia išjungti, kol jie nesutaps: kažkas gali manipuliuoti serveriu.
 friends-outgoing-title = Išsiųstos
 friends-outgoing-hint = Laukiama atsakymo. Pamatysi juos tarp draugų, kai jie priims.
 friends-withdraw = Atšaukti
@@ -935,3 +944,174 @@ home-row-owed = tau skolingi
 home-row-owe = tu skolingas
 home-row-settled = Atsiskaityta
 home-totals-partial = Be projektų be valiutos kurso
+error-account-key-changed = Tavo paskyros raktas pasikeitė kitame įrenginyje. Prisijunk iš naujo, kad tęstum.
+settings-security = Saugumas
+settings-change-password = Keisti slaptažodį
+settings-change-password-hint = Tavo projektai ir duomenys lieka tokie patys. Kiti tavo įrenginiai atjungiami.
+change-password-title = Pakeisk savo slaptažodį
+change-password-current = Dabartinis slaptažodis
+change-password-new = Naujas slaptažodis
+change-password-confirm = Patvirtink naują slaptažodį
+change-password-mismatch = Du nauji slaptažodžiai nesutampa.
+change-password-submit = Keisti slaptažodį
+change-password-submitting = Keičiama…
+change-password-done = Slaptažodis pakeistas. Kiti tavo įrenginiai atjungti.
+error-rotation-incomplete = Tavo paskyra tuo metu pasikeitė. Bandyk dar kartą.
+error-key-lifecycle-unavailable = Dar negalima: pirmiausia visiems reikia naujausios programėlės versijos.
+settings-compromised = Kažkas gali žinoti mano slaptažodį
+settings-compromised-hint = Naujas slaptažodis, nauji raktai, o visi kiti įrenginiai atjungiami.
+settings-compromised-open = Apsaugoti mano paskyrą
+compromised-title = Apsaugok savo paskyrą
+compromised-body = Tavo slaptažodis ir paskyros raktai pakeičiami, o visi kiti įrenginiai atjungiami. Tavo draugai pamatys, kad tavo saugos kodas pasikeitė: palygink jį su jais iš naujo.
+compromised-keeps = Kas turėjo tavo slaptažodį, pasilieka tai, kas jau atidaryta: projektus, kuriuos iki šiol buvo galima skaityti.
+compromised-submit = Pakeisti slaptažodį ir raktus
+compromised-done = Tavo paskyra apsaugota. Paprašyk draugų palyginti tavo naują saugos kodą.
+friends-new-fingerprint = Naujas kodas:
+friends-code-matches = Kodas sutampa
+friends-code-trusted = Kodas patvirtintas.
+settings-recovery-key = Atkūrimo raktas
+settings-recovery-key-none = Be jo pamirštas slaptažodis kainuoja nustatymus, mokėjimo duomenis ir draugų kodus, o atkūrimas trunka 3 dienas.
+settings-recovery-key-set = Sukurtas. Pamiršęs slaptažodį, juo atgausi paskyrą su viskuo.
+settings-recovery-key-pending = Naujas raktas jį pakeis { $when }. Ne tu? Atšauk dabartiniu raktu.
+recovery-key-create = Sukurti
+recovery-key-replace = Pakeisti
+recovery-key-cancel-replacement = Atšaukti naują raktą
+recovery-key-title = Tavo atkūrimo raktas
+recovery-key-body = Užsirašyk jį arba išsaugok ten, kur gali pasiekti tik tu. Counted negali jo parodyti dar kartą ar atkurti už tave.
+recovery-key-copy = Kopijuoti
+recovery-key-copied = Nukopijuota
+recovery-key-save = Išsaugoti kaip failą
+recovery-key-print = Spausdinti
+recovery-key-next = Tęsti
+recovery-key-confirm-body = Norėdamas patikrinti kopiją, įvesk rakto grupę { $n }.
+recovery-key-confirm-wrong = Ši grupė nesutampa. Dar kartą pažiūrėk į kopiją.
+recovery-key-password-body = Įvesk slaptažodį, kad išsaugotum raktą paskyroje.
+recovery-key-submit = Išsaugoti raktą
+recovery-key-done = Atkūrimo raktas išsaugotas.
+recovery-key-replacement-done = Naujas raktas išsaugotas. Jis pakeis dabartinį po 72 valandų; iki tol dabartinis vis dar veikia.
+recovery-key-field = Atkūrimo raktas
+recovery-key-file-intro = Counted atkūrimo raktas
+recovery-key-cancel-done = Naujas raktas atšauktas.
+compromised-new-key = Išsaugok naują atkūrimo raktą dabar: jis pakeis senąjį po 72 valandų, o iki tol senasis vis dar veikia.
+pending-reset-title = Paprašyta atkurti tavo paskyrą iš naujo
+pending-reset-body = Jis įsigalios { $when }: tada prarasi nustatymus, mokėjimo duomenis ir draugų kodus, o įrenginiai turės prisijungti iš naujo. Ne tu? Atšauk dabartiniu slaptažodžiu.
+pending-reset-cancel = Atšaukti atkūrimą
+pending-reset-cancelled = Atkūrimas atšauktas.
+login-forgot = Pamiršai slaptažodį?
+forgot-title = Pamirštas slaptažodis
+forgot-body = Įvesk el. paštą. Jei jis turi paskyrą, atsiųsime nuorodą naujam slaptažodžiui pasirinkti.
+forgot-submit = Siųsti nuorodą
+forgot-sent = Jei šis adresas turi paskyrą, nuoroda jau keliauja. Ji galioja 24 valandas.
+reset-title = Atgauk savo paskyrą
+reset-with-key-body = Įvesk atkūrimo raktą ir naują slaptažodį: viskas grįš taip, kaip buvo.
+reset-submit-key = Atkurti mano paskyrą
+reset-no-key = Neturiu atkūrimo rakto
+reset-without-key-title = Atkurti be atkūrimo rakto
+reset-without-key-body = Tavo paskyra po 72 valandų prasidės iš naujo su nauju slaptažodžiu. Projektai grįš iš tavo įrenginių ir bendrinimo nuorodų; nustatymai, mokėjimo duomenys ir draugų kodai ne. Iki tol dabartinis slaptažodis veikia ir gali atšaukti atkūrimą.
+reset-name = Tavo vardas
+reset-submit-request = Atkurti mano paskyrą iš naujo
+reset-requested = Atlikta. Naujas slaptažodis veiks nuo { $when }. Iki tol dabartinis slaptažodis veikia ir gali tai atšaukti.
+reset-pending-already = Atkūrimas jau laukia iki { $when }. Naujas prašymas pradeda 72 valandas iš naujo.
+recovered-done = Tavo paskyra atgauta. Kiti įrenginiai atjungti.
+login-reset-undoable = Šį slaptažodį per pastarąsias 30 dienų pakeitė atkūrimas. Jei to neprašei, atšauk: paskyra grįš tokia, kokia buvo.
+login-undo-reset = Atšaukti atkūrimą
+reset-undone = Atkūrimas atšauktas. Paskyra vėl tokia, kokia buvo.
+error-reset-pending = Naujas slaptažodis veiks, kai atkūrimas įsigalios, praėjus 72 valandoms nuo prašymo.
+error-account-disabled = Ši paskyra ištrinta netrukus po atkūrimo ir laukia sunaikinimo. Ankstesnis slaptažodis vis dar gali atšaukti atkūrimą.
+error-recovery-key-invalid = Šis atkūrimo raktas neatidaro šios paskyros.
+error-project-key-required = Šiam projektui reikia jo rakto. Atidaryk jį iš naujo per bendrinimo nuorodą.
+names-or = { $first } arba { $last }
+participants-admin-badge = Admin
+edit-project-admins = Administratoriai: { $count }
+edit-project-succession = Jei projekte nebelieka administratoriaus, šį vaidmenį perima ilgiausiai projekte esantis narys su paskyra.
+member-sheet-account = Narys su paskyra
+member-actions = Veiksmai: { $name }
+member-make-admin = Suteikti administratoriaus vaidmenį
+member-make-admin-hint = Galės pakeisti projekto raktą ir ką nors pašalinti.
+member-made-admin = { $name } dabar turi administratoriaus vaidmenį.
+group-security = Projekto saugumas
+group-security-admin = Projekto saugumas · turi administratoriaus vaidmenį
+group-rotate = Pakeisti projekto raktą
+group-rotate-hint = Jei projekto nuoroda buvo nutekinta: senos nuorodos turėtojai praras prieigą prie projekto.
+group-remove = Pašalinti ką nors iš projekto
+group-remove-hint = Atima prieigą ir tuo pačiu pakeičia raktą.
+group-admins-only = Tik administratoriams.
+group-admins-only-account = Tik administratoriams, kurie turi paskyrą.
+group-ask-admin = Paklausk projekto administratoriaus: { $names }.
+group-ask-admins = Paklausk projekto administratorių: { $names }.
+group-ask-an-admin = Paklausk kurio nors projekto administratoriaus.
+group-with-account = Su paskyra
+group-free = Nemokamai
+group-sign-in-hint = Projekto administratorius ({ $names }) vėliau galės tau suteikti šį vaidmenį.
+group-sign-in-hint-any = Projekto administratorius vėliau galės tau suteikti šį vaidmenį.
+group-no-admin = Šis projektas neturi administratoriaus, todėl jo rakto pakeisti negalima.
+group-hide = Paslėpti ką nors
+group-hide-hint = Paslepia asmenį sąrašuose, bet prieigos neatima: nuoroda ir raktas vis dar veikia.
+group-recreate-hint = Šis projektas neturi administratoriaus. Jei nori ką nors pašalinti, sukurk naują projektą.
+group-recreate = Sukurti naują projektą
+group-no-admin-yet = Šis projektas dar neturi administratoriaus.
+group-creator-hint = Šio projekto administratoriaus vaidmenį gali gauti tik tu, jei susikursi paskyrą.
+group-creator-elsewhere-hint = Administratoriaus vaidmenį gali gauti tik projektą sukūręs asmuo, jei susikurs paskyrą. Kitu atveju sukurk naują projektą, jei nori ką nors pašalinti.
+member-revoke-admin = Atimti administratoriaus vaidmenį
+member-revoke-admin-hint = Nebegalės keisti projekto rakto nei nieko šalinti.
+member-revoked-admin = { $name } nebeturi administratoriaus vaidmens.
+member-step-down = Atsisakyti administratoriaus vaidmens
+member-step-down-hint = Nebegalėsi keisti projekto rakto nei nieko šalinti.
+member-stepped-down = Nebeturi administratoriaus vaidmens.
+member-remove = Pašalinti iš projekto
+member-remove-hint = Pakeičia projekto raktą: { $name } nebegalės skaityti nieko naujo.
+member-hide = Paslėpti sąrašuose
+error-user-not-admin = Šis narys neturi administratoriaus vaidmens.
+error-creator-proof-invalid = Šis įrenginys nesukūrė šio projekto.
+error-project-has-admin = Šis projektas jau turi administratorių.
+error-not-project-admin = Tai gali padaryti tik projekto administratoriai.
+error-user-not-claimed = Šis asmuo neturi paskyros, todėl negali gauti administratoriaus vaidmens.
+error-project-key-rotated = Projekto raktas pasikeitė. Paprašyk nario naujos nuorodos.
+error-project-rotating = Projekto raktas keičiamas. Bandyk dar kartą po akimirkos.
+error-rotation-expired = Rakto keitimas užtruko per ilgai ir buvo atšauktas. Pradėk iš naujo.
+error-rotation-rows-changed = Projektas pasikeitė keičiant raktą. Pradėk iš naujo.
+project-rotated-title = Nebeturi prieigos prie šio projekto
+project-rotated-body = Administratorius pakeitė šio projekto raktą. Paprašyk administratoriaus naujos nuorodos.
+project-rotated-open-link = Atidaryti nuorodą
+rotation-remove-title = Pašalinti { $name } iš projekto?
+rotation-rotate-title = Pakeisti projekto raktą?
+rotation-remove-body = Pašalinus narį, sukuriamas naujas raktas. Naują nuorodą reikės pasidalyti su žmonėmis be paskyros.
+rotation-rotate-body = Kas turi seną nuorodą, praras prieigą prie projekto. Naują nuorodą reikės pasidalyti su žmonėmis be paskyros.
+rotation-boxed =
+    { $count ->
+        [0] Joks kitas narys negaus rakto automatiškai
+        [one] { $count } narys gaus raktą automatiškai
+        [few] { $count } nariai gaus raktą automatiškai
+        [many] { $count } nario gaus raktą automatiškai
+       *[other] { $count } narių gaus raktą automatiškai
+    }
+rotation-by-link-title = Žmonės, kuriems turėsi išsiųsti naują nuorodą
+rotation-by-link-hint = Šie žmonės neturi paskyros. Nuorodą jiems išsiųsi iškart po to.
+rotation-names-and = { $first } ir { $last }
+rotation-names-and-others = { $names } ir dar { $count }
+rotation-confirm-remove = Pašalinti ir pakeisti raktą
+rotation-confirm-rotate = Pakeisti raktą
+rotation-done-title = Naujas raktas galioja
+rotation-done-removed = { $name } nebedalyvauja projekte.
+rotation-done-rotated = Projekto raktas pakeistas.
+rotation-done-boxed =
+    { $count ->
+        [0] Joks kitas narys negavo rakto automatiškai.
+        [one] { $count } narys gavo raktą automatiškai.
+        [few] { $count } nariai gavo raktą automatiškai.
+        [many] { $count } nario gavo raktą automatiškai.
+       *[other] { $count } narių gavo raktą automatiškai.
+    }
+rotation-new-link =
+    { $count ->
+        [0] Nauja projekto nuoroda
+        [one] Nauja nuoroda išsiųsti · { $count } žmogus be paskyros
+        [few] Nauja nuoroda išsiųsti · { $count } žmonės be paskyros
+        [many] Nauja nuoroda išsiųsti · { $count } žmogaus be paskyros
+       *[other] Nauja nuoroda išsiųsti · { $count } žmonių be paskyros
+    }
+rotation-link-renewed = Nuoroda sėkmingai atnaujinta.
+rotation-done = Atlikta
+history-key-changed = Projekto raktas pakeistas
+history-member-removed = { $name } nebedalyvauja projekte
+project-rotated-row-hint = Raktas pakeistas. Paprašyk naujos nuorodos.

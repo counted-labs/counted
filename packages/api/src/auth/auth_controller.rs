@@ -1,7 +1,7 @@
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use shared::{
-    Account, Keypair, LoginPayload, LoginSalt, LoginSaltPayload, RegisterPayload,
+    Account, ChangePassword, DeleteAccount, Keypair, RotationSet, LoginPayload, LoginSalt, LoginSaltPayload, RegisterPayload,
     ResendVerificationPayload, UpdatePaymentMethods, UpdatePreferences, VerifyEmailPayload,
     VerifyEmailSaltPayload,
 };
@@ -62,9 +62,20 @@ pub async fn logout() -> Result<(), ServerFnError> {
 /// RGPD art. 17. The account row and everything keyed to it go in one transaction; what the caller
 /// wrote into a *shared* project stays, because those rows are the other members' ledger too - and
 /// they are ciphertext whose key was derived from the password being destroyed here.
+///
+/// The session-only form, for clients below `KEY_LIFECYCLE_FROM`: once the floor is reached it
+/// answers 400 `CLIENT_OUTDATED` and only the route below deletes (security review 2026-11-02 L3).
 #[delete("/api/v1/auth/account")]
 pub async fn delete_account() -> Result<(), ServerFnError> {
     crate::server::auth::delete_account().await
+}
+
+/// The same deletion, proven with the password like a password change (401 `INVALID_CREDENTIALS`
+/// on a wrong proof, counted like a failed login), so that a session alone cannot erase an
+/// account's only copies of its keys.
+#[post("/api/v1/auth/account/delete")]
+pub async fn delete_account_with_proof(Json(payload): Json<DeleteAccount>) -> Result<(), ServerFnError> {
+    crate::server::auth::delete_account_with_proof(payload).await
 }
 
 /// Stores the caller's UI preferences. The body is opaque ciphertext produced with the account key;
@@ -96,10 +107,88 @@ pub async fn set_keypair(Json(keypair): Json<Keypair>) -> Result<(), ServerFnErr
     crate::server::auth::set_keypair(keypair).await
 }
 
+/// Seeds the account's ML-KEM-768 key, the post-quantum half of its hybrid keypair. Write-once.
+#[put("/api/v1/auth/kem-key")]
+pub async fn set_kem_key(Json(keypair): Json<shared::KemKeypair>) -> Result<(), ServerFnError> {
+    crate::server::auth::set_kem_key(keypair).await
+}
+
 /// The same private key, re-wrapped typed. Refused (409) unless `public_key` is the stored one.
 #[put("/api/v1/auth/keypair/wrap")]
 pub async fn rewrap_private_key(Json(keypair): Json<Keypair>) -> Result<(), ServerFnError> {
     crate::server::auth::rewrap_private_key(keypair).await
+}
+
+/// Docs/plans/key-lifecycle.md §4: the current password's proof, the new one with the same
+/// `login_salt`, and the master key under the new password-derived key. At epoch 0 every account
+/// blob is re-encrypted under a new random master key, and what it supersedes is retired. Every
+/// other session is deleted.
+#[put("/api/v1/auth/password")]
+pub async fn change_password(Json(payload): Json<ChangePassword>) -> Result<(), ServerFnError> {
+    crate::server::auth::change_password(payload).await
+}
+
+/// The account's escrow rows and friend labels as stored, which a rotation must name exactly.
+#[get("/api/v1/auth/rotation-set")]
+pub async fn rotation_set() -> Result<RotationSet, ServerFnError> {
+    crate::server::auth::rotation_set().await
+}
+
+/// Docs/plans/key-lifecycle.md §6.1. A first recovery key takes effect at once; a replacement 72
+/// hours later, during which the current key cancels it.
+#[put("/api/v1/auth/recovery-key")]
+pub async fn set_recovery_key(Json(payload): Json<shared::SetRecoveryKey>) -> Result<(), ServerFnError> {
+    crate::server::auth::recovery::set_recovery_key(payload).await
+}
+
+#[post("/api/v1/auth/recovery-key/cancel")]
+pub async fn cancel_recovery_replacement(Json(payload): Json<shared::RecoveryAuth>) -> Result<(), ServerFnError> {
+    crate::server::auth::recovery::cancel_recovery_replacement(payload).await
+}
+
+/// "Forgot password": the same answer for every address; a link only for a verified account.
+#[post("/api/v1/auth/forgot-password")]
+pub async fn forgot_password(Json(payload): Json<shared::ForgotPassword>) -> Result<(), ServerFnError> {
+    crate::server::auth::recovery::forgot_password(payload).await
+}
+
+/// What the holder of a reset link needs to derive the recovery secrets and the new proof.
+#[post("/api/v1/auth/recovery/start")]
+pub async fn recovery_start(Json(payload): Json<shared::ResetToken>) -> Result<shared::RecoveryStart, ServerFnError> {
+    crate::server::auth::recovery::recovery_start(payload).await
+}
+
+/// The link and the recovery key's auth secret, both checked, then the recovery wrap.
+#[post("/api/v1/auth/recovery/wrap")]
+pub async fn recovery_wrap(Json(payload): Json<shared::RecoveryWrapRequest>) -> Result<shared::RecoveryWrap, ServerFnError> {
+    crate::server::auth::recovery::recovery_wrap(payload).await
+}
+
+#[post("/api/v1/auth/recovery/complete")]
+pub async fn complete_recovery(Json(payload): Json<shared::CompleteRecovery>) -> Result<Account, ServerFnError> {
+    crate::server::auth::recovery::complete_recovery(payload).await
+}
+
+/// A reset without the recovery key, in effect 72 hours later. Returns when.
+#[post("/api/v1/auth/reset/request")]
+pub async fn request_reset(Json(payload): Json<shared::RequestReset>) -> Result<chrono::NaiveDateTime, ServerFnError> {
+    crate::server::auth::recovery::request_reset(payload).await
+}
+
+#[post("/api/v1/auth/reset/cancel")]
+pub async fn cancel_reset(Json(payload): Json<shared::CancelReset>) -> Result<(), ServerFnError> {
+    crate::server::auth::recovery::cancel_reset(payload).await
+}
+
+/// What a reset retired, after the proof of the password it replaced.
+#[post("/api/v1/auth/retired")]
+pub async fn retired_generation(Json(payload): Json<shared::RetiredProof>) -> Result<shared::RetiredGeneration, ServerFnError> {
+    crate::server::auth::recovery::retired_generation(payload).await
+}
+
+#[post("/api/v1/auth/reset/undo")]
+pub async fn undo_reset(Json(payload): Json<shared::UndoReset>) -> Result<Account, ServerFnError> {
+    crate::server::auth::recovery::undo_reset(payload).await
 }
 
 #[get("/api/v1/auth/me")]

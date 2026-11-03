@@ -1,4 +1,4 @@
-use crate::auth::{LoginPage, RegisterPage, SettingsPage, VerifyEmailPage};
+use crate::auth::{ForgotPasswordPage, LoginPage, RegisterPage, ResetPage, SettingsPage, VerifyEmailPage};
 use crate::charts::ChartsPage;
 use crate::demo::DemoPage;
 use crate::common::AppLayout;
@@ -50,6 +50,10 @@ pub enum Route {
         FriendsPage {},
         #[route("/verify-email/:token")]
         VerifyEmailPage { token: String },
+        #[route("/forgot-password")]
+        ForgotPasswordPage {},
+        #[route("/reset/:token")]
+        ResetPage { token: String },
         #[route("/privacy")]
         PrivacyPage {},
         #[route("/terms")]
@@ -66,9 +70,9 @@ pub enum Route {
         // A security control, not a nicety. Without a catch-all, Route::from_str fails, the router
         // throws ParseRouteError, and dioxus-fullstack writes the parse error - which quotes the
         // raw request path - into the 404 body with no Content-Type at all. Only `nosniff` kept
-        // that from being reflected XSS, and script-src has to keep 'unsafe-inline', so an XSS
-        // reads the E2EE key straight out of localStorage. Catch-alls sort last, so every route
-        // above still wins.
+        // that from being reflected XSS, and an XSS reads the E2EE key straight out of
+        // localStorage. The CSP refuses inline script now, but stays a second layer, not this one.
+        // Catch-alls sort last, so every route above still wins.
         #[route("/:..segments")]
         NotFoundPage { segments: Vec<String> },
 }
@@ -92,6 +96,8 @@ pub fn project_id_of(route: &Route) -> Option<Uuid> {
         | Route::LoginPage {}
         | Route::RegisterPage {}
         | Route::VerifyEmailPage { .. }
+        | Route::ForgotPasswordPage {}
+        | Route::ResetPage { .. }
         | Route::HelpPage {}
         | Route::PrivacyPage {}
         | Route::TermsPage {}

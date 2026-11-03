@@ -132,6 +132,7 @@ pub fn UserSelectionModal(props: UserSelectionModalProps) -> Element {
                 key: None,
                 claim_label: label,
                 claim_token: token,
+                amk_epoch: crate::auth::account_key::held_amk_epoch(),
             }))
             .await;
 

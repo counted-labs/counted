@@ -25,6 +25,7 @@ pub fn unescrowed(state: &LocalStorageState, server: &[AccountProject], account_
     state
         .projects
         .iter()
+        .filter(|local| !local.key_rotated)
         .filter_map(|local| {
             let project_key = key_of(local)?;
             let wrapped = server.iter().find(|r| r.project_id == local.project_id).and_then(|r| r.key.as_ref());
@@ -70,14 +71,18 @@ pub async fn check_erase(account: Account, account_key: Option<[u8; 32]>, pendin
         return EraseCheck::Unreachable;
     };
     let mut state = read_from_ls();
-    let left = left_elsewhere(&state, &server, account.id);
-    state.projects.retain(|p| !left.contains(&p.project_id));
+    if !crate::auth::recovery_flow::memberships_reset(&state, &account) {
+        let left = left_elsewhere(&state, &server, account.id);
+        state.projects.retain(|p| !left.contains(&p.project_id));
+    }
 
     let push = to_push(&state, &server, account_key.as_ref(), Some(&account));
     let server = if push.is_empty() {
         server
     } else {
-        if batch_upsert_account_projects(Json(push)).await.is_err() {
+        let written = batch_upsert_account_projects(Json(push)).await;
+        crate::auth::account_key::note(&written);
+        if written.is_err() {
             return EraseCheck::Unreachable;
         }
         let Ok(server) = get_account_projects().await else {
@@ -114,6 +119,7 @@ mod tests {
             claim_verifier_seeded: true,
             payment_methods_shared: true,
             history_has_actors: None,
+            admin: false,
         }
     }
 
@@ -134,9 +140,9 @@ mod tests {
             ..Default::default()
         };
         let server = vec![
-            row(escrowed, wrap_key(&account_key, WrapUse::Escrow(escrowed), &keys[0], true)),
+            row(escrowed, wrap_key(&account_key, WrapUse::Escrow(escrowed), &keys[0])),
             row(missing, None),
-            row(wrong, wrap_key(&account_key, WrapUse::Escrow(wrong), &generate_key(), true)),
+            row(wrong, wrap_key(&account_key, WrapUse::Escrow(wrong), &generate_key())),
             row(locked, None),
         ];
 
@@ -148,9 +154,23 @@ mod tests {
         let (wrapped, bare) = (Uuid::new_v4(), Uuid::new_v4());
         let (k1, k2) = (generate_key(), generate_key());
         let state = LocalStorageState { projects: vec![holding(wrapped, &k1), holding(bare, &k2)], ..Default::default() };
-        let server = vec![row(wrapped, wrap_key(&generate_key(), WrapUse::Escrow(wrapped), &k1, true)), row(bare, None)];
+        let server = vec![row(wrapped, wrap_key(&generate_key(), WrapUse::Escrow(wrapped), &k1)), row(bare, None)];
 
         assert_eq!(unescrowed(&state, &server, None), vec![bare]);
+    }
+
+    #[test]
+    fn a_project_whose_key_changed_loses_nothing_on_erase() {
+        let (rotated, bare) = (Uuid::new_v4(), Uuid::new_v4());
+        let state = LocalStorageState {
+            projects: vec![
+                LocalStorageProject { key_rotated: true, ..holding(rotated, &generate_key()) },
+                holding(bare, &generate_key()),
+            ],
+            ..Default::default()
+        };
+
+        assert_eq!(unescrowed(&state, &[], None), vec![bare]);
     }
 
     #[test]
@@ -173,6 +193,12 @@ mod tests {
             language: Some("fr".into()),
             personal_project: Some(Uuid::new_v4()),
             typed_wrap_accounts: vec![account],
+            friend_keys: [(account, "k".into())].into(),
+            account_key_owner: Some(account),
+            account_key_epoch: Some(1),
+            amk_epoch_pins: [(account, 1)].into(),
+            previous_account_keys: [(account, vec![crate::common::local_storage::PreviousAccountKey { key: "k0".into(), epoch: 0 }])].into(),
+            membership_epochs: [(account, 1)].into(),
         };
 
         assert_eq!(erased(&state), LocalStorageState { language: Some("fr".into()), ..Default::default() });

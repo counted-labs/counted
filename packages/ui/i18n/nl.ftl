@@ -9,6 +9,12 @@ retry = Opnieuw proberen
 delete = Verwijderen
 back = Terug
 language = Taal
+theme = Thema
+theme-light = Licht
+theme-dark = Donker
+theme-system = Systeem
+theme-hint-device = Alleen op dit apparaat opgeslagen.
+theme-hint-system = Volgt de weergave van dit apparaat.
 
 ### Navigation
 
@@ -39,7 +45,7 @@ error-generic = Er is iets misgegaan. Probeer het opnieuw.
 
 error-invalid-email = Dit e-mailadres is niet geldig.
 error-invalid-password = Dit wachtwoord is niet geldig.
-error-password-too-short = Het wachtwoord moet minstens 8 tekens bevatten.
+error-password-too-short = Het wachtwoord moet minstens 12 tekens bevatten.
 error-client-outdated = Deze versie van de app is verouderd. Werk hem bij om in te loggen.
 error-invalid-link = Deze link is niet geldig.
 error-batch-too-large = Te veel items tegelijk.
@@ -83,8 +89,8 @@ login-resend-sent = E-mail verzonden - kijk in je inbox.
 register-submit = Account aanmaken
 register-submitting = Bezig met aanmaken…
 register-have-account = Heb je al een account?
-register-password-placeholder = Minstens 8 tekens
-register-password-warning = Schrijf je wachtwoord op. Vergeet je het, dan kan je account niet worden hersteld.
+register-password-placeholder = Minstens 12 tekens
+register-password-warning = Schrijf je wachtwoord op: wij zien het nooit en kunnen het je niet teruggeven.
 register-check-email-title = Kijk in je inbox
 register-email-sent = E-mail verzonden
 register-email-sent-hint = Klik op de link in je inbox om je account te activeren.
@@ -578,8 +584,8 @@ help-encryption-zero-term = Geen toegang
 help-encryption-zero-def = - jij versleutelt de gegevens voordat je ze verstuurt, en de server bewaart alleen versleutelde tekst. Wij kunnen die niet lezen.
 help-encryption-see = Zie voor de details het
 help-forgot-password-q = Wat gebeurt er als ik mijn wachtwoord vergeet?
-help-forgot-password-warning = Je gegevens zijn dan definitief verloren.
-help-forgot-password-a = De sleutel wordt afgeleid van je wachtwoord, dus resetten kan niet: niemand - wij ook niet - kan je projecten zonder dat wachtwoord ontsleutelen. Bewaar het goed, het liefst in een wachtwoordmanager.
+help-forgot-password-warning = Niemand kan het voor je terughalen.
+help-forgot-password-a = Je wachtwoord beschermt je sleutels en wordt nooit naar ons gestuurd: niemand - wij ook niet - kan je projecten in jouw plaats ontsleutelen. Bewaar het goed, het liefst in een wachtwoordmanager.
 help-archive-delete-q = Hoe archiveer of verwijder ik een project?
 help-archive-delete-a = Open in het project het menu en kies
 help-archive-delete-b = om het te verbergen maar te bewaren. Een project wordt pas definitief verwijderd als de laatste deelnemer het verlaat.
@@ -760,9 +766,12 @@ friends-remove = Verwijderen
 friends-remove-confirm-title = Vriend verwijderen
 friends-remove-confirm-message = { $email } staat dan niet meer in je vrienden, en jij niet meer in die van hen. Elk van jullie kan later een nieuw verzoek sturen.
 friends-no-key = Nog niet klaar
+friends-key-changed = Code gewijzigd
+friends-key-changed-hint = De veiligheidscode van een vriend is veranderd. Dat gebeurt als die zijn account beveiligt, of als zijn sleutel is vervangen. Uitnodigingen met die vriend zijn geblokkeerd tot jullie elkaar de nieuwe code voorlezen, persoonlijk of telefonisch, en je op ‘De code klopt’ tikt.
 friends-fingerprint = Veiligheidscode
 friends-fingerprint-hint = Twee vrienden die elkaar dezelfde veiligheidscode voorlezen weten dat er niemand tussen hen zit - zelfs onze server niet.
 friends-key-mismatch = De server stuurde voor je account een publieke sleutel die niet bij je privésleutel past. Je veiligheidscode is verborgen en uitnodigingen staan uit op dit apparaat: misschien knoeit iemand met de server.
+keypair-mismatch = De sleutels die de server voor je account stuurde, komen niet overeen met die op dit apparaat. Uitnodigingen en sleutelwissels staan hier uit tot ze overeenkomen: misschien knoeit iemand met de server.
 friends-outgoing-title = Verstuurd
 friends-outgoing-hint = Wacht op antwoord. Ze verschijnen bij je vrienden zodra ze accepteren.
 friends-withdraw = Annuleren
@@ -947,3 +956,172 @@ home-row-owed = jij krijgt nog
 home-row-owe = jij moet nog
 home-row-settled = Verrekend
 home-totals-partial = Zonder projecten zonder wisselkoers
+error-account-key-changed = De sleutel van je account is op een ander apparaat gewijzigd. Log opnieuw in om verder te gaan.
+settings-security = Beveiliging
+settings-change-password = Wachtwoord wijzigen
+settings-change-password-hint = Je projecten en gegevens blijven zoals ze zijn. Je andere apparaten worden uitgelogd.
+change-password-title = Wijzig je wachtwoord
+change-password-current = Huidig wachtwoord
+change-password-new = Nieuw wachtwoord
+change-password-confirm = Bevestig het nieuwe wachtwoord
+change-password-mismatch = De twee nieuwe wachtwoorden komen niet overeen.
+change-password-submit = Wachtwoord wijzigen
+change-password-submitting = Bezig met wijzigen…
+change-password-done = Wachtwoord gewijzigd. Je andere apparaten zijn uitgelogd.
+error-rotation-incomplete = Je account is intussen gewijzigd. Probeer het opnieuw.
+error-key-lifecycle-unavailable = Nog niet beschikbaar: eerst heeft iedereen de nieuwste versie van de app nodig.
+settings-compromised = Iemand kent misschien mijn wachtwoord
+settings-compromised-hint = Nieuw wachtwoord, nieuwe sleutels en alle andere apparaten uitgelogd.
+settings-compromised-open = Mijn account beveiligen
+compromised-title = Beveilig je account
+compromised-body = Je wachtwoord en de sleutels van je account worden vervangen, en alle andere apparaten worden uitgelogd. Je vrienden zien je veiligheidscode veranderen: vergelijk hem opnieuw met hen.
+compromised-keeps = Wie je wachtwoord had, houdt wat die al heeft geopend: de projecten die tot nu toe leesbaar waren.
+compromised-submit = Wachtwoord en sleutels vervangen
+compromised-done = Je account is beveiligd. Vraag je vrienden je nieuwe veiligheidscode te vergelijken.
+friends-new-fingerprint = Nieuwe code:
+friends-code-matches = De code klopt
+friends-code-trusted = Code bevestigd.
+settings-recovery-key = Herstelsleutel
+settings-recovery-key-none = Zonder sleutel kost een vergeten wachtwoord je voorkeuren, betaalgegevens en vriendcodes, en duurt het 3 dagen.
+settings-recovery-key-set = Ingesteld. Vergeet je je wachtwoord, dan krijg je hiermee je account terug met alles erin.
+settings-recovery-key-pending = Een nieuwe sleutel vervangt hem op { $when }. Was jij dit niet? Annuleer met je huidige sleutel.
+recovery-key-create = Aanmaken
+recovery-key-replace = Vervangen
+recovery-key-cancel-replacement = Nieuwe sleutel annuleren
+recovery-key-title = Je herstelsleutel
+recovery-key-body = Schrijf hem op of bewaar hem waar alleen jij bij kunt. Counted kan hem niet opnieuw tonen of voor je terughalen.
+recovery-key-copy = Kopiëren
+recovery-key-copied = Gekopieerd
+recovery-key-save = Opslaan als bestand
+recovery-key-print = Afdrukken
+recovery-key-next = Doorgaan
+recovery-key-confirm-body = Typ ter controle groep { $n } van de sleutel.
+recovery-key-confirm-wrong = Die groep klopt niet. Kijk nog eens naar je kopie.
+recovery-key-password-body = Voer je wachtwoord in om de sleutel aan je account toe te voegen.
+recovery-key-submit = Sleutel opslaan
+recovery-key-done = Herstelsleutel opgeslagen.
+recovery-key-replacement-done = Nieuwe sleutel opgeslagen. Hij vervangt de huidige over 72 uur; tot dan werkt de huidige nog.
+recovery-key-field = Herstelsleutel
+recovery-key-file-intro = Counted-herstelsleutel
+recovery-key-cancel-done = De nieuwe sleutel is geannuleerd.
+compromised-new-key = Bewaar nu je nieuwe herstelsleutel: hij vervangt de oude over 72 uur, en tot dan werkt de oude nog.
+pending-reset-title = Er is gevraagd je account opnieuw in te stellen
+pending-reset-body = Dit gaat in op { $when }: dan gaan je voorkeuren, betaalgegevens en vriendcodes verloren en moeten je apparaten opnieuw inloggen. Was jij dit niet? Annuleer met je huidige wachtwoord.
+pending-reset-cancel = Opnieuw instellen annuleren
+pending-reset-cancelled = Het opnieuw instellen is geannuleerd.
+login-forgot = Wachtwoord vergeten?
+forgot-title = Wachtwoord vergeten
+forgot-body = Voer je e-mailadres in. Als er een account bij hoort, sturen we een link om een nieuw wachtwoord te kiezen.
+forgot-submit = Link versturen
+forgot-sent = Als dit adres een account heeft, is er een link onderweg. Die verloopt over 24 uur.
+reset-title = Je account terugkrijgen
+reset-with-key-body = Voer je herstelsleutel en een nieuw wachtwoord in: alles komt terug zoals het was.
+reset-submit-key = Mijn account herstellen
+reset-no-key = Ik heb mijn herstelsleutel niet
+reset-without-key-title = Opnieuw instellen zonder herstelsleutel
+reset-without-key-body = Je account begint over 72 uur opnieuw met een nieuw wachtwoord. Je projecten komen terug van je apparaten en deellinks; je voorkeuren, betaalgegevens en vriendcodes niet. Tot dan werkt je huidige wachtwoord nog en kun je er de reset mee annuleren.
+reset-name = Je naam
+reset-submit-request = Mijn account opnieuw instellen
+reset-requested = Klaar. Je nieuwe wachtwoord werkt vanaf { $when }. Tot dan werkt je huidige wachtwoord nog en kan het dit annuleren.
+reset-pending-already = Er staat al een herinstelling klaar tot { $when }. Een nieuw verzoek start de 72 uur opnieuw.
+recovered-done = Je account is terug. Je andere apparaten zijn uitgelogd.
+login-reset-undoable = Dit wachtwoord is de afgelopen 30 dagen vervangen door een herinstelling. Heb je daar niet om gevraagd, maak het dan ongedaan: je account komt terug zoals het was.
+login-undo-reset = Herinstelling ongedaan maken
+reset-undone = De herinstelling is ongedaan gemaakt. Je account is weer zoals het was.
+error-reset-pending = Dit nieuwe wachtwoord werkt zodra de herinstelling ingaat, 72 uur na het verzoek.
+error-account-disabled = Dit account is kort na een herinstelling verwijderd en wacht op wissing. Het vorige wachtwoord kan de herinstelling nog ongedaan maken.
+error-recovery-key-invalid = Deze herstelsleutel opent dit account niet.
+error-project-key-required = Dit project heeft zijn sleutel nodig. Open het opnieuw via de deellink.
+names-or = { $first } of { $last }
+participants-admin-badge = Beheerder
+edit-project-admins = Beheerders: { $count }
+edit-project-succession = Als de laatste beheerder het project verlaat, wordt het lid met een account dat het langst in het project zit beheerder.
+member-sheet-account = Lid met een account
+member-actions = Acties voor { $name }
+member-make-admin = Beheerder maken
+member-make-admin-hint = Kan dan de projectsleutel wijzigen en iemand verwijderen.
+member-made-admin = { $name } is nu beheerder.
+group-security = Projectbeveiliging
+group-security-admin = Projectbeveiliging · je bent beheerder
+group-rotate = Projectsleutel wijzigen
+group-rotate-hint = Als de projectlink is uitgelekt: wie de oude link heeft, verliest de toegang tot het project.
+group-remove = Iemand uit het project verwijderen
+group-remove-hint = Neemt de toegang af en wijzigt tegelijk de sleutel.
+group-admins-only = Alleen voor beheerders.
+group-admins-only-account = Alleen voor beheerders, die een account hebben.
+group-ask-admin = Vraag het { $names }, beheerder van het project.
+group-ask-admins = Vraag het { $names }, de beheerders van het project.
+group-ask-an-admin = Vraag het een beheerder van het project.
+group-with-account = Met een account
+group-free = Gratis
+group-sign-in-hint = Een beheerder van het project, { $names }, kan je daarna de rol geven.
+group-sign-in-hint-any = Een beheerder van het project kan je daarna de rol geven.
+group-no-admin = Dit project heeft geen beheerder, dus de sleutel kan niet veranderen.
+group-hide = Iemand verbergen
+group-hide-hint = Verbergt diegene in de lijsten zonder de toegang af te nemen: de link en de sleutel blijven geldig.
+group-recreate-hint = Dit project heeft geen beheerder. Maak een nieuw project om iemand te verwijderen.
+group-recreate = Nieuw project maken
+group-no-admin-yet = Dit project heeft nog geen beheerder.
+group-creator-hint = Alleen jij kunt beheerder van dit project worden, door een account aan te maken.
+group-creator-elsewhere-hint = Alleen de persoon die het project heeft gemaakt, kan de beheerder worden, door een account aan te maken. Maak anders een nieuw project om iemand te verwijderen.
+member-revoke-admin = Beheerdersrol afnemen
+member-revoke-admin-hint = Kan de projectsleutel dan niet meer wijzigen en niemand meer verwijderen.
+member-revoked-admin = { $name } is geen beheerder meer.
+member-step-down = Geen beheerder meer zijn
+member-step-down-hint = Je kunt de projectsleutel dan niet meer wijzigen en niemand meer verwijderen.
+member-stepped-down = Je bent geen beheerder meer.
+member-remove = Uit het project verwijderen
+member-remove-hint = Wijzigt de projectsleutel: { $name } kan niets nieuws meer lezen.
+member-hide = Verbergen in de lijsten
+error-user-not-admin = Dit lid is geen beheerder.
+error-creator-proof-invalid = Dit apparaat heeft dit project niet gemaakt.
+error-project-has-admin = Dit project heeft al een beheerder.
+error-not-project-admin = Alleen de beheerders van het project kunnen dit.
+error-user-not-claimed = Deze deelnemer heeft geen account en kan dus geen beheerder zijn.
+error-project-key-rotated = De projectsleutel is gewijzigd. Vraag een lid om de nieuwe link.
+error-project-rotating = De projectsleutel wordt gewijzigd. Probeer het zo opnieuw.
+error-rotation-expired = Deze sleutelwijziging duurde te lang en is geannuleerd. Begin opnieuw.
+error-rotation-rows-changed = Het project is tijdens de sleutelwijziging veranderd. Begin opnieuw.
+project-rotated-title = Je hebt geen toegang meer tot dit project
+project-rotated-body = De sleutel van dit project is door de beheerder gewijzigd. Vraag de beheerder om de nieuwe link.
+project-rotated-open-link = Een link openen
+rotation-remove-title = { $name } uit het project verwijderen?
+rotation-rotate-title = Projectsleutel wijzigen?
+rotation-remove-body = Een lid verwijderen betekent een nieuwe sleutel maken. De nieuwe link moet je delen met de mensen zonder account.
+rotation-rotate-body = Wie de oude link heeft, verliest de toegang tot het project. De nieuwe link moet je delen met de mensen zonder account.
+rotation-boxed =
+    { $count ->
+        [0] Geen ander lid krijgt de sleutel automatisch
+        [one] { $count } lid krijgt de sleutel automatisch
+       *[other] { $count } leden krijgen de sleutel automatisch
+    }
+rotation-by-link-title = Mensen naar wie je de nieuwe link moet sturen
+rotation-by-link-hint = Deze mensen hebben geen account. Je stuurt ze de link meteen daarna.
+rotation-names-and = { $first } en { $last }
+rotation-names-and-others =
+    { $names } en { $count ->
+        [one] { $count } ander
+       *[other] { $count } anderen
+    }
+rotation-confirm-remove = Verwijderen en sleutel wijzigen
+rotation-confirm-rotate = Sleutel wijzigen
+rotation-done-title = Nieuwe sleutel actief
+rotation-done-removed = { $name } hoort niet meer bij het project.
+rotation-done-rotated = De projectsleutel is gewijzigd.
+rotation-done-boxed =
+    { $count ->
+        [0] Geen ander lid heeft de sleutel automatisch gekregen.
+        [one] { $count } lid heeft de sleutel automatisch gekregen.
+       *[other] { $count } leden hebben de sleutel automatisch gekregen.
+    }
+rotation-new-link =
+    { $count ->
+        [0] Nieuwe projectlink
+        [one] Nieuwe link om te sturen · { $count } persoon zonder account
+       *[other] Nieuwe link om te sturen · { $count } mensen zonder account
+    }
+rotation-link-renewed = De link is vernieuwd.
+rotation-done = Klaar
+history-key-changed = Projectsleutel gewijzigd
+history-member-removed = { $name } hoort niet meer bij het project
+project-rotated-row-hint = De sleutel is gewijzigd. Vraag om de nieuwe link.

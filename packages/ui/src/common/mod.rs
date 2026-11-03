@@ -94,11 +94,12 @@ pub mod fx_cache;
 pub use fx_cache::CachedFx;
 
 pub mod account_sync;
-pub use account_sync::{apply_pull, copy_missing, left_elsewhere, to_push};
+pub mod creator_proof;
+pub use account_sync::{apply_pull, copy_missing, forget_left, left_elsewhere, to_push};
 
 pub mod local_storage;
 pub use local_storage::{
-    clear_user_id, initials, is_mobile, key_of, mark_converted, mark_synced, project_key, read_from_ls, remove_project, remove_quarantined_ls,
+    cached_project_row, clear_user_id, initials, is_mobile, key_of, mark_converted, mark_key_opened, mark_synced, project_key, read_from_ls, remove_project, remove_quarantined_ls,
     set_anon_member_id, set_cached_projects_list, set_project_cache, update_ls,
     update_ls_if_changed, upsert_project, upsert_project_key, user_color_class, write_to_ls,
     LocalStorageProject, LocalStorageState,
@@ -185,6 +186,12 @@ pub use route_focus::use_route_focus;
 mod language_picker;
 pub use language_picker::LanguagePicker;
 
+mod theme;
+pub use theme::{apply_theme, data_theme, set_native_theme, stored_theme, NativeTheme, Theme};
+
+mod theme_picker;
+pub use theme_picker::ThemePicker;
+
 mod currency_picker;
 pub use currency_picker::CurrencyPicker;
 
@@ -210,6 +217,7 @@ pub use splash::{use_client_ready, SplashScreen};
 mod update_required;
 pub use update_required::UpdateRequiredScreen;
 
+pub mod project_token;
 #[cfg(target_arch = "wasm32")]
 pub mod web_dom;
 
@@ -230,8 +238,11 @@ mod info_plist_guard;
 #[cfg(test)]
 pub(crate) mod test_dom;
 
-#[cfg(test)]
+#[cfg(any(test, fuzzing))]
 pub(crate) mod test_fixtures;
+
+#[cfg(test)]
+pub(crate) mod hostile;
 
 pub type NativeClipboardReader = std::sync::Arc<dyn Fn() -> Option<String> + Send + Sync + 'static>;
 

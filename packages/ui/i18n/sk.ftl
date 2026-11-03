@@ -10,6 +10,12 @@ retry = Skúsiť znova
 delete = Odstrániť
 back = Späť
 language = Jazyk
+theme = Motív
+theme-light = Svetlý
+theme-dark = Tmavý
+theme-system = Systémový
+theme-hint-device = Uložené len v tomto zariadení.
+theme-hint-system = Riadi sa vzhľadom tohto zariadenia.
 
 ### Navigation
 
@@ -42,7 +48,7 @@ error-generic = Niečo sa pokazilo. Skús to znova.
 
 error-invalid-email = Táto e-mailová adresa nie je platná.
 error-invalid-password = Toto heslo nie je platné.
-error-password-too-short = Heslo musí mať aspoň 8 znakov.
+error-password-too-short = Heslo musí mať aspoň 12 znakov.
 error-client-outdated = Táto verzia aplikácie je zastaraná. Na prihlásenie ju aktualizuj.
 error-invalid-link = Tento odkaz nie je platný.
 error-batch-too-large = Príliš veľa položiek naraz.
@@ -99,8 +105,8 @@ login-resend-sent = E-mail odoslaný - skontroluj schránku.
 register-submit = Vytvoriť účet
 register-submitting = Vytvára sa…
 register-have-account = Už máš účet?
-register-password-placeholder = Aspoň 8 znakov
-register-password-warning = Heslo si zapíš. Ak ho zabudneš, účet sa nedá obnoviť.
+register-password-placeholder = Aspoň 12 znakov
+register-password-warning = Heslo si zapíš: nikdy ho nevidíme a nemôžeme ti ho vrátiť.
 register-check-email-title = Skontroluj e-mail
 register-email-sent = E-mail odoslaný
 register-email-sent-hint = Na aktiváciu účtu klikni na odkaz v schránke.
@@ -698,8 +704,8 @@ help-encryption-zero-term = Nulový prístup
 help-encryption-zero-def = - dáta šifruješ pred odoslaním a server ukladá len šifrovaný text. Nemáme ako ho prečítať.
 help-encryption-see = Podrobnosti nájdeš v
 help-forgot-password-q = Čo sa stane, keď zabudnem heslo?
-help-forgot-password-warning = Tvoje dáta budú nenávratne stratené.
-help-forgot-password-a = Šifrovací kľúč sa odvodzuje z hesla, takže reset nie je možný: bez neho nikto - ani my - tvoje projekty nedešifruje. Uchovaj ho v bezpečí, ideálne v správcovi hesiel.
+help-forgot-password-warning = Nikto ho za teba nemôže obnoviť.
+help-forgot-password-a = Tvoje heslo chráni tvoje šifrovacie kľúče a nikdy sa k nám neposiela: nikto - ani my - tvoje projekty za teba nedešifruje. Uchovaj ho v bezpečí, ideálne v správcovi hesiel.
 help-archive-delete-q = Ako projekt archivujem alebo odstránim?
 help-archive-delete-a = Na obrazovke projektu otvor menu a zvoľ
 help-archive-delete-b = a projekt sa skryje, ale ostane zachovaný. Projekt je trvalo odstránený, keď ho opustí posledný člen.
@@ -746,9 +752,12 @@ friends-remove = Odstrániť
 friends-remove-confirm-title = Odstrániť priateľa
 friends-remove-confirm-message = { $email } už nebude medzi tvojimi priateľmi a ty medzi jeho. Ktokoľvek z vás môže neskôr poslať novú žiadosť.
 friends-no-key = Zatiaľ nie je pripravené
+friends-key-changed = Kód sa zmenil
+friends-key-changed-hint = Bezpečnostný kód priateľa sa zmenil. Stáva sa to, keď si zabezpečí účet, alebo keď bol jeho kľúč podvrhnutý. Pozvánky s ním sú zablokované, kým si nový kód neprečítate osobne alebo po telefóne a neťukneš na „Kód sedí“.
 friends-fingerprint = Bezpečnostný kód
 friends-fingerprint-hint = Dvaja priatelia, ktorí si prečítajú rovnaký bezpečnostný kód, vedia, že medzi nimi nikto nesedí - ani náš server.
 friends-key-mismatch = Server poslal pre tvoj účet verejný kľúč, ktorý nezodpovedá tvojmu súkromnému kľúču. Tvoj bezpečnostný kód je skrytý a pozvánky sú na tomto zariadení vypnuté: niekto možno manipuluje so serverom.
+keypair-mismatch = Kľúče, ktoré server poslal pre tvoj účet, nezodpovedajú tým na tomto zariadení. Pozvánky a zmeny kľúča sú tu vypnuté, kým nebudú sedieť: niekto možno manipuluje so serverom.
 friends-outgoing-title = Odoslané
 friends-outgoing-hint = Čaká na odpoveď. Po prijatí sa objavia medzi tvojimi priateľmi.
 friends-withdraw = Zrušiť
@@ -935,3 +944,180 @@ home-row-owed = dlhujú ti
 home-row-owe = dlhuješ
 home-row-settled = Vyrovnané
 home-totals-partial = Bez projektov bez výmenného kurzu
+error-account-key-changed = Kľúč tvojho účtu sa zmenil na inom zariadení. Prihlás sa znova a pokračuj.
+settings-security = Zabezpečenie
+settings-change-password = Zmeniť heslo
+settings-change-password-hint = Tvoje projekty a údaje zostanú, ako sú. Tvoje ostatné zariadenia budú odhlásené.
+change-password-title = Zmeň svoje heslo
+change-password-current = Súčasné heslo
+change-password-new = Nové heslo
+change-password-confirm = Potvrď nové heslo
+change-password-mismatch = Obe nové heslá sa nezhodujú.
+change-password-submit = Zmeniť heslo
+change-password-submitting = Mením…
+change-password-done = Heslo zmenené. Tvoje ostatné zariadenia boli odhlásené.
+error-rotation-incomplete = Tvoj účet sa medzitým zmenil. Skús to znova.
+error-key-lifecycle-unavailable = Zatiaľ nedostupné: najprv všetci potrebujú najnovšiu verziu aplikácie.
+settings-compromised = Niekto možno pozná moje heslo
+settings-compromised-hint = Nové heslo, nové kľúče a odhlásenie všetkých ostatných zariadení.
+settings-compromised-open = Zabezpečiť môj účet
+compromised-title = Zabezpeč svoj účet
+compromised-body = Tvoje heslo a kľúče účtu sa nahradia a všetky ostatné zariadenia sa odhlásia. Tvoji priatelia uvidia, že sa tvoj bezpečnostný kód zmenil: porovnajte ho znova.
+compromised-keeps = Kto mal tvoje heslo, si ponechá všetko, čo už bolo otvorené: projekty, ktoré sa doteraz dali čítať.
+compromised-submit = Nahradiť heslo a kľúče
+compromised-done = Tvoj účet je zabezpečený. Požiadaj priateľov, nech porovnajú tvoj nový bezpečnostný kód.
+friends-new-fingerprint = Nový kód:
+friends-code-matches = Kód sedí
+friends-code-trusted = Kód potvrdený.
+settings-recovery-key = Kľúč na obnovenie
+settings-recovery-key-none = Bez neho ťa zabudnuté heslo stojí nastavenia, platobné údaje a kódy priateľov a obnovenie trvá 3 dni.
+settings-recovery-key-set = Vytvorený. Keď zabudneš heslo, vráti ti účet so všetkým obsahom.
+settings-recovery-key-pending = Nový kľúč ho nahradí { $when }. Nebol si to ty? Zruš ho svojím súčasným kľúčom.
+recovery-key-create = Vytvoriť
+recovery-key-replace = Nahradiť
+recovery-key-cancel-replacement = Zrušiť nový kľúč
+recovery-key-title = Tvoj kľúč na obnovenie
+recovery-key-body = Zapíš si ho alebo ho ulož tam, kam sa dostaneš len ty. Counted ho nemôže znova ukázať ani za teba obnoviť.
+recovery-key-copy = Kopírovať
+recovery-key-copied = Skopírované
+recovery-key-save = Uložiť ako súbor
+recovery-key-print = Vytlačiť
+recovery-key-next = Pokračovať
+recovery-key-confirm-body = Na kontrolu kópie zadaj skupinu { $n } kľúča.
+recovery-key-confirm-wrong = Táto skupina nesedí. Pozri sa znova na kópiu.
+recovery-key-password-body = Zadaj heslo a ulož kľúč do účtu.
+recovery-key-submit = Uložiť kľúč
+recovery-key-done = Kľúč na obnovenie uložený.
+recovery-key-replacement-done = Nový kľúč uložený. Nahradí súčasný o 72 hodín; dovtedy súčasný stále funguje.
+recovery-key-field = Kľúč na obnovenie
+recovery-key-file-intro = Kľúč na obnovenie Counted
+recovery-key-cancel-done = Nový kľúč je zrušený.
+compromised-new-key = Ulož si teraz nový kľúč na obnovenie: nahradí starý o 72 hodín a dovtedy starý stále funguje.
+pending-reset-title = Bolo požiadané o obnovenie tvojho účtu
+pending-reset-body = Vstúpi do platnosti { $when }: potom prídeš o nastavenia, platobné údaje a kódy priateľov a zariadenia sa musia znova prihlásiť. Nebol si to ty? Zruš to súčasným heslom.
+pending-reset-cancel = Zrušiť obnovenie
+pending-reset-cancelled = Obnovenie je zrušené.
+login-forgot = Zabudnuté heslo?
+forgot-title = Zabudnuté heslo
+forgot-body = Zadaj svoj e-mail. Ak k nemu existuje účet, pošleme odkaz na nové heslo.
+forgot-submit = Poslať odkaz
+forgot-sent = Ak k adrese existuje účet, odkaz je na ceste. Vyprší o 24 hodín.
+reset-title = Získaj späť svoj účet
+reset-with-key-body = Zadaj kľúč na obnovenie a nové heslo: všetko sa vráti, ako bolo.
+reset-submit-key = Obnoviť môj účet
+reset-no-key = Nemám kľúč na obnovenie
+reset-without-key-title = Obnoviť bez kľúča na obnovenie
+reset-without-key-body = Tvoj účet začne znova s novým heslom o 72 hodín. Projekty sa vrátia z tvojich zariadení a odkazov na zdieľanie; nastavenia, platobné údaje a kódy priateľov nie. Dovtedy súčasné heslo funguje a môže obnovenie zrušiť.
+reset-name = Tvoje meno
+reset-submit-request = Obnoviť môj účet od začiatku
+reset-requested = Hotovo. Nové heslo funguje od { $when }. Dovtedy súčasné heslo funguje a môže to zrušiť.
+reset-pending-already = Obnovenie už čaká do { $when }. Nová žiadosť spustí 72 hodín znova.
+recovered-done = Účet je späť. Ostatné zariadenia boli odhlásené.
+login-reset-undoable = Toto heslo bolo v posledných 30 dňoch nahradené obnovením. Ak si o to nežiadal, vráť to späť: účet sa vráti, ako bol.
+login-undo-reset = Vrátiť obnovenie späť
+reset-undone = Obnovenie je vrátené. Účet je ako predtým.
+error-reset-pending = Nové heslo začne fungovať, keď obnovenie vstúpi do platnosti, 72 hodín po žiadosti.
+error-account-disabled = Tento účet bol vymazaný krátko po obnovení a čaká na zmazanie. Predchádzajúce heslo môže obnovenie ešte vrátiť.
+error-recovery-key-invalid = Tento kľúč na obnovenie neotvára tento účet.
+error-project-key-required = Tento projekt potrebuje svoj kľúč. Otvor ho znova z odkazu na zdieľanie.
+names-or = { $first } alebo { $last }
+participants-admin-badge = Admin
+edit-project-admins = Admini: { $count }
+edit-project-succession = Keď v projekte nezostane žiadny admin, rolu prevezme osoba s účtom, ktorá je v projekte najdlhšie.
+member-sheet-account = Člen s účtom
+member-actions = Akcie: { $name }
+member-make-admin = Udeliť rolu admina
+member-make-admin-hint = Získa možnosť zmeniť kľúč projektu a niekoho odobrať.
+member-made-admin = { $name } má teraz rolu admina.
+group-security = Zabezpečenie projektu
+group-security-admin = Zabezpečenie projektu · máš rolu admina
+group-rotate = Zmeniť kľúč projektu
+group-rotate-hint = Ak odkaz na projekt unikol: držitelia starého odkazu stratia prístup k projektu.
+group-remove = Odobrať niekoho z projektu
+group-remove-hint = Odoberie prístup a zároveň zmení kľúč.
+group-admins-only = Len pre adminov.
+group-admins-only-account = Len pre adminov, ktorí majú účet.
+group-ask-admin = Požiadaj admina projektu: { $names }.
+group-ask-admins = Požiadaj adminov projektu: { $names }.
+group-ask-an-admin = Požiadaj niektorého z adminov projektu.
+group-with-account = S účtom
+group-free = Zadarmo
+group-sign-in-hint = Admin projektu ({ $names }) ti potom môže rolu udeliť.
+group-sign-in-hint-any = Admin projektu ti potom môže rolu udeliť.
+group-no-admin = Tento projekt nemá admina, takže jeho kľúč sa nedá zmeniť.
+group-hide = Skryť niekoho
+group-hide-hint = Skryje túto osobu v zoznamoch bez odobratia prístupu: odkaz aj kľúč naďalej fungujú.
+group-recreate-hint = Tento projekt nemá admina. Ak chceš niekoho odobrať, vytvor nový projekt.
+group-recreate = Vytvoriť nový projekt
+group-no-admin-yet = Tento projekt zatiaľ nemá admina.
+group-creator-hint = Len ty sa môžeš stať adminom tohto projektu, a to vytvorením účtu.
+group-creator-elsewhere-hint = Adminom projektu sa môže stať len osoba, ktorá ho vytvorila, a to vytvorením účtu. Inak vytvor nový projekt, ak chceš niekoho odobrať.
+member-revoke-admin = Odobrať rolu admina
+member-revoke-admin-hint = Už nebude môcť meniť kľúč projektu ani nikoho odobrať.
+member-revoked-admin = { $name } už nemá rolu admina.
+member-step-down = Prestať byť adminom
+member-step-down-hint = Už nebudeš môcť meniť kľúč projektu ani nikoho odobrať.
+member-stepped-down = Už nemáš rolu admina.
+member-remove = Odobrať z projektu
+member-remove-hint = Zmení kľúč projektu: { $name } už nebude môcť čítať nič nové.
+member-hide = Skryť v zoznamoch
+error-user-not-admin = Tento člen nie je admin.
+error-creator-proof-invalid = Toto zariadenie tento projekt nevytvorilo.
+error-project-has-admin = Tento projekt už má admina.
+error-not-project-admin = Toto môžu urobiť len admini projektu.
+error-user-not-claimed = Táto osoba nemá účet, takže nemôže byť adminom.
+error-project-key-rotated = Kľúč projektu sa zmenil. Požiadaj člena o nový odkaz.
+error-project-rotating = Kľúč projektu sa práve mení. Skús to o chvíľu znova.
+error-rotation-expired = Zmena kľúča trvala príliš dlho a bola zrušená. Začni znova.
+error-rotation-rows-changed = Projekt sa počas zmeny kľúča zmenil. Začni znova.
+project-rotated-title = K tomuto projektu už nemáš prístup
+project-rotated-body = Kľúč tohto projektu bol zmenený. Požiadaj admina projektu o nový odkaz.
+project-rotated-open-link = Otvoriť odkaz
+rotation-remove-title = Odobrať { $name } z projektu?
+rotation-rotate-title = Zmeniť kľúč projektu?
+rotation-remove-body = Odobratie člena znamená vytvorenie nového kľúča. Nový odkaz bude treba zdieľať s ľuďmi bez účtu.
+rotation-rotate-body = Kto má starý odkaz, stratí prístup k projektu. Nový odkaz bude treba zdieľať s ľuďmi bez účtu.
+rotation-boxed =
+    { $count ->
+        [0] Kľúč automaticky nedostane nikto ďalší
+        [one] Kľúč automaticky dostane { $count } člen
+        [few] Kľúč automaticky dostanú { $count } členovia
+        [many] Kľúč automaticky dostane { $count } člena
+       *[other] Kľúč automaticky dostane { $count } členov
+    }
+rotation-by-link-title = Ľudia, ktorým budeš musieť poslať nový odkaz
+rotation-by-link-hint = Títo ľudia nemajú účet. Odkaz im pošleš hneď potom.
+rotation-names-and = { $first } a { $last }
+rotation-names-and-others =
+    { $names } a { $count ->
+        [one] { $count } ďalší
+        [few] { $count } ďalší
+        [many] { $count } ďalšieho
+       *[other] { $count } ďalších
+    }
+rotation-confirm-remove = Odobrať a zmeniť kľúč
+rotation-confirm-rotate = Zmeniť kľúč
+rotation-done-title = Nový kľúč platí
+rotation-done-removed = { $name } už nie je súčasťou projektu.
+rotation-done-rotated = Kľúč projektu sa zmenil.
+rotation-done-boxed =
+    { $count ->
+        [0] Kľúč nebol automaticky odovzdaný nikomu ďalšiemu.
+        [one] Kľúč bol automaticky odovzdaný { $count } členovi.
+        [few] Kľúč bol automaticky odovzdaný { $count } členom.
+        [many] Kľúč bol automaticky odovzdaný { $count } člena.
+       *[other] Kľúč bol automaticky odovzdaný { $count } členom.
+    }
+rotation-new-link =
+    { $count ->
+        [0] Nový odkaz na projekt
+        [one] Nový odkaz na odoslanie · { $count } človek bez účtu
+        [few] Nový odkaz na odoslanie · { $count } ľudia bez účtu
+        [many] Nový odkaz na odoslanie · { $count } človeka bez účtu
+       *[other] Nový odkaz na odoslanie · { $count } ľudí bez účtu
+    }
+rotation-link-renewed = Odkaz bol úspešne obnovený.
+rotation-done = Hotovo
+history-key-changed = Kľúč projektu zmenený
+history-member-removed = { $name } už nie je súčasťou projektu
+project-rotated-row-hint = Kľúč bol zmenený. Požiadaj o nový odkaz.

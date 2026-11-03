@@ -31,6 +31,7 @@ pub async fn seed_demo(ls_ctx: Signal<LocalStorageState>, data: &'static Dataset
         payload,
         claim_verifier: Some(claim_verifier(&key).to_vec()),
         demo: true,
+        creator_verifier: None,
     }))
     .await
     .map_err(|e| error_message(&e))?;
@@ -45,6 +46,7 @@ pub async fn seed_demo(ls_ctx: Signal<LocalStorageState>, data: &'static Dataset
             })
         })
         .collect::<Result<Vec<_>, String>>()?;
+    crate::common::project_token::scope_key(Some(&key));
     let user_ids: Vec<i32> = add_user(Json(CreatableUserBatch::Multiple(users)))
         .await
         .map_err(|e| error_message(&e))?
@@ -56,6 +58,7 @@ pub async fn seed_demo(ls_ctx: Signal<LocalStorageState>, data: &'static Dataset
     }
 
     let expenses = expense_creatables(&key, data, project.id, &user_ids, Local::now().date_naive())?;
+    crate::common::project_token::scope_key(Some(&key));
     batch_add_expenses(Json(expenses)).await.map_err(|e| error_message(&e))?;
 
     update_ls(ls_ctx, |state| {

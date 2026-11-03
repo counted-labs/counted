@@ -8,17 +8,20 @@ use std::collections::VecDeque;
 use uuid::Uuid;
 
 use crate::common::{
-    error_message, identity_locked, update_project_fresh, write_queue, Flash,
+    error_message, identity_locked, update_ls, update_project_fresh, write_queue, Flash,
     InviteRetry, LocalStorageState, OpKind, ProjectEdit, ProjectKey, QueuedOp,
 };
 use std::collections::HashSet;
 use crate::crypto::{decrypt_json, encrypt_json, encrypt_padded_json};
 use crate::decrypted::{decrypt_user, DecryptedUser};
 use crate::friends::friends_service::{invite_each, my_private_key, Invitee};
-use crate::icons::{CloseIcon, LockIcon, ICON_HEADER, ICON_INLINE};
+use crate::icons::{CloseIcon, LockIcon, MoreIcon, UserPlusIcon, ICON_HEADER, ICON_INLINE};
 use crate::participants::participants_service::{invite_count, same_name, DraftParticipant};
 use crate::participants::{use_friend_list, Avatar, ParticipantsEditor};
 use crate::expenses::hooks::use_project_store::ProjectStore;
+use crate::expenses::group_security::{
+    grant_admin, me_admin, member_actions, revoke_admin, step_down_admin, MemberAction, MemberSheet,
+};
 
 #[derive(PartialEq, Props, Clone)]
 pub struct EditProjectModalProps {
@@ -30,6 +33,10 @@ pub struct EditProjectModalProps {
     /// list has no picker to open, so it passes none and the card shows no button.
     #[props(default)]
     pub on_switch: Option<EventHandler<()>>,
+    /// "Remove from the project" in a member's sheet, by user id: the removal that changes the key.
+    /// `None` where this device cannot rotate: the sheet then only hides the participant.
+    #[props(default)]
+    pub on_remove_member: Option<EventHandler<i32>>,
 }
 
 #[component]
@@ -74,6 +81,8 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     let mut removed_users: Signal<Vec<DecryptedUser>> =
         use_signal(|| initial_users.iter().filter(|u| u.removed).cloned().collect());
     let mut drafts: Signal<Vec<DraftParticipant>> = use_signal(Vec::new);
+    let mut member_sheet: Signal<Option<i32>> = use_signal(|| None);
+    let mut stepped_down = use_signal(|| false);
     let mut loading = use_signal(|| false);
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
 
@@ -91,6 +100,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             if !signed_in {
                 return Vec::new();
             }
+            crate::common::project_token::scope(project_id);
             get_sent_invitations(project_id).await.unwrap_or_default()
         }
     });
@@ -100,9 +110,8 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     let can_add_friend = auth_ctx().is_some() && account_key_ctx().is_some();
     let add_friend = move |(user_id, participant_name): (i32, String)| {
         let Some(account_key) = account_key_ctx() else { return };
-        let typed = auth_ctx().is_some_and(|a| a.typed_wraps);
         spawn(async move {
-            match crate::friends::friends_service::add_from_project(project_id, user_id, &participant_name, &account_key, typed).await {
+            match crate::friends::friends_service::add_from_project(project_id, user_id, &participant_name, &account_key).await {
                 Ok(()) => flash.set(Some(Flash::ok(tid!("friends-request-sent")))),
                 Err(e) => flash.set(Some(Flash::err(error_message(&e)))),
             }
@@ -114,6 +123,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     let on_close_backdrop = props.on_close;
     let on_saved = props.on_saved;
     let on_switch = props.on_switch;
+    let on_remove_member = props.on_remove_member;
 
     let on_submit = move |_| {
         let key = match key_snap {
@@ -257,6 +267,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                     };
                     creatables.push(CreatableUser { payload, project_id });
                 }
+                crate::common::project_token::scope(project_id);
                 match add_user(Json(CreatableUserBatch::Multiple(creatables))).await {
                     // Moved into the existing list at once: a removal below can still fail (409
                     // for a participant with payments, the ordinary case), and a re-submit used to
@@ -321,6 +332,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                 }
             }
             if !edits.is_empty() {
+                crate::common::project_token::scope(project_id);
                 if let Err(e) = edit_users(Json(edits)).await {
                     error_msg.set(Some(error_message(&e)));
                     loading.set(false);
@@ -353,6 +365,76 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     };
     let invites = invite_count(&drafts.read());
     let other_count = others.len() + drafts.read().len();
+    // The admin role (docs/plans/key-lifecycle.md §8.7), shown once every app understands it.
+    let roles_shown = props.project.key_lifecycle && !props.project.read_only;
+    let stored_admin = ls_ctx.read().projects.iter().any(|p| p.project_id == project_id && p.admin);
+    let i_am_admin =
+        roles_shown && auth_ctx.read().is_some() && !stepped_down() && me_admin(stored_admin, &props.users, my_id);
+    let admin_count = existing_users().iter().filter(|u| u.claimed && u.admin).count();
+    let mut hide = move |user_id: i32| {
+        let gone = existing_users.read().iter().find(|u| u.id == user_id).cloned();
+        existing_users.write().retain(|u| u.id != user_id);
+        if let Some(u) = gone {
+            removed_users.write().push(u);
+        }
+    };
+    let mut set_role = move |user_id: i32, admin: bool, done: String| {
+        if let Some(u) = existing_users.write().iter_mut().find(|u| u.id == user_id) {
+            u.admin = admin;
+        }
+        flash.set(Some(Flash::ok(done)));
+    };
+    let mut on_member_action = move |(user_id, member_name, action): (i32, String, MemberAction)| match action {
+        MemberAction::MakeAdmin => {
+            spawn(async move {
+                match grant_admin(project_id, user_id).await {
+                    Ok(()) => set_role(user_id, true, tid!("member-made-admin", name: member_name)),
+                    Err(e) => flash.set(Some(Flash::err(error_message(&e)))),
+                }
+            });
+        }
+        MemberAction::RevokeAdmin => {
+            spawn(async move {
+                match revoke_admin(project_id, user_id).await {
+                    Ok(()) => set_role(user_id, false, tid!("member-revoked-admin", name: member_name)),
+                    Err(e) => flash.set(Some(Flash::err(error_message(&e)))),
+                }
+            });
+        }
+        MemberAction::StepDown => {
+            spawn(async move {
+                match step_down_admin(project_id).await {
+                    Ok(()) => {
+                        stepped_down.set(true);
+                        update_ls(ls_ctx, |state| {
+                            if let Some(entry) = state.projects.iter_mut().find(|p| p.project_id == project_id) {
+                                entry.admin = false;
+                            }
+                        });
+                        set_role(user_id, false, tid!("member-stepped-down"));
+                    }
+                    Err(e) => flash.set(Some(Flash::err(error_message(&e)))),
+                }
+            });
+        }
+        MemberAction::Remove => match on_remove_member {
+            Some(on_remove_member) => on_remove_member.call(user_id),
+            None => hide(user_id),
+        },
+    };
+    let sheet = member_sheet().and_then(|user_id| {
+        let user = existing_users.read().iter().find(|u| u.id == user_id).cloned()?;
+        let is_me = Some(user_id) == my_id;
+        let subtitle = if is_me {
+            tid!("participants-you-badge")
+        } else if user.claimed {
+            tid!("member-sheet-account")
+        } else {
+            tid!("participants-unlinked")
+        };
+        let actions = member_actions(i_am_admin, is_me, user.claimed, user.admin);
+        Some((user_id, user.name, subtitle, !user.claimed, actions))
+    });
 
     rsx! {
         div {
@@ -419,24 +501,39 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
 
                     div { class: "flex flex-col gap-2",
                         h4 { class: "text-xs font-bold uppercase tracking-wide text-base-content/70", {tid!("participants-you-badge")} }
-                        div { class: "flex items-center gap-2.5 min-h-13 border border-base-200 rounded-box pl-3 pr-1.5 py-1",
+                        div { class: "flex items-center gap-2 min-h-13 border border-base-200 rounded-box pl-3 pr-1 py-1.5",
                             match me.clone() {
                                 Some(u) => rsx! {
                                     span { class: "w-9 h-9 rounded-full bg-secondary text-secondary-content flex items-center justify-center text-sm font-semibold flex-shrink-0", aria_hidden: "true",
                                         {crate::participants::participants_service::initial(&u.name)}
                                     }
                                     span { class: "flex flex-col min-w-0 flex-1 gap-0.5",
-                                        span { class: "flex items-center gap-1.5 min-w-0",
-                                            span { class: "font-semibold truncate", "{u.name}" }
+                                        span { class: "flex flex-wrap items-center gap-x-1 gap-y-0.5 min-w-0",
+                                            span { class: "font-semibold truncate max-w-full", "{u.name}" }
                                             span { class: "badge badge-secondary badge-sm", {tid!("participants-you-badge")} }
+                                            if i_am_admin {
+                                                button {
+                                                    id: "edit-project-you-actions",
+                                                    r#type: "button",
+                                                    class: "badge badge-primary badge-sm gap-0.5 pr-1.5 cursor-pointer relative after:absolute after:-inset-3",
+                                                    aria_label: format!("{}, {}", tid!("participants-admin-badge"), tid!("member-actions", name: u.name.clone())),
+                                                    aria_haspopup: "dialog",
+                                                    onclick: move |_| {
+                                                        crate::common::haptic(crate::common::Haptic::Light);
+                                                        member_sheet.set(Some(u.id));
+                                                    },
+                                                    {tid!("participants-admin-badge")}
+                                                    MoreIcon { size: 12 }
+                                                }
+                                            }
                                         }
-                                        span { class: "text-sm text-base-content/70 leading-snug", {tid!("edit-project-you-are", name: u.name.clone())} }
+                                        span { class: "text-[13px] text-base-content/70 leading-snug", {tid!("edit-project-you-are", name: u.name.clone())} }
                                     }
                                     if let Some(on_switch) = on_switch {
                                         button {
                                             id: "edit-project-switch",
                                             r#type: "button",
-                                            class: "btn btn-ghost text-primary",
+                                            class: "btn btn-ghost text-primary px-2 shrink-0",
                                             onclick: move |_| on_switch.call(()),
                                             {tid!("edit-project-switch")}
                                         }
@@ -461,7 +558,12 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                     div { class: "flex flex-col gap-2",
                         div { class: "flex items-center justify-between",
                             h4 { class: "text-xs font-bold uppercase tracking-wide text-base-content/70", {tid!("participants-others")} }
-                            span { class: "badge badge-ghost badge-sm", "{other_count}" }
+                            span { class: "flex items-center gap-1.5",
+                                if roles_shown && admin_count > 0 {
+                                    span { id: "edit-project-admin-count", class: "badge badge-soft badge-primary badge-sm", {tid!("edit-project-admins", count: admin_count)} }
+                                }
+                                span { class: "badge badge-ghost badge-sm", "{other_count}" }
+                            }
                         }
                         if !others.is_empty() {
                             ul { class: "flex flex-col",
@@ -477,15 +579,11 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                                                 id: format!("edit-project-participant-{user_id}"),
                                                 name: user.name.clone(),
                                                 locked,
+                                                admin: roles_shown && user.admin,
+                                                on_actions: i_am_admin.then(|| EventHandler::new(move |_| member_sheet.set(Some(user_id)))),
                                                 claim_name: user.claim_name.clone(),
                                                 invited,
-                                                on_remove: move |_| {
-                                                    let gone = existing_users.read().iter().find(|u| u.id == user_id).cloned();
-                                                    existing_users.write().retain(|u| u.id != user_id);
-                                                    if let Some(u) = gone {
-                                                        removed_users.write().push(u);
-                                                    }
-                                                },
+                                                on_remove: move |_| hide(user_id),
                                                 on_add_friend: (can_add_friend && locked).then(|| {
                                                     EventHandler::new(move |_| add_friend((user_id, friend_name.clone())))
                                                 }),
@@ -525,6 +623,9 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                                     }
                                 }
                             }
+                        }
+                        if roles_shown && props.project.has_admin {
+                            p { id: "edit-project-succession", class: "text-xs text-base-content/70 leading-snug", {tid!("edit-project-succession")} }
                         }
                         ParticipantsEditor {
                             drafts,
@@ -571,6 +672,17 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                 onclick: move |_| on_close_backdrop.call(()),
             }
         }
+        if let Some((user_id, member_name, subtitle, guest, actions)) = sheet {
+            MemberSheet {
+                name: member_name.clone(),
+                subtitle,
+                guest,
+                actions,
+                remove_rotates: on_remove_member.is_some(),
+                on_action: move |action| on_member_action((user_id, member_name.clone(), action)),
+                on_close: move |_| member_sheet.set(None),
+            }
+        }
     }
 }
 
@@ -588,6 +700,11 @@ struct SavedRowProps {
     on_remove: EventHandler<()>,
     /// Sends the holder a friend request. Offered only on a locked row, to a signed-in device.
     on_add_friend: Option<EventHandler<()>>,
+    #[props(default)]
+    admin: bool,
+    /// The member sheet (artboard T3), for an admin.
+    #[props(default)]
+    on_actions: Option<EventHandler<()>>,
 }
 
 #[component]
@@ -597,9 +714,30 @@ fn SavedRow(props: SavedRowProps) -> Element {
         None => tid!("identity-claimed"),
     };
     let name = props.name.clone();
+    let on_actions = props.on_actions;
+    let mut press_task: Signal<Option<dioxus::core::Task>> = use_signal(|| None);
+    let mut cancel_press = move || {
+        if let Some(t) = press_task.write().take() {
+            t.cancel();
+        }
+    };
 
     rsx! {
-        li { id: "{props.id}", class: "flex items-center gap-2.5 min-h-13",
+        li {
+            id: "{props.id}",
+            class: "flex items-center gap-2.5 min-h-13",
+            ontouchstart: move |_| {
+                let Some(on_actions) = on_actions else { return };
+                let task = spawn(async move {
+                    crate::common::sleep(500).await;
+                    crate::common::haptic(crate::common::Haptic::Medium);
+                    on_actions.call(());
+                });
+                press_task.set(Some(task));
+            },
+            ontouchcancel: move |_| cancel_press(),
+            onpointercancel: move |_| cancel_press(),
+            ontouchend: move |_| cancel_press(),
             Avatar { name: props.name.clone(), guest: !props.locked && props.invited.is_none() }
             span { class: "flex flex-col min-w-0 flex-1 gap-0.5",
                 span { class: "flex items-center gap-1.5 min-w-0",
@@ -607,40 +745,62 @@ fn SavedRow(props: SavedRowProps) -> Element {
                     if props.invited.is_some() {
                         span { class: "badge badge-soft badge-info badge-sm", {tid!("participants-invited-badge")} }
                     }
+                    if props.admin {
+                        span { class: "badge badge-primary badge-sm", {tid!("participants-admin-badge")} }
+                    }
                 }
                 if props.locked {
                     // Inline rather than a hover tooltip - no hover on touch. `title` is the desktop
                     // affordance only.
-                    span { class: "text-sm text-base-content/70 flex items-center gap-1 min-w-0", title: "{claimed_by}",
-                        LockIcon { size: 13 }
-                        span { class: "truncate", "{claimed_by}" }
+                    span { class: "text-[13px] text-base-content/70 leading-snug flex items-start gap-1 min-w-0", title: "{claimed_by}",
+                        span { class: "shrink-0 mt-0.5", LockIcon { size: 13 } }
+                        span { class: "min-w-0 break-words", "{claimed_by}" }
                     }
                 } else if let Some(invited) = props.invited.clone() {
-                    span { class: "text-sm text-base-content/70 truncate",
+                    span { class: "text-[13px] text-base-content/70 truncate",
                         match invited {
                             Some(email) => rsx! { {tid!("participants-invited-sub", email: email)} },
                             None => rsx! { {tid!("participants-invited-pending")} },
                         }
                     }
                 } else {
-                    span { class: "text-sm text-base-content/70 truncate", {tid!("participants-unlinked")} }
+                    span { class: "text-[13px] text-base-content/70 truncate", {tid!("participants-unlinked")} }
                 }
             }
-            if let Some(on_add_friend) = props.on_add_friend {
+            div { class: "flex items-center shrink-0",
+                if let Some(on_add_friend) = props.on_add_friend {
+                    button {
+                        r#type: "button",
+                        class: "btn btn-ghost h-11 w-11 min-h-11 p-0 shrink-0 text-primary sm:w-auto sm:px-3",
+                        aria_label: tid!("friends-add-from-project"),
+                        title: tid!("friends-add-from-project"),
+                        onclick: move |_| on_add_friend.call(()),
+                        UserPlusIcon { size: ICON_INLINE }
+                        span { class: "hidden sm:inline", {tid!("friends-add-from-project")} }
+                    }
+                }
+                if let Some(on_actions) = props.on_actions {
+                    button {
+                        id: "{props.id}-actions",
+                        r#type: "button",
+                        class: "btn btn-ghost btn-circle h-11 w-11 min-h-11",
+                        aria_label: tid!("member-actions", name: props.name.clone()),
+                        aria_haspopup: "dialog",
+                        onclick: move |_| {
+                            crate::common::haptic(crate::common::Haptic::Light);
+                            on_actions.call(());
+                        },
+                        MoreIcon { size: ICON_INLINE }
+                    }
+                }
                 button {
+                    id: "{props.id}-remove",
                     r#type: "button",
-                    class: "btn btn-outline btn-xs",
-                    onclick: move |_| on_add_friend.call(()),
-                    {tid!("friends-add-from-project")}
+                    class: "btn btn-ghost btn-circle h-11 w-11 min-h-11",
+                    aria_label: tid!("participants-remove", name: name),
+                    onclick: move |_| props.on_remove.call(()),
+                    CloseIcon { size: ICON_INLINE }
                 }
-            }
-            button {
-                id: "{props.id}-remove",
-                r#type: "button",
-                class: "btn btn-ghost btn-circle h-11 w-11 min-h-11",
-                aria_label: tid!("participants-remove", name: name),
-                onclick: move |_| props.on_remove.call(()),
-                CloseIcon { size: ICON_INLINE }
             }
         }
     }

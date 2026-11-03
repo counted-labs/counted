@@ -32,6 +32,10 @@ Gratuit, sans pub ni traqueur, sans plafond de dépenses ni de participants. Tou
 • Hors connexion : consultez et ajoutez des dépenses sans réseau
 • Export CSV et JSON en un clic
 • Coordonnées de paiement (IBAN, PayPal, Wero, Lydia, Revolut…) chiffrées comme le reste
+• Changez de mot de passe sans rien perdre ; oublié, une clé de récupération vous rend tout
+• Mot de passe divulgué ou téléphone perdu : nouvelles clés de compte, autres appareils déconnectés
+• Administrateurs de projet : retirer quelqu'un change la clé du projet, et son ancien lien n'ouvre plus rien
+• Les membres avec un compte reçoivent la nouvelle clé seuls, par un chiffrement post-quantique ; les autres, un nouveau lien
 • Importez vos projets depuis Tricount d'un simple copier-coller
 • Web, Android et iOS : le même projet partout, avec le même lien
 • 32 langues, dont les 24 langues officielles de l'Union européenne

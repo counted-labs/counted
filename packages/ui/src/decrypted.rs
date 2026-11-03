@@ -25,6 +25,8 @@ pub struct DecryptedUser {
     pub created_at: Option<NaiveDateTime>,
     /// An account holds this participant as its identity in the project.
     pub claimed: bool,
+    /// That account administers the project.
+    pub admin: bool,
     /// That account's display name. `None` when the claim carries no label, or when it does not
     /// decrypt - the padlock still shows, only the name is missing.
     pub claim_name: Option<String>,
@@ -98,6 +100,7 @@ pub fn decrypt_user(key: &[u8; 32], u: &User) -> Result<DecryptedUser, String> {
         name: up.name,
         created_at: u.created_at,
         claimed: u.claimed,
+        admin: u.admin,
         claim_name: u.claim_label.as_ref().and_then(|p| decrypt_json::<String>(key, p).ok()),
         payment_methods: u
             .payment_methods
@@ -283,6 +286,28 @@ pub fn payments_are_inconsistent(total: f64, payments: &[DecryptedPayment]) -> b
     !shared::sums_to_total(total, side(false)) || !shared::sums_to_total(total, side(true))
 }
 
+/// Every decoder that runs on plaintext a key holder or the server chose: each refuses it or reads
+/// it, never panics.
+#[cfg(any(test, fuzzing))]
+pub(crate) fn decode_hostile(plain: &str) {
+    use crate::common::test_fixtures::TEST_KEY;
+    use crate::crypto::{encrypt, open_wrap, WrapUse};
+
+    let pair = encrypt(&TEST_KEY, plain).unwrap();
+    let _ = decrypt_json::<shared::ExpensePayload>(&TEST_KEY, &pair);
+    let _ = decrypt_json::<shared::ProjectPayload>(&TEST_KEY, &pair);
+    let _ = decrypt_json::<UserPayload>(&TEST_KEY, &pair);
+    let _ = decrypt_json::<crate::recurring::model::RecurringPayload>(&TEST_KEY, &pair);
+    let _ = decrypt_json::<shared::HistoryPayload>(&TEST_KEY, &pair);
+    let _ = decrypt_json::<PaymentPayload>(&TEST_KEY, &pair);
+    let _ = decrypt_json::<PaymentMethods>(&TEST_KEY, &pair);
+    let _ = decrypt_json::<shared::Preferences>(&TEST_KEY, &pair);
+    let _ = decrypt_json::<String>(&TEST_KEY, &pair);
+    let _ = open_wrap(&TEST_KEY, WrapUse::PrivateKey, &pair);
+    let _ = open_wrap(&TEST_KEY, WrapUse::Escrow(Uuid::nil()), &pair);
+    let _ = crate::common::parse_share_link(plain);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -381,7 +406,10 @@ mod tests {
             .unwrap(),
             status: shared::ProjectStatus::Ongoing,
             created_at: chrono::NaiveDateTime::default(),
-            owner_account_id: None,
+            has_admin: false,
+            key_lifecycle: false,
+            key_epoch: 0,
+            has_creator_proof: false,
             read_only: false,
         }
     }

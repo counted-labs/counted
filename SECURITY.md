@@ -86,6 +86,9 @@ those copies cannot be compared with a build.
 
 ## 5. Security model
 
+This section is the summary. The full construction, with test vectors and every known limitation,
+is in [SPEC.md](SPEC.md).
+
 Each statement has one label:
 
 - **[Public code]**: visible in this repository; what counted.fr serves can be rebuilt from it.
@@ -103,6 +106,10 @@ Each statement has one label:
   (between accounts), keyed hashes of addresses you sent friend requests to, which friend you
   invited to which project, public keys, and, if you turn notifications on, your phone's push
   address and language. **[Not independently verified]**
+- For changing keys: how many times your account key and each project's key changed, and when;
+  whether you set a recovery key and when you last changed your password; who administers each
+  project; for each change of a project's key, who made it, who was removed and who received the
+  new key. The full list is [SPEC.md](SPEC.md) section 12.2. **[Not independently verified]**
 - For everyone: IP address, user agent and time in technical logs; the size and timing of
   encrypted writes; how many participants and expenses a project has; which projects one device
   syncs together. **[Not independently verified]**
@@ -124,16 +131,21 @@ Each statement has one label:
 
 - A project key is 32 random bytes, generated on the device that creates the project. It travels in
   the `#fragment` of the share link, which browsers never send to the server. **[Public code]**
-- Your account key is derived on your device from your password with Argon2id. At sign-in your
-  device sends a login proof derived separately, from which the password cannot be recovered. The
-  server stores a hash of that proof. **[Public code]** for the device half; **[Not independently
-  verified]** for the storage.
+- Your account key is protected by a key derived on your device from your password with Argon2id.
+  At sign-in your device sends a login proof derived separately, from which the password cannot be
+  recovered. The server stores a hash of that proof. **[Public code]** for the device half; **[Not
+  independently verified]** for the storage.
+- You can change your password. "Someone may know my password" also replaces your account key and
+  your public keys, and signs out every other device; whoever had the password keeps what they
+  already opened. **[Public code]** for the device half; **[Not independently verified]** for the
+  server half.
 - With an account, your project keys are stored on the server encrypted under your account key
   ("key escrow"), so a new device gets them back. The trade-off: someone holding **both** our
   database and your password could read your projects. **[Public code]**
 - Inviting a friend boxes the project key to their public key (X25519). An active server could
   substitute a public key. To detect that, compare the friend codes (an 80-bit fingerprint) with
-  your friend outside the app. **[Public code]**
+  your friend outside the app. Each device also remembers a friend's key the first time it sees it
+  and blocks invitations if the key changes later. **[Public code]**
 - On the device, keys and the encrypted cache live in `localStorage` (web) or in the app's private
   data file (mobile). The key is stored next to the encrypted cache, so anyone who can copy that
   storage can read your projects. The mobile apps exclude this file from cloud backups, and on
@@ -142,8 +154,18 @@ Each statement has one label:
   shared computer, use "Sign out and erase this device" in the settings instead: it removes
   everything but the interface language, after checking that your account can give every project
   back. **[Public code]**
-- There is no password reset and no key recovery: we hold neither. Without an account, a lost
-  device means the share link is the only way back. **[Public code]**
+- We cannot recover your keys: we never hold them. A recovery key, 52 characters you write down,
+  gives your account and its projects back with the link we email you. Without it, a reset gives
+  your account new keys after 72 hours, and your projects come back only from a device that still
+  holds them or from their share links. Without an account, a lost device means the share link is
+  the only way back. **[Public code]** for the device half; **[Not independently verified]** for the
+  delays.
+- A project's admin can change its key, alone or to remove someone. Members with an account who
+  have opened the project with a current version get the new key automatically, boxed with X25519
+  and ML-KEM-768 (post-quantum); the others need the new link. Whoever is cut off keeps what they
+  already read. A project created without an account by an older app version, or left with no
+  account member holding its key, has no admin and cannot change its key. **[Public code]** for the device half; **[Not independently verified]** for the server's
+  refusal of the old key.
 
 ### 5.3 Logs, backups, deletion
 
@@ -166,9 +188,14 @@ Each statement has one label:
   because the server only checks the login proof. **[Not independently verified]**
 - Every request on an expense, payment, participant, recurring-expense or history row is scoped to the project
   it names: holding one project's id gives nothing in another. **[Not independently verified]**
+- Every request about a project carries a token derived from its key. Once the server no longer
+  accepts app versions before 3.2.9, it refuses a request without the right token, on every project
+  that has a key check, and only an admin can change a project's key. **[Not independently
+  verified]**
 - Size caps on encrypted payloads and batches. **[Not independently verified]**
-- There are no administrative endpoints. The full list of routes is in the public `*_controller.rs`
-  files of `packages/api/src/`. **[Public code]**
+- There are no operator endpoints: the only admin routes are a project admin's, on their own
+  project. The full list of routes is in the public `*_controller.rs` files of `packages/api/src/`.
+  **[Public code]**
 
 Some of these already have private tests. A public test suite is planned: its code in this
 repository, run before each release, its result attached to the GitHub release. When it ships, the
@@ -185,28 +212,40 @@ An attacker in control of our server **could**:
   can detect a swap served to everyone, and `.github/workflows/monitor.yml` checks for one every
   6 hours. Neither can detect a swap aimed at a single person. If that worries you,
   use the mobile app;
-- substitute a public key during a friend invitation (detectable by comparing friend codes, 5.2);
+- substitute a public key during a friend invitation before your device first sees that friend
+  (detectable by comparing friend codes, 5.2; a later change is blocked on the device);
+- on app versions up to 3.2.7 and web versions up to v1.24.3, make a user who accepts a forged
+  invitation switch to a project key the attacker chose, with nothing that comparing codes would show
+  ([SPEC.md](SPEC.md) section 9.1);
 - try to guess passwords offline from the stored login-proof hashes. Each guess costs an Argon2id
-  computation, and a found password would unlock that account's escrowed project keys.
+  computation, and a found password would unlock that account's escrowed project keys;
+- with the help of someone who held a project's old key, get a key of its own adopted by a member's
+  device that has not yet moved to the new one after a key change ([SPEC.md](SPEC.md) section 8.5).
 
 It **could not**:
 
 - read names, amounts, dates or notes already stored, without a project key or a password;
 - forge an encrypted row that a member's device accepts as valid, without the project key.
 
-### 5.6 Known limitations, by design
+### 5.6 Known limitations
 
-- **The project id is an access token.** Anyone who holds a project's id can read its encrypted
-  rows and can write or delete them, even without the key. Without the key they cannot read
-  anything, and anything they write fails to decrypt and is ignored by members' devices. The id
-  is in the share link, so treat a share link like a house key.
-- No key rotation: a leaked project key exposes that project for good.
-- Encrypted rows are not yet bound to their position in the database, so a server could swap two
-  rows of the same project without detection. Planned.
+The full list, grouped by what would close each, is [SPEC.md](SPEC.md) section 14. The ones that
+matter most day to day:
+
+- **The share link is a house key.** It carries the project's key. Until the server enforces
+  project tokens (5.4), and for good on a few old projects that have no key check, anyone who holds
+  a project's id can also read its encrypted rows and write or delete them, even without the key.
+  Without the key they cannot read anything, and anything they write fails to decrypt and is
+  ignored by members' devices.
+- Every member of a project holds its key and can write any row in any participant's name. Nothing
+  authenticates who wrote what.
+- Changing a project's key protects what is written after the change, not before: a removed member
+  keeps what they read or saved. A project with no admin cannot change its key at all (5.2).
 - Metadata: see 5.1. We publish the full list rather than claim there is none.
 
 ## 6. Audits
 
 Seven internal audit passes between August and October 2026, each with its findings and fixes
 written up in internal reports, which are not public. **No independent audit has been done.** We
-will say so until one has.
+will say so until one has. A review of the client cryptography needs nothing from us:
+[REVIEW.md](REVIEW.md) says where to start, what is in scope and what we already know.

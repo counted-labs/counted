@@ -54,6 +54,25 @@ pub const EMAIL_NOT_VERIFIED: &str = "Email not verified";
 /// stays open to any holder of the UUID; only claiming a participant needs the key.
 pub const CLAIM_PROOF_INVALID: &str = "Claiming an identity requires the project key";
 pub const PROJECT_READ_ONLY: &str = "This project is read-only";
+/// A project route without the claim token of a project that has a verifier, once enforced
+/// (docs/plans/key-lifecycle.md §8.2): the id alone no longer opens it.
+pub const PROJECT_KEY_REQUIRED: &str = "This project needs its key";
+/// A route that moves an account off master-key epoch 0 before `MIN_APP_VERSION` reaches
+/// `KEY_LIFECYCLE_FROM`: an older client would read blobs under the new key with the old one.
+pub const KEY_LIFECYCLE_UNAVAILABLE: &str = "Not available until every app is updated";
+/// An admin action (granting the role, changing the key, removing a member) from an account that
+/// does not administer the project.
+pub const NOT_PROJECT_ADMIN: &str = "Only the group's admins can do this";
+/// A token that was this project's before its key changed (docs/plans/key-lifecycle.md §8.3): the
+/// device switches through a rotation box or its escrow, or asks for the new link.
+pub const PROJECT_KEY_ROTATED: &str = "The group key changed";
+/// The new password of a reset that has not taken effect yet (docs/plans/key-lifecycle.md §6.3).
+pub const RESET_PENDING: &str = "This password works once the reset takes effect";
+/// An account deleted while a reset was younger than 30 days: disabled until it is erased.
+pub const ACCOUNT_DISABLED: &str = "This account is disabled and will be erased";
+/// A recovery key that matches nothing the account has, or that is too young to cancel a pending
+/// reset.
+pub const RECOVERY_KEY_INVALID: &str = "This recovery key does not open this account";
 
 // -------- 404 --------
 /// Sent when a project id resolves to no row. Shared so the client can recognise a deleted
@@ -90,6 +109,32 @@ pub const RECURRING_STALE: &str = "Recurring expense was changed elsewhere";
 pub const TOO_MANY_RECURRING: &str = "Too many recurring expenses for this project";
 pub const USER_IN_RECURRING: &str =
     "User is part of a recurring expense in this project and cannot be removed";
+/// The participant is an account's claimed identity. Deleting it would clear that claim, and the
+/// delete route takes no session.
+pub const USER_CLAIMED: &str = "User is claimed by an account and cannot be removed";
+/// Granting the admin role to a participant no account claims: only account holders can be admins.
+pub const USER_NOT_CLAIMED: &str = "This participant has no account";
+/// Revoking the role from a participant whose account is not an admin.
+pub const USER_NOT_ADMIN: &str = "This participant is not an admin";
+/// A creator claim (D9) whose secret is not the project's, on a project that has none, or from an
+/// account that holds no membership with the key.
+pub const CREATOR_PROOF_INVALID: &str = "This device did not create the project";
+/// A creator claim on a project that has an admin already: the proof only fills an empty role.
+pub const PROJECT_HAS_ADMIN: &str = "The project has an admin already";
+/// A write to a project whose key is being changed. The offline queue replays it after the switch.
+pub const PROJECT_ROTATING: &str = "The group key is being changed";
+/// A rotation that expired, was abandoned, or belongs to someone else.
+pub const ROTATION_EXPIRED: &str = "This key change is no longer under way";
+/// A commit whose re-encrypted rows do not match the project's rows.
+pub const ROTATION_ROWS_CHANGED: &str = "The group changed during the key change";
+/// An account-key write whose `amk_epoch` is not the account's: the device holds an older master
+/// key, and the blob would be unreadable to every other device.
+pub const ACCOUNT_KEY_CHANGED: &str = "The account key changed on another device";
+/// A rotation that does not name exactly the account's escrow rows and friend labels: one was
+/// added or removed while it was being built.
+pub const ROTATION_INCOMPLETE: &str = "The account changed while its key was being rotated";
+/// A password that was this account's until a reset in the last 30 days: the reset can be undone.
+pub const RESET_UNDOABLE: &str = "This password was replaced by a recent reset";
 
 // -------- 429 --------
 pub const RESEND_COOLDOWN: &str = "Veuillez attendre 60 secondes avant de renvoyer l'email.";

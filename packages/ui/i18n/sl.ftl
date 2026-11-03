@@ -10,6 +10,12 @@ retry = Poskusi znova
 delete = Izbriši
 back = Nazaj
 language = Jezik
+theme = Tema
+theme-light = Svetla
+theme-dark = Temna
+theme-system = Sistemska
+theme-hint-device = Shranjeno samo v tej napravi.
+theme-hint-system = Sledi videzu te naprave.
 
 ### Navigation
 
@@ -42,7 +48,7 @@ error-generic = Nekaj je šlo narobe. Poskusi znova.
 
 error-invalid-email = Ta e-poštni naslov ni veljaven.
 error-invalid-password = To geslo ni veljavno.
-error-password-too-short = Geslo mora imeti vsaj 8 znakov.
+error-password-too-short = Geslo mora imeti vsaj 12 znakov.
 error-client-outdated = Ta različica aplikacije je zastarela. Posodobi jo za prijavo.
 error-invalid-link = Ta povezava ni veljavna.
 error-batch-too-large = Preveč elementov naenkrat.
@@ -99,8 +105,8 @@ login-resend-sent = E-pošta poslana - preveri nabiralnik.
 register-submit = Ustvari račun
 register-submitting = Ustvarjanje…
 register-have-account = Že imaš račun?
-register-password-placeholder = Vsaj 8 znakov
-register-password-warning = Zapiši si geslo. Če ga pozabiš, računa ni mogoče obnoviti.
+register-password-placeholder = Vsaj 12 znakov
+register-password-warning = Zapiši si geslo: nikoli ga ne vidimo in ti ga ne moremo vrniti.
 register-check-email-title = Preveri e-pošto
 register-email-sent = E-pošta poslana
 register-email-sent-hint = Klikni povezavo v nabiralniku, da aktiviraš račun.
@@ -698,8 +704,8 @@ help-encryption-zero-term = Ničelni dostop
 help-encryption-zero-def = - podatke šifriraš pred pošiljanjem, strežnik pa hrani le šifrirano besedilo. Nimamo možnosti, da bi ga prebrali.
 help-encryption-see = Za podrobnosti glej
 help-forgot-password-q = Kaj se zgodi, če pozabim geslo?
-help-forgot-password-warning = Tvoji podatki bodo trajno izgubljeni.
-help-forgot-password-a = Šifrirni ključ je izpeljan iz tvojega gesla, zato ponastavitev ni mogoča: nihče - niti mi - ne more dešifrirati tvojih projektov brez njega. Hrani ga na varnem, najbolje v upravitelju gesel.
+help-forgot-password-warning = Nihče ga ne more obnoviti namesto tebe.
+help-forgot-password-a = Tvoje geslo varuje tvoje šifrirne ključe in nam ni nikoli poslano: nihče - niti mi - ne more dešifrirati tvojih projektov namesto tebe. Hrani ga na varnem, najbolje v upravitelju gesel.
 help-archive-delete-q = Kako arhiviram ali izbrišem projekt?
 help-archive-delete-a = Na zaslonu projekta odpri meni in izberi
 help-archive-delete-b = da ga skriješ, a ohraniš. Projekt je dokončno izbrisan, ko ga zapusti zadnji član.
@@ -746,9 +752,12 @@ friends-remove = Odstrani
 friends-remove-confirm-title = Odstrani prijatelja
 friends-remove-confirm-message = { $email } ne bo več med tvojimi prijatelji, ti pa ne več med njegovimi. Kdorkoli od vaju lahko kasneje pošlje novo prošnjo.
 friends-no-key = Še ni pripravljeno
+friends-key-changed = Koda spremenjena
+friends-key-changed-hint = Varnostna koda prijatelja se je spremenila. To se zgodi, ko zavaruje svoj račun, ali če je bil njegov ključ zamenjan. Povabila z njim so blokirana, dokler si nove kode ne preberete v živo ali po telefonu in ne tapneš »Koda se ujema«.
 friends-fingerprint = Varnostna koda
 friends-fingerprint-hint = Dva prijatelja, ki si prebereta isto varnostno kodo, vesta, da med njima ni nikogar - niti našega strežnika.
 friends-key-mismatch = Strežnik je za tvoj račun poslal javni ključ, ki se ne ujema s tvojim zasebnim ključem. Tvoja varnostna koda je skrita, povabila pa so v tej napravi izklopljena: morda nekdo posega v strežnik.
+keypair-mismatch = Ključi, ki jih je strežnik poslal za tvoj račun, se ne ujemajo s tistimi na tej napravi. Povabila in menjave ključa so tu izklopljeni, dokler se ne ujamejo: nekdo morda posega v strežnik.
 friends-outgoing-title = Poslano
 friends-outgoing-hint = Čaka na odgovor. Med prijatelji jih boš videl, ko sprejmejo.
 friends-withdraw = Prekliči
@@ -935,3 +944,174 @@ home-row-owed = dolgujejo ti
 home-row-owe = dolguješ
 home-row-settled = Poravnano
 home-totals-partial = Brez projektov brez menjalnega tečaja
+error-account-key-changed = Ključ tvojega računa se je spremenil v drugi napravi. Znova se prijavi za nadaljevanje.
+settings-security = Varnost
+settings-change-password = Spremeni geslo
+settings-change-password-hint = Tvoji projekti in podatki ostanejo nespremenjeni. Tvoje druge naprave bodo odjavljene.
+change-password-title = Spremeni svoje geslo
+change-password-current = Trenutno geslo
+change-password-new = Novo geslo
+change-password-confirm = Potrdi novo geslo
+change-password-mismatch = Novi gesli se ne ujemata.
+change-password-submit = Spremeni geslo
+change-password-submitting = Spreminjam…
+change-password-done = Geslo spremenjeno. Tvoje druge naprave so bile odjavljene.
+error-rotation-incomplete = Tvoj račun se je medtem spremenil. Poskusi znova.
+error-key-lifecycle-unavailable = Še ni na voljo: najprej morajo vsi imeti najnovejšo različico aplikacije.
+settings-compromised = Nekdo morda pozna moje geslo
+settings-compromised-hint = Novo geslo, novi ključi in odjava vseh drugih naprav.
+settings-compromised-open = Zavaruj moj račun
+compromised-title = Zavaruj svoj račun
+compromised-body = Tvoje geslo in ključi računa se zamenjajo, vse druge naprave pa se odjavijo. Tvoji prijatelji bodo videli, da se je tvoja varnostna koda spremenila: ponovno jo primerjajte.
+compromised-keeps = Oseba s tvojim geslom obdrži vse, kar je že bilo odprto: projekte, ki so bili do zdaj berljivi.
+compromised-submit = Zamenjaj geslo in ključe
+compromised-done = Tvoj račun je zavarovan. Prosi prijatelje, naj primerjajo tvojo novo varnostno kodo.
+friends-new-fingerprint = Nova koda:
+friends-code-matches = Koda se ujema
+friends-code-trusted = Koda potrjena.
+settings-recovery-key = Obnovitveni ključ
+settings-recovery-key-none = Brez njega te pozabljeno geslo stane nastavitve, plačilne podatke in kode prijateljev, obnovitev pa traja 3 dni.
+settings-recovery-key-set = Ustvarjen. Če pozabiš geslo, ti vrne račun z vso vsebino.
+settings-recovery-key-pending = Nov ključ ga zamenja { $when }. Nisi bil ti? Prekliči s trenutnim ključem.
+recovery-key-create = Ustvari
+recovery-key-replace = Zamenjaj
+recovery-key-cancel-replacement = Prekliči nov ključ
+recovery-key-title = Tvoj obnovitveni ključ
+recovery-key-body = Zapiši si ga ali ga shrani tja, kamor lahko dostopaš le ti. Counted ga ne more znova pokazati ali obnoviti namesto tebe.
+recovery-key-copy = Kopiraj
+recovery-key-copied = Kopirano
+recovery-key-save = Shrani kot datoteko
+recovery-key-print = Natisni
+recovery-key-next = Nadaljuj
+recovery-key-confirm-body = Za preverjanje kopije vpiši skupino { $n } ključa.
+recovery-key-confirm-wrong = Ta skupina se ne ujema. Še enkrat poglej kopijo.
+recovery-key-password-body = Vpiši geslo, da ključ shraniš v račun.
+recovery-key-submit = Shrani ključ
+recovery-key-done = Obnovitveni ključ shranjen.
+recovery-key-replacement-done = Nov ključ shranjen. Trenutnega zamenja čez 72 ur; do takrat trenutni še deluje.
+recovery-key-field = Obnovitveni ključ
+recovery-key-file-intro = Obnovitveni ključ Counted
+recovery-key-cancel-done = Nov ključ je preklican.
+compromised-new-key = Zdaj shrani nov obnovitveni ključ: starega zamenja čez 72 ur, do takrat stari še deluje.
+pending-reset-title = Zahtevana je bila ponastavitev tvojega računa
+pending-reset-body = Začne veljati { $when }: takrat izgubiš nastavitve, plačilne podatke in kode prijateljev, naprave pa se morajo znova prijaviti. Nisi bil ti? Prekliči s trenutnim geslom.
+pending-reset-cancel = Prekliči ponastavitev
+pending-reset-cancelled = Ponastavitev je preklicana.
+login-forgot = Pozabljeno geslo?
+forgot-title = Pozabljeno geslo
+forgot-body = Vpiši e-poštni naslov. Če ima račun, pošljemo povezavo za izbiro novega gesla.
+forgot-submit = Pošlji povezavo
+forgot-sent = Če ima ta naslov račun, je povezava na poti. Poteče čez 24 ur.
+reset-title = Pridobi svoj račun nazaj
+reset-with-key-body = Vpiši obnovitveni ključ in novo geslo: vse se vrne, kot je bilo.
+reset-submit-key = Obnovi moj račun
+reset-no-key = Nimam obnovitvenega ključa
+reset-without-key-title = Ponastavi brez obnovitvenega ključa
+reset-without-key-body = Tvoj račun čez 72 ur začne znova z novim geslom. Projekti se vrnejo iz tvojih naprav in povezav za deljenje; nastavitve, plačilni podatki in kode prijateljev ne. Do takrat trenutno geslo deluje in lahko ponastavitev prekliče.
+reset-name = Tvoje ime
+reset-submit-request = Ponastavi moj račun
+reset-requested = Končano. Novo geslo deluje od { $when }. Do takrat trenutno geslo deluje in lahko to prekliče.
+reset-pending-already = Ponastavitev že čaka do { $when }. Nova zahteva začne 72 ur znova.
+recovered-done = Račun je spet tvoj. Druge naprave so bile odjavljene.
+login-reset-undoable = To geslo je v zadnjih 30 dneh zamenjala ponastavitev. Če je nisi zahteval, jo razveljavi: račun se vrne, kot je bil.
+login-undo-reset = Razveljavi ponastavitev
+reset-undone = Ponastavitev je razveljavljena. Račun je kot prej.
+error-reset-pending = Novo geslo deluje, ko ponastavitev začne veljati, 72 ur po zahtevi.
+error-account-disabled = Ta račun je bil izbrisan kmalu po ponastavitvi in čaka na izbris. Prejšnje geslo lahko ponastavitev še razveljavi.
+error-recovery-key-invalid = Ta obnovitveni ključ ne odpre tega računa.
+error-project-key-required = Ta projekt potrebuje svoj ključ. Znova ga odpri prek povezave za deljenje.
+names-or = { $first } ali { $last }
+participants-admin-badge = Skrbnik
+edit-project-admins = Skrbniki: { $count }
+edit-project-succession = Če v projektu ne ostane noben skrbnik, vlogo prevzame oseba z računom, ki je v projektu najdlje.
+member-sheet-account = Član z računom
+member-actions = Dejanja: { $name }
+member-make-admin = Dodeli vlogo skrbnika
+member-make-admin-hint = Dobi možnost spreminjanja ključa projekta in odstranjevanja članov.
+member-made-admin = { $name } ima zdaj vlogo skrbnika.
+group-security = Varnost projekta
+group-security-admin = Varnost projekta · imaš vlogo skrbnika
+group-rotate = Spremeni ključ projekta
+group-rotate-hint = Če je povezava do projekta ušla v napačne roke: imetniki stare povezave izgubijo dostop do projekta.
+group-remove = Odstrani koga iz projekta
+group-remove-hint = Odvzame dostop in hkrati spremeni ključ.
+group-admins-only = Samo za skrbnike.
+group-admins-only-account = Samo za skrbnike, ki imajo račun.
+group-ask-admin = Vprašaj skrbnika projekta: { $names }.
+group-ask-admins = Vprašaj skrbnike projekta: { $names }.
+group-ask-an-admin = Vprašaj enega od skrbnikov projekta.
+group-with-account = Z računom
+group-free = Brezplačno
+group-sign-in-hint = Skrbnik projekta ({ $names }) ti nato lahko dodeli vlogo.
+group-sign-in-hint-any = Skrbnik projekta ti nato lahko dodeli vlogo.
+group-no-admin = Ta projekt nima skrbnika, zato njegovega ključa ni mogoče spremeniti.
+group-hide = Skrij koga
+group-hide-hint = Osebo skrije s seznamov, dostop pa ji ostane: povezava in ključ še vedno delujeta.
+group-recreate-hint = Ta projekt nima skrbnika. Če želiš koga odstraniti, ustvari nov projekt.
+group-recreate = Ustvari nov projekt
+group-no-admin-yet = Ta projekt še nima skrbnika.
+group-creator-hint = Samo ti lahko postaneš skrbnik tega projekta, če ustvariš račun.
+group-creator-elsewhere-hint = Skrbnik projekta lahko postane le oseba, ki ga je ustvarila, če ustvari račun. Sicer ustvari nov projekt, če želiš koga odstraniti.
+member-revoke-admin = Odvzemi vlogo skrbnika
+member-revoke-admin-hint = Spreminjanje ključa projekta in odstranjevanje članov ne bosta več na voljo.
+member-revoked-admin = { $name } nima več vloge skrbnika.
+member-step-down = Odpovej se vlogi skrbnika
+member-step-down-hint = Spreminjanje ključa projekta in odstranjevanje članov ti ne bosta več na voljo.
+member-stepped-down = Nimaš več vloge skrbnika.
+member-remove = Odstrani iz projekta
+member-remove-hint = Spremeni ključ projekta: za { $name } nič novega ne bo več berljivo.
+member-hide = Skrij s seznamov
+error-user-not-admin = Ta član ni skrbnik.
+error-creator-proof-invalid = Ta naprava ni ustvarila tega projekta.
+error-project-has-admin = Ta projekt že ima skrbnika.
+error-not-project-admin = To lahko storijo samo skrbniki projekta.
+error-user-not-claimed = Ta oseba nima računa, zato ne more biti skrbnik.
+error-project-key-rotated = Ključ projekta se je spremenil. Prosi člana za novo povezavo.
+error-project-rotating = Ključ projekta se spreminja. Poskusi znova čez trenutek.
+error-rotation-expired = Sprememba ključa je trajala predolgo in je bila preklicana. Začni znova.
+error-rotation-rows-changed = Projekt se je med spremembo ključa spremenil. Začni znova.
+project-rotated-title = Do tega projekta nimaš več dostopa
+project-rotated-body = Ključ tega projekta je bil spremenjen. Za novo povezavo prosi skrbnika projekta.
+project-rotated-open-link = Odpri povezavo
+rotation-remove-title = Odstraniti { $name } iz projekta?
+rotation-rotate-title = Spremeniti ključ projekta?
+rotation-remove-body = Odstranitev člana pomeni ustvarjanje novega ključa. Novo povezavo bo treba deliti z ljudmi brez računa.
+rotation-rotate-body = Kdor ima staro povezavo, izgubi dostop do projekta. Novo povezavo bo treba deliti z ljudmi brez računa.
+rotation-boxed =
+    { $count ->
+        [0] Ključ ne bo samodejno poslan nobenemu drugemu članu
+        [one] Ključ bo samodejno poslan { $count } članu
+        [two] Ključ bo samodejno poslan { $count } članoma
+        [few] Ključ bo samodejno poslan { $count } članom
+       *[other] Ključ bo samodejno poslan { $count } članom
+    }
+rotation-by-link-title = Ljudje, ki jim je treba poslati novo povezavo
+rotation-by-link-hint = Ti ljudje nimajo računa. Povezavo jim pošlješ takoj zatem.
+rotation-names-and = { $first } in { $last }
+rotation-names-and-others = { $names } in še { $count }
+rotation-confirm-remove = Odstrani in spremeni ključ
+rotation-confirm-rotate = Spremeni ključ
+rotation-done-title = Nov ključ velja
+rotation-done-removed = { $name } ni več del projekta.
+rotation-done-rotated = Ključ projekta se je spremenil.
+rotation-done-boxed =
+    { $count ->
+        [0] Ključ ni bil samodejno poslan nobenemu drugemu članu.
+        [one] Ključ je bil samodejno poslan { $count } članu.
+        [two] Ključ je bil samodejno poslan { $count } članoma.
+        [few] Ključ je bil samodejno poslan { $count } članom.
+       *[other] Ključ je bil samodejno poslan { $count } članom.
+    }
+rotation-new-link =
+    { $count ->
+        [0] Nova povezava do projekta
+        [one] Nova povezava za pošiljanje · { $count } oseba brez računa
+        [two] Nova povezava za pošiljanje · { $count } osebi brez računa
+        [few] Nova povezava za pošiljanje · { $count } osebe brez računa
+       *[other] Nova povezava za pošiljanje · { $count } oseb brez računa
+    }
+rotation-link-renewed = Povezava je bila uspešno obnovljena.
+rotation-done = Končano
+history-key-changed = Ključ projekta spremenjen
+history-member-removed = { $name } ni več del projekta
+project-rotated-row-hint = Ključ je bil spremenjen. Prosi za novo povezavo.

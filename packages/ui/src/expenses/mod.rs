@@ -1,4 +1,5 @@
 pub(crate) mod budget_panel;
+pub(crate) mod group_security;
 mod expense_row;
 mod expense_search;
 pub(crate) mod my_spending;
@@ -11,6 +12,7 @@ pub(crate) mod project_actions_sheet;
 mod project_header;
 mod project_states;
 mod project_stats;
+mod rotation_sheets;
 pub(crate) mod tabs;
 
 pub use expense_row::ExpenseRow;

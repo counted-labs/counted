@@ -735,3 +735,144 @@ pub fn UndoIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         }
     }
 }
+
+#[component]
+pub fn KeyIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            circle { cx: "8", cy: "15", r: "4" }
+            path { d: "m10.8 12.2 9-9M17 6l3 3M14 9l2 2" }
+        }
+    }
+}
+
+#[component]
+pub fn UserMinusIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            circle { cx: "9", cy: "8", r: "4" }
+            path { d: "M2 21a7 7 0 0 1 14 0" }
+            path { d: "M17 11h5" }
+        }
+    }
+}
+
+#[component]
+pub fn ShieldIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M12 3 4 6v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V6z" }
+        }
+    }
+}
+
+#[component]
+pub fn SunIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            circle { cx: "12", cy: "12", r: "4" }
+            path { d: "M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" }
+        }
+    }
+}
+
+#[component]
+pub fn MoonIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" }
+        }
+    }
+}
+
+#[component]
+pub fn DeviceIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            rect { x: "6", y: "2", width: "12", height: "20", rx: "3" }
+            path { d: "M12 6h3v12h-3z", fill: "currentColor", stroke: "none" }
+        }
+    }
+}
+
+#[component]
+pub fn EyeOffIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: "{size}",
+            height: "{size}",
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" }
+            path { d: "M14.084 14.158a3 3 0 0 1-4.242-4.242" }
+            path { d: "M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" }
+            path { d: "m2 2 20 20" }
+        }
+    }
+}

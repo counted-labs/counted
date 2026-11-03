@@ -11,6 +11,7 @@ pub mod demo;
 pub mod expenses;
 pub mod friends;
 pub mod help;
+pub mod hybrid;
 pub mod i18n;
 pub mod icons;
 pub mod legal;
@@ -23,5 +24,10 @@ pub mod privacy;
 pub mod project_history;
 pub mod projects;
 pub mod recurring;
+pub mod rotation;
+pub mod rotation_flow;
 pub mod route;
 pub mod welcome;
+
+#[cfg(fuzzing)]
+pub mod fuzz;

@@ -29,7 +29,7 @@ pub fn VerifyEmailPage(token: String) -> Element {
             next_paint().await;
             match verify_and_sign_in(token_val, &password_val).await {
                 Ok((account, account_key)) => {
-                    ls_ctx.set(remember_account_key(&account_key));
+                    ls_ctx.set(remember_account_key(&account, &account_key));
                     let account = sync_personal_project(account, account_key, ls_ctx).await;
                     account_enc_key_ctx.set(Some(account_key));
                     auth_ctx.set(Some(account));

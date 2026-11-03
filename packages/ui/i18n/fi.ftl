@@ -10,6 +10,12 @@ retry = Yritä uudelleen
 delete = Poista
 back = Takaisin
 language = Kieli
+theme = Teema
+theme-light = Vaalea
+theme-dark = Tumma
+theme-system = Järjestelmä
+theme-hint-device = Tallennettu vain tälle laitteelle.
+theme-hint-system = Seuraa tämän laitteen ulkoasua.
 
 ### Navigation
 
@@ -40,7 +46,7 @@ error-generic = Jokin meni pieleen. Yritä uudelleen.
 
 error-invalid-email = Sähköpostiosoite ei kelpaa.
 error-invalid-password = Salasana ei kelpaa.
-error-password-too-short = Salasanassa on oltava vähintään 8 merkkiä.
+error-password-too-short = Salasanassa on oltava vähintään 12 merkkiä.
 error-client-outdated = Tämä sovellusversio on vanhentunut. Päivitä se kirjautuaksesi.
 error-invalid-link = Linkki ei kelpaa.
 error-batch-too-large = Liian monta kohdetta kerralla.
@@ -97,8 +103,8 @@ login-resend-sent = Sähköposti lähetetty - tarkista postilaatikkosi.
 register-submit = Luo tili
 register-submitting = Luodaan…
 register-have-account = Onko sinulla jo tili?
-register-password-placeholder = Vähintään 8 merkkiä
-register-password-warning = Kirjoita salasanasi muistiin. Jos unohdat sen, tiliäsi ei voi palauttaa.
+register-password-placeholder = Vähintään 12 merkkiä
+register-password-warning = Kirjoita salasanasi muistiin: emme näe sitä koskaan emmekä voi antaa sitä sinulle takaisin.
 register-check-email-title = Tarkista sähköpostisi
 register-email-sent = Sähköposti lähetetty
 register-email-sent-hint = Napsauta postilaatikossasi olevaa linkkiä aktivoidaksesi tilisi.
@@ -684,8 +690,8 @@ help-encryption-zero-term = Nollapääsy
 help-encryption-zero-def = - salaat tiedot ennen lähettämistä, ja palvelin tallentaa vain salattua tekstiä. Meillä ei ole keinoa lukea sitä.
 help-encryption-see = Lisätietoja:
 help-forgot-password-q = Mitä tapahtuu, jos unohdan salasanani?
-help-forgot-password-warning = Tietosi menetetään pysyvästi.
-help-forgot-password-a = Salausavain johdetaan salasanastasi, joten nollaus ei ole mahdollista: kukaan - emme mekään - ei voi purkaa projektiesi salausta ilman sitä. Säilytä se turvassa, mieluiten salasanojen hallintaohjelmassa.
+help-forgot-password-warning = Kukaan ei voi palauttaa sitä puolestasi.
+help-forgot-password-a = Salasanasi suojaa salausavaimiasi, eikä sitä koskaan lähetetä meille: kukaan - emme mekään - ei voi purkaa projektiesi salausta puolestasi. Säilytä se turvassa, mieluiten salasanojen hallintaohjelmassa.
 help-archive-delete-q = Miten arkistoin tai poistan projektin?
 help-archive-delete-a = Avaa projektin näytöllä valikko ja valitse
 help-archive-delete-b = piilottaaksesi sen säilyttäen. Projekti poistetaan lopullisesti, kun sen viimeinen jäsen poistuu.
@@ -732,9 +738,12 @@ friends-remove = Poista
 friends-remove-confirm-title = Poista kaveri
 friends-remove-confirm-message = { $email } ei ole enää kavereissasi, etkä sinä hänen. Kumpi tahansa voi lähettää uuden pyynnön myöhemmin.
 friends-no-key = Ei vielä valmis
+friends-key-changed = Koodi muuttunut
+friends-key-changed-hint = Ystävän turvakoodi vaihtui. Niin käy, kun hän suojaa tilinsä, tai jos hänen avaimensa on vaihdettu. Kutsut hänen kanssaan on estetty, kunnes luette uuden koodin toisillenne kasvokkain tai puhelimessa ja napautat ”Koodi täsmää”.
 friends-fingerprint = Turvakoodi
 friends-fingerprint-hint = Kaksi kaveria, jotka lukevat toisilleen saman turvakoodin, tietävät, ettei kukaan ole heidän välissään - ei edes palvelimemme.
 friends-key-mismatch = Palvelin lähetti tilillesi julkisen avaimen, joka ei vastaa yksityistä avaintasi. Turvakoodisi on piilotettu ja kutsut ovat pois päältä tällä laitteella: joku saattaa peukaloida palvelinta.
+keypair-mismatch = Palvelimen tilillesi lähettämät avaimet eivät vastaa tämän laitteen avaimia. Kutsut ja avaimen vaihdot ovat täällä pois käytöstä, kunnes ne vastaavat: joku saattaa peukaloida palvelinta.
 friends-outgoing-title = Lähetetyt
 friends-outgoing-hint = Odottaa vastausta. Näet heidät kavereissasi, kun he hyväksyvät.
 friends-withdraw = Peruuta
@@ -919,3 +928,172 @@ home-row-owed = sinulle velkaa
 home-row-owe = olet velkaa
 home-row-settled = Selvitetty
 home-totals-partial = Ilman projekteja, joilla ei ole vaihtokurssia
+error-account-key-changed = Tilisi avain vaihtui toisella laitteella. Kirjaudu uudelleen jatkaaksesi.
+settings-security = Turvallisuus
+settings-change-password = Vaihda salasana
+settings-change-password-hint = Projektisi ja tietosi pysyvät ennallaan. Muut laitteesi kirjataan ulos.
+change-password-title = Vaihda salasanasi
+change-password-current = Nykyinen salasana
+change-password-new = Uusi salasana
+change-password-confirm = Vahvista uusi salasana
+change-password-mismatch = Uudet salasanat eivät täsmää.
+change-password-submit = Vaihda salasana
+change-password-submitting = Vaihdetaan…
+change-password-done = Salasana vaihdettu. Muut laitteesi kirjattiin ulos.
+error-rotation-incomplete = Tilisi muuttui tämän aikana. Yritä uudelleen.
+error-key-lifecycle-unavailable = Ei vielä käytettävissä: kaikkien täytyy ensin päivittää sovellus uusimpaan versioon.
+settings-compromised = Joku saattaa tietää salasanani
+settings-compromised-hint = Uusi salasana, uudet avaimet ja kaikki muut laitteet kirjataan ulos.
+settings-compromised-open = Suojaa tilini
+compromised-title = Suojaa tilisi
+compromised-body = Salasanasi ja tilisi avaimet vaihdetaan, ja kaikki muut laitteet kirjataan ulos. Ystäväsi näkevät turvakoodisi vaihtuvan: vertailkaa sitä uudelleen.
+compromised-keeps = Salasanasi tiennyt säilyttää sen, minkä on jo avannut: projektit, joita on tähän asti voinut lukea.
+compromised-submit = Vaihda salasana ja avaimet
+compromised-done = Tilisi on suojattu. Pyydä ystäviäsi vertaamaan uutta turvakoodiasi.
+friends-new-fingerprint = Uusi koodi:
+friends-code-matches = Koodi täsmää
+friends-code-trusted = Koodi vahvistettu.
+settings-recovery-key = Palautusavain
+settings-recovery-key-none = Ilman sitä unohtunut salasana vie asetuksesi, maksutietosi ja ystävien koodit, ja palautus kestää 3 päivää.
+settings-recovery-key-set = Asetettu. Jos unohdat salasanasi, saat sillä tilisi takaisin kaikkineen.
+settings-recovery-key-pending = Uusi avain korvaa sen { $when }. Etkö se ollut sinä? Peru se nykyisellä avaimellasi.
+recovery-key-create = Luo
+recovery-key-replace = Korvaa
+recovery-key-cancel-replacement = Peru uusi avain
+recovery-key-title = Palautusavaimesi
+recovery-key-body = Kirjoita se ylös tai tallenna paikkaan, johon vain sinä pääset. Counted ei voi näyttää sitä uudelleen eikä palauttaa sitä puolestasi.
+recovery-key-copy = Kopioi
+recovery-key-copied = Kopioitu
+recovery-key-save = Tallenna tiedostona
+recovery-key-print = Tulosta
+recovery-key-next = Jatka
+recovery-key-confirm-body = Tarkista kopiosi kirjoittamalla avaimen ryhmä { $n }.
+recovery-key-confirm-wrong = Ryhmä ei täsmää. Katso kopiotasi uudelleen.
+recovery-key-password-body = Tallenna avain tiliisi syöttämällä salasanasi.
+recovery-key-submit = Tallenna avain
+recovery-key-done = Palautusavain tallennettu.
+recovery-key-replacement-done = Uusi avain tallennettu. Se korvaa nykyisen 72 tunnin kuluttua; siihen asti nykyinen toimii.
+recovery-key-field = Palautusavain
+recovery-key-file-intro = Countedin palautusavain
+recovery-key-cancel-done = Uusi avain on peruttu.
+compromised-new-key = Tallenna uusi palautusavaimesi nyt: se korvaa vanhan 72 tunnin kuluttua, ja siihen asti vanha toimii.
+pending-reset-title = Tilisi nollausta on pyydetty
+pending-reset-body = Se tulee voimaan { $when }: silloin asetuksesi, maksutietosi ja ystävien koodit menetetään, ja laitteidesi täytyy kirjautua uudelleen. Etkö se ollut sinä? Peru se nykyisellä salasanallasi.
+pending-reset-cancel = Peru nollaus
+pending-reset-cancelled = Nollaus on peruttu.
+login-forgot = Unohtuiko salasana?
+forgot-title = Unohtunut salasana
+forgot-body = Syötä sähköpostiosoitteesi. Jos sillä on tili, lähetämme linkin uuden salasanan valintaan.
+forgot-submit = Lähetä linkki
+forgot-sent = Jos osoitteella on tili, linkki on matkalla. Se vanhenee 24 tunnissa.
+reset-title = Palauta tilisi
+reset-with-key-body = Syötä palautusavaimesi ja uusi salasana: kaikki palaa ennalleen.
+reset-submit-key = Palauta tilini
+reset-no-key = Minulla ei ole palautusavainta
+reset-without-key-title = Nollaa ilman palautusavainta
+reset-without-key-body = Tilisi alkaa alusta uudella salasanalla 72 tunnin kuluttua. Projektisi palaavat laitteistasi ja jakolinkeistä; asetuksesi, maksutietosi ja ystävien koodit eivät. Siihen asti nykyinen salasanasi toimii ja voi perua nollauksen.
+reset-name = Nimesi
+reset-submit-request = Nollaa tilini
+reset-requested = Valmis. Uusi salasanasi toimii { $when } alkaen. Siihen asti nykyinen salasana toimii ja voi perua sen.
+reset-pending-already = Nollaus odottaa jo { $when } asti. Uusi pyyntö aloittaa 72 tuntia alusta.
+recovered-done = Tilisi on palautettu. Muut laitteesi kirjattiin ulos.
+login-reset-undoable = Tämä salasana korvattiin nollauksella viimeisten 30 päivän aikana. Jos et pyytänyt sitä, peru se: tilisi palaa ennalleen.
+login-undo-reset = Peru nollaus
+reset-undone = Nollaus on peruttu. Tilisi on ennallaan.
+error-reset-pending = Uusi salasana toimii, kun nollaus tulee voimaan, 72 tuntia pyynnön jälkeen.
+error-account-disabled = Tili poistettiin pian nollauksen jälkeen ja odottaa pyyhkimistä. Aiempi salasana voi yhä perua nollauksen.
+error-recovery-key-invalid = Tämä palautusavain ei avaa tätä tiliä.
+error-project-key-required = Projekti tarvitsee avaimensa. Avaa se uudelleen jakolinkistä.
+names-or = { $first } tai { $last }
+participants-admin-badge = Ylläpitäjä
+edit-project-admins = Ylläpitäjiä: { $count }
+edit-project-succession = Jos viimeinen ylläpitäjä lähtee projektista, ylläpitäjäksi tulee pisimpään mukana ollut jäsen, jolla on tili.
+member-sheet-account = Jäsen, jolla on tili
+member-actions = Toiminnot: { $name }
+member-make-admin = Tee ylläpitäjäksi
+member-make-admin-hint = Voi sitten vaihtaa projektin avaimen ja poistaa jonkun.
+member-made-admin = { $name } on nyt ylläpitäjä.
+group-security = Projektin turvallisuus
+group-security-admin = Projektin turvallisuus · olet ylläpitäjä
+group-rotate = Vaihda projektin avain
+group-rotate-hint = Jos projektin linkki on vuotanut: vanhan linkin haltijat menettävät pääsyn projektiin.
+group-remove = Poista joku projektista
+group-remove-hint = Poistaa pääsyn ja vaihtaa avaimen samalla kertaa.
+group-admins-only = Vain ylläpitäjille.
+group-admins-only-account = Vain ylläpitäjille, joilla on tili.
+group-ask-admin = Kysy projektin ylläpitäjältä: { $names }.
+group-ask-admins = Kysy projektin ylläpitäjiltä: { $names }.
+group-ask-an-admin = Kysy joltakulta projektin ylläpitäjältä.
+group-with-account = Tilin kanssa
+group-free = Ilmainen
+group-sign-in-hint = Projektin ylläpitäjä ({ $names }) voi sitten antaa sinulle roolin.
+group-sign-in-hint-any = Projektin ylläpitäjä voi sitten antaa sinulle roolin.
+group-no-admin = Projektilla ei ole ylläpitäjää, joten sen avainta ei voi vaihtaa.
+group-hide = Piilota joku
+group-hide-hint = Piilottaa hänet listoista poistamatta pääsyä: linkki ja avain toimivat yhä.
+group-recreate-hint = Projektilla ei ole ylläpitäjää. Jos haluat poistaa jonkun, luo uusi projekti.
+group-recreate = Luo uusi projekti
+group-no-admin-yet = Projektilla ei ole vielä ylläpitäjää.
+group-creator-hint = Vain sinä voit tulla tämän projektin ylläpitäjäksi luomalla tilin.
+group-creator-elsewhere-hint = Vain projektin luonut henkilö voi tulla sen ylläpitäjäksi luomalla tilin. Muuten luo uusi projekti, jos haluat poistaa jonkun.
+member-revoke-admin = Poista ylläpitäjän rooli
+member-revoke-admin-hint = Ei voi enää vaihtaa projektin avainta eikä poistaa ketään.
+member-revoked-admin = { $name } ei ole enää ylläpitäjä.
+member-step-down = Lopeta ylläpitäjänä
+member-step-down-hint = Et voi enää vaihtaa projektin avainta etkä poistaa ketään.
+member-stepped-down = Et ole enää ylläpitäjä.
+member-remove = Poista projektista
+member-remove-hint = Vaihtaa projektin avaimen: { $name } ei voi enää lukea mitään uutta.
+member-hide = Piilota listoista
+error-user-not-admin = Tämä jäsen ei ole ylläpitäjä.
+error-creator-proof-invalid = Tämä laite ei luonut tätä projektia.
+error-project-has-admin = Projektilla on jo ylläpitäjä.
+error-not-project-admin = Vain projektin ylläpitäjät voivat tehdä tämän.
+error-user-not-claimed = Tällä osallistujalla ei ole tiliä, joten hän ei voi olla ylläpitäjä.
+error-project-key-rotated = Projektin avain vaihtui. Pyydä uusi linkki joltakulta jäseneltä.
+error-project-rotating = Projektin avainta vaihdetaan. Yritä hetken päästä uudelleen.
+error-rotation-expired = Avaimen vaihto kesti liian kauan ja peruttiin. Aloita alusta.
+error-rotation-rows-changed = Projekti muuttui avaimen vaihdon aikana. Aloita alusta.
+project-rotated-title = Sinulla ei ole enää pääsyä tähän projektiin
+project-rotated-body = Ylläpitäjä vaihtoi tämän projektin avaimen. Pyydä häneltä uusi linkki.
+project-rotated-open-link = Avaa linkki
+rotation-remove-title = Poistetaanko { $name } projektista?
+rotation-rotate-title = Vaihdetaanko projektin avain?
+rotation-remove-body = Jäsenen poistaminen tarkoittaa uuden avaimen luomista. Uusi linkki pitää jakaa niille, joilla ei ole tiliä.
+rotation-rotate-body = Vanhan linkin haltijat menettävät pääsyn projektiin. Uusi linkki pitää jakaa niille, joilla ei ole tiliä.
+rotation-boxed =
+    { $count ->
+        [0] Kukaan muu jäsen ei saa avainta automaattisesti
+        [one] { $count } jäsen saa avaimen automaattisesti
+       *[other] { $count } jäsentä saa avaimen automaattisesti
+    }
+rotation-by-link-title = Henkilöt, joille sinun pitää lähettää uusi linkki
+rotation-by-link-hint = Näillä henkilöillä ei ole tiliä. Lähetät heille linkin heti tämän jälkeen.
+rotation-names-and = { $first } ja { $last }
+rotation-names-and-others =
+    { $names } ja { $count ->
+        [one] { $count } muu
+       *[other] { $count } muuta
+    }
+rotation-confirm-remove = Poista ja vaihda avain
+rotation-confirm-rotate = Vaihda avain
+rotation-done-title = Uusi avain käytössä
+rotation-done-removed = { $name } ei ole enää mukana projektissa.
+rotation-done-rotated = Projektin avain vaihtui.
+rotation-done-boxed =
+    { $count ->
+        [0] Kukaan muu jäsen ei saanut avainta automaattisesti.
+        [one] { $count } jäsen sai avaimen automaattisesti.
+       *[other] { $count } jäsentä sai avaimen automaattisesti.
+    }
+rotation-new-link =
+    { $count ->
+        [0] Projektin uusi linkki
+        [one] Uusi linkki lähetettäväksi · { $count } henkilö ilman tiliä
+       *[other] Uusi linkki lähetettäväksi · { $count } henkilöä ilman tiliä
+    }
+rotation-link-renewed = Linkki uusittiin.
+rotation-done = Valmis
+history-key-changed = Projektin avain vaihdettu
+history-member-removed = { $name } ei ole enää mukana projektissa
+project-rotated-row-hint = Avain vaihtui. Pyydä uusi linkki.

@@ -116,6 +116,12 @@ mod tests {
         Rule { freq, interval, anchor, ends }
     }
 
+    /// SPEC §16: occurrence ids are stored and deduplicated by a unique index, so they must not drift.
+    #[test]
+    fn the_occurrence_id_matches_its_known_answer() {
+        assert_eq!(occurrence_id(Uuid::from_bytes([7u8; 16]), d(2026, 1, 31)).to_string(), "66a6c464-8843-8e0e-8282-42618503332b");
+    }
+
     #[test]
     fn the_31st_lands_on_the_last_day_and_comes_back() {
         let r = rule(Freq::Monthly, 1, d(2027, 1, 31), Ends::Never);

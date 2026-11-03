@@ -27,6 +27,8 @@ counted.fr serves is built from exactly these files, reproducibly, and its hashe
 
 The backend - `packages/api/src/server/`, the database, the deployment - stays private. The
 client is what handles your keys and your plaintext, and it is the part you can audit and rebuild.
+How it encrypts, what the server can still learn, and the known limitations:
+[SPEC.md](SPEC.md). To review it: [REVIEW.md](REVIEW.md).
 
 ## Rebuilding what counted.fr serves
 
@@ -75,7 +77,7 @@ It proves where the list comes from, not that the code is safe; the rebuild abov
 | Store | What can be checked |
 | --- | --- |
 | [F-Droid](https://f-droid.org/packages/fr.counted.app/) | F-Droid rebuilds each `mobile-vX.Y.Z` tag from this repository and ships our signed APK only if its own build matches it, signature aside. The same APK is attached to the tag's GitHub release |
-| Google Play | Google re-signs the app with its own key, so a Play install cannot be compared with a build yet |
+| Google Play | Google re-signs the app with its own key (certificate below), so a Play install proves where it came from but cannot be compared with a build yet |
 | App Store | Each copy is encrypted for the device that installs it (FairPlay); nobody can compare it with a build. Team ID `UK936HFQ24`, bundle ID `fr.counted.app` |
 
 Signing certificate of the F-Droid and GitHub-release APK, package `fr.counted.app`, SHA-256:
@@ -89,6 +91,12 @@ Check an installed copy with [AppVerifier](https://github.com/soupslurpr/AppVeri
 ```sh
 adb pull "$(adb shell pm path fr.counted.app | head -1 | cut -d: -f2)" counted.apk
 apksigner verify --print-certs counted.apk | grep SHA-256
+```
+
+Google Play signing certificate, same package, SHA-256:
+
+```
+4C:1E:7D:F5:2C:FB:D6:03:14:C2:0B:E4:AA:7E:9E:7D:30:19:1C:50:24:3B:F5:09:1A:21:F4:B1:30:98:A6:DC
 ```
 
 ## Licence

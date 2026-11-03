@@ -144,6 +144,25 @@ pub fn FriendsPage() -> Element {
                                                         div { class: "list-col-grow flex flex-col min-w-0",
                                                             span { class: "font-medium truncate", "{f.email}" }
                                                             match &f.fingerprint {
+                                                                _ if f.key_changed => {
+                                                                    let trusted = row.clone();
+                                                                    rsx! {
+                                                                        span { class: "badge badge-soft badge-error badge-xs", {tid!("friends-key-changed")} }
+                                                                        if let Some(code) = f.new_fingerprint() {
+                                                                            span { class: "text-xs text-base-content/70 flex flex-wrap items-center gap-1",
+                                                                                {tid!("friends-new-fingerprint")}
+                                                                                kbd { class: "kbd kbd-xs", "{code}" }
+                                                                            }
+                                                                            button {
+                                                                                r#type: "button",
+                                                                                class: "btn btn-xs btn-outline mt-1 self-start",
+                                                                                disabled: (friends.busy)(),
+                                                                                onclick: move |_| friends.trust_new_key(trusted.clone()),
+                                                                                {tid!("friends-code-matches")}
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
                                                                 Some(fp) => rsx! {
                                                                     span { class: "text-xs text-base-content/70 flex flex-wrap items-center gap-1",
                                                                         {tid!("friends-fingerprint")}
@@ -168,6 +187,9 @@ pub fn FriendsPage() -> Element {
                                             }
                                         }
                                     }
+                                }
+                                if lists.friends.iter().any(|f| f.key_changed) {
+                                    div { role: "alert", class: "alert alert-error text-sm", {tid!("friends-key-changed-hint")} }
                                 }
                                 p { class: "text-xs text-base-content/70", {tid!("friends-fingerprint-hint")} }
                             }
@@ -212,7 +234,7 @@ pub fn FriendsPage() -> Element {
                     on_cancel: move |_| removing.set(None),
                     on_confirm: move |_| {
                         removing.set(None);
-                        friends.remove(row.id);
+                        friends.remove(row.clone());
                     },
                 }
             }

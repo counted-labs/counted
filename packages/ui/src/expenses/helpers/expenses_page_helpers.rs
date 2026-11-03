@@ -46,6 +46,11 @@ pub fn went_offline<T>(guard: Resolved<'_, T>) -> bool {
     guard.and_then(|r| r.as_ref().err()).map(is_offline_error).unwrap_or(false)
 }
 
+/// The key changed and this device has no way to the new one (docs/plans/key-lifecycle.md §8.6).
+pub fn went_rotated<T>(guard: Resolved<'_, T>) -> bool {
+    guard.and_then(|r| r.as_ref().err()).is_some_and(crate::rotation_flow::is_key_rotated)
+}
+
 /// The sync's failure as (message to display, whether the server was unreachable). The second flag
 /// is what lets the page fall back to cached rows for a connectivity error but not for a real one.
 pub fn sync_error<T>(guard: Resolved<'_, T>) -> Option<(String, bool)> {
@@ -189,6 +194,9 @@ pub enum HeaderState {
     /// Every dropdown entry needs the live project.
     Cached { title: String },
     Ready { title: String, status: ProjectStatus, read_only: bool },
+    /// The key changed and no box or escrow gave this device the new one (artboard T10). Nothing
+    /// of the project shows, its name included: a removed member sees no more of it.
+    Rotated,
 }
 
 pub fn header_state(
@@ -200,6 +208,7 @@ pub fn header_state(
     match sync {
         None => HeaderState::Loading,
         Some(Err(e)) if is_project_gone_error(e) => HeaderState::Gone,
+        Some(Err(e)) if crate::rotation_flow::is_key_rotated(e) => HeaderState::Rotated,
         Some(Err(e)) => match (is_offline_error(e), cached_project) {
             (true, Some(p)) => HeaderState::Cached { title: project_name(key, p) },
             _ => HeaderState::Error(error_key(e)),
@@ -289,6 +298,7 @@ mod tests {
                 payments,
                 recurring: None,
                 server_date: None,
+                rotated: None,
             },
         )))
     }

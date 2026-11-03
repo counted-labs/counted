@@ -27,7 +27,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 use super::local_storage::{
-    key_of, mark_synced, upsert_project, upsert_project_key, LocalStorageState,
+    cached_project_row, key_of, mark_synced, remove_project, upsert_project, upsert_project_key, LocalStorageState,
 };
 use crate::crypto::{claim_label, claim_token, key_to_fragment, open_wrap, wrap_key, WrapUse};
 use crate::decrypted::decrypt_project;
@@ -52,10 +52,24 @@ pub fn left_elsewhere(
         .collect()
 }
 
+/// Forgets what [`left_elsewhere`] found, except a project a rotation removed this account from
+/// (`rotated`, or already marked): that one keeps a row opening T10 (D14).
+pub fn forget_left(state: &mut LocalStorageState, left: &[Uuid], rotated: &[Uuid]) {
+    for project_id in left {
+        let marked = state.projects.iter().any(|p| p.project_id == *project_id && p.key_rotated);
+        if marked || rotated.contains(project_id) {
+            crate::rotation_flow::mark_rotated(state, *project_id);
+        } else {
+            remove_project(state, *project_id);
+        }
+    }
+}
+
 /// What this device should send up, given what the server already has.
 ///
 /// An entry is pushed when the server is missing the membership, the participant, or the escrowed
-/// key. Nothing is pushed for a project the server already knows about in full - reconciliation
+/// key. Nothing is pushed for a project whose key changed without reaching this device (its token
+/// is from before the rotation), nor for one the server already knows about in full - reconciliation
 /// runs on every projects-page load with an account, and a batch of unchanged rows is a write the
 /// database does not need.
 ///
@@ -77,21 +91,20 @@ pub fn to_push(
     state
         .projects
         .iter()
+        .filter(|local| !local.key_rotated)
         .filter_map(|local| {
             let remote = known.get(&local.project_id);
             let project_key = key_of(local);
 
-            // Only wrap what the server lacks, or holds untyped once typed wraps are on (audit
-            // 2026-10-19 L1). Re-wrapping a current row on every load would burn a fresh nonce
-            // and a write for nothing.
-            let typed = account.is_some_and(|a| a.typed_wraps);
+            // Only wrap what the server lacks, or holds untyped (audit 2026-10-19 L1). Re-wrapping
+            // a current row on every load would burn a fresh nonce and a write for nothing.
             let use_ = WrapUse::Escrow(local.project_id);
             let key = match (account_key, project_key, remote.and_then(|r| r.key.as_ref())) {
-                (Some(ak), Some(pk), None) => wrap_key(ak, use_, &pk, typed),
+                (Some(ak), Some(pk), None) => wrap_key(ak, use_, &pk),
                 (Some(ak), Some(pk), Some(wrapped))
-                    if typed && open_wrap(ak, use_, wrapped).is_none_or(|u| !u.typed || u.key != pk) =>
+                    if open_wrap(ak, use_, wrapped).is_none_or(|u| !u.typed || u.key != pk) =>
                 {
-                    wrap_key(ak, use_, &pk, true)
+                    wrap_key(ak, use_, &pk)
                 }
                 _ => None,
             };
@@ -119,6 +132,7 @@ pub fn to_push(
                     key,
                     claim_label: label,
                     claim_token: project_key.map(|pk| claim_token(&pk).to_vec()),
+                    amk_epoch: Some(state.held_amk_epoch()),
                 })
             } else {
                 None
@@ -175,6 +189,9 @@ pub fn apply_pull(
     for remote in server {
         upsert_project(state, remote.project_id, remote.user_id);
         mark_synced(state, &[remote.project_id], account_id);
+        if let Some(entry) = state.projects.iter_mut().find(|p| p.project_id == remote.project_id) {
+            entry.admin = remote.admin;
+        }
 
         let (Some(ak), Some(wrapped)) = (account_key, remote.key.as_ref()) else { continue };
         let Some(opened) = open_wrap(ak, WrapUse::Escrow(remote.project_id), wrapped) else { continue };
@@ -187,13 +204,7 @@ pub fn apply_pull(
         if already_held || !(opened.typed || raw_ok) || Some(opened.key) == own_private_key {
             continue;
         }
-        let cached = state
-            .projects
-            .iter()
-            .find(|p| p.project_id == remote.project_id)
-            .and_then(|p| p.cached_project.clone())
-            .or_else(|| state.cached_projects_list.as_ref()?.iter().find(|d| d.id == remote.project_id).cloned());
-        if cached.is_none_or(|project| decrypt_project(&opened.key, &project).is_ok()) {
+        if cached_project_row(state, remote.project_id).is_none_or(|project| decrypt_project(&opened.key, project).is_ok()) {
             upsert_project_key(state, remote.project_id, key_to_fragment(&opened.key));
         }
     }
@@ -206,7 +217,7 @@ pub fn apply_pull(
 mod tests {
     use super::*;
     use crate::common::local_storage::LocalStorageProject;
-    use crate::crypto::{generate_key, key_to_fragment};
+    use crate::crypto::{generate_key, key_to_fragment, wrap_key_untyped};
 
     fn local(id: Uuid, user_id: Option<i32>, key: Option<String>) -> LocalStorageProject {
         LocalStorageProject { project_id: id, user_id, encryption_key: key, ..Default::default() }
@@ -219,7 +230,7 @@ mod tests {
     /// A server row for a project whose verifier is already seeded and whose payment-methods copy
     /// is in place - the steady state.
     fn remote(project_id: Uuid, user_id: Option<i32>, key: Option<shared::EncryptedPair>) -> AccountProject {
-        AccountProject { project_id, user_id, key, claim_verifier_seeded: true, payment_methods_shared: true, history_has_actors: None }
+        AccountProject { project_id, user_id, key, claim_verifier_seeded: true, payment_methods_shared: true, history_has_actors: None, admin: false }
     }
 
     /// A membership write never carries a payment-methods copy, whatever the server lacks: the
@@ -227,12 +238,12 @@ mod tests {
     #[test]
     fn a_missing_project_copy_is_never_pushed_with_the_membership() {
         let id = Uuid::new_v4();
-        let project_key = generate_key();
+        let (project_key, account_key) = (generate_key(), generate_key());
         let s = state(vec![local(id, Some(7), Some(key_to_fragment(&project_key)))]);
-        let mut server = remote(id, Some(7), Some(shared::EncryptedPair { ct: "x".into(), iv: "y".into() }));
+        let mut server = remote(id, Some(7), wrap_key(&account_key, WrapUse::Escrow(id), &project_key));
         server.payment_methods_shared = false;
 
-        assert!(to_push(&s, std::slice::from_ref(&server), Some(&generate_key()), None).is_empty());
+        assert!(to_push(&s, std::slice::from_ref(&server), Some(&account_key), None).is_empty());
         assert!(copy_missing(&s, &[server]), "but the gap is reported for the refill");
     }
 
@@ -322,9 +333,9 @@ mod tests {
     #[test]
     fn a_key_the_server_already_holds_is_not_rewrapped() {
         let id = Uuid::new_v4();
-        let account_key = generate_key();
-        let s = state(vec![local(id, Some(7), Some(key_to_fragment(&generate_key())))]);
-        let server = vec![remote(id, Some(7), Some(shared::EncryptedPair { ct: "x".into(), iv: "y".into() }))];
+        let (account_key, project_key) = (generate_key(), generate_key());
+        let s = state(vec![local(id, Some(7), Some(key_to_fragment(&project_key)))]);
+        let server = vec![remote(id, Some(7), wrap_key(&account_key, WrapUse::Escrow(id), &project_key))];
 
         assert!(to_push(&s, &server, Some(&account_key), None).is_empty());
     }
@@ -374,7 +385,7 @@ mod tests {
     #[test]
     fn a_wrong_account_key_leaves_the_project_locked() {
         let id = Uuid::new_v4();
-        let wrapped = wrap_key(&generate_key(), WrapUse::Escrow(id), &generate_key(), false).unwrap();
+        let wrapped = wrap_key_untyped(&generate_key(), WrapUse::Escrow(id), &generate_key()).unwrap();
         let mut s = state(vec![]);
 
         apply_pull(
@@ -398,7 +409,7 @@ mod tests {
         let (_, private) = crate::crypto::generate_keypair();
         let mut s = state(vec![]);
 
-        apply_pull(&mut s, &[remote(id, None, wrap_key(&account_key, WrapUse::Escrow(id), &private, false))], Some(&account_key), Uuid::new_v4(), Some(private));
+        apply_pull(&mut s, &[remote(id, None, wrap_key_untyped(&account_key, WrapUse::Escrow(id), &private))], Some(&account_key), Uuid::new_v4(), Some(private));
 
         assert!(s.projects[0].encryption_key.is_none());
     }
@@ -410,7 +421,7 @@ mod tests {
         let account_key = generate_key();
         let right = generate_key();
         let cached = crate::common::test_fixtures::make_project(&right, id, "Trip", "EUR");
-        let row = |key: &[u8; 32]| remote(id, None, wrap_key(&account_key, WrapUse::Escrow(id), key, false));
+        let row = |key: &[u8; 32]| remote(id, None, wrap_key_untyped(&account_key, WrapUse::Escrow(id), key));
 
         let mut s = state(vec![LocalStorageProject { cached_project: Some(cached.clone()), ..local(id, None, None) }]);
         apply_pull(&mut s, &[row(&generate_key())], Some(&account_key), Uuid::new_v4(), None);
@@ -430,7 +441,7 @@ mod tests {
 
         apply_pull(
             &mut s,
-            &[remote(id, None, Some(wrap_key(&account_key, WrapUse::Escrow(id), &other, false).unwrap()))],
+            &[remote(id, None, Some(wrap_key_untyped(&account_key, WrapUse::Escrow(id), &other).unwrap()))],
             Some(&account_key),
             Uuid::new_v4(),
             None,
@@ -540,6 +551,36 @@ mod tests {
         assert_eq!(push[0].claim_token, Some(claim_token(&project_key).to_vec()), "with its proof");
     }
 
+    /// D14/D17: a rotation that removes this account deletes its row, which reads as a leave.
+    /// Whichever runs first, the batch sync's `rotated` answer or the reconciliation, the device
+    /// keeps a row opening T10 and pushes nothing back.
+    #[test]
+    fn a_removal_by_rotation_keeps_the_row_that_opens_t10() {
+        let (removed, left) = (Uuid::new_v4(), Uuid::new_v4());
+        let account = Uuid::new_v4();
+        let k1 = generate_key();
+        let cached = crate::common::test_fixtures::make_project(&k1, removed, "Trip", "EUR");
+        let held = LocalStorageProject { cached_project: Some(cached), ..local(removed, Some(3), Some(key_to_fragment(&k1))) };
+        let mut device = state(vec![held, local(left, None, None)]);
+        apply_pull(&mut device, &[remote(removed, Some(3), None), remote(left, None, None)], None, account, None);
+
+        let mut adopted_first = device.clone();
+        crate::rotation_flow::mark_rotated(&mut adopted_first, removed);
+
+        let gone = left_elsewhere(&device, &[], account);
+        assert_eq!(gone, vec![removed, left]);
+        forget_left(&mut device, &gone, &[removed]);
+        forget_left(&mut adopted_first, &gone, &[]);
+
+        for device in [device, adopted_first] {
+            assert_eq!(device.projects.len(), 1, "the project left elsewhere is forgotten");
+            assert_eq!(crate::rotation_flow::lost_projects(&device, &[]), vec![removed]);
+            assert_eq!(key_of(&device.projects[0]), Some(k1), "the held key stays for §8.4");
+            assert!(device.projects[0].cached_project.is_none(), "nothing of the project is kept");
+            assert!(to_push(&device, &[], None, None).is_empty(), "a token from before the rotation is not pushed");
+        }
+    }
+
     #[test]
     fn nothing_to_do_pushes_nothing() {
         let id = Uuid::new_v4();
@@ -566,6 +607,7 @@ mod tests {
                 public_key: None,
                 private_key: None,
                 typed_wraps,
+                ..Default::default()
             }
         }
 
@@ -574,7 +616,7 @@ mod tests {
         fn a_row_escrowed_for_another_project_does_not_open() {
             let (a, b) = (Uuid::new_v4(), Uuid::new_v4());
             let account_key = generate_key();
-            let row = wrap_key(&account_key, WrapUse::Escrow(a), &generate_key(), true).unwrap();
+            let row = wrap_key(&account_key, WrapUse::Escrow(a), &generate_key()).unwrap();
             let mut s = state(vec![]);
 
             apply_pull(&mut s, &[remote(b, None, Some(row))], Some(&account_key), Uuid::new_v4(), None);
@@ -593,8 +635,8 @@ mod tests {
             apply_pull(
                 &mut s,
                 &[
-                    remote(a, None, Some(wrap_key(&account_key, WrapUse::Escrow(a), &ka, true).unwrap())),
-                    remote(b, None, Some(wrap_key(&account_key, WrapUse::Escrow(b), &kb, false).unwrap())),
+                    remote(a, None, Some(wrap_key(&account_key, WrapUse::Escrow(a), &ka).unwrap())),
+                    remote(b, None, Some(wrap_key_untyped(&account_key, WrapUse::Escrow(b), &kb).unwrap())),
                 ],
                 Some(&account_key),
                 account_id,
@@ -606,7 +648,7 @@ mod tests {
 
             apply_pull(
                 &mut s,
-                &[remote(c, None, Some(wrap_key(&account_key, WrapUse::Escrow(c), &kc, false).unwrap()))],
+                &[remote(c, None, Some(wrap_key_untyped(&account_key, WrapUse::Escrow(c), &kc).unwrap()))],
                 Some(&account_key),
                 account_id,
                 None,
@@ -615,21 +657,19 @@ mod tests {
         }
 
         #[test]
-        fn typed_wraps_on_rewrap_an_untyped_row_once() {
+        fn an_untyped_row_is_rewrapped_once_whatever_the_server_flag() {
             let id = Uuid::new_v4();
             let account_key = generate_key();
             let pk = generate_key();
             let s = state(vec![local(id, None, Some(key_to_fragment(&pk)))]);
-            let untyped = vec![remote(id, None, Some(wrap_key(&account_key, WrapUse::Escrow(id), &pk, false).unwrap()))];
+            let untyped = vec![remote(id, None, Some(wrap_key_untyped(&account_key, WrapUse::Escrow(id), &pk).unwrap()))];
 
-            assert!(to_push(&s, &untyped, Some(&account_key), Some(&account(false))).is_empty());
-
-            let push = to_push(&s, &untyped, Some(&account_key), Some(&account(true)));
+            let push = to_push(&s, &untyped, Some(&account_key), Some(&account(false)));
             let rewrapped = push[0].key.clone().unwrap();
             assert_eq!(open_wrap(&account_key, WrapUse::Escrow(id), &rewrapped), Some(crate::crypto::Unwrapped { key: pk, typed: true }));
 
             let typed = vec![remote(id, None, Some(rewrapped))];
-            assert!(to_push(&s, &typed, Some(&account_key), Some(&account(true))).is_empty());
+            assert!(to_push(&s, &typed, Some(&account_key), Some(&account(false))).is_empty());
         }
     }
 }

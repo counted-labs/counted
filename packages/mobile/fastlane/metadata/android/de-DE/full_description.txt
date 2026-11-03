@@ -32,6 +32,10 @@ Kostenlos, ohne Werbung, ohne Tracker, ohne Limit für Ausgaben oder Teilnehmend
 • Offline: ohne Netz ansehen und eintragen
 • Export als CSV und JSON mit einem Tipp
 • Zahlungsdaten (IBAN, PayPal, Wero, Lydia, Revolut…) verschlüsselt wie alles andere
+• Passwort ändern, ohne etwas zu verlieren. Vergessen? Ein Wiederherstellungsschlüssel bringt alles zurück
+• Passwort bekannt geworden oder Handy verloren: neue Kontoschlüssel, alle anderen Geräte abgemeldet
+• Projekt-Admins: Jemanden zu entfernen ändert den Projektschlüssel, und der alte Link dieser Person öffnet nichts mehr
+• Mitglieder mit Konto bekommen den neuen Schlüssel von selbst, post-quantensicher verschlüsselt; die anderen einen neuen Link
 • Tricount-Import: Freigabelink einfügen, alles wird übernommen
 • Web, Android und iOS: dasselbe Projekt überall, mit demselben Link
 • 32 Sprachen, darunter alle 24 Amtssprachen der EU

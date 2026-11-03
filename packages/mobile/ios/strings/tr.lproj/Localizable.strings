@@ -3,3 +3,4 @@
 "push.friend_accepted" = "Arkadaşlık isteğin kabul edildi";
 "push.project_invitation" = "Bir projeye yeni davet";
 "push.project_closed" = "Projelerinden biri kapatıldı";
+"push.key_changed" = "Projelerinden birinin anahtarı değişti";

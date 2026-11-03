@@ -96,10 +96,20 @@ test.describe('B - project boundaries', () => {
     const p = await project();
 
     const dto = await json(await anon.get(`/api/v1/projects/${p.id}`), 'project');
-    expect(keysOf(dto)).toEqual(['createdAt', 'id', 'payload', 'readOnly', 'status']);
+    expect(keysOf(dto)).toEqual([
+      'createdAt',
+      'hasAdmin',
+      'hasCreatorProof',
+      'id',
+      'keyEpoch',
+      'keyLifecycle',
+      'payload',
+      'readOnly',
+      'status',
+    ]);
 
     for (const user of await usersOf(anon, p)) {
-      expect(keysOf(user)).toEqual(['claimLabel', 'claimed', 'createdAt', 'id', 'payload', 'paymentMethods']);
+      expect(keysOf(user)).toEqual(['admin', 'claimLabel', 'claimed', 'createdAt', 'id', 'payload', 'paymentMethods']);
     }
 
     const expense = await expenseOf(anon, p);

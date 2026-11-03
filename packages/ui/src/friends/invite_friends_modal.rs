@@ -4,7 +4,7 @@ use shared::{Account, Friend};
 use uuid::Uuid;
 
 use super::friend_checklist::FriendChecklist;
-use super::friends_service::{invite_each, invitee_emails, my_private_key, Invitee};
+use super::friends_service::{get_pinned_friends, invite_each, invitee_emails, my_private_key, Invitee};
 use crate::common::{error_message, Flash, LocalStorageState};
 use crate::route::Route;
 
@@ -34,9 +34,7 @@ pub fn InviteFriendsModal(props: InviteFriendsModalProps) -> Element {
     let mut busy = use_signal(|| false);
     let mut error: Signal<Option<String>> = use_signal(|| None);
 
-    let friends = use_resource(|| async {
-        api::friends::friends_controller::get_friends().await.map(|v| v.friends)
-    });
+    let friends = use_resource(move || async move { get_pinned_friends(ls_ctx).await.map(|(v, _)| v.friends) });
 
     let my_private = auth_ctx().zip(account_key()).and_then(|(a, k)| my_private_key(&a, &k, ls_ctx.peek().raw_wraps_ok(a.id)));
     let project_id = props.project_id;

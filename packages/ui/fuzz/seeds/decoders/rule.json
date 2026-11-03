@@ -1,0 +1,1 @@
+{"template":{"name":"Rent","expenseType":"expense","amount":900.0,"payers":{"exact":false,"entries":[[1,900.0]]},"debtors":{"exact":false,"entries":[[1,450.0],[2,450.0]]},"variable":false},"rule":{"freq":"monthly","interval":1,"anchor":"2026-01-01","ends":{"kind":"after","value":12}},"next":3,"paused":false,"seed":"6f1c1a52-0e5c-4a3e-9d0b-6d1f8e2c7a11","authorId":1}

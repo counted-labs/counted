@@ -60,6 +60,7 @@ pub async fn convert(key: [u8; 32], project_id: Uuid) -> Result<(), ServerFnErro
 }
 
 async fn convert_once(key: &[u8; 32], project_id: Uuid) -> Result<(), ServerFnError> {
+    crate::common::project_token::scope(project_id);
     let sync = sync_project_data(project_id, NO_CACHED_VERSION).await?;
     let Some(project) = sync.project else { return Ok(()) };
     // A key that does not open the project would rewrite nothing and still clear the history actors.
@@ -80,6 +81,7 @@ async fn convert_once(key: &[u8; 32], project_id: Uuid) -> Result<(), ServerFnEr
     let expenses =
         converted_expenses(key, &sync.expenses.unwrap_or_default(), &sync.payments.unwrap_or_default());
     let rules = converted_rules(key, &sync.recurring.unwrap_or_default());
+    crate::common::project_token::scope(project_id);
     let entries = get_project_history(project_id).await?;
     let history = converted_history(key, &entries);
     let history_through = entries.iter().map(|h| h.id).max();
@@ -436,6 +438,7 @@ mod tests {
             payments,
             recurring: Some(vec![]),
             server_date: None,
+            rotated: None,
         }
     }
 
@@ -489,6 +492,7 @@ mod tests {
             claim_verifier_seeded: true,
             payment_methods_shared: false,
             history_has_actors: flag,
+            admin: false,
         }]
     }
 

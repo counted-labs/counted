@@ -1,30 +1,34 @@
 use dioxus::prelude::*;
 use crate::tid;
-use shared::{ExpenseType, ExpenseWithPayments, ProjectDto, ProjectStatus, ReimbursementSuggestion};
+use shared::{ExpenseType, ExpenseWithPayments, ProjectDto, ProjectStatus, ReimbursementSuggestion, User};
+use std::collections::VecDeque;
 use uuid::Uuid;
 
 use super::helpers::export;
 use crate::common::persist::is_demo;
 use crate::common::{
     copy_text, is_mobile, leave_project_and_forget, pending, read_from_ls, InviteRetry,
-    remove_project, scheme_link_for, share_link_for, share_text, update_project_fresh, write_to_ls, AppHeader, AvatarGroup, ConfirmModal, Flash,
-    LocalStorageState, ProjectKey, PullToRefresh, SizeClass, Toast, LEAVE_CONFIRM_MESSAGE,
+    remove_project, scheme_link_for, share_link_for, share_text, update_project_fresh, write_queue, write_to_ls, AppHeader, AvatarGroup, ConfirmModal, Flash,
+    LocalStorageState, ProjectKey, PullToRefresh, QueuedOp, SizeClass, Toast, LEAVE_CONFIRM_MESSAGE,
     LEAVE_CONFIRM_TITLE,
 };
+use crate::common::offline_queue::drop_project_ops;
+use crate::expenses::rotation_sheets::ProjectRotation;
 use crate::expenses::helpers::my_spending::load_ledgers;
 use crate::expenses::my_spending::{CountedGroup, CountedGroupsSheet};
 use crate::preferences::{push_counted, uncounted_projects};
 use crate::projects::personal_cards::is_personal_dto;
 use std::sync::Arc;
 use crate::expenses::helpers::expenses_page_helpers::{
-    header_state, sync_error, transfer_preset, DownloadFn,
+    header_state, sync_error, transfer_preset, went_rotated, DownloadFn,
 };
 use crate::expenses::hooks::use_project_store::ProjectStore;
+use crate::expenses::group_security::{recreate_prefill, security_access, AdminAccess, GroupSecurity};
 use crate::expenses::project_header::ProjectHeader;
 use crate::friends::friends_service::{invitee_emails, Invitee};
 use crate::friends::InviteFriendsModal;
 use crate::icons::{CloseIcon, ICON_INLINE};
-use crate::projects::JoinProjectModal;
+use crate::projects::{AddProjectModal, GroupPrefill, JoinProjectModal};
 use crate::decrypted::{pickable_users, status_edit};
 use crate::expenses::project_states::{
     ExpensesSkeleton, MissingKeyScreen, NoLocalDataScreen, Spinner,
@@ -40,6 +44,15 @@ use crate::route::Route;
 
 /// Set by "Payer" on the projects page: the project whose page opens on its Remboursements tab.
 pub static OPEN_REIMBURSEMENTS: GlobalSignal<Option<Uuid>> = Signal::global(|| None);
+
+/// A key change being confirmed, with the key and roster it started from: both outlive the switch,
+/// which replaces the page's key and reloads its rows while the new-link sheet is still open.
+#[derive(Clone, PartialEq)]
+struct RotationTarget {
+    k1: [u8; 32],
+    users: Vec<User>,
+    removee: Option<i32>,
+}
 
 #[component]
 pub fn ExpensesPage(project_id: Uuid) -> Element {
@@ -57,12 +70,15 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
     });
     let mut show_transfer_modal = use_signal(|| false);
     let mut show_edit_modal = use_signal(|| false);
+    let mut recreate: Signal<Option<GroupPrefill>> = use_signal(|| None);
     let mut show_invite_modal = use_signal(|| false);
     let mut show_switch = use_signal(|| false);
     let mut invite_retry = use_context::<Signal<Option<InviteRetry>>>();
     let mut retry_invitees: Signal<Vec<Invitee>> = use_signal(Vec::new);
     let mut show_leave_confirm = use_signal(|| false);
     let mut show_unlock_modal = use_signal(|| false);
+    let mut rotation: Signal<Option<RotationTarget>> = use_signal(|| None);
+    let mut pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
     let mut transfer = use_signal(|| None::<(String, f64, i32, i32)>);
 
     // "Ouvrir dans l'application" targets a phone *browser* - not the native app, not desktop.
@@ -80,7 +96,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
     let (mut sync, live, data, key_missing, unusable) =
         (store.sync, store.live, store.data, store.key_missing, store.unusable);
     let on_expenses_changed = store.on_expenses_changed;
-    let key_ctx = use_context::<ProjectKey>().0;
+    let mut key_ctx = use_context::<ProjectKey>().0;
     let account_key_ctx = use_context::<Signal<Option<[u8; 32]>>>();
     let mut show_counted_groups = use_signal(|| false);
 
@@ -128,13 +144,16 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
         .find(|p| p.project_id == project_id)
         .and_then(|p| p.cached_project.clone());
 
-    // The only exit from a dangling share link: the id is gone server-side, so every resource
-    // here keeps failing until the local entry is dropped.
+    // The only exit from a dangling share link (the id is gone server-side, so every resource here
+    // keeps failing until the local entry is dropped) and from a key that changed (T10), whose
+    // queued ops go with it (D15).
     let forget_project = move |_| {
         let mut state = read_from_ls();
         remove_project(&mut state, project_id);
         write_to_ls(&state);
         ls_ctx.set(state);
+        drop_project_ops(&mut pending_ops.write(), project_id);
+        write_queue(&pending_ops.read());
         nav.push(Route::ProjectsPage {});
     };
 
@@ -173,6 +192,30 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
         let Some(proj) = l.project.as_ref() else { return };
         download(&key, proj, &l.users, &l.expenses, &l.payments);
     };
+
+    let security = {
+        let snapshot = live.read();
+        let stored_admin = ls_ctx.read().projects.iter().any(|p| p.project_id == project_id && p.admin);
+        snapshot.as_ref().filter(|l| l.project_id == project_id && !demo && !personal).and_then(|l| {
+            let project = l.project.as_ref()?;
+            let access = security_access(project, &l.users, &key, auth_ctx.read().is_some(), stored_admin, stored_user_id())?;
+            let prefill = recreate_prefill(&key, project, &l.users, stored_user_id());
+            let users = l.users.clone();
+            Some(GroupSecurity {
+                access,
+                on_rotate: Some(EventHandler::new(move |_| {
+                    rotation.set(Some(RotationTarget { k1: key, users: users.clone(), removee: None }));
+                })),
+                on_remove: Some(EventHandler::new(move |_| show_edit_modal.set(true))),
+                on_hide: EventHandler::new(move |_| show_edit_modal.set(true)),
+                on_recreate: EventHandler::new(move |_| recreate.set(Some(prefill.clone()))),
+                on_sign_in: EventHandler::new(move |_| { nav.push(Route::LoginPage {}); }),
+                on_register: EventHandler::new(move |_| { nav.push(Route::RegisterPage {}); }),
+            })
+        })
+    };
+
+    let can_rotate = security.as_ref().is_some_and(|s| s.access == AdminAccess::Admin);
 
     // (message, server-unreachable) - the second drives the cache fallback.
     let body_err = sync_error(sync.read().as_ref().and_then(|r| r.as_ref()));
@@ -228,9 +271,45 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                 })),
                 on_invite: (auth_ctx().is_some() && !personal).then(|| EventHandler::new(move |_| show_invite_modal.set(true))),
                 on_forget: forget_project,
+                on_open_link: EventHandler::new(move |_| show_unlock_modal.set(true)),
                 counted,
                 on_counted: counted.is_some().then(|| EventHandler::new(move |on: bool| set_counted(project_id, on))),
                 on_counted_groups: personal.then(|| EventHandler::new(move |_| show_counted_groups.set(true))),
+                security,
+            }
+
+            // The rotated screen's "Open a link": a new key that passes §8.4 replaces the held one.
+            if show_unlock_modal() {
+                JoinProjectModal {
+                    expect_project_id: project_id,
+                    on_close: move |_| {
+                        show_unlock_modal.set(false);
+                        let held = crate::common::local_storage::project_key(project_id);
+                        if held.is_some() && *key_ctx.peek() != held {
+                            key_ctx.set(held);
+                            sync.restart();
+                        }
+                    },
+                }
+            }
+
+            if let Some(prefill) = recreate() {
+                AddProjectModal { on_close: move |_| recreate.set(None), prefill }
+            }
+
+            if let Some(target) = rotation() {
+                ProjectRotation {
+                    project_id,
+                    k1: target.k1,
+                    users: target.users,
+                    removee: target.removee,
+                    my_user_id: stored_user_id(),
+                    on_close: move |_| rotation.set(None),
+                    on_switched: move |k2: [u8; 32]| {
+                        key_ctx.set(Some(k2));
+                        sync.restart();
+                    },
+                }
             }
 
             if show_counted_groups() {
@@ -457,13 +536,23 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                                         show_edit_modal.set(false);
                                         show_switch.set(true);
                                     }),
+                                    on_remove_member: can_rotate.then(|| {
+                                        let users = user_list.clone();
+                                        EventHandler::new(move |user_id: i32| {
+                                            show_edit_modal.set(false);
+                                            rotation.set(Some(RotationTarget { k1: key, users: users.clone(), removee: Some(user_id) }));
+                                        })
+                                    }),
                                 }
                             }
                         }
                     }
                 }
                 None => {
-                    if is_stale {
+                    // The header's card is the whole page: nothing of the project shows (T10).
+                    if went_rotated(sync.read().as_ref().and_then(|r| r.as_ref())) {
+                        rsx! {}
+                    } else if is_stale {
                         rsx! {
                             NoLocalDataScreen {}
                         }

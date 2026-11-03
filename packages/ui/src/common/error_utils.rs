@@ -52,6 +52,23 @@ const KEYS: &[(&str, &str)] = &[
     (shared::errors::RECURRING_STALE, "error-recurring-stale"),
     (shared::errors::TOO_MANY_RECURRING, "error-too-many-recurring"),
     (shared::errors::USER_IN_RECURRING, "error-user-in-recurring"),
+    (shared::errors::ACCOUNT_KEY_CHANGED, "error-account-key-changed"),
+    (shared::errors::ROTATION_INCOMPLETE, "error-rotation-incomplete"),
+    (shared::errors::KEY_LIFECYCLE_UNAVAILABLE, "error-key-lifecycle-unavailable"),
+    (shared::errors::RESET_PENDING, "error-reset-pending"),
+    (shared::errors::RESET_UNDOABLE, "login-reset-undoable"),
+    (shared::errors::ACCOUNT_DISABLED, "error-account-disabled"),
+    (shared::errors::RECOVERY_KEY_INVALID, "error-recovery-key-invalid"),
+    (shared::errors::PROJECT_KEY_REQUIRED, "error-project-key-required"),
+    (shared::errors::NOT_PROJECT_ADMIN, "error-not-project-admin"),
+    (shared::errors::USER_NOT_CLAIMED, "error-user-not-claimed"),
+    (shared::errors::PROJECT_KEY_ROTATED, "error-project-key-rotated"),
+    (shared::errors::PROJECT_ROTATING, "error-project-rotating"),
+    (shared::errors::ROTATION_EXPIRED, "error-rotation-expired"),
+    (shared::errors::ROTATION_ROWS_CHANGED, "error-rotation-rows-changed"),
+    (shared::errors::USER_NOT_ADMIN, "error-user-not-admin"),
+    (shared::errors::CREATOR_PROOF_INVALID, "error-creator-proof-invalid"),
+    (shared::errors::PROJECT_HAS_ADMIN, "error-project-has-admin"),
 ];
 
 fn is_network_error(e: &str) -> bool {

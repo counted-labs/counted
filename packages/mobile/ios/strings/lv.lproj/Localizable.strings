@@ -3,3 +3,4 @@
 "push.friend_accepted" = "Tavs draudzības pieprasījums ir pieņemts";
 "push.project_invitation" = "Jauns ielūgums uz projektu";
 "push.project_closed" = "Viens no taviem projektiem ir slēgts";
+"push.key_changed" = "Viena tava projekta atslēga ir mainīta";

@@ -167,9 +167,19 @@ pub fn use_app_contexts() {
     });
 
     use_effect(move || {
+        if crate::auth::account_key::ACCOUNT_KEY_STALE() {
+            spawn(async move {
+                crate::auth::account_key::settle_stale(ls_ctx, account_enc_key, auth).await;
+                *crate::auth::account_key::ACCOUNT_KEY_STALE.write() = false;
+            });
+        }
+    });
+
+    use_effect(move || {
         let mut auth = auth;
         let mut auth_resolved = auth_resolved;
         let mut update_required = update_required;
+        let mut account_enc_key = account_enc_key;
         spawn(async move {
             // The demo is anonymous whatever cookie the browser holds: an account would escrow the
             // throwaway project and sync the sandbox's store with the real one.
@@ -179,9 +189,32 @@ pub fn use_app_contexts() {
             }
             match me().await {
                 Ok(account) => {
-                    let account = match (account, account_enc_key()) {
+                    let held = match (&account, account_enc_key()) {
+                        (Some(a), Some(key)) => {
+                            crate::common::update_ls_if_changed(ls_ctx, |state| {
+                                crate::auth::account_key::adopt_owner(state, a.id);
+                            });
+                            use crate::auth::account_key::{reconcile, remember, sign_out_stale, Reconciled};
+                            match reconcile(a, &key, read_from_ls().held_amk_epoch()) {
+                                Reconciled::Unchanged => Some(key),
+                                Reconciled::CaughtUp(amk) => {
+                                    remember(ls_ctx, a, &amk);
+                                    account_enc_key.set(Some(amk));
+                                    Some(amk)
+                                }
+                                Reconciled::Lost => {
+                                    sign_out_stale(ls_ctx, account_enc_key, auth).await;
+                                    auth_resolved.set(AuthResolved(true));
+                                    return;
+                                }
+                            }
+                        }
+                        _ => None,
+                    };
+                    let account = match (account, held) {
                         (Some(a), Some(key)) => {
                             let a = crate::auth::credentials::ensure_keypair(a, &key).await;
+                            let a = crate::auth::credentials::ensure_kem_key(a, &key).await;
                             if crate::friends::friends_service::private_key_is_typed(&a, &key) {
                                 crate::common::update_ls_if_changed(ls_ctx, |state| state.saw_typed_wrap(a.id));
                             }

@@ -3,7 +3,7 @@ use crate::tid;
 use shared::Account;
 use uuid::Uuid;
 
-use super::friends_service::{self, FriendsLists};
+use super::friends_service::{self, FriendRow, FriendsLists};
 use crate::common::{error_message, Flash, LocalStorageState};
 
 /// The friends page's state and every action on it. The page renders what this holds and calls
@@ -16,8 +16,8 @@ pub struct Friends {
     pub error: Signal<Option<String>>,
     version: Signal<u64>,
     account_key: Signal<Option<[u8; 32]>>,
-    auth_ctx: Signal<Option<Account>>,
     flash: Signal<Option<Flash>>,
+    ls_ctx: Signal<LocalStorageState>,
 }
 
 pub fn use_friends() -> Friends {
@@ -43,11 +43,11 @@ pub fn use_friends() -> Friends {
                 return Ok(FriendsLists::default());
             };
             let raw_ok = ls_ctx.peek().raw_wraps_ok(account.id);
-            friends_service::load(key, account, raw_ok).await
+            friends_service::load(ls_ctx, key, account, raw_ok).await
         }
     });
 
-    Friends { lists, email, busy, error, version, account_key, auth_ctx, flash }
+    Friends { lists, email, busy, error, version, account_key, flash, ls_ctx }
 }
 
 impl Friends {
@@ -81,9 +81,8 @@ impl Friends {
             self.error.set(Some(tid!("friends-no-account-key")));
             return;
         };
-        let typed = (self.auth_ctx)().is_some_and(|a| a.typed_wraps);
         self.email.set(String::new());
-        self.run(async move { friends_service::add_by_email(&email, &key, typed).await }, Some(tid!("friends-request-sent")));
+        self.run(async move { friends_service::add_by_email(&email, &key).await }, Some(tid!("friends-request-sent")));
     }
 
     pub fn accept(self, id: Uuid) {
@@ -94,7 +93,15 @@ impl Friends {
         self.run(friends_service::decline_or_withdraw(id), None);
     }
 
-    pub fn remove(self, id: Uuid) {
-        self.run(friends_service::remove(id), None);
+    /// "The code matches": the friend read out the code shown, so its new key is pinned.
+    pub fn trust_new_key(mut self, row: FriendRow) {
+        let Some(key) = row.new_key else { return };
+        crate::common::update_ls_if_changed(self.ls_ctx, |state| friends_service::trust_key(&mut state.friend_keys, row.account_id, &key));
+        self.flash.set(Some(Flash::ok(tid!("friends-code-trusted"))));
+        self.reload();
+    }
+
+    pub fn remove(self, row: FriendRow) {
+        self.run(friends_service::remove(self.ls_ctx, row.id, row.account_id), None);
     }
 }

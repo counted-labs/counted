@@ -1,0 +1,5 @@
+• Stronger protection for group keys and invitations
+• Connections protected against future quantum computers
+• A warning when a friend's safety code changes
+• New passwords need at least 12 characters
+• Small fixes and improvements

@@ -5,6 +5,7 @@ use uuid::Uuid;
 
 use super::persist::{read_json, write_json};
 use crate::crypto::key_from_fragment;
+use crate::decrypted::decrypt_project;
 
 const LS_KEY: &str = "counted_local_storage";
 
@@ -35,9 +36,70 @@ pub struct LocalStorageState {
     /// from then on, whatever the server serves (audit 2026-10-19 L1).
     #[serde(default)]
     pub typed_wrap_accounts: Vec<Uuid>,
+    /// Each friend's public key as this device first saw it, base64url by account id. A keypair is
+    /// written once, so a different key served later is a substitution (`friends_service::pin_keys`).
+    #[serde(default)]
+    pub friend_keys: std::collections::BTreeMap<Uuid, String>,
+    /// The account `account_key` belongs to, and the master-key epoch it is. `None` for a key
+    /// remembered before either was recorded: the session's account, at epoch 0.
+    #[serde(default)]
+    pub account_key_owner: Option<Uuid>,
+    #[serde(default)]
+    pub account_key_epoch: Option<i32>,
+    /// The highest master-key epoch this device has opened, per account. A lower one served later
+    /// is refused (docs/plans/key-lifecycle.md §3).
+    #[serde(default)]
+    pub amk_epoch_pins: std::collections::BTreeMap<Uuid, i32>,
+    /// Account keys a later sign-in replaced, by account, so another account signing in on a
+    /// shared device never uses them. They open what a reset retired (plan §6.4).
+    #[serde(default)]
+    pub previous_account_keys: std::collections::BTreeMap<Uuid, Vec<PreviousAccountKey>>,
+    /// `Account.membership_epoch` as of this device's last full push, per account. Until it
+    /// matches, an absent membership means a reset retired it, not a leave elsewhere.
+    #[serde(default)]
+    pub membership_epochs: std::collections::BTreeMap<Uuid, i32>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PreviousAccountKey {
+    pub key: String,
+    pub epoch: i32,
+}
+
+const PREVIOUS_KEYS_KEPT: usize = 3;
+
 impl LocalStorageState {
+    /// Sets the held account key, moving a different one this device held for the same account to
+    /// [`Self::previous_account_keys`] rather than dropping it.
+    pub fn remember_account_key(&mut self, account: Uuid, epoch: i32, key: String) {
+        self.set_aside_account_key(Some(&key));
+        self.account_key = Some(key);
+        self.account_key_owner = Some(account);
+        self.account_key_epoch = Some(epoch);
+        let pin = self.amk_epoch_pins.entry(account).or_insert(epoch);
+        *pin = (*pin).max(epoch);
+    }
+
+    /// Drops the held key into [`Self::previous_account_keys`]: a key the account no longer uses,
+    /// which may still open what a reset retired.
+    pub fn set_aside_account_key(&mut self, replaced_by: Option<&String>) {
+        let (Some(old), Some(owner)) = (self.account_key.take(), self.account_key_owner) else { return };
+        if Some(&old) == replaced_by {
+            return;
+        }
+        let kept = self.previous_account_keys.entry(owner).or_default();
+        kept.retain(|p| p.key != old);
+        kept.push(PreviousAccountKey { key: old, epoch: self.account_key_epoch.unwrap_or(0) });
+        if kept.len() > PREVIOUS_KEYS_KEPT {
+            kept.remove(0);
+        }
+        self.account_key_epoch = None;
+    }
+
+    pub fn held_amk_epoch(&self) -> i32 {
+        self.account_key_epoch.unwrap_or(0)
+    }
+
     pub fn raw_wraps_ok(&self, account_id: Uuid) -> bool {
         !self.typed_wrap_accounts.contains(&account_id)
     }
@@ -104,6 +166,37 @@ pub struct LocalStorageProject {
     /// convert every project they hold, not only those opened. Goes with that module.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub converted: bool,
+    /// `encryption_key` has decrypted this project's row on this device, so no other key replaces
+    /// it - see `membership::may_adopt`. Kept when the caches are dropped; reset with the key.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub key_opened: bool,
+    /// The signed-in account administers this project, as its `account_projects` row last said.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub admin: bool,
+    /// Keys this project had before a rotation, by the epoch they served
+    /// (docs/plans/key-lifecycle.md §8.6). A switch moves the old key here before replacing it.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub previous_keys: Vec<(i32, String)>,
+    /// The key epoch this device last wrote its member key entry at, and a digest of the public
+    /// keys that entry vouched for (`rotation_flow::member_key_stamp`): the entry is written again
+    /// when either changes, so a keypair rotation does not leave a stale entry behind.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub member_key_at: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub member_key_for: Option<String>,
+    /// The longest `rotatedFrom` chain the held key has opened for this project: the key epoch as
+    /// the ciphertext states it. A switch needs a longer one (`rotation::may_switch`). Reset with
+    /// the key, like `key_opened`.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub chain_seen: usize,
+    /// The key changed and this device found no way to the new one: its caches are gone, and the
+    /// page says so until a new link or the account brings the key.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub key_rotated: bool,
+    /// The creator secret (D9) of a project this device created signed out, base64. Device-only:
+    /// never in a link or a synced payload. Dropped once the server settles it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub creator_secret: Option<String>,
 }
 
 /// How many expenses are cached per project. **Web is the only target with a ceiling.**
@@ -259,9 +352,39 @@ pub fn mark_converted(state: &mut LocalStorageState, project_id: Uuid) {
     }
 }
 
+fn is_zero(n: &usize) -> bool {
+    *n == 0
+}
+
 /// Store the base64url-encoded encryption key for a project. Creates the entry if absent.
 pub fn upsert_project_key(state: &mut LocalStorageState, project_id: Uuid, key: String) {
-    entry_mut(state, project_id).encryption_key = Some(key);
+    let entry = entry_mut(state, project_id);
+    if entry.encryption_key.as_ref() != Some(&key) {
+        entry.key_opened = false;
+        entry.chain_seen = 0;
+    }
+    entry.encryption_key = Some(key);
+}
+
+/// Sets `key_opened` once the held key decrypts `project`, and keeps the longest chain it has
+/// opened. No-op if the project entry does not exist.
+pub fn mark_key_opened(state: &mut LocalStorageState, project_id: Uuid, project: &ProjectDto) {
+    let Some(entry) = state.projects.iter_mut().find(|p| p.project_id == project_id) else { return };
+    let Some(key) = key_of(entry) else { return };
+    if decrypt_project(&key, project).is_ok() {
+        entry.key_opened = true;
+        entry.chain_seen = entry.chain_seen.max(crate::rotation::chain_len(&key, project));
+    }
+}
+
+/// The project row this device last saw, from its own entry or the projects list.
+pub fn cached_project_row(state: &LocalStorageState, project_id: Uuid) -> Option<&ProjectDto> {
+    state
+        .projects
+        .iter()
+        .find(|p| p.project_id == project_id)
+        .and_then(|p| p.cached_project.as_ref())
+        .or_else(|| state.cached_projects_list.as_ref()?.iter().find(|d| d.id == project_id))
 }
 
 /// The decoded per-project encryption key held on this device, if any.
@@ -373,6 +496,7 @@ mod tests {
                 cached_payments: Some(vec![]),
                 cached_users: Some(vec![]),
                 cached_data_version: Some(7),
+                key_opened: true,
                 ..Default::default()
             }],
             cached_projects_list: Some(vec![]),
@@ -386,10 +510,45 @@ mod tests {
                 user_id: Some(3),
                 anon_member_id: Some(Uuid::nil()),
                 encryption_key: Some("key".into()),
+                key_opened: true,
                 ..Default::default()
             }
         );
         assert!(state.cached_projects_list.is_none());
+    }
+
+    #[test]
+    fn a_key_is_marked_opened_by_its_own_project_only_and_reset_with_a_new_key() {
+        use crate::crypto::{encrypt_json, generate_key, key_to_fragment};
+        let id = Uuid::new_v4();
+        let (good, other) = (generate_key(), generate_key());
+        let row = |key: &[u8; 32]| ProjectDto {
+            id,
+            payload: encrypt_json(
+                key,
+                &shared::ProjectPayload { name: "Trip".into(), currency: "EUR".into(), description: None, status: None, extra: Default::default() },
+            )
+            .unwrap(),
+            status: shared::ProjectStatus::Ongoing,
+            created_at: Default::default(),
+            has_admin: false,
+            key_lifecycle: false,
+            key_epoch: 0,
+            has_creator_proof: false,
+            read_only: false,
+        };
+        let mut state = LocalStorageState::default();
+        upsert_project_key(&mut state, id, key_to_fragment(&good));
+
+        mark_key_opened(&mut state, id, &row(&other));
+        assert!(!state.projects[0].key_opened);
+        mark_key_opened(&mut state, id, &row(&good));
+        assert!(state.projects[0].key_opened);
+
+        upsert_project_key(&mut state, id, key_to_fragment(&good));
+        assert!(state.projects[0].key_opened, "the same key keeps its proof");
+        upsert_project_key(&mut state, id, key_to_fragment(&other));
+        assert!(!state.projects[0].key_opened);
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -420,7 +579,10 @@ mod tests {
                 payload: EncryptedPair { ct: "ct".into(), iv: "iv".into() },
                 status: ProjectStatus::Ongoing,
                 created_at: chrono::DateTime::UNIX_EPOCH.naive_utc(),
-                owner_account_id: None,
+                has_admin: false,
+                key_lifecycle: false,
+                key_epoch: 0,
+                has_creator_proof: false,
                 read_only: false,
             }
         }

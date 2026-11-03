@@ -1,7 +1,9 @@
 @import "tailwindcss" source(none);
 @source "./src/**/*.{rs,html,css}";
 @source "../ui/src/**/*.rs";
-@plugin "daisyui";
+@plugin "daisyui" {
+  themes: false;
+}
 @plugin "daisyui/theme" {
   name: "counted";
   default: true;
@@ -55,13 +57,14 @@
   --color-well: #FAFCFB;
 }
 
-/* Dark mode, mobile only: the WebView follows the system appearance. web and desktop keep the light
-   theme, so this theme and the token overrides below live in this file alone. Primary and the four
-   status colours are the light theme's - mid-lightness already reads on both grounds. */
+/* Dark, chosen in the settings (ui::common::theme), which sets data-theme on <html>. Never by media
+   query: "System" is resolved in the client, so a chosen theme always beats the system's. Duplicated
+   in packages/web/tailwind.input.css. Primary and the four status colours are the light theme's -
+   mid-lightness already reads on both grounds. */
 @plugin "daisyui/theme" {
   name: "counted-dark";
   default: false;
-  prefersdark: true;
+  prefersdark: false;
   color-scheme: dark;
   --color-base-100: oklch(20% 0.01 165);
   --color-base-200: oklch(24.5% 0.012 165);
@@ -93,20 +96,18 @@
   --noise: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-tile-green: oklch(30% 0.05 162);
-    --color-tile-green-content: oklch(82% 0.1 162);
-    --color-tile-blue: oklch(30% 0.05 240);
-    --color-tile-blue-content: oklch(82% 0.08 240);
-    --color-tile-amber: oklch(30% 0.05 65);
-    --color-tile-amber-content: oklch(84% 0.1 65);
-    --color-tile-violet: oklch(30% 0.05 290);
-    --color-tile-violet-content: oklch(84% 0.08 290);
-    --color-tile-red: oklch(30% 0.05 30);
-    --color-tile-red-content: oklch(82% 0.1 30);
-    --color-owed: oklch(76% 0.13 162);
-    --color-owe: oklch(78% 0.13 60);
-    --color-well: oklch(17.5% 0.01 165);
-  }
+[data-theme="counted-dark"] {
+  --color-tile-green: oklch(30% 0.05 162);
+  --color-tile-green-content: oklch(82% 0.1 162);
+  --color-tile-blue: oklch(30% 0.05 240);
+  --color-tile-blue-content: oklch(82% 0.08 240);
+  --color-tile-amber: oklch(30% 0.05 65);
+  --color-tile-amber-content: oklch(84% 0.1 65);
+  --color-tile-violet: oklch(30% 0.05 290);
+  --color-tile-violet-content: oklch(84% 0.08 290);
+  --color-tile-red: oklch(30% 0.05 30);
+  --color-tile-red-content: oklch(82% 0.1 30);
+  --color-owed: oklch(76% 0.13 162);
+  --color-owe: oklch(78% 0.13 60);
+  --color-well: oklch(17.5% 0.01 165);
 }

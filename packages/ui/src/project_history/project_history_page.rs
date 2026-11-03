@@ -48,7 +48,10 @@ pub fn ProjectHistoryPage(project_id: Uuid) -> Element {
     // History is append-only and unbounded, so it stays its own fetch. The participant names come
     // from the project store, which is already decrypted - this page used to be the third place to
     // fetch and decrypt the same roster.
-    let mut history = use_resource(move || async move { get_project_history(project_id).await });
+    let mut history = use_resource(move || async move {
+        crate::common::project_token::scope(project_id);
+        get_project_history(project_id).await
+    });
     let store = use_context::<ProjectStore>();
     // A memo, not the body: the history is unbounded and the body re-runs on every sync state.
     let entries = use_memo(use_reactive!(|project_id| {
@@ -220,6 +223,55 @@ fn HistoryItem(props: HistoryItemProps) -> Element {
             if !props.is_last {
                 hr { class: "bg-base-200" }
             }
+        }
+    }
+}
+
+#[cfg(any(test, fuzzing))]
+pub(crate) fn exercise_hostile(entries: &[shared::HistoryEntry], names: &std::collections::HashMap<i32, String>) {
+    assert_eq!(decrypt_history(&crate::common::test_fixtures::TEST_KEY, entries, Some(names)).len(), entries.len());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::hostile;
+    use crate::common::test_fixtures::test_key;
+    use crate::crypto::encrypt_json;
+    use proptest::prelude::*;
+    use shared::{HistoryEntity, HistoryEntry};
+
+    fn action() -> impl Strategy<Value = HistoryAction> {
+        prop_oneof![Just(HistoryAction::Created), Just(HistoryAction::Updated), Just(HistoryAction::Deleted)]
+    }
+
+    fn payload() -> impl Strategy<Value = HistoryPayload> {
+        (any::<String>(), proptest::option::of(hostile::id()), proptest::option::of(action()), proptest::option::of(hostile::id()))
+            .prop_map(|(summary, actor_user_id, action, entity_id)| HistoryPayload { summary, actor_user_id, action, entity: Some(HistoryEntity::Expense), entity_id })
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(300))]
+
+        #[test]
+        fn any_history_row_is_listed(rows in prop::collection::vec((payload(), any::<String>(), proptest::option::of(hostile::id()), action(), hostile::timestamp()), 0..8), names in prop::collection::hash_map(hostile::id(), any::<String>(), 0..4)) {
+            let key = test_key();
+            let entries: Vec<HistoryEntry> = rows
+                .into_iter()
+                .enumerate()
+                .map(|(i, (p, raw, actor_user_id, action, created_at))| HistoryEntry {
+                    id: i as i64,
+                    project_id: Uuid::nil(),
+                    actor_user_id,
+                    actor_account_id: None,
+                    action,
+                    entity: HistoryEntity::Project,
+                    entity_id: None,
+                    payload: if i % 2 == 0 { encrypt_json(&key, &p).unwrap() } else { crate::crypto::encrypt(&key, &raw).unwrap() },
+                    created_at,
+                })
+                .collect();
+            exercise_hostile(&entries, &names);
         }
     }
 }

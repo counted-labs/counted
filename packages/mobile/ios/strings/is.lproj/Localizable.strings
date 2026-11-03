@@ -3,3 +3,4 @@
 "push.friend_accepted" = "Vinabeiðni þín var samþykkt";
 "push.project_invitation" = "Nýtt boð í verkefni";
 "push.project_closed" = "Einu af verkefnunum þínum var lokað";
+"push.key_changed" = "Lykli eins af verkefnunum þínum var breytt";

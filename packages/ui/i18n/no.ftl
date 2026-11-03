@@ -10,6 +10,12 @@ retry = Prøv igjen
 delete = Slett
 back = Tilbake
 language = Språk
+theme = Tema
+theme-light = Lyst
+theme-dark = Mørkt
+theme-system = System
+theme-hint-device = Lagret bare på denne enheten.
+theme-hint-system = Følger utseendet til denne enheten.
 
 ### Navigation
 
@@ -40,7 +46,7 @@ error-generic = Noe gikk galt. Prøv igjen.
 
 error-invalid-email = Den e-postadressen er ikke gyldig.
 error-invalid-password = Det passordet er ikke gyldig.
-error-password-too-short = Passordet må være minst 8 tegn.
+error-password-too-short = Passordet må være minst 12 tegn.
 error-client-outdated = Denne versjonen av appen er utdatert. Oppdater den for å logge inn.
 error-invalid-link = Denne lenken er ikke gyldig.
 error-batch-too-large = For mange elementer på én gang.
@@ -97,8 +103,8 @@ login-resend-sent = E-post sendt - sjekk innboksen din.
 register-submit = Opprett en konto
 register-submitting = Oppretter…
 register-have-account = Har du allerede en konto?
-register-password-placeholder = Minst 8 tegn
-register-password-warning = Skriv ned passordet ditt. Glemmer du det, kan ikke kontoen gjenopprettes.
+register-password-placeholder = Minst 12 tegn
+register-password-warning = Skriv ned passordet ditt: vi ser det aldri og kan ikke gi det tilbake til deg.
 register-check-email-title = Sjekk e-posten din
 register-email-sent = E-post sendt
 register-email-sent-hint = Klikk på lenken i innboksen for å aktivere kontoen din.
@@ -684,8 +690,8 @@ help-encryption-zero-term = Null tilgang
 help-encryption-zero-def = - du krypterer dataene før de sendes, og serveren lagrer bare chiffertekst. Vi har ingen måte å lese den på.
 help-encryption-see = For detaljer, se
 help-forgot-password-q = Hva skjer hvis jeg glemmer passordet mitt?
-help-forgot-password-warning = Dataene dine går permanent tapt.
-help-forgot-password-a = Krypteringsnøkkelen utledes fra passordet ditt, så ingen tilbakestilling er mulig: ingen - heller ikke vi - kan dekryptere prosjektene dine uten det. Oppbevar det trygt, helst i en passordbehandler.
+help-forgot-password-warning = Ingen kan hente det fram for deg.
+help-forgot-password-a = Passordet ditt beskytter krypteringsnøklene dine og sendes aldri til oss: ingen - heller ikke vi - kan dekryptere prosjektene dine for deg. Oppbevar det trygt, helst i en passordbehandler.
 help-archive-delete-q = Hvordan arkiverer eller sletter jeg et prosjekt?
 help-archive-delete-a = Fra prosjektskjermen åpner du menyen og velger
 help-archive-delete-b = for å skjule det, men beholde det. Et prosjekt slettes for godt når det siste medlemmet forlater det.
@@ -732,9 +738,12 @@ friends-remove = Fjern
 friends-remove-confirm-title = Fjern venn
 friends-remove-confirm-message = { $email } vil ikke lenger være blant vennene dine, og du ikke blant deres. Hver av dere kan sende en ny forespørsel senere.
 friends-no-key = Ikke klar ennå
+friends-key-changed = Kode endret
+friends-key-changed-hint = En venns sikkerhetskode er endret. Det skjer når vennen sikrer kontoen sin, eller hvis nøkkelen er byttet ut. Invitasjoner med vennen er blokkert til dere leser den nye koden for hverandre, personlig eller på telefon, og du trykker på «Koden stemmer».
 friends-fingerprint = Sikkerhetskode
 friends-fingerprint-hint = To venner som leser opp den samme sikkerhetskoden for hverandre, vet at ingen sitter imellom dem - ikke engang serveren vår.
 friends-key-mismatch = Serveren sendte en offentlig nøkkel for kontoen din som ikke passer til den private nøkkelen din. Sikkerhetskoden din er skjult, og invitasjoner er slått av på denne enheten: noen tukler kanskje med serveren.
+keypair-mismatch = Nøklene serveren sendte for kontoen din stemmer ikke med dem på denne enheten. Invitasjoner og nøkkelbytter er slått av her til de stemmer: noen tukler kanskje med serveren.
 friends-outgoing-title = Sendt
 friends-outgoing-hint = Venter på svar. Du ser dem blant vennene dine når de godtar.
 friends-withdraw = Avbryt
@@ -919,3 +928,172 @@ home-row-owed = du har til gode
 home-row-owe = du skylder
 home-row-settled = Gjort opp
 home-totals-partial = Uten prosjekter uten valutakurs
+error-account-key-changed = Nøkkelen til kontoen din ble endret på en annen enhet. Logg inn igjen for å fortsette.
+settings-security = Sikkerhet
+settings-change-password = Endre passord
+settings-change-password-hint = Prosjektene og dataene dine forblir som de er. De andre enhetene dine blir logget ut.
+change-password-title = Endre passordet ditt
+change-password-current = Nåværende passord
+change-password-new = Nytt passord
+change-password-confirm = Bekreft det nye passordet
+change-password-mismatch = De to nye passordene er ikke like.
+change-password-submit = Endre passord
+change-password-submitting = Endrer…
+change-password-done = Passordet er endret. De andre enhetene dine er logget ut.
+error-rotation-incomplete = Kontoen din ble endret i mellomtiden. Prøv igjen.
+error-key-lifecycle-unavailable = Ikke tilgjengelig ennå: først må alle ha den nyeste versjonen av appen.
+settings-compromised = Noen kan kjenne passordet mitt
+settings-compromised-hint = Nytt passord, nye nøkler, og alle andre enheter logges ut.
+settings-compromised-open = Sikre kontoen min
+compromised-title = Sikre kontoen din
+compromised-body = Passordet ditt og kontoens nøkler byttes ut, og alle andre enheter logges ut. Vennene dine vil se at sikkerhetskoden din endres: sammenlign den med dem på nytt.
+compromised-keeps = Den som hadde passordet ditt, beholder det som allerede er åpnet: prosjektene som kunne leses til nå.
+compromised-submit = Bytt passord og nøkler
+compromised-done = Kontoen din er sikret. Be vennene dine sammenligne den nye sikkerhetskoden din.
+friends-new-fingerprint = Ny kode:
+friends-code-matches = Koden stemmer
+friends-code-trusted = Koden er bekreftet.
+settings-recovery-key = Gjenopprettingsnøkkel
+settings-recovery-key-none = Uten den koster et glemt passord innstillingene, betalingsopplysningene og vennekodene dine, og det tar 3 dager.
+settings-recovery-key-set = Opprettet. Glemmer du passordet, får du kontoen tilbake med alt innhold.
+settings-recovery-key-pending = En ny nøkkel erstatter den { $when }. Var det ikke deg? Avbryt med din nåværende nøkkel.
+recovery-key-create = Opprett
+recovery-key-replace = Erstatt
+recovery-key-cancel-replacement = Avbryt den nye nøkkelen
+recovery-key-title = Gjenopprettingsnøkkelen din
+recovery-key-body = Skriv den ned eller lagre den der bare du har tilgang. Counted kan ikke vise den igjen eller finne den for deg.
+recovery-key-copy = Kopier
+recovery-key-copied = Kopiert
+recovery-key-save = Lagre som fil
+recovery-key-print = Skriv ut
+recovery-key-next = Fortsett
+recovery-key-confirm-body = Skriv gruppe { $n } av nøkkelen for å sjekke kopien din.
+recovery-key-confirm-wrong = Gruppen stemmer ikke. Se på kopien din igjen.
+recovery-key-password-body = Skriv inn passordet ditt for å lagre nøkkelen på kontoen.
+recovery-key-submit = Lagre nøkkelen
+recovery-key-done = Gjenopprettingsnøkkelen er lagret.
+recovery-key-replacement-done = Ny nøkkel lagret. Den erstatter den nåværende om 72 timer; til da virker den nåværende fortsatt.
+recovery-key-field = Gjenopprettingsnøkkel
+recovery-key-file-intro = Gjenopprettingsnøkkel for Counted
+recovery-key-cancel-done = Den nye nøkkelen er avbrutt.
+compromised-new-key = Lagre den nye gjenopprettingsnøkkelen nå: den erstatter den gamle om 72 timer, og til da virker den gamle fortsatt.
+pending-reset-title = Det er bedt om tilbakestilling av kontoen din
+pending-reset-body = Den trer i kraft { $when }: da går innstillingene, betalingsopplysningene og vennekodene tapt, og enhetene dine må logge inn igjen. Var det ikke deg? Avbryt med ditt nåværende passord.
+pending-reset-cancel = Avbryt tilbakestillingen
+pending-reset-cancelled = Tilbakestillingen er avbrutt.
+login-forgot = Glemt passordet?
+forgot-title = Glemt passordet
+forgot-body = Skriv inn e-posten din. Hvis den har en konto, sender vi en lenke for å velge nytt passord.
+forgot-submit = Send lenken
+forgot-sent = Hvis adressen har en konto, er en lenke på vei. Den utløper om 24 timer.
+reset-title = Få tilbake kontoen din
+reset-with-key-body = Skriv inn gjenopprettingsnøkkelen og et nytt passord: alt kommer tilbake slik det var.
+reset-submit-key = Gjenopprett kontoen min
+reset-no-key = Jeg har ikke gjenopprettingsnøkkelen min
+reset-without-key-title = Tilbakestill uten gjenopprettingsnøkkelen
+reset-without-key-body = Kontoen din starter på nytt med et nytt passord om 72 timer. Prosjektene kommer tilbake fra enhetene dine og delingslenkene; innstillingene, betalingsopplysningene og vennekodene gjør ikke det. Til da virker det nåværende passordet fortsatt og kan avbryte tilbakestillingen.
+reset-name = Navnet ditt
+reset-submit-request = Tilbakestill kontoen min
+reset-requested = Ferdig. Det nye passordet virker fra { $when }. Til da virker det nåværende og kan avbryte det.
+reset-pending-already = En tilbakestilling venter allerede til { $when }. En ny forespørsel starter de 72 timene på nytt.
+recovered-done = Kontoen din er tilbake. De andre enhetene dine er logget ut.
+login-reset-undoable = Dette passordet ble erstattet av en tilbakestilling de siste 30 dagene. Ba du ikke om det, angre det: kontoen kommer tilbake slik den var.
+login-undo-reset = Angre tilbakestillingen
+reset-undone = Tilbakestillingen er angret. Kontoen er som før.
+error-reset-pending = Det nye passordet virker når tilbakestillingen trer i kraft, 72 timer etter forespørselen.
+error-account-disabled = Kontoen ble slettet kort etter en tilbakestilling og venter på å bli fjernet. Det forrige passordet kan fortsatt angre tilbakestillingen.
+error-recovery-key-invalid = Denne gjenopprettingsnøkkelen åpner ikke kontoen.
+error-project-key-required = Prosjektet trenger nøkkelen sin. Åpne det igjen fra delingslenken.
+names-or = { $first } eller { $last }
+participants-admin-badge = Admin
+edit-project-admins = Admins: { $count }
+edit-project-succession = Hvis den siste adminen forlater prosjektet, blir medlemmet med konto som har vært med lengst, admin.
+member-sheet-account = Medlem med konto
+member-actions = Handlinger for { $name }
+member-make-admin = Gjør til admin
+member-make-admin-hint = Kan da bytte prosjektets nøkkel og fjerne noen.
+member-made-admin = { $name } er nå admin.
+group-security = Prosjektsikkerhet
+group-security-admin = Prosjektsikkerhet · du er admin
+group-rotate = Bytt prosjektets nøkkel
+group-rotate-hint = Hvis prosjektlenken er kompromittert: de som har den gamle lenken, mister tilgangen til prosjektet.
+group-remove = Fjern noen fra prosjektet
+group-remove-hint = Fjerner tilgangen og bytter nøkkelen samtidig.
+group-admins-only = Bare for admins.
+group-admins-only-account = Bare for admins, som har en konto.
+group-ask-admin = Spør { $names }, prosjektets admin.
+group-ask-admins = Spør { $names }, prosjektets admins.
+group-ask-an-admin = Spør en av prosjektets admins.
+group-with-account = Med konto
+group-free = Gratis
+group-sign-in-hint = En admin i prosjektet, { $names }, kan deretter gi deg rollen.
+group-sign-in-hint-any = En admin i prosjektet kan deretter gi deg rollen.
+group-no-admin = Prosjektet har ingen admin, så nøkkelen kan ikke byttes.
+group-hide = Skjul noen
+group-hide-hint = Skjuler personen i listene uten å fjerne tilgangen: lenken og nøkkelen virker fortsatt.
+group-recreate-hint = Prosjektet har ingen admin. Opprett et nytt prosjekt for å fjerne noen.
+group-recreate = Opprett et nytt prosjekt
+group-no-admin-yet = Prosjektet har ingen admin ennå.
+group-creator-hint = Bare du kan bli admin for dette prosjektet, ved å opprette en konto.
+group-creator-elsewhere-hint = Bare personen som opprettet prosjektet, kan bli admin for det, ved å opprette en konto. Ellers kan du opprette et nytt prosjekt for å fjerne noen.
+member-revoke-admin = Fjern admin-rollen
+member-revoke-admin-hint = Kan ikke lenger bytte prosjektets nøkkel eller fjerne noen.
+member-revoked-admin = { $name } er ikke lenger admin.
+member-step-down = Slutt å være admin
+member-step-down-hint = Du kan ikke lenger bytte prosjektets nøkkel eller fjerne noen.
+member-stepped-down = Du er ikke lenger admin.
+member-remove = Fjern fra prosjektet
+member-remove-hint = Bytter prosjektets nøkkel: { $name } kan ikke lenger lese noe nytt.
+member-hide = Skjul i listene
+error-user-not-admin = Medlemmet er ikke admin.
+error-creator-proof-invalid = Denne enheten opprettet ikke prosjektet.
+error-project-has-admin = Prosjektet har allerede en admin.
+error-not-project-admin = Bare prosjektets admins kan gjøre dette.
+error-user-not-claimed = Denne deltakeren har ingen konto og kan derfor ikke være admin.
+error-project-key-rotated = Prosjektets nøkkel er byttet. Be et medlem om den nye lenken.
+error-project-rotating = Prosjektets nøkkel byttes nå. Prøv igjen om et øyeblikk.
+error-rotation-expired = Nøkkelbyttet tok for lang tid og ble avbrutt. Start på nytt.
+error-rotation-rows-changed = Prosjektet endret seg under nøkkelbyttet. Start på nytt.
+project-rotated-title = Du har ikke lenger tilgang til dette prosjektet
+project-rotated-body = Nøkkelen til dette prosjektet er byttet av en admin. Be vedkommende om den nye lenken.
+project-rotated-open-link = Åpne en lenke
+rotation-remove-title = Fjerne { $name } fra prosjektet?
+rotation-rotate-title = Bytte prosjektets nøkkel?
+rotation-remove-body = Når du fjerner et medlem, lages det en ny nøkkel. Den nye lenken må deles med dem som ikke har en konto.
+rotation-rotate-body = De som har den gamle lenken, mister tilgangen til prosjektet. Den nye lenken må deles med dem som ikke har en konto.
+rotation-boxed =
+    { $count ->
+        [0] Ingen andre medlemmer får nøkkelen automatisk
+        [one] { $count } medlem får nøkkelen automatisk
+       *[other] { $count } medlemmer får nøkkelen automatisk
+    }
+rotation-by-link-title = Personer du må sende den nye lenken til
+rotation-by-link-hint = Disse personene har ikke en konto. Du sender dem lenken rett etterpå.
+rotation-names-and = { $first } og { $last }
+rotation-names-and-others =
+    { $names } og { $count ->
+        [one] { $count } annen
+       *[other] { $count } andre
+    }
+rotation-confirm-remove = Fjern og bytt nøkkelen
+rotation-confirm-rotate = Bytt nøkkelen
+rotation-done-title = Ny nøkkel på plass
+rotation-done-removed = { $name } er ikke lenger med i prosjektet.
+rotation-done-rotated = Prosjektets nøkkel er byttet.
+rotation-done-boxed =
+    { $count ->
+        [0] Ingen andre medlemmer fikk nøkkelen automatisk.
+        [one] { $count } medlem fikk nøkkelen automatisk.
+       *[other] { $count } medlemmer fikk nøkkelen automatisk.
+    }
+rotation-new-link =
+    { $count ->
+        [0] Ny lenke til prosjektet
+        [one] Ny lenke å sende · { $count } person uten konto
+       *[other] Ny lenke å sende · { $count } personer uten konto
+    }
+rotation-link-renewed = Lenken er fornyet.
+rotation-done = Ferdig
+history-key-changed = Prosjektets nøkkel byttet
+history-member-removed = { $name } er ikke lenger med i prosjektet
+project-rotated-row-hint = Nøkkelen er byttet. Be om den nye lenken.

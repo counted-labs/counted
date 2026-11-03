@@ -12,7 +12,7 @@ use std::collections::HashSet;
 use uuid::Uuid;
 
 use crate::common::{is_preferences_stale_error, key_of, update_ls, Flash, LocalStorageState};
-use crate::crypto::{decrypt_json, encrypt_json};
+use crate::crypto::{decrypt_json, encrypt_padded_json_within};
 use crate::tid;
 
 /// The account's stored language, or `None` when it has never saved one, the blob does not decrypt,
@@ -59,9 +59,11 @@ async fn write(
     key: &[u8; 32],
     change: &impl Fn(Preferences) -> Preferences,
 ) -> Result<Account, ServerFnError> {
-    let pair = encrypt_json(key, &change(stored(account, key))).map_err(ServerFnError::new)?;
+    let pair = encrypt_padded_json_within(key, &change(stored(account, key)), shared::MAX_PREFERENCES_LENGTH).map_err(ServerFnError::new)?;
     let expected_iv = account.preferences.as_ref().map(|p| p.iv.clone());
-    update_preferences(Json(UpdatePreferences { preferences: pair.clone(), expected_iv })).await?;
+    let written = update_preferences(Json(UpdatePreferences { preferences: pair.clone(), expected_iv, amk_epoch: crate::auth::account_key::held_amk_epoch() })).await;
+    crate::auth::account_key::note(&written);
+    written?;
     Ok(Account { preferences: Some(pair), ..account.clone() })
 }
 
@@ -155,7 +157,7 @@ pub fn push_counted(
     mut flash: Signal<Option<Flash>>,
 ) {
     let Some(account) = auth.peek().clone() else { return };
-    let Ok(pair) = encrypt_json(&key, &with_counted(stored(&account, &key), project_id, counted)) else {
+    let Ok(pair) = encrypt_padded_json_within(&key, &with_counted(stored(&account, &key), project_id, counted), shared::MAX_PREFERENCES_LENGTH) else {
         return;
     };
     if let Some(a) = auth.write().as_mut() {
@@ -175,6 +177,7 @@ pub fn push_counted(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::crypto::encrypt_json;
     use chrono::NaiveDate;
     use shared::EncryptedPair;
     use uuid::Uuid;
@@ -195,6 +198,7 @@ mod tests {
             public_key: None,
             private_key: None,
             typed_wraps: false,
+            ..Default::default()
         }
     }
 

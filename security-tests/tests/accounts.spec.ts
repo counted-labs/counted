@@ -117,7 +117,7 @@ test.describe('A - account boundaries', () => {
 
   test('A6 a deleted account cookie opens nothing', async ({ account }) => {
     const { api, cookie, email, proof } = await account();
-    expect((await api.delete('/api/v1/auth/account')).ok()).toBe(true);
+    expect((await api.post('/api/v1/auth/account/delete', { data: { proof } })).ok()).toBe(true);
 
     const stale = await withCookie(cookie);
     await refusedEverywhere(stale);
@@ -126,6 +126,26 @@ test.describe('A - account boundaries', () => {
     const anon = await request.newContext({ baseURL: BASE_URL });
     const login = await anon.post('/api/v1/auth/login', { data: { email, proof } });
     expect(login.status()).toBe(401);
+    await anon.dispose();
+  });
+
+  test('A7 deleting an account needs the password, and a session alone is refused once the floor is reached', async ({ account }) => {
+    const { api, email, proof } = await account();
+    const wrong = await api.post('/api/v1/auth/account/delete', { data: { proof: bytes(32) } });
+    expect(wrong.status(), 'a wrong proof is refused like a wrong password').toBe(401);
+    expect((await api.get('/api/v1/auth/me')).ok(), 'and the account is still there').toBe(true);
+
+    const me = await json<{ keyLifecycle: boolean }>(await api.get('/api/v1/auth/me'), 'me');
+    const sessionOnly = await api.delete('/api/v1/auth/account');
+    if (me.keyLifecycle) {
+      expect(sessionOnly.status(), 'from the floor, the session-only route is refused').toBe(400);
+      expect((await api.get('/api/v1/auth/me')).ok()).toBe(true);
+      expect((await api.post('/api/v1/auth/account/delete', { data: { proof } })).ok()).toBe(true);
+    } else {
+      expect(sessionOnly.ok(), 'below the floor, older clients still delete with the session').toBe(true);
+    }
+    const anon = await request.newContext({ baseURL: BASE_URL });
+    expect((await anon.post('/api/v1/auth/login', { data: { email, proof } })).status()).toBe(401);
     await anon.dispose();
   });
 });

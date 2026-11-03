@@ -237,6 +237,15 @@ pub(crate) fn trigger_download(content: &str, filename: &str, mime_type: &str) {
     }
 }
 
+#[cfg(any(test, fuzzing))]
+pub(crate) fn exercise_hostile(expenses: Vec<Expense>, payments: Vec<Payment>, users: Vec<User>) {
+    use crate::common::test_fixtures::{make_project, TEST_KEY};
+
+    let project = make_project(&TEST_KEY, uuid::Uuid::nil(), "p", "EUR");
+    let _ = to_csv(&TEST_KEY, &project, &users, &expenses, &payments);
+    let _ = to_json(&TEST_KEY, &project, &users, &expenses, &payments);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -508,5 +517,18 @@ mod tests {
         let v: serde_json::Value = serde_json::from_str(&json).unwrap();
         assert_eq!(v["users"].as_array().unwrap().len(), 2);
         assert_eq!(v["expenses"][0]["name"], "Dinner");
+    }
+    mod hostile_payloads {
+        use crate::common::hostile;
+        use proptest::prelude::*;
+
+        proptest! {
+            #![proptest_config(ProptestConfig::with_cases(300))]
+
+            #[test]
+            fn any_ledger_exports(expenses in hostile::expenses(), payments in hostile::payments(), users in hostile::users()) {
+                crate::expenses::helpers::export::exercise_hostile(expenses, payments, users);
+            }
+        }
     }
 }

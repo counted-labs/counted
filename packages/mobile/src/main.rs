@@ -86,6 +86,10 @@ fn latin_font_face_css() -> String {
 const KEEP_SELECTION_TOOLBAR: &str =
     "window.addEventListener('contextmenu', e => e.stopImmediatePropagation(), true);";
 
+/// `ui::common::apply_theme` calls `countedTheme`. Set from the head so the first paint already
+/// has the chosen theme; the listener repaints while the choice is System.
+const THEME_SCRIPT: &str = "(function(){var m=matchMedia('(prefers-color-scheme: dark)'),c;function p(){document.documentElement.dataset.theme=c==='dark'||(c==='system'&&m.matches)?'counted-dark':'counted';}window.countedTheme=function(t){c=t;p();};m.addEventListener('change',p);})();";
+
 /// Stylesheets spliced into dioxus-desktop's index template before `</head>`, so they are
 /// render-blocking - `document::Link` only reaches the head after the first render, leaving the
 /// webview's first paint unstyled. This does not replace the template (docs/dioxus-overrides.md).
@@ -95,15 +99,16 @@ const KEEP_SELECTION_TOOLBAR: &str =
 /// Only the mobile config consumes it - not the host server binary that
 /// `dx bundle --platform android` also builds.
 #[cfg_attr(not(any(target_os = "android", target_os = "ios")), allow(dead_code))]
-fn head_html() -> String {
+fn head_html(theme: ui::common::Theme) -> String {
     format!(
         // The empty icon is not decoration: a WebView asks for /favicon.ico on every document load,
         // wry's asset protocol has none to serve, and the 404 is logged as a console error - noise
         // in every session, and enough to make `boots without console errors` flake depending on
         // whether it lands before the spec attaches. `data:,` answers it without a request. No app
         // window ever shows an icon here, so there is nothing to supply instead.
-        r#"<link rel="icon" href="data:,"><link rel="stylesheet" href="{TAILWIND_CSS}"><link rel="stylesheet" href="{MAIN_CSS}"><style>{fonts}</style><script>{KEEP_SELECTION_TOOLBAR}</script>"#,
-        fonts = font_face_css()
+        r#"<link rel="icon" href="data:,"><link rel="stylesheet" href="{TAILWIND_CSS}"><link rel="stylesheet" href="{MAIN_CSS}"><style>{fonts}</style><script>{KEEP_SELECTION_TOOLBAR}{THEME_SCRIPT}countedTheme('{theme}');</script>"#,
+        fonts = font_face_css(),
+        theme = theme.as_str()
     )
 }
 
@@ -352,6 +357,14 @@ fn init_data_dir() -> String {
     std::env::var("HOME").unwrap_or_else(|_| ".".to_string())
 }
 
+/// reqwest uses the process-wide rustls provider when one is installed and falls back to ring, which
+/// offers no ML-KEM group. aws-lc offers X25519MLKEM768 first, so a recorded login cannot be
+/// decrypted later by a quantum computer (SPEC 3.1).
+#[cfg(not(feature = "server"))]
+fn install_tls_provider() {
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+}
+
 /// A reqwest client with a file-backed cookie store, registered as the global Dioxus fullstack
 /// client. Must be called before any server function.
 #[cfg(not(feature = "server"))]
@@ -399,6 +412,7 @@ fn init_persistent_client(data_dir: &str) {
         api::app_version::HEADER,
         reqwest::header::HeaderValue::from_static(env!("CARGO_PKG_VERSION")),
     );
+    install_tls_provider();
     let client = reqwest::Client::builder()
         .cookie_provider(store)
         .default_headers(headers)
@@ -489,6 +503,53 @@ fn platform_read_clipboard() -> Option<String> {
 /// cheap, `prepare()` is what actually costs (it wakes the Taptic Engine), and holding one across
 /// calls would mean holding a `MainThreadOnly` object in a `Send + Sync` closure.
 ///
+/// The window's interface style, which the status bar, the keyboard and the WebView's
+/// `prefers-color-scheme` all follow. Unspecified hands it back to the system.
+#[cfg(target_os = "ios")]
+#[allow(deprecated)]
+fn apply_native_theme(theme: ui::common::Theme) {
+    use objc2::MainThreadMarker;
+    use objc2_ui_kit::{UIApplication, UIUserInterfaceStyle};
+    use ui::common::Theme;
+
+    let Some(mtm) = MainThreadMarker::new() else {
+        return;
+    };
+    let style = match theme {
+        Theme::Light => UIUserInterfaceStyle::Light,
+        Theme::Dark => UIUserInterfaceStyle::Dark,
+        Theme::System => UIUserInterfaceStyle::Unspecified,
+    };
+    if let Some(window) = UIApplication::sharedApplication(mtm).keyWindow() {
+        window.setOverrideUserInterfaceStyle(style);
+    }
+}
+
+/// The status bar icons, which `values(-night)/styles.xml` set from the system's mode. Through
+/// `MainActivity.setLightStatusBar`, which needs the UI thread.
+#[cfg(target_os = "android")]
+fn apply_native_theme(theme: ui::common::Theme) {
+    fn call(env: &mut jni::JNIEnv, light: bool) -> jni::errors::Result<()> {
+        let ctx = ndk_context::android_context();
+        let activity = unsafe { jni::objects::JObject::from_raw(ctx.context().cast()) };
+        env.call_method(&activity, "setLightStatusBar", "(Z)V", &[jni::objects::JValue::Bool(light.into())])?;
+        Ok(())
+    }
+
+    let light = !theme.is_dark(system_is_dark());
+    let ctx = ndk_context::android_context();
+    let Ok(vm) = (unsafe { jni::JavaVM::from_raw(ctx.vm().cast()) }) else {
+        return;
+    };
+    let Ok(mut env) = vm.attach_current_thread() else {
+        return;
+    };
+    if let Err(e) = call(&mut env, light) {
+        let _ = env.exception_clear();
+        tracing::debug!("status bar appearance failed: {e}");
+    }
+}
+
 /// `MainThreadMarker::new()` returning `None` is the guard - UIFeedbackGenerator is main-thread
 /// only, and a haptic is never worth a crash. `initWithStyle`/`init` are deprecated in favour of
 /// the `forView:` constructors, which need a `UIView` this layer has no handle on.
@@ -1065,6 +1126,11 @@ fn main() {
     #[cfg(any(target_os = "android", target_os = "ios"))]
     push::install();
 
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    let theme = ui::common::stored_theme();
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    ui::common::set_native_theme(std::sync::Arc::new(apply_native_theme));
+
     let builder = dioxus::LaunchBuilder::new();
     // `disable_context_menu` is false only in debug builds: false is dioxus-desktop's debug mode,
     // which calls `with_devtools(true)` - the socket the Android e2e suite attaches to - and with
@@ -1083,10 +1149,9 @@ fn main() {
         dioxus::mobile::Config::new()
             // wry paints this before parsing any HTML. The window shows right after the first
             // rebuild's edits are *sent*, unflushed, so one frame has an empty document - this
-            // makes it base-200 rather than white. sRGB of --color-base-200, of the theme the
-            // system is in: the CSS picks `counted-dark` by media query, which this frame predates.
-            .with_background_color(if system_is_dark() { (27, 34, 31, 255) } else { (244, 248, 246, 255) })
-            .with_custom_head(head_html())
+            // makes it base-200 rather than white. sRGB of --color-base-200, of the chosen theme.
+            .with_background_color(if theme.is_dark(system_is_dark()) { (27, 34, 31, 255) } else { (244, 248, 246, 255) })
+            .with_custom_head(head_html(theme))
             .with_disable_context_menu(cfg!(not(debug_assertions)))
             .with_custom_event_handler(|event, _| {
                 use dioxus::mobile::tao::event::Event;
@@ -1119,6 +1184,9 @@ fn main() {
 fn app() -> Element {
     use_app_contexts();
     let ready = use_client_ready();
+    // The window and its status bar exist only once mounted; the page took the theme from the head.
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    use_effect(|| apply_native_theme(ui::common::stored_theme()));
     #[cfg(any(target_os = "android", target_os = "ios"))]
     use_effect(|| {
         document::eval(r#"
@@ -1399,6 +1467,13 @@ fn hide_form_accessory_bar() {
 #[cfg(test)]
 mod tests {
     use super::{css_inset_vars, visible_insets};
+
+    #[test]
+    fn the_client_offers_the_post_quantum_hybrid_first() {
+        super::install_tls_provider();
+        let provider = rustls::crypto::CryptoProvider::get_default().expect("a provider is installed");
+        assert_eq!(provider.kx_groups[0].name(), rustls::NamedGroup::X25519MLKEM768);
+    }
 
     // The bug these pin: `getRootWindowInsets()` returns the same numbers whether or not the
     // WebView is laid out under the bars, so the CSS vars were added on top of an inset the

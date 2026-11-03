@@ -1,0 +1,37 @@
+# Coverage-guided fuzzing of what a key holder controls: `make fuzz` (docs/fuzzing.md). Its own
+# workspace, so CI and `dx` never build libFuzzer; the patches repeat the root's, and `make fuzz`
+# copies the root Cargo.lock in, so the fuzzed code is the shipped code.
+[package]
+name = "ui-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+ui = { path = ".." }
+
+[[bin]]
+name = "decoders"
+path = "fuzz_targets/decoders.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pages"
+path = "fuzz_targets/pages.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
+
+[patch.crates-io]
+tao = { path = "../../../vendor/tao" }
+jni-macros = { path = "../../../vendor/jni-macros" }
+dioxus-server = { path = "../../../vendor/dioxus-server" }
+dioxus-web = { path = "../../../vendor/dioxus-web" }

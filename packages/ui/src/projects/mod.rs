@@ -6,5 +6,5 @@ mod home_balances;
 mod project_row_sheet;
 mod projects_page;
 
-pub use modals::{AddProjectModal, ImportTricountModal, JoinProjectModal};
+pub use modals::{AddProjectModal, GroupPrefill, ImportTricountModal, JoinProjectModal};
 pub use projects_page::ProjectsPage;

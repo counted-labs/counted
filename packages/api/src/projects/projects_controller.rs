@@ -1,8 +1,8 @@
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use shared::{
-    BatchProject, ConvertProject, CreatableProject, EditableProject, JoinProject, LeaveProject,
-    ProjectDto,
+    BatchProject, ClaimCreator, ConvertProject, CreatableProject, EditableProject, GrantAdmin, JoinProject,
+    LeaveProject, ProjectDto, ProjectRef, RevokeAdmin,
 };
 use uuid::Uuid;
 
@@ -56,4 +56,32 @@ pub async fn join_project(Json(payload): Json<JoinProject>) -> Result<(), Server
 #[post("/api/v1/projects/leave")]
 pub async fn leave_project(Json(payload): Json<LeaveProject>) -> Result<(), ServerFnError> {
     crate::server::projects::leave_project(payload).await
+}
+
+/// An admin makes another account member admin (docs/plans/key-lifecycle.md §8.7). The member is
+/// named by the participant they claimed: co-members never see each other's account ids.
+#[post("/api/v1/projects/admins")]
+pub async fn grant_admin(Json(payload): Json<GrantAdmin>) -> Result<(), ServerFnError> {
+    crate::server::projects::grant_admin(payload).await
+}
+
+/// An admin takes the role from another admin (D18), named by their claimed participant. A last
+/// admin cannot be revoked by anyone else: the caller is an admin too.
+#[post("/api/v1/projects/admins/revoke")]
+pub async fn revoke_admin(Json(payload): Json<RevokeAdmin>) -> Result<(), ServerFnError> {
+    crate::server::projects::revoke_admin(payload).await
+}
+
+/// The caller gives up the role (D18). A last admin hands it to the longest-standing key holder,
+/// or leaves the project without an admin.
+#[post("/api/v1/projects/admins/step-down")]
+pub async fn step_down_admin(Json(payload): Json<ProjectRef>) -> Result<(), ServerFnError> {
+    crate::server::projects::step_down(payload).await
+}
+
+/// The anonymous creator, now signed in on the device that holds the creator secret, becomes admin
+/// (D9). Only while the project has no admin; the proof is cleared once used.
+#[post("/api/v1/projects/creator/claim")]
+pub async fn claim_creator(Json(payload): Json<ClaimCreator>) -> Result<(), ServerFnError> {
+    crate::server::projects::claim_creator(payload).await
 }

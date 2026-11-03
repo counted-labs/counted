@@ -77,6 +77,7 @@ pub fn save_rule(
         }
     };
     spawn(async move {
+        crate::common::project_token::scope(req.project_id);
         match edit_recurring_expense(Json(req)).await {
             Ok(_) => {}
             Err(e) if is_recurring_stale_error(&e) => {
@@ -103,6 +104,7 @@ pub fn stop_rule(
         history: history(&key, actor, summary, HistoryAction::Deleted),
     };
     spawn(async move {
+        crate::common::project_token::scope(req.project_id);
         if let Err(e) = delete_recurring_expense(Json(req)).await {
             flash.set(Some(Flash::err(error_message(&e))));
         }

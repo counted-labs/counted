@@ -13,7 +13,7 @@ use shared::{
 
 use crate::{
     common::{key_of, read_from_ls, LocalStorageProject},
-    crypto::{decrypt_json, encrypt_json},
+    crypto::{decrypt_json, encrypt_padded_json_within},
 };
 
 /// Stable ids and their brand names.
@@ -149,8 +149,8 @@ pub fn project_copies(
         .filter(|p| p.user_id.is_some())
         .filter_map(|p| {
             let key = key_of(p)?;
-            let payment_methods = encrypt_json(&key, &plaintext).ok()?;
-            Some(ProjectPaymentMethods { project_id: p.project_id, payment_methods })
+            let payment_methods = encrypt_padded_json_within(&key, &plaintext, shared::MAX_PAYMENT_METHODS_LENGTH).ok()?;
+            Some(ProjectPaymentMethods { project_id: p.project_id, payment_methods, token: Some(crate::crypto::claim_token(&key).to_vec()) })
         })
         .collect()
 }
@@ -201,8 +201,8 @@ pub async fn save_payment_methods(
     expected_iv: Option<String>,
 ) -> Result<EncryptedPair, SaveFailure> {
     let shared = project_copies(&methods, &read_from_ls().projects);
-    let pair = encrypt_json(&key, &PaymentMethods { methods }).map_err(SaveFailure::Other)?;
-    put(UpdatePaymentMethods { account: pair.clone(), shared, expected_iv }).await?;
+    let pair = encrypt_padded_json_within(&key, &PaymentMethods { methods }, shared::MAX_PAYMENT_METHODS_LENGTH).map_err(SaveFailure::Other)?;
+    put(UpdatePaymentMethods { account: pair.clone(), shared, expected_iv, amk_epoch: crate::auth::account_key::held_amk_epoch() }).await?;
     Ok(pair)
 }
 
@@ -222,14 +222,16 @@ pub async fn refill_project_copies(fresh: &Account, account_key: &[u8; 32]) -> R
         return Ok(());
     }
     let expected_iv = Some(pair.iv.clone());
-    match put(UpdatePaymentMethods { account: pair, shared, expected_iv }).await {
+    match put(UpdatePaymentMethods { account: pair, shared, expected_iv, amk_epoch: crate::auth::account_key::held_amk_epoch() }).await {
         Ok(()) | Err(SaveFailure::Stale) => Ok(()),
         Err(SaveFailure::Other(e)) => Err(e),
     }
 }
 
 async fn put(payload: UpdatePaymentMethods) -> Result<(), SaveFailure> {
-    update_payment_methods(Json(payload)).await.map_err(|e| {
+    let written = update_payment_methods(Json(payload)).await;
+    crate::auth::account_key::note(&written);
+    written.map_err(|e| {
         if crate::common::is_payment_methods_stale_error(&e) {
             SaveFailure::Stale
         } else {
@@ -272,6 +274,7 @@ pub fn method_display_name(method: &PaymentMethod) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::crypto::encrypt_json;
     use chrono::NaiveDate;
     use uuid::Uuid;
 
@@ -291,6 +294,7 @@ mod tests {
             public_key: None,
             private_key: None,
             typed_wraps: false,
+            ..Default::default()
         }
     }
 
@@ -487,7 +491,7 @@ mod tests {
 
         let cleaned = validate_methods(&worst).expect("exactly at the limits, not over them");
         let cap = shared::MAX_PAYMENT_METHODS_LENGTH;
-        let pair = encrypt_json(&KEY, &PaymentMethods { methods: cleaned.clone() }).unwrap();
+        let pair = encrypt_padded_json_within(&KEY, &PaymentMethods { methods: cleaned.clone() }, cap).unwrap();
         assert!(pair.ct.len() <= cap, "ciphertext {} exceeds the server cap {cap}", pair.ct.len());
         assert!(pair.iv.len() <= cap);
 

@@ -53,6 +53,7 @@ async fn create_personal_project(
         payload: encrypt_padded_json(&key, &payload)?,
         claim_verifier: Some(claim_verifier(&key).to_vec()),
         demo: crate::common::persist::is_demo(),
+        creator_verifier: None,
     }))
     .await
     .map_err(|e| error_message(&e))?;
@@ -62,6 +63,7 @@ async fn create_personal_project(
     });
 
     let me_payload = encrypt_padded_json(&key, &UserPayload { name: me, removed: false })?;
+    crate::common::project_token::scope_key(Some(&key));
     let users = add_user(Json(CreatableUserBatch::Multiple(vec![CreatableUser {
         payload: me_payload,
         project_id: project.id,
@@ -74,7 +76,6 @@ async fn create_personal_project(
         state.personal_project = Some(project.id);
     });
     let account = auth.peek().clone();
-    let typed = account.as_ref().is_some_and(|a| a.typed_wraps);
     if let (Some(account), Some(ak)) = (account, account_key) {
         if let Ok(written) = crate::preferences::remember_personal_project(account, ak, project.id).await {
             auth.set(Some(written));
@@ -83,14 +84,16 @@ async fn create_personal_project(
 
     // Escrowed, so the account's other devices open it without a link. A failure here is retried by
     // the projects page's reconciliation, as for any project.
-    let _ = upsert_account_project(Json(UpsertAccountProject {
+    let escrowed = upsert_account_project(Json(UpsertAccountProject {
         project_id: project.id,
         user_id,
-        key: account_key.and_then(|ak| wrap_key(&ak, WrapUse::Escrow(project.id), &key, typed)),
+        key: account_key.and_then(|ak| wrap_key(&ak, WrapUse::Escrow(project.id), &key)),
         claim_label: None,
         claim_token: Some(claim_token(&key).to_vec()),
+        amk_epoch: crate::auth::account_key::held_amk_epoch(),
     }))
     .await;
+    crate::auth::account_key::note(&escrowed);
     Ok(project.id)
 }
 

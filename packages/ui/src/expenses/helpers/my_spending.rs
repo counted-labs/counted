@@ -207,6 +207,7 @@ pub async fn sync_all(ids: Vec<Uuid>) -> Result<(LocalStorageState, Vec<ProjectS
         .map(|id| KnownProject {
             id,
             known_version: before.projects.iter().find(|p| p.project_id == id).map_or(NO_CACHED_VERSION, known_version),
+            token: crate::common::project_token::tokens(&[id]).pop().flatten(),
         })
         .collect();
     let request = BatchSync { projects };
@@ -252,12 +253,13 @@ pub async fn load_ledgers(personal: Uuid) -> Vec<GroupLedger> {
 }
 
 /// The groups as `sync_all` answered them, each falling back to `state`'s cache where the server
-/// sent no rows or no longer has the project.
+/// sent no rows or no longer has the project. A project whose key changed falls back to nothing:
+/// its cache is what a removed member must no longer see (D14).
 pub fn synced_ledgers(state: &LocalStorageState, syncs: &[ProjectSync], personal: Uuid) -> Vec<GroupLedger> {
     let ledgers = state
         .projects
         .iter()
-        .filter(|p| p.project_id != personal)
+        .filter(|p| p.project_id != personal && !syncs.iter().any(|s| s.rotated == Some(p.project_id)))
         .filter_map(|p| match syncs.iter().find(|s| s.project.as_ref().is_some_and(|d| d.id == p.project_id)) {
             Some(sync) => ledger_of(
                 p,
@@ -319,6 +321,51 @@ fn ledger_of(
         members: pickable_users(Some(&key), &data.users, &[]).len(),
         data,
     })
+}
+
+#[cfg(any(test, fuzzing))]
+pub(crate) fn exercise_hostile(
+    group: Vec<Expense>,
+    payments: Vec<Payment>,
+    users: Vec<User>,
+    own: Vec<Expense>,
+    me: Option<i32>,
+    budgets: shared::Budgets,
+    rates: HashMap<String, f64>,
+) {
+    use crate::common::test_fixtures::{make_project, TEST_KEY};
+    use crate::crypto::encrypt_json;
+    use crate::expenses::helpers::budgets::{average_by_category, crossed};
+
+    let k = TEST_KEY;
+    let (group_id, personal) = (Uuid::from_u128(1), Uuid::from_u128(2));
+    let group_data = project_data::build(
+        Some(k),
+        Some(&LiveData { project_id: group_id, project: Some(make_project(&k, group_id, "g", "USD")), users, expenses: group, payments, version: None }),
+        None,
+    );
+    let mut payload = ProjectPayload { name: "perso".into(), currency: "EUR".into(), description: None, status: None, extra: Default::default() };
+    payload.set_budgets(&budgets);
+    let project = ProjectDto { payload: encrypt_json(&k, &payload).unwrap(), ..make_project(&k, personal, "", "") };
+    let personal_data = project_data::build(
+        Some(k),
+        Some(&LiveData { project_id: personal, project: Some(project), users: vec![], expenses: own, payments: vec![], version: None }),
+        Some(personal),
+    );
+    let ledgers = [GroupLedger { project_id: group_id, name: "g".into(), me, members: 2, data: group_data }];
+    let fx = CachedFx { day: "2026-11-01".into(), base: "EUR".into(), rates, fetched_at: 0 };
+    let shares = share_rows(&ledgers, &HashSet::new(), "EUR", Some(&fx));
+    let month = first_of_month(NaiveDate::from_ymd_opt(2026, 11, 1).unwrap());
+    let totals = month_totals(&personal_data.expenses, &shares, month);
+    assert!(totals.spent().is_finite() && totals.balance().is_finite());
+    let spent = spent_by_category(&personal_data.expenses, &shares, month);
+    let _ = average_by_category(&personal_data.expenses, &shares, month);
+    for line in budget_lines(&personal_data.budgets, &spent) {
+        let _ = (line.meter(), crossed(line.spent, 1.0, line.limit));
+    }
+    let by_id: HashMap<i32, &ShareRow> = shares.iter().map(|s| (s.row.expense.id, s)).collect();
+    let rows: Vec<&RowExpense> = personal_data.expenses.iter().collect();
+    assert!(results_total(&rows, &by_id).is_finite());
 }
 
 #[cfg(test)]
@@ -581,11 +628,23 @@ mod tests {
             expenses,
             recurring: Some(vec![]),
             server_date: None,
+            rotated: None,
         }
     }
 
     fn cafe() -> Vec<Expense> {
         vec![make_expense(&test_key(), 1, "Café", 3.0, ExpenseType::Expense, "2026-10-01")]
+    }
+
+    #[test]
+    fn a_rotated_project_shows_no_ledger_from_its_old_cache() {
+        let id = Uuid::new_v4();
+        let mut state = held(id);
+        crate::common::upsert_project_key(&mut state, id, crate::crypto::key_to_fragment(&test_key()));
+        cache_sync(&mut state, &answer(id, 7, Some(cafe())));
+        assert_eq!(synced_ledgers(&state, &[], Uuid::nil()).len(), 1, "a project the answer left out keeps its cache");
+        let rotated = ProjectSync { data_version: -1, project: None, users: None, expenses: None, payments: None, recurring: None, server_date: None, rotated: Some(id) };
+        assert!(synced_ledgers(&state, &[rotated], Uuid::nil()).is_empty());
     }
 
     #[test]
@@ -613,5 +672,29 @@ mod tests {
         cache_sync(&mut state, &answer(Uuid::new_v4(), 7, Some(cafe())));
         assert_eq!(state.projects.len(), 1);
         assert!(state.projects[0].cached_project.is_none());
+    }
+    mod hostile_payloads {
+        use crate::common::hostile;
+        use proptest::prelude::*;
+        use shared::Budgets;
+        use std::collections::HashMap;
+
+        fn budgets() -> impl Strategy<Value = Budgets> {
+            let category = prop_oneof![prop::sample::select(crate::categories::CHART_CATEGORIES.to_vec()).prop_map(String::from), any::<String>()];
+            (prop::collection::btree_map(category, hostile::amount(), 0..6), any::<bool>()).prop_map(|(monthly, alert)| Budgets { monthly, alert })
+        }
+
+        fn rates() -> impl Strategy<Value = HashMap<String, f64>> {
+            prop::collection::hash_map(prop_oneof![Just("EUR".to_string()), Just("USD".to_string()), any::<String>()], hostile::amount(), 0..4)
+        }
+
+        proptest! {
+            #![proptest_config(ProptestConfig::with_cases(300))]
+
+            #[test]
+            fn any_group_and_personal_ledger_adds_up(group in hostile::expenses(), payments in hostile::payments(), users in hostile::users(), own in hostile::expenses(), me in proptest::option::of(hostile::id()), budgets in budgets(), rates in rates()) {
+                crate::expenses::helpers::my_spending::exercise_hostile(group, payments, users, own, me, budgets, rates);
+            }
+        }
     }
 }

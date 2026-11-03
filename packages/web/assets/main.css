@@ -182,3 +182,24 @@ body:has(#demo-bar) .app-container {
     scroll-behavior: auto !important;
   }
 }
+
+/* Dark theme (`counted-dark` in tailwind.input.css, duplicated in packages/mobile/assets/main.css). A shadow does not read on a dark
+   ground, so the page sinks below base-100 and a card stands on its fill alone, the way iOS
+   grouped lists do - no outline. The page shells paint `bg-base-100` as a utility, which this
+   unlayered rule outranks. The drop shadow stays for whatever floats over other content. A sheet
+   is base-100 over a scrim that darkens the page by only a few percent: measured #121815 on
+   #0B0E0D, an edge the eye loses, so it keeps a hairline. */
+[data-theme="counted-dark"] .page-shell,
+[data-theme="counted-dark"] .app-container {
+  background-color: oklch(15% 0.008 165);
+}
+[data-theme="counted-dark"] .shadow-soft,
+[data-theme="counted-dark"] .filter .btn,
+[data-theme="counted-dark"] .ptr[data-plat="android"] .ptr-indicator {
+  box-shadow: 0 8px 18px -6px oklch(0% 0 0 / 0.5);
+}
+[data-theme="counted-dark"] .modal-box {
+  box-shadow:
+    0 0 0 1px oklch(100% 0 0 / 0.08),
+    0 8px 18px -6px oklch(0% 0 0 / 0.5);
+}

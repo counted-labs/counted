@@ -1,0 +1,5 @@
+• Protection renforcée des clés de groupe et des invitations
+• Connexions protégées contre les futurs ordinateurs quantiques
+• Une alerte si le code de sécurité d’un ami change
+• Les nouveaux mots de passe comptent au moins 12 caractères
+• Petites corrections et améliorations

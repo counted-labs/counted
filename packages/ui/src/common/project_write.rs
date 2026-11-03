@@ -17,9 +17,11 @@ pub async fn update_project_fresh(
 ) -> Result<ProjectDto, ServerFnError> {
     let mut stale = None;
     for _ in 0..ATTEMPTS {
+        crate::common::project_token::scope(project_id);
         let stored = get_project(project_id).await?;
         let mut editable = edit(&stored).map_err(ServerFnError::new)?;
         editable.expected_iv = editable.payload.as_ref().map(|_| stored.payload.iv.clone());
+        crate::common::project_token::scope(editable.id);
         match update_project_by_id(Json(editable)).await {
             Err(e) if is_project_stale_error(&e) => stale = Some(e),
             result => return result,

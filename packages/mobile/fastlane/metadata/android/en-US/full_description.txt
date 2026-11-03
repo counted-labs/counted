@@ -32,6 +32,10 @@ Free, with no ads, no trackers and no cap on expenses or participants. Everythin
 • Offline: browse and enter with no network
 • CSV and JSON export in one tap
 • Payment details (IBAN, PayPal, Wero, Lydia, Revolut…) encrypted like everything else
+• Change your password without losing anything; forget it, and a recovery key gets everything back
+• Password leaked or phone lost: new account keys, every other device signed out
+• Project admins: removing someone changes the project key, and their old link opens nothing any more
+• Members with an account get the new key on their own, under post-quantum encryption; the others get a new link
 • Tricount import: paste the share link, everything comes across
 • Web, Android and iOS: the same project everywhere, with the same link
 • 32 languages, including all 24 official EU languages

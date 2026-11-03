@@ -34,6 +34,9 @@ fn LoginForm() -> Element {
     let mut unverified = use_signal(|| false);
     let mut resend_loading = use_signal(|| false);
     let mut resend_done = use_signal(|| false);
+    let mut undoable = use_signal(|| false);
+    let mut undoing = use_signal(|| false);
+    let mut flash = use_context::<Signal<Option<crate::common::Flash>>>();
 
     let nav = use_navigator();
     let mut auth_ctx = use_context::<Signal<Option<Account>>>();
@@ -51,6 +54,7 @@ fn LoginForm() -> Element {
             error_msg.set(None);
             rejected.set(false);
             unverified.set(false);
+            undoable.set(false);
             resend_done.set(false);
             // Two Argon2id derivations run before the request now; without a paint in between
             // the spinner never shows.
@@ -58,7 +62,7 @@ fn LoginForm() -> Element {
 
             match sign_in(email_val, &password_val, lang).await {
                 Ok((account, account_key)) => {
-                    ls_ctx.set(remember_account_key(&account_key));
+                    ls_ctx.set(remember_account_key(&account, &account_key));
                     let account = sync_personal_project(account, account_key, ls_ctx).await;
 
                     account_enc_key_ctx.set(Some(account_key));
@@ -71,6 +75,9 @@ fn LoginForm() -> Element {
                     if is_email_not_verified(&e) {
                         unverified.set(true);
                         error_msg.set(None);
+                    } else if error_key(&e) == "login-reset-undoable" {
+                        undoable.set(true);
+                        error_msg.set(None);
                     } else {
                         rejected.set(error_key(&e) == "error-invalid-credentials");
                         error_msg.set(Some(error_message(&e)));
@@ -79,6 +86,29 @@ fn LoginForm() -> Element {
                 }
             }
         }
+    };
+
+    // Docs/plans/key-lifecycle.md §6.3: the password a recent reset replaced brings the account back.
+    let on_undo = move |_| {
+        let (email_val, password_val) = (email(), password());
+        spawn(async move {
+            undoing.set(true);
+            next_paint().await;
+            match crate::auth::recovery_flow::undo_reset(email_val, &password_val).await {
+                Ok((account, account_key)) => {
+                    ls_ctx.set(remember_account_key(&account, &account_key));
+                    account_enc_key_ctx.set(Some(account_key));
+                    auth_ctx.set(Some(account));
+                    flash.set(Some(crate::common::Flash::ok(tid!("reset-undone"))));
+                    nav.push("/");
+                }
+                Err(e) => {
+                    undoable.set(false);
+                    error_msg.set(Some(error_message(&e)));
+                }
+            }
+            undoing.set(false);
+        });
     };
 
     let on_resend = move |_| {
@@ -130,6 +160,20 @@ fn LoginForm() -> Element {
                 }
             }
 
+            if undoable() {
+                div { id: "login-undoable", role: "alert", class: "alert alert-warning flex flex-col items-start gap-2",
+                    p { {tid!("login-reset-undoable")} }
+                    button {
+                        id: "login-undo-reset",
+                        class: "btn btn-sm btn-outline",
+                        r#type: "button",
+                        disabled: undoing(),
+                        onclick: on_undo,
+                        {tid!("login-undo-reset")}
+                    }
+                }
+            }
+
             form { class: "flex flex-col gap-4", onsubmit: on_submit,
                 fieldset { class: "fieldset",
                     label { class: "fieldset-legend", r#for: "login-email", {tid!("field-email")} }
@@ -160,6 +204,7 @@ fn LoginForm() -> Element {
                         value: "{password}",
                         oninput: move |e| password.set(e.value()),
                     }
+                    Link { id: "login-forgot", class: "link link-primary text-sm mt-1", to: Route::ForgotPasswordPage {}, {tid!("login-forgot")} }
                 }
                 button {
                     id: "login-submit",

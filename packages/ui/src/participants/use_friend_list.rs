@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
 use shared::{Account, Friend};
 
+use crate::common::LocalStorageState;
 use crate::crypto::decrypt_json;
+use crate::friends::friends_service::get_pinned_friends;
 
 #[derive(Clone, PartialEq, Default)]
 pub struct FriendList {
@@ -13,16 +15,14 @@ pub struct FriendList {
 /// block usable with typed names only.
 pub fn use_friend_list() -> FriendList {
     let auth = use_context::<Signal<Option<Account>>>();
+    let ls_ctx = use_context::<Signal<LocalStorageState>>();
     let friends = use_resource(move || {
         let signed_in = auth.read().is_some();
         async move {
             if !signed_in {
                 return Vec::new();
             }
-            api::friends::friends_controller::get_friends()
-                .await
-                .map(|v| v.friends)
-                .unwrap_or_default()
+            get_pinned_friends(ls_ctx).await.map(|(v, _)| v.friends).unwrap_or_default()
         }
     });
     let signed_in = auth.read().is_some();

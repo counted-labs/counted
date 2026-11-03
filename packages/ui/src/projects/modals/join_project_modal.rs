@@ -71,8 +71,7 @@ pub fn JoinProjectModal(props: JoinProjectModalProps) -> Element {
         }
 
         let is_auth = auth_ctx().is_some();
-        let typed = auth_ctx().is_some_and(|a| a.typed_wraps);
-        let escrowed = account_key_ctx().and_then(|ak| wrap_key(&ak, WrapUse::Escrow(project_id), &key, typed));
+        let escrowed = account_key_ctx().and_then(|ak| wrap_key(&ak, WrapUse::Escrow(project_id), &key));
         let token = claim_token(&key).to_vec();
         let on_close = props.on_close;
         spawn(async move {
@@ -84,14 +83,16 @@ pub fn JoinProjectModal(props: JoinProjectModalProps) -> Element {
             if is_auth && adopted {
                 // user_id is None - the user identifies themselves via UserSelectionModal, which is
                 // also what attaches the claim label. Nothing to claim here yet.
-                let _ = upsert_account_project(Json(UpsertAccountProject {
+                let written = upsert_account_project(Json(UpsertAccountProject {
                     project_id,
                     user_id: None,
                     key: escrowed,
                     claim_label: None,
                     claim_token: Some(token),
+                    amk_epoch: crate::auth::account_key::held_amk_epoch(),
                 }))
                 .await;
+                crate::auth::account_key::note(&written);
             }
         });
     };

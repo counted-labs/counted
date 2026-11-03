@@ -147,6 +147,46 @@ pub fn materialize_request(
     })
 }
 
+#[cfg(any(test, fuzzing))]
+pub(crate) fn rule_rows(payloads: &[RecurringPayload], author_id: Option<i32>, created_at: chrono::NaiveDateTime) -> Vec<shared::RecurringExpense> {
+    payloads
+        .iter()
+        .enumerate()
+        .map(|(i, p)| shared::RecurringExpense {
+            id: Uuid::from_u128(i as u128),
+            project_id: Uuid::nil(),
+            author_id,
+            payload: crate::crypto::encrypt_json(&crate::common::test_fixtures::TEST_KEY, p).unwrap(),
+            version: i as i64,
+            created_at,
+            listed_participants: false,
+        })
+        .collect()
+}
+
+#[cfg(any(test, fuzzing))]
+pub(crate) fn exercise_hostile(rows: &[shared::RecurringExpense], me: i32) {
+    use crate::common::test_fixtures::TEST_KEY;
+    use crate::recurring::model::decrypt_rules;
+    use crate::recurring::schedule::{due, last_date, resume_index, total, upcoming};
+    use crate::recurring::view::{monthly_total, my_monthly_share, next_date, progress, rate_drift, sorted, state};
+
+    let rules = decrypt_rules(&TEST_KEY, rows);
+    let today = NaiveDate::from_ymd_opt(2026, 11, 1).unwrap();
+    let _ = (sorted(&rules), monthly_total(&rules), my_monthly_share(&rules, me));
+    for r in &rules {
+        let p = &r.payload;
+        let _ = (state(p), next_date(p), progress(p), total(&p.rule), last_date(&p.rule));
+        let _ = (resume_index(&p.rule, p.next, today), upcoming(&p.rule, p.next, 5), rate_drift(&p.template, 1.1));
+        let _ = (p.template.conversion(), p.template.participant_ids());
+        let due = due(&p.rule, p.next, today, 50);
+        assert!(due.len() <= 50);
+        if !due.is_empty() {
+            let _ = materialize_request(&TEST_KEY, Uuid::nil(), r, &due, today, me, |d| d.to_string());
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -273,5 +313,19 @@ mod tests {
         assert_eq!(p.summary, "Rent");
         assert_eq!(p.actor_user_id, Some(2));
         assert_eq!((p.action, p.entity), (Some(HistoryAction::Updated), Some(HistoryEntity::Project)));
+    }
+    mod hostile_payloads {
+        use crate::common::hostile;
+        use proptest::prelude::*;
+
+        proptest! {
+            #![proptest_config(ProptestConfig::with_cases(300))]
+
+            #[test]
+            fn any_rule_schedules_and_materialises(payloads in prop::collection::vec(hostile::rule_payload(), 1..6), author_id in proptest::option::of(hostile::id()), me in hostile::id(), created_at in hostile::timestamp()) {
+                let rows = crate::recurring::requests::rule_rows(&payloads, author_id, created_at);
+                crate::recurring::requests::exercise_hostile(&rows, me);
+            }
+        }
     }
 }

@@ -3,3 +3,4 @@
 "push.friend_accepted" = "Tvoja prošnja za prijateljstvo je bila sprejeta";
 "push.project_invitation" = "Novo povabilo v projekt";
 "push.project_closed" = "Eden od tvojih projektov je bil zaprt";
+"push.key_changed" = "Ključ enega od tvojih projektov se je spremenil";

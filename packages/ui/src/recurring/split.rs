@@ -12,7 +12,7 @@ pub fn side_amounts(side: &Side, total: f64, rotation: u32) -> Vec<(i32, f64)> {
     }
     let weights: Vec<(i32, f64)> = side.entries.iter().copied().filter(|(_, w)| *w > 0.0).collect();
     let sum: f64 = weights.iter().map(|(_, w)| w).sum();
-    if weights.is_empty() || sum <= 0.0 {
+    if weights.is_empty() || sum <= 0.0 || !shared::is_valid_amount(total) {
         return Vec::new();
     }
     let total_cents = to_cents(total);
@@ -70,6 +70,13 @@ mod tests {
             amount,
             shares,
         }
+    }
+
+    #[test]
+    fn a_total_out_of_range_splits_into_nothing() {
+        assert!(side_amounts(&equal(&[1, 2]), f64::MAX, 0).is_empty());
+        assert!(side_amounts(&equal(&[1, 2]), f64::NAN, 0).is_empty());
+        assert_eq!(side_amounts(&equal(&[1, 2]), shared::MAX_AMOUNT, 0).len(), 2);
     }
 
     #[test]

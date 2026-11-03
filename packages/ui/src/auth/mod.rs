@@ -1,10 +1,20 @@
+pub mod account_key;
+pub mod account_rotation;
 pub mod credentials;
+pub mod delete_account_sheet;
 pub mod erase_device;
 pub mod erase_device_sheet;
+pub mod forgot_password_page;
+pub mod keypair_banner;
 pub mod locked_feature_card;
 pub mod login_page;
 pub mod payment_methods_card;
+pub mod recovery_flow;
+pub mod recovery_key;
+pub mod recovery_ui;
 pub mod register_page;
+pub mod reset_page;
+pub mod security_card;
 pub mod settings_page;
 pub mod verify_email_page;
 
@@ -14,3 +24,5 @@ pub use settings_page::SettingsPage;
 pub use login_page::LoginPage;
 pub use register_page::RegisterPage;
 pub use verify_email_page::VerifyEmailPage;
+pub use forgot_password_page::ForgotPasswordPage;
+pub use reset_page::ResetPage;

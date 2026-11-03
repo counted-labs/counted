@@ -9,6 +9,7 @@ use shared::{
     UpsertAccountProject, UserPayload,
 };
 
+use crate::common::creator_proof::{keep_creator_secret, new_creator_proof};
 use crate::common::{
     error_message, update_ls, CurrencyPicker, upsert_project, upsert_project_key, InviteRetry, LocalStorageState,
 };
@@ -25,15 +26,26 @@ use crate::participants::{use_friend_list, use_my_display_name, ParticipantsEdit
 use crate::route::Route;
 use uuid::Uuid;
 
+/// "Recreate the group" (D8): the same name and participants in a new group, so a new key and link.
+#[derive(Clone, PartialEq, Debug)]
+pub struct GroupPrefill {
+    pub name: String,
+    pub me: String,
+    pub others: Vec<String>,
+}
+
 #[derive(Props, Clone, PartialEq)]
 pub struct AddProjectModalProps {
     pub on_close: EventHandler<()>,
+    #[props(default)]
+    pub prefill: Option<GroupPrefill>,
 }
 
 #[component]
 pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
     crate::common::use_modal_focus("add-project-modal");
-    let mut project_name = use_signal(String::new);
+    let prefill = props.prefill.clone();
+    let mut project_name = use_signal(|| prefill.as_ref().map(|p| p.name.clone()).unwrap_or_default());
     let mut description = use_signal(String::new);
     // The project's currency is fixed at creation - every amount in it is stored converted into
     // this one, and there is no migration that could re-price an existing ledger, so
@@ -41,9 +53,14 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
     let mut currency = use_signal(|| "EUR".to_string());
     // You are never a row: the creator is always the first participant of the batch.
     let account_name = use_my_display_name();
-    let mut me_name = use_signal(|| account_name.clone().unwrap_or_default());
+    let mut me_name = use_signal(|| {
+        prefill.as_ref().map(|p| p.me.clone()).filter(|me| !me.is_empty()).or(account_name.clone()).unwrap_or_default()
+    });
     let mut me_touched = use_signal(|| false);
-    let drafts: Signal<Vec<DraftParticipant>> = use_signal(Vec::new);
+    let drafts: Signal<Vec<DraftParticipant>> = use_signal(|| {
+        let others = prefill.as_ref().map(|p| p.others.clone()).unwrap_or_default();
+        others.into_iter().map(|name| DraftParticipant { name, friend: None }).collect()
+    });
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
     let mut loading = use_signal(|| false);
     // Set once the project row exists, so a retry after a failed participants step finishes this
@@ -57,6 +74,8 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
     let ls_ctx = use_context::<Signal<LocalStorageState>>();
     let is_online = use_context::<Signal<bool>>();
     let mut invite_retry = use_context::<Signal<Option<InviteRetry>>>();
+    // The server makes the creator admin; the demo seeds without an account.
+    let creates_admin = auth_ctx.read().as_ref().is_some_and(|a| a.key_lifecycle) && !crate::common::persist::is_demo();
 
     // `me()` can land after the modal opened: fill the name then, unless it was already typed.
     use_effect(use_reactive!(|account_name| {
@@ -120,8 +139,10 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 Some((id, _)) => id,
                 None => {
                     let claim_verifier = Some(claim_verifier(&key).to_vec());
+                    let demo = crate::common::persist::is_demo();
+                    let (creator_secret, creator_verifier) = new_creator_proof(account.is_none() && !demo);
                     let project =
-                        match add_project(Json(CreatableProject { payload, claim_verifier, demo: crate::common::persist::is_demo() })).await {
+                        match add_project(Json(CreatableProject { payload, claim_verifier, demo, creator_verifier })).await {
                             Ok(p) => p,
                             Err(e) => {
                                 error_msg.set(Some(error_message(&e)));
@@ -134,6 +155,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                     update_ls(ls_ctx, |state| {
                         upsert_project(state, project.id, None);
                         upsert_project_key(state, project.id, key_to_fragment(&key));
+                        keep_creator_secret(state, project.id, creator_secret);
                     });
                     created.set(Some((project.id, key)));
                     project.id
@@ -152,6 +174,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 creatables.push(CreatableUser { payload, project_id });
             }
 
+            crate::common::project_token::scope_key(Some(&key));
             let created_users = match add_user(Json(CreatableUserBatch::Multiple(creatables))).await
             {
                 Ok(u) => u,
@@ -185,14 +208,16 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 // No claim label: these participants were created by this very request, so nobody
                 // can be holding one, and `ensure_membership` attaches the label on the project
                 // page this navigates to a line below.
-                let _ = upsert_account_project(Json(UpsertAccountProject {
+                let escrowed = upsert_account_project(Json(UpsertAccountProject {
                     project_id,
                     user_id,
-                    key: account_key.and_then(|ak| wrap_key(&ak, WrapUse::Escrow(project_id), &key, account.typed_wraps)),
+                    key: account_key.and_then(|ak| wrap_key(&ak, WrapUse::Escrow(project_id), &key)),
                     claim_label: None,
                     claim_token: Some(claim_token(&key).to_vec()),
+                    amk_epoch: crate::auth::account_key::held_amk_epoch(),
                 }))
                 .await;
+                crate::auth::account_key::note(&escrowed);
 
                 // Step F - invitations need the project and its participants to exist. The modal
                 // closes whatever they return: what failed is offered again on the project page.
@@ -311,6 +336,9 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                                 },
                             }
                             span { class: "badge badge-secondary badge-sm", {tid!("participants-you-badge")} }
+                            if creates_admin {
+                                span { id: "add-project-admin-badge", class: "badge badge-primary badge-sm", {tid!("participants-admin-badge")} }
+                            }
                         }
                     }
 
@@ -387,6 +415,7 @@ mod tests {
             })?,
             claim_verifier: Some(claim_verifier(key).to_vec()),
             demo: false,
+            creator_verifier: None,
         })
     }
 

@@ -1,0 +1,1 @@
+{"name":"Dinner","amount":42.5,"expenseType":"expense","date":"2026-10-31","category":"food","sourceCurrency":"USD","sourceAmount":50.0,"rate":0.85,"estimate":false,"authorId":1,"shares":[{"userId":1,"amount":42.5,"isDebt":false},{"userId":2,"amount":21.25,"isDebt":true},{"userId":3,"amount":21.25,"isDebt":true}]}

@@ -3,3 +3,4 @@
 "push.friend_accepted" = "Elfogadták a barátkérelmedet";
 "push.project_invitation" = "Új meghívó egy projektbe";
 "push.project_closed" = "Az egyik projektedet lezárták";
+"push.key_changed" = "Megváltozott az egyik projekted kulcsa";

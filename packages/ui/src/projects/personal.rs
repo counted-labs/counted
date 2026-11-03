@@ -54,6 +54,7 @@ pub fn PersonalExpenseSheet(project: PersonalProject, on_close: EventHandler<()>
     let project_id = project.project_id;
     // Offline, the cached participants still let the expense queue.
     let users = use_resource(move || async move {
+        crate::common::project_token::scope(project_id);
         match get_users_by_project_id(project_id).await {
             Ok(users) => users,
             Err(_) => read_from_ls()

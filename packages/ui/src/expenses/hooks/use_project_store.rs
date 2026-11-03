@@ -14,7 +14,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::common::{
-    adopt_project_key, ensure_membership, project_key, queued_expenses, read_from_ls, set_project_cache,
+    adopt_project_key, ensure_membership, mark_key_opened, project_key, queued_expenses, read_from_ls, set_project_cache,
     update_ls_if_changed, ClaimOutcome, Flash, LocalStorageState, ProjectKey, QueuedOp,
 };
 use crate::expenses::helpers::expenses_page_helpers::{
@@ -162,10 +162,21 @@ pub fn use_project_store() -> ProjectStore {
             }
             #[cfg(not(target_arch = "wasm32"))]
             let _ = adopted;
+            // A key the rotation replaced (T10) claims nothing: the server refuses its token.
+            if read_from_ls().projects.iter().any(|p| p.project_id == id && p.key_rotated) {
+                return;
+            }
             // `IdentityTaken` has already dropped the local `user_id`, so `stored_user_id()` goes
             // `None` and `ExpensesPage` reopens `UserSelectionModal` on its own. All that is left is
             // to say why, otherwise the picker reappears with no explanation.
-            match ensure_membership(ls_ctx, id, account, account_key).await {
+            let member = account.clone();
+            let outcome = ensure_membership(ls_ctx, id, account, account_key).await;
+            if let (Some(member), Some(ak)) = (member, account_key) {
+                let state = read_from_ls();
+                let epoch = crate::common::cached_project_row(&state, id).map(|p| p.key_epoch).unwrap_or(0);
+                crate::rotation_flow::ensure_member_key(id, &member, &ak, state.raw_wraps_ok(member.id), epoch).await;
+            }
+            match outcome {
                 ClaimOutcome::IdentityTaken => {
                     flash.set(Some(Flash::err(tid!("identity-taken-repick"))));
                 }
@@ -203,7 +214,25 @@ pub fn use_project_store() -> ProjectStore {
             true => NO_CACHED_VERSION,
             false => held.unwrap_or_else(|| cached_data_version(&read_from_ls(), id)),
         };
-        Some(sync_project_data(id, known).await.map(|s| (id, s)))
+        // A share link's first open: the key is still only in the fragment, since
+        // `adopt_project_key` stores it from a spawned task that has not run yet.
+        let token_key = project_key(id).or_else(|| key_for_project(url_fragment().as_deref(), &read_from_ls(), id));
+        crate::common::project_token::scope_key(token_key.as_ref());
+        let mut synced = sync_project_data(id, known).await;
+        // The key changed: switch through the account's escrow or a rotation box when one passes
+        // §8.4, then sync again under the new key; otherwise the page reads its cache, read-only.
+        if synced.as_ref().err().is_some_and(crate::rotation_flow::is_key_rotated) {
+            let account = auth_ctx.peek().clone();
+            let account_key = *account_key_ctx.peek();
+            if crate::rotation_flow::adopt(ls_ctx, id, account, account_key).await == crate::rotation_flow::Adopted::Switched {
+                if let Some(k) = project_key(id) {
+                    key_ctx.set(Some(k));
+                }
+                crate::common::project_token::scope(id);
+                synced = sync_project_data(id, NO_CACHED_VERSION).await;
+            }
+        }
+        Some(synced.map(|s| (id, s)))
     }));
 
     // `use_reactive!`, like the two effects above, and for a sharper reason than they have: this
@@ -290,6 +319,7 @@ pub fn use_project_store() -> ProjectStore {
         // Both writes are expensive at scale (serialise the store, re-render every `ls_ctx`
         // reader) and an unchanged revisit is the common case - hence the `_if_changed` variant.
         update_ls_if_changed(ls_ctx, |next| {
+            mark_key_opened(next, l.project_id, &proj);
             set_project_cache(
                 next,
                 l.project_id,

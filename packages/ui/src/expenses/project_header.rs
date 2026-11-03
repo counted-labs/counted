@@ -4,9 +4,10 @@ use shared::ProjectStatus;
 
 use crate::common::{haptic, AppHeader, Haptic};
 use crate::expenses::helpers::expenses_page_helpers::HeaderState;
+use crate::expenses::group_security::GroupSecurity;
 use crate::expenses::project_actions_sheet::ProjectActionsSheet;
 use crate::expenses::project_states::Spinner;
-use crate::icons::MoreIcon;
+use crate::icons::{KeyIcon, MoreIcon};
 use crate::route::Route;
 
 #[derive(PartialEq, Props, Clone)]
@@ -38,6 +39,11 @@ pub struct ProjectHeaderProps {
     pub on_counted: Option<EventHandler<bool>>,
     #[props(default)]
     pub on_counted_groups: Option<EventHandler<()>>,
+    #[props(default)]
+    pub security: Option<GroupSecurity>,
+    /// "Open a link" on the rotated screen: the join modal, for the new link a member sends.
+    #[props(default)]
+    pub on_open_link: Option<EventHandler<()>>,
 }
 
 /// The project page's header and its actions sheet. Decides nothing - every entry calls back out.
@@ -65,6 +71,35 @@ pub fn ProjectHeader(props: ProjectHeaderProps) -> Element {
                     class: "btn btn-primary btn-sm mt-2",
                     onclick: move |_| props.on_forget.call(()),
                     {tid!("project-forget")}
+                }
+            }
+        },
+        // Artboard T10: the key changed and nothing gave this device the new one.
+        HeaderState::Rotated => rsx! {
+            AppHeader { back_button_route: Route::ProjectsPage {}, title: "Counted", brand: true, sticky: true }
+            div { id: "project-rotated", role: "alert", class: "rounded-box border border-warning/50 bg-base-100 p-4 flex flex-col gap-2.5",
+                div { class: "flex items-center gap-2.5",
+                    span { class: "text-warning shrink-0", KeyIcon { size: 22 } }
+                    h2 { class: "font-display font-bold text-[17px] leading-snug", {tid!("project-rotated-title")} }
+                }
+                p { class: "text-sm text-base-content/80 leading-snug", {tid!("project-rotated-body")} }
+                div { class: "flex gap-2",
+                    if let Some(on_open_link) = props.on_open_link {
+                        button {
+                            id: "project-rotated-open-link",
+                            r#type: "button",
+                            class: "btn btn-primary flex-1",
+                            onclick: move |_| on_open_link.call(()),
+                            {tid!("project-rotated-open-link")}
+                        }
+                    }
+                    button {
+                        id: "project-rotated-forget",
+                        r#type: "button",
+                        class: "btn btn-outline flex-1",
+                        onclick: move |_| props.on_forget.call(()),
+                        {tid!("project-forget")}
+                    }
                 }
             }
         },
@@ -109,6 +144,7 @@ pub fn ProjectHeader(props: ProjectHeaderProps) -> Element {
                     counted: props.counted,
                     on_counted: props.on_counted,
                     on_counted_groups: props.on_counted_groups,
+                    security: props.security.clone(),
                 }
             }
         },

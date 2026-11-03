@@ -6,6 +6,7 @@ const APP_PAGES = ["/projects", "/login", "/register", "/settings", "/help", "/p
 const DX_BOOTSTRAP =
 	'window.hydrate_queue=[];window.dx_hydrate=(id,data,debug_types,debug_locations)=>{let decoded=atob(data),bytes=Uint8Array.from(decoded,(c)=>c.charCodeAt(0));if(window.hydration_callback)window.hydration_callback(id,bytes,debug_types,debug_locations);else window.hydrate_queue.push([id,bytes,debug_types,debug_locations])};';
 const HYDRATION_DATA = /^window\.initial_dioxus_hydration_data="[A-Za-z0-9+/=]*";$/;
+const HYDRATION_BLOCK = /^\s*type="text\/plain"\s+id="dioxus-hydration-data"\s*$/;
 
 const sums = new Map(
 	readFileSync(process.argv[2], "utf8")
@@ -55,6 +56,8 @@ function checkMarkup(page, html, allowScript) {
 function appScript(attributes, content) {
 	const src = attributes.match(/\ssrc="([^"]*)"/)?.[1];
 	if (src !== undefined) return content === "" && sums.has(src.replace(/^\/(\.\/)?/, "")) ? null : "script outside the signed sums";
+	if (HYDRATION_BLOCK.test(attributes)) return /^[A-Za-z0-9+/=]*$/.test(content) ? null : "hydration data that is not base64";
+	if (attributes.trim() !== "") return "unknown script type";
 	return content === DX_BOOTSTRAP || HYDRATION_DATA.test(content) ? null : "unknown inline script";
 }
 

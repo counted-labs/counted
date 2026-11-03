@@ -27,6 +27,39 @@ pub fn set_html_lang(lang: &str) {
     }
 }
 
+thread_local! {
+    static THEME: std::cell::Cell<Option<crate::common::Theme>> = const { std::cell::Cell::new(None) };
+}
+
+fn system_dark_query() -> Option<web_sys::MediaQueryList> {
+    web_sys::window()?.match_media("(prefers-color-scheme: dark)").ok().flatten()
+}
+
+fn paint_theme(theme: crate::common::Theme) {
+    let system_dark = system_dark_query().is_some_and(|q| q.matches());
+    if let Some(el) = document().and_then(|d| d.document_element()) {
+        let _ = el.set_attribute("data-theme", crate::common::data_theme(theme.is_dark(system_dark)));
+    }
+}
+
+/// `<html data-theme>`, plus a `prefers-color-scheme` listener installed on the first call and
+/// leaked, which repaints while the choice is System.
+pub fn set_theme(theme: crate::common::Theme) {
+    let first = THEME.with(|t| t.replace(Some(theme))).is_none();
+    paint_theme(theme);
+    if !first {
+        return;
+    }
+    let Some(query) = system_dark_query() else { return };
+    let handler = wasm_bindgen::closure::Closure::<dyn Fn()>::new(|| {
+        if let Some(theme) = THEME.with(|t| t.get()) {
+            paint_theme(theme);
+        }
+    });
+    let _ = query.add_event_listener_with_callback("change", handler.as_ref().unchecked_ref());
+    handler.forget();
+}
+
 /// `document.cookie = "name=value; …"`.
 ///
 /// Only ever used for the language preference, which the *server* has to know before the client

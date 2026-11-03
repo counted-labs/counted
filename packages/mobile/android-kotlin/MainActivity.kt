@@ -26,6 +26,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import androidx.core.content.FileProvider
+import androidx.core.view.WindowCompat
 import java.io.File
 import org.unifiedpush.android.connector.UnifiedPush
 
@@ -59,6 +60,14 @@ class MainActivity : WryActivity() {
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         send.clipData = ClipData.newRawUri(null, uri)
         startActivity(Intent.createChooser(send, null))
+    }
+
+    // apply_native_theme in packages/mobile/src/main.rs: the icons follow the chosen theme, not the
+    // system mode values-night/ picked them from.
+    fun setLightStatusBar(light: Boolean) {
+        runOnUiThread {
+            WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = light
+        }
     }
 
     fun requestPush(vapid: String) {

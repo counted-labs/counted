@@ -227,6 +227,7 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
             loading.set(true);
             error_msg.set(None);
             spawn(async move {
+                crate::common::project_token::scope(req.project_id);
                 match add_recurring_expense(Json(req)).await {
                     Ok(_) => {
                         on_created.call(None);
@@ -276,6 +277,7 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
         let on_created = on_created;
         let on_close_submit = on_close_submit;
         spawn(async move {
+            crate::common::project_token::scope(payload.project_id);
             match add_expense(Json(payload)).await {
                 Ok(created) => {
                     on_created.call(Some(created));

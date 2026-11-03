@@ -259,9 +259,11 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
         let on_edited = on_edited;
         let on_close_submit = on_close_submit;
         spawn(async move {
+            crate::common::project_token::scope(payload.project_id);
             match edit_expense(Json(payload)).await {
                 Ok(edited) => {
                     if let Some(req) = rule_update {
+                        crate::common::project_token::scope(req.project_id);
                         if edit_recurring_expense(Json(req)).await.is_err() {
                             flash.set(Some(Flash::err(tid!("apply-rule-failed"))));
                         }

@@ -3,3 +3,4 @@
 "push.friend_accepted" = "Glacadh le d'iarraidh chairdis";
 "push.project_invitation" = "Cuireadh nua chuig tionscadal";
 "push.project_closed" = "Dúnadh ceann de do thionscadail";
+"push.key_changed" = "Athraíodh eochair ceann de do thionscadail";

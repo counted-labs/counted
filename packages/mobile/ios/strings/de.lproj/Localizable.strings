@@ -3,3 +3,4 @@
 "push.friend_accepted" = "Deine Freundschaftsanfrage wurde angenommen";
 "push.project_invitation" = "Du wurdest zu einem Projekt eingeladen";
 "push.project_closed" = "Eines deiner Projekte wurde abgeschlossen";
+"push.key_changed" = "Der Schlüssel eines deiner Projekte hat sich geändert";

@@ -42,7 +42,7 @@ pub fn InvitationsCard(props: InvitationsCardProps) -> Element {
             if !signed_in {
                 return Ok(vec![]);
             }
-            load_invitations(private).await
+            load_invitations(ls_ctx, private).await
         }
     });
 

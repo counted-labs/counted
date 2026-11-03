@@ -14,8 +14,8 @@ use std::collections::{HashSet, VecDeque};
 
 use crate::common::{
     apply_pull, clear_user_id, copy_missing, copy_text, error_message, haptic, is_offline_error, is_rate_limited, key_of,
-    leave_project_and_forget, left_elsewhere, mark_converted, mark_synced, pending,
-    read_from_ls, remove_project, set_cached_projects_list, share_link_for, share_text, sleep, to_push, update_ls,
+    forget_left, leave_project_and_forget, left_elsewhere, mark_converted, mark_synced, pending,
+    read_from_ls, set_cached_projects_list, share_link_for, share_text, sleep, to_push, update_ls,
     update_project_fresh, write_queue, QUICK_ADD,
     write_to_ls,
     ConfirmModal, Mascot, MascotPose, PageTitle,
@@ -25,10 +25,11 @@ use crate::common::{
 use crate::common::fx_cache::read_fx;
 use crate::crypto::decrypt_json;
 use crate::conversion::{conversion_plan, rows_verdicts, Verdict};
+use crate::rotation_flow::{adopt_all, lost_projects, rotated_among, rotated_ids};
 use crate::decrypted::{project_status, status_edit};
 use crate::expenses::helpers::my_spending::{cached_ledgers, sync_all, synced_ledgers, GroupLedger};
 use crate::expenses::{EditProjectModal, OPEN_REIMBURSEMENTS};
-use crate::icons::{ChevronRightIcon, ImportIcon, LinkIcon, LockIcon, PlusIcon, UsersIcon, WalletIcon};
+use crate::icons::{ChevronRightIcon, ImportIcon, KeyIcon, LinkIcon, LockIcon, PlusIcon, UsersIcon, WalletIcon};
 use crate::payment_methods::refill_project_copies;
 use crate::projects::home::{row_subtitle, BalanceCard, RowBalance};
 use crate::projects::home_balances::{debts, glance, home_currency, totals, Debt, ProjectGlance};
@@ -94,15 +95,14 @@ pub fn ProjectsPage() -> Element {
             let Ok(server) = get_account_projects().await else { return };
 
             // Forget first: a project this account was seen holding that it no longer holds was
-            // left on another device. Dropped before the push reads the store, or it would be
-            // pushed straight back and the leave undone. See common::account_sync.
-            let left = left_elsewhere(&read_from_ls(), &server, account.id);
+            // left on another device, unless a rotation removed the account (D14). Dropped before
+            // the push reads the store, or it would be pushed straight back and the leave undone.
+            // See common::account_sync.
+            let reset = crate::auth::recovery_flow::memberships_reset(&read_from_ls(), &account);
+            let left = if reset { vec![] } else { left_elsewhere(&read_from_ls(), &server, account.id) };
             if !left.is_empty() {
-                update_ls(ls_ctx, |state| {
-                    for project_id in &left {
-                        remove_project(state, *project_id);
-                    }
-                });
+                let Ok(rotated) = rotated_among(&read_from_ls(), &left).await else { return };
+                update_ls(ls_ctx, |state| forget_left(state, &left, &rotated));
             }
 
             // Push next: what this device holds and the account does not. Without it a project
@@ -111,11 +111,20 @@ pub fn ProjectsPage() -> Element {
             let push = to_push(&read_from_ls(), &server, account_key.as_ref(), Some(&account));
             let mut rejected: Vec<Uuid> = vec![];
             let mut accepted: Vec<Uuid> = vec![];
+            let mut pushed = true;
             if !push.is_empty() {
-                if let Ok(result) = batch_upsert_account_projects(Json(push)).await {
+                let written = batch_upsert_account_projects(Json(push)).await;
+                crate::auth::account_key::note(&written);
+                pushed = written.is_ok();
+                if let Ok(result) = written {
                     rejected = result.identity_rejected;
                     accepted = result.accepted;
                 }
+            }
+            if reset && pushed {
+                update_ls(ls_ctx, |state| {
+                    state.membership_epochs.insert(account.id, account.membership_epoch);
+                });
             }
 
             // A project claimed here that the account's shared payment methods never reached -
@@ -158,6 +167,7 @@ pub fn ProjectsPage() -> Element {
                     }
                 }
             });
+            crate::common::creator_proof::claim_created_projects(ls_ctx).await;
 
             let mut account_answer = account_answer;
             account_answer.set(Some(server));
@@ -189,7 +199,14 @@ pub fn ProjectsPage() -> Element {
             }
             // One request for the list and every group's balances: one per project tripped the
             // proxy's burst limit on accounts with a few groups.
-            let result = sync_all(ids).await;
+            let mut result = sync_all(ids.clone()).await;
+            // D17: a rotated project switches through a box or the escrow, then syncs under the new
+            // key; one nothing reaches keeps a row (`lost_projects`) that opens artboard T10.
+            let rotated = result.as_ref().map(|(_, syncs)| rotated_ids(syncs)).unwrap_or_default();
+            let (account, account_key) = (auth_ctx.peek().clone(), *account_key_ctx.peek());
+            if !rotated.is_empty() && adopt_all(ls_ctx, &rotated, account, account_key).await {
+                result = sync_all(ids).await;
+            }
             synced.set(true);
             let (before, syncs) = result?;
             ledgers.set(synced_ledgers(&before, &syncs, Uuid::nil()));
@@ -348,6 +365,8 @@ pub fn ProjectsPage() -> Element {
                 }
             }
 
+            crate::auth::recovery_ui::PendingResetBanner {}
+            crate::auth::keypair_banner::KeypairMismatchBanner {}
             InvitationsCard { on_accepted: move |_| projects.restart() }
 
             // `show_archived` is an *include* flag, so the second tab is "All", not "Archived" -
@@ -408,6 +427,7 @@ pub fn ProjectsPage() -> Element {
                             let mine = filtered.iter().find(|p| is_personal_dto(p, &ls_ctx.peek())).cloned();
                             let filtered: Vec<ProjectDto> =
                                 filtered.into_iter().filter(|p| Some(p.id) != mine.as_ref().map(|m| m.id)).collect();
+                            let lost = lost_projects(&ls_ctx.read(), &list.iter().map(|p| p.id).collect::<Vec<_>>());
                             rsx! {
                                 div { id: "projects-cached-banner", role: "alert",
                                     class: "alert alert-warning alert-soft text-sm",
@@ -416,12 +436,12 @@ pub fn ProjectsPage() -> Element {
                                 if let Some(project) = mine {
                                     PersonalCard { project, ledgers }
                                 }
-                                if filtered.is_empty() {
+                                if filtered.is_empty() && lost.is_empty() {
                                     div { class: "flex flex-col items-center gap-2 py-12 text-base-content/70",
                                         Mascot { pose: MascotPose::Empty }
                                         span { class: "font-semibold", {tid!("projects-empty")} }
                                     }
-                                } else {
+                                } else if !filtered.is_empty() {
                                     div { id: "projects-list", class: "shrink-0 rounded-[20px] bg-base-100 shadow-soft flex flex-col",
                                         for (i, project) in filtered.into_iter().enumerate() {
                                             if i > 0 {
@@ -431,6 +451,7 @@ pub fn ProjectsPage() -> Element {
                                         }
                                     }
                                 }
+                                LostProjects { lost }
                             }
                         }
                         None if rate_limited => rsx! {
@@ -460,17 +481,18 @@ pub fn ProjectsPage() -> Element {
                         .filter(|p| Some(p.id) != mine.as_ref().map(|m| m.id))
                         .cloned()
                         .collect();
+                    let lost = lost_projects(&ls_ctx.read(), &list.iter().map(|p| p.id).collect::<Vec<_>>());
                     rsx! {
                         if let Some(project) = pinned {
                             PersonalCard { project, ledgers }
                         }
-                        if filtered.is_empty() {
+                        if filtered.is_empty() && lost.is_empty() {
                             div { class: "flex flex-col items-center gap-2 py-12 text-base-content/70",
                                 Mascot { pose: MascotPose::Empty }
                                 span { class: "font-semibold", {tid!("projects-empty")} }
                             }
                             GroupCreateCard { on_create: move |_| show_add_project.set(true) }
-                        } else {
+                        } else if !filtered.is_empty() {
                             div { id: "projects-list", class: "shrink-0 rounded-[20px] bg-base-100 shadow-soft flex flex-col",
                                 for (i, project) in filtered.into_iter().enumerate() {
                                     if i > 0 {
@@ -480,6 +502,7 @@ pub fn ProjectsPage() -> Element {
                                 }
                             }
                         }
+                        LostProjects { lost }
                         if mine.is_none() {
                             PersonalCreateCard {
                                 signed_in: auth_ctx().is_some(),
@@ -568,6 +591,39 @@ fn GroupCreateCard(on_create: EventHandler<()>) -> Element {
     }
 }
 
+/// Projects whose key changed with nothing to switch to (D17). No name is left to show; the row
+/// opens the page that says what happened and offers a new link or removal (artboard T10).
+#[component]
+fn LostProjects(lost: Vec<Uuid>) -> Element {
+    let nav = use_navigator();
+    if lost.is_empty() {
+        return rsx! {};
+    }
+    rsx! {
+        div { id: "projects-lost", class: "shrink-0 rounded-[20px] bg-base-100 shadow-soft flex flex-col",
+            for (i, project_id) in lost.into_iter().enumerate() {
+                if i > 0 {
+                    div { class: "h-px bg-base-200 ml-[70px]" }
+                }
+                button {
+                    id: "project-lost-{project_id}",
+                    r#type: "button",
+                    class: "flex items-center gap-3 px-4 py-3 text-start first:rounded-t-[20px] last:rounded-b-[20px] active:bg-base-200",
+                    onclick: move |_| { nav.push(Route::ExpensesPage { project_id }); },
+                    span { class: "size-[42px] shrink-0 rounded-[13px] bg-tile-amber text-tile-amber-content flex items-center justify-center",
+                        KeyIcon {}
+                    }
+                    span { class: "flex-1 min-w-0 flex flex-col gap-0.5",
+                        span { class: "font-semibold text-[15px] truncate text-base-content/70", {tid!("project-rotated-title")} }
+                        span { class: "text-xs text-base-content/70 line-clamp-2", {tid!("project-rotated-row-hint")} }
+                    }
+                    span { class: "shrink-0 text-base-content/50", ChevronRightIcon {} }
+                }
+            }
+        }
+    }
+}
+
 #[derive(PartialEq, Props, Clone)]
 struct ProjectCardProps {
     project: ProjectDto,
@@ -650,6 +706,7 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
         if !show_edit_modal() {
             return Ok(vec![]);
         }
+        crate::common::project_token::scope(project_id);
         get_users_by_project_id(project_id).await
     });
 

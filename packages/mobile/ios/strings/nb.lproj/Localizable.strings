@@ -3,3 +3,4 @@
 "push.friend_accepted" = "Venneforespørselen din ble godtatt";
 "push.project_invitation" = "Ny invitasjon til et prosjekt";
 "push.project_closed" = "Et av prosjektene dine ble lukket";
+"push.key_changed" = "Nøkkelen til et av prosjektene dine er endret";
