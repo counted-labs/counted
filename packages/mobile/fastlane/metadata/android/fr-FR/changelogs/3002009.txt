@@ -1,0 +1,7 @@
+• Catégories personnalisées, avec leur emoji
+• Un emoji pour chaque projet
+• Le titre complet des dépenses aux noms longs
+• Invitez plus facilement les participants qui n’ont pas encore rejoint
+• Prévenez un ami par message quand vous l’ajoutez
+• Les fenêtres restent visibles au-dessus du clavier
+• Petites corrections et améliorations

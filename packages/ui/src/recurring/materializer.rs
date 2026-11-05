@@ -28,7 +28,7 @@ struct Job {
 
 /// Writes every due occurrence of the open project, once per rule version.
 ///
-/// Measured against the server's date from the sync, never the device clock. The rules go one
+/// Measured against the member's own day on the server's clock, never the device clock. The rules go one
 /// after another, paced, and the project resyncs once at the end: one call and one resync per rule
 /// at once was a burst nginx refused from sixteen due rules. Every outcome ends in that resync or
 /// nothing: a 409 means another member won and their expenses arrive with it, and a network error
@@ -49,7 +49,9 @@ pub fn use_recurring_materializer(
     use_effect(move || {
         let r = recurring();
         let d = data();
-        let (Some(project_id), Some(today), Some(k)) = (r.project_id, r.server_date, key()) else {
+        let (Some(project_id), Some(server_date), Some(today), Some(k)) =
+            (r.project_id, r.server_date, r.member_day, key())
+        else {
             return;
         };
         if !is_online() || d.project_id != Some(project_id) || d.project_status != ProjectStatus::Ongoing || d.read_only {
@@ -72,7 +74,7 @@ pub fn use_recurring_materializer(
             let name = rule.payload.template.name.clone();
             let summary =
                 |date| tid!("history-recurring-added", name: name.clone(), date: format_date(date));
-            let Ok(request) = materialize_request(&k, project_id, rule, &dates, today, actor, summary) else {
+            let Ok(request) = materialize_request(&k, project_id, rule, &dates, server_date, actor, summary) else {
                 continue;
             };
             claimed.write().insert(claim);

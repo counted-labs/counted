@@ -5,6 +5,7 @@ pub(crate) mod expense_form_helpers;
 pub(crate) mod expense_modal_helpers;
 pub(crate) mod expenses_page_helpers;
 pub(crate) mod expense_query;
+pub(crate) mod guest_invites;
 pub(crate) mod my_spending;
 pub(crate) mod export;
 pub(crate) mod project_data;

@@ -13,7 +13,7 @@ use crate::decrypted::{payments_are_inconsistent, pickable_users, DecryptedExpen
 use crate::expenses::helpers::delete_expense_action::{
     can_delete_expense, can_edit_expense, delete_expense_request, run_delete_expense,
 };
-use crate::categories::category_label;
+use crate::categories::{ProjectCategories, ShownCategory};
 use crate::expenses::expense_search::{ExpenseSearchField, SearchToggle};
 use crate::expenses::move_expense::finish_move;
 use crate::expenses::helpers::expense_query::{mark_segments_hit, ExpenseFilter, ExpenseQuery};
@@ -584,7 +584,7 @@ type Groups = Vec<(chrono::NaiveDate, Vec<RowExpense>)>;
 /// date already parsed on [`RowExpense`], so a filter tap costs no crypto and no parsing.
 #[cfg(any(test, fuzzing))]
 fn group_expenses(data: &ProjectData, query: &ExpenseQuery, stored_user_id: Option<i32>) -> Groups {
-    group_rows(query.select(data, stored_user_id, category_label))
+    group_rows(query.select(data, stored_user_id, ShownCategory::label))
 }
 
 fn group_rows(rows: Vec<&RowExpense>) -> Groups {
@@ -688,6 +688,7 @@ struct BudgetWatch {
     on: bool,
     month: chrono::NaiveDate,
     lines: Vec<crate::expenses::helpers::budgets::BudgetLine>,
+    categories: ProjectCategories,
 }
 
 /// "Me prévenir à 80 %": a personal expense that takes its category past 80 % or past the ceiling
@@ -697,16 +698,21 @@ fn warn_on_budget(key: &[u8; 32], created: &ExpenseWithPayments, watch: &BudgetW
         return;
     }
     let Ok(expense) = crate::decrypted::decrypt_expense(key, &created.expense) else { return };
-    let row = RowExpense::from(expense);
+    let row = RowExpense::new(expense, &watch.categories);
     if row.expense.expense_type != ExpenseType::Expense || !in_month(row.date, watch.month) {
         return;
     }
-    let Some(line) = watch.lines.iter().find(|l| l.category == row.category) else { return };
-    let label = category_label(line.category);
-    match crossed(line.spent, row.expense.amount, line.limit) {
-        Some(Meter::Near(pct)) => flash.set(Some(Flash::ok(tid!("budget-alert-near", category: label, percent: pct as i64)))),
-        Some(Meter::Over(_)) => flash.set(Some(Flash::err(tid!("budget-alert-over", category: label)))),
-        _ => {}
+    let watched = [row.category.id.as_str(), row.category.parent];
+    let crossing = watched.iter().find_map(|id| {
+        let line = watch.lines.iter().find(|l| l.category.id == *id)?;
+        Some((line, crossed(line.spent, row.expense.amount, line.limit)?))
+    });
+    let Some((line, meter)) = crossing else { return };
+    let label = line.category.label();
+    match meter {
+        Meter::Near(pct) => flash.set(Some(Flash::ok(tid!("budget-alert-near", category: label, percent: pct as i64)))),
+        Meter::Over(_) => flash.set(Some(Flash::err(tid!("budget-alert-over", category: label)))),
+        Meter::Left(_) => {}
     }
 }
 
@@ -754,7 +760,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
     let project_status = data.project_status.clone();
     let read_only = data.read_only;
     let personal = data.personal;
-    let month = use_signal(|| first_of_month(chrono::Local::now().date_naive()));
+    let month = use_signal(|| first_of_month(crate::common::local_today()));
     let account = use_context::<Signal<Option<shared::Account>>>();
     let account_key = use_context::<Signal<Option<[u8; 32]>>>();
     let needs_fx = use_memo(move || {
@@ -776,11 +782,12 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
     let mut show_budget_sheet = use_signal(|| false);
     let budget_open = personal && budget_tab();
     let spent_by_cat = if personal { spent_by_category(&data.expenses, &shares, month()) } else { HashMap::new() };
-    let lines = if personal { budget_lines(&data.budgets, &spent_by_cat) } else { Vec::new() };
+    let lines = if personal { budget_lines(&data.budgets, &data.budgets_custom, &data.categories, &spent_by_cat) } else { Vec::new() };
     let budget_watch = BudgetWatch {
         on: personal && data.budgets.alert,
         month: month(),
         lines: lines.clone(),
+        categories: data.categories.clone(),
     };
 
     // Only the debt filter shows the second amount.
@@ -798,18 +805,18 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
     let selected: Vec<&RowExpense> = if personal {
         let shown_month = month();
         let everywhere = !words.is_empty();
-        q.search(data.expenses.iter().filter(|r| everywhere || in_month(r.date, shown_month)), category_label)
+        q.search(data.expenses.iter().filter(|r| everywhere || in_month(r.date, shown_month)), ShownCategory::label)
             .into_iter()
             .chain(q.search(
                 shares
                     .iter()
                     .filter(|s| everywhere || (s.counted && in_month(s.row.date, shown_month)))
                     .map(|s| &s.row),
-                category_label,
+                ShownCategory::label,
             ))
             .collect()
     } else {
-        q.select(&data, props.stored_user_id, category_label)
+        q.select(&data, props.stored_user_id, ShownCategory::label)
     };
     let search_summary = (!words.is_empty()).then(|| {
         let count = selected.len() as i64;
@@ -1009,7 +1016,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                                     let etype = row.expense.expense_type.clone();
                                     // Shown only when the name says nothing of why the row matched.
                                     let matched_category = (!words.is_empty() && !mark_segments_hit(&name, &words))
-                                        .then(|| category_label(row.category))
+                                        .then(|| row.category.label())
                                         .filter(|label| mark_segments_hit(label, &words));
                                     if let Some(share) = share_by_id.get(&expense_id) {
                                         let group_project = share.project_id;
@@ -1229,7 +1236,8 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                 BudgetSheet {
                     project_id: props.project_id,
                     budgets: data.budgets.clone(),
-                    averages: sheet_categories(&average_by_category(&data.expenses, &shares, month())),
+                    custom: data.budgets_custom.clone(),
+                    averages: sheet_categories(&average_by_category(&data.expenses, &shares, month()), &data.categories),
                     currency: currency.clone(),
                     on_close: move |_| show_budget_sheet.set(false),
                     on_saved: move |_| {
@@ -1301,7 +1309,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                     initial_amount: Some(draft.amount),
                     initial_currency: Some(draft.currency.clone()),
                     initial_date: Some(draft.payload.date.clone()),
-                    initial_category: draft.category(),
+                    initial_category: draft.category_for(&data.categories),
                     initial_expense_type: Some(draft.expense_type()),
                     carried: Some(draft.payload.clone()),
                     personal: draft.to_personal,

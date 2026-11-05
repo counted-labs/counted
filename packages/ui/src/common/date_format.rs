@@ -90,11 +90,35 @@ const MONTH_SHORT_KEYS: [MonthKey; 12] = [
     MonthKey(|| tid!("month-short-12")),
 ];
 
+pub fn local_today() -> chrono::NaiveDate {
+    chrono::Local::now().date_naive()
+}
+
+pub fn today_iso() -> String {
+    day_iso(&chrono::Local::now(), 0)
+}
+
+pub fn yesterday_iso() -> String {
+    day_iso(&chrono::Local::now(), 1)
+}
+
+fn day_iso<Tz: chrono::TimeZone>(now: &chrono::DateTime<Tz>, days_back: i64) -> String {
+    (now.date_naive() - chrono::Duration::days(days_back)).format("%Y-%m-%d").to_string()
+}
+
 #[cfg(test)]
 mod tests {
-    use chrono::NaiveDate;
+    use chrono::{NaiveDate, TimeZone};
 
     use super::*;
+
+    #[test]
+    fn the_day_is_the_one_on_the_wall_clock() {
+        let paris = chrono::FixedOffset::east_opt(3600).unwrap();
+        let just_after_midnight = paris.with_ymd_and_hms(2026, 11, 5, 0, 30, 0).unwrap();
+        assert_eq!(day_iso(&just_after_midnight, 0), "2026-11-05");
+        assert_eq!(day_iso(&just_after_midnight, 1), "2026-11-04");
+    }
 
     /// Rendering needs an i18n context, which a plain unit test has no runtime for. What is
     /// testable without one is the parsing half - and that every locale defines all 24 month

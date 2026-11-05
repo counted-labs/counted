@@ -9,8 +9,8 @@ use dioxus::prelude::*;
 use crate::tid;
 use shared::{
     round_currency, sums_to_total, Account as AccountData, CreatableExpense, CreatableProject,
-    CreatableUser, CreatableUserBatch, ExpensePayload, ExpenseType, ProjectPayload,
-    UpsertAccountProject, UserPayload,
+    CreatableUser, CreatableUserBatch, EncryptedPair, ExpensePayload, ExpenseType, ProjectPayload,
+    UpsertAccountProject, User, UserPayload,
 };
 use std::collections::{HashMap, HashSet};
 
@@ -171,6 +171,8 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                 }
             };
 
+            let sent: Vec<(String, EncryptedPair)> =
+                members.iter().zip(&creatables).map(|(m, c)| (m.uuid.clone(), c.payload.clone())).collect();
             let created_users = if creatables.is_empty() {
                 vec![]
             } else {
@@ -185,10 +187,7 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                 }
             };
 
-            let mut uuid_to_id: HashMap<String, i32> = HashMap::new();
-            for (member, user) in members.iter().zip(created_users.iter()) {
-                uuid_to_id.insert(member.uuid.clone(), user.id);
-            }
+            let uuid_to_id = ids_by_member(&sent, &created_users);
 
             let mut expenses_batch: Vec<CreatableExpense> = Vec::new();
             for entry in &planned {
@@ -468,12 +467,43 @@ fn balance_allocations<T>(total: f64, allocations: &mut [(T, f64)]) -> bool {
     true
 }
 
+/// Each row `add_user` returns carries the ciphertext it was sent, under a random IV, so the
+/// pairing holds whatever order the rows come back in and however many members share an alias.
+fn ids_by_member(sent: &[(String, EncryptedPair)], created: &[User]) -> HashMap<String, i32> {
+    sent.iter()
+        .filter_map(|(uuid, payload)| created.iter().find(|u| &u.payload == payload).map(|u| (uuid.clone(), u.id)))
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{balance_allocations, plan_entries, PlannedEntry};
+    use super::{balance_allocations, ids_by_member, plan_entries, PlannedEntry};
     use serde_json::{json, Value};
-    use shared::sums_to_total;
+    use shared::{sums_to_total, EncryptedPair, User};
     use std::collections::HashSet;
+
+    fn pair(iv: &str) -> EncryptedPair {
+        EncryptedPair { ct: "same-alias".into(), iv: iv.into() }
+    }
+
+    #[test]
+    fn members_get_their_own_row_whatever_order_the_server_returns() {
+        let sent = vec![("alice-1".to_string(), pair("iv-1")), ("alice-2".to_string(), pair("iv-2"))];
+        let created = vec![
+            User { id: 20, payload: pair("iv-2"), ..Default::default() },
+            User { id: 10, payload: pair("iv-1"), ..Default::default() },
+        ];
+        let ids = ids_by_member(&sent, &created);
+        assert_eq!(ids.get("alice-1"), Some(&10));
+        assert_eq!(ids.get("alice-2"), Some(&20));
+    }
+
+    #[test]
+    fn a_member_without_its_row_gets_no_id() {
+        let sent = vec![("a".to_string(), pair("iv-1")), ("b".to_string(), pair("iv-2"))];
+        let created = vec![User { id: 10, payload: pair("iv-3"), ..Default::default() }];
+        assert!(ids_by_member(&sent, &created).is_empty());
+    }
 
     fn non_user(uuid: &str) -> Value {
         json!({ "RegistryMembershipNonUser": { "uuid": uuid } })

@@ -51,8 +51,8 @@ pub enum OpKind {
     AddExpense(CreatableExpense),
     EditExpense(EditableExpense),
     DeleteExpense(DeleteExpenseRequest),
-    /// A whole payload built when queued. Only replayed from queues an older build wrote: it
-    /// overwrites anything written to the project in the meantime.
+    /// Only in queues a build before 3.2.5 wrote. A status alone still replays; a whole payload is
+    /// dropped (`queue_replay::is_legacy_overwrite`), since the server refuses it without `expected_iv`.
     UpdateProject(EditableProject),
     EditProject(ProjectEdit),
 }
@@ -83,6 +83,10 @@ pub struct ProjectEdit {
     pub status: Option<ProjectStatus>,
     #[serde(default)]
     pub history: Option<HistoryContext>,
+    /// `Some` only when the emoji was changed, sealed like the name: `Option<String>`, `None` for
+    /// back to the initial.
+    #[serde(default)]
+    pub emoji: Option<EncryptedPair>,
 }
 
 impl ProjectEdit {
@@ -99,6 +103,11 @@ impl ProjectEdit {
         }
         if let Some(status) = &self.status {
             payload.status = Some(status.clone());
+            changed = true;
+        }
+        if let Some(sealed) = &self.emoji {
+            let emoji: Option<String> = decrypt_json(key, sealed)?;
+            payload.set_emoji(emoji.as_deref());
             changed = true;
         }
         Ok(EditableProject {
@@ -305,7 +314,7 @@ mod tests {
                 crate::common::upsert_project_key(&mut state, project_id, crate::crypto::key_to_fragment(&key));
                 crate::common::write_to_ls(&state);
 
-                let edit = ProjectEdit { project_id, name_description: None, status: Some(ProjectStatus::Closed), history: None };
+                let edit = ProjectEdit { project_id, name_description: None, status: Some(ProjectStatus::Closed), history: None, emoji: None };
                 let op = QueuedOp::new(Uuid::new_v4(), "Corse", OpKind::EditProject(edit));
 
                 assert!(!serde_json::to_string(&op).unwrap().contains("Corse"), "the queue holds no plaintext name");
@@ -553,6 +562,7 @@ mod project_edit_tests {
             name_description: Some(sealed),
             status: None,
             history: None,
+            emoji: None,
         }
     }
 
@@ -575,6 +585,37 @@ mod project_edit_tests {
     }
 
     #[test]
+    fn a_replayed_emoji_change_touches_only_the_emoji() {
+        let k = test_key();
+        let stored = stored_with(&k, |p| {
+            p.name = "Written meanwhile".into();
+            p.extra.insert("finance".into(), serde_json::json!({ "budgets": [1] }));
+        });
+        let pick = |emoji: Option<&str>| ProjectEdit {
+            project_id: Uuid::nil(),
+            name_description: None,
+            status: None,
+            history: None,
+            emoji: Some(encrypt_json(&k, &emoji).unwrap()),
+        };
+        let back: ProjectEdit = serde_json::from_str(&serde_json::to_string(&pick(Some("🎿"))).unwrap()).unwrap();
+        let after = payload_of(&k, &back.apply(&k, &stored).unwrap());
+        assert_eq!(after.emoji().as_deref(), Some("🎿"));
+        assert_eq!(after.name, "Written meanwhile");
+        assert_eq!(after.extra["finance"], serde_json::json!({ "budgets": [1] }));
+
+        let with_emoji = ProjectDto { payload: encrypt_json(&k, &after).unwrap(), ..stored };
+        assert_eq!(payload_of(&k, &pick(None).apply(&k, &with_emoji).unwrap()).emoji(), None);
+    }
+
+    #[test]
+    fn a_queue_written_before_the_emoji_still_reads() {
+        let old = serde_json::json!({ "project_id": Uuid::nil(), "status": "closed" });
+        let edit: ProjectEdit = serde_json::from_value(old).unwrap();
+        assert_eq!(edit.emoji, None);
+    }
+
+    #[test]
     fn a_cleared_description_survives_the_queue_on_disk() {
         let edit = rename("Corse", None);
         let back: ProjectEdit = serde_json::from_str(&serde_json::to_string(&edit).unwrap()).unwrap();
@@ -592,6 +633,7 @@ mod project_edit_tests {
             name_description: None,
             status: Some(ProjectStatus::Closed),
             history: None,
+            emoji: None,
         };
         let mut legacy = stored_with(&k, |p| p.status = None);
         legacy.status = ProjectStatus::Archived;

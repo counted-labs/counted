@@ -22,6 +22,7 @@ Kostenlos, ohne Werbung, ohne Tracker, ohne Limit für Ausgaben oder Teilnehmend
 • Wiederkehrende Ausgaben wie Miete oder Abos: einmal eingetragen, bei jeder Fälligkeit hinzugefügt
 • Über 150 Währungen, umgerechnet zum Monatskurs der Europäischen Kommission
 • Statistiken nach Kategorie, nach Person und Monat für Monat
+• Deine eigenen Kategorien, jede mit ihrem Emoji, und ein Emoji für jedes Projekt
 • Ein Verlauf, wer was hinzugefügt, geändert oder gelöscht hat
 • Suche nach Name, Notiz oder Kategorie, direkt auf deinem Gerät
 • Mit Konto ein eigenes Projekt „Meine Ausgaben“: was du allein ausgibst plus dein Anteil an deinen Gruppen, Monat für Monat

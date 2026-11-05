@@ -298,6 +298,7 @@ mod tests {
                 payments,
                 recurring: None,
                 server_date: None,
+                server_time: None,
                 rotated: None,
             },
         )))

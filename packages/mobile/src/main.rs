@@ -1260,83 +1260,15 @@ fn app() -> Element {
                     const px = parseFloat(getComputedStyle(p).fontSize);
                     p.remove();
                     if (!(px > 0) || px === 99) return;
-                    const scale = Math.min(1.6, Math.max(0.85, px / 17));
-                    document.documentElement.style.setProperty('--dt-scale', String(scale));
+                    const scale = String(Math.min(1.6, Math.max(0.85, px / 17)));
+                    const root = document.documentElement.style;
+                    if (root.getPropertyValue('--dt-scale') !== scale) root.setProperty('--dt-scale', scale);
                 };
                 window.addEventListener('resize', measure);
                 measure();
             })();
         "#,
         );
-    });
-
-    // The on-screen keyboard, as a --kb CSS variable the bottom sheets pad themselves by, and the
-    // visual viewport's scroll as --vvo, which their max-height subtracts.
-    //
-    // Needed because daisyUI's .modal is `position: fixed` and neither platform resizes the layout
-    // viewport for the keyboard - WKWebView scrolls the *page* to reveal the focused input, the
-    // edge-to-edge Android window is never resized - and a fixed element does not move with page scroll, so a
-    // sheet's field can sit behind the keyboard. Only visualViewport can see it.
-    //
-    // Both edges need a variable, not just the bottom one. --kb is measured net of the scroll, so
-    // it lands the footer on the keyboard however far the page moved; but the box is bottom-pinned
-    // inside a layout viewport that did not shrink, so its *top* stays where a keyboard-less screen
-    // would put it - one scroll's worth above the visible band, which is the header disappearing off
-    // the top of the screen.
-    //
-    // Same split as the safe-area bridge below: JS observes, Rust decides. `keyboard_inset` lives in
-    // the ui crate and is unit-tested there; nothing here does arithmetic.
-    //
-    // rAF-coalesced and change-gated on purpose. The keyboard animation fires these ~20 times over
-    // ~250ms, and every message to Rust costs a synchronous XHR over wry's bridge (see the module
-    // docs on expense_row.rs) - so the listener sends at most one value per frame, and none at all
-    // while the number is unchanged.
-    //
-    // The layout height is measured off a `position: fixed; top: 0; bottom: 0` probe, not
-    // `innerHeight`: that probe is exactly the box every sheet is laid out in. iOS 26's WKWebView
-    // reports `innerHeight` with the page scroll already taken out (measured on an iPhone 17:
-    // innerHeight + offsetTop = the 874px screen), so feeding it here subtracted the scroll twice
-    // and sank the sheet - and the operator bar under it - by `offsetTop` behind the keyboard.
-    // Where `innerHeight` means what the spec says (Android), the probe measures the same number.
-    //
-    // No cfg split: the arithmetic is the same on both, and a build whose window *is* resized for
-    // the keyboard shrinks both heights together, so `keyboard_inset` yields 0 and this is a no-op.
-    #[cfg(any(target_os = "android", target_os = "ios"))]
-    use_effect(|| {
-        let mut eval = document::eval(
-            r#"
-            (function() {
-                const vv = window.visualViewport;
-                if (!vv) return;
-                const frame = document.createElement('div');
-                frame.style.cssText = 'position:fixed;top:0;bottom:0;left:0;width:0;visibility:hidden;pointer-events:none';
-                document.body.appendChild(frame);
-                let queued = false, last = null;
-                const report = () => {
-                    queued = false;
-                    const msg = [frame.getBoundingClientRect().height, vv.height, vv.offsetTop];
-                    const key = msg.join(',');
-                    if (key === last) return;
-                    last = key;
-                    dioxus.send(msg);
-                };
-                const schedule = () => {
-                    if (queued) return;
-                    queued = true;
-                    requestAnimationFrame(report);
-                };
-                vv.addEventListener('resize', schedule);
-                vv.addEventListener('scroll', schedule);
-                schedule();
-            })();
-        "#,
-        );
-        spawn(async move {
-            while let Ok(m) = eval.recv::<[f64; 3]>().await {
-                let px = ui::common::keyboard_inset(m[0], m[1], m[2]);
-                document::eval(&ui::common::css_viewport_vars(px, m[2]));
-            }
-        });
     });
 
     // Android's WebView maps only display cutouts into env(safe-area-inset-*), never the status or
@@ -1352,13 +1284,21 @@ fn app() -> Element {
             tick();
         "#,
         );
+        // The WebView fires `resize` on every keyboard step too, with the same insets; rewriting
+        // them would restyle the whole document mid-keyboard for nothing.
         spawn(async move {
+            let mut written = String::new();
             while eval.recv::<String>().await.is_ok() {
                 if let Some((top, bottom, right, density)) = android_insets() {
+                    let js = css_inset_vars(top, bottom, right, density);
+                    if js == written {
+                        continue;
+                    }
                     tracing::info!(
                         "android safe-area insets: top={top} bottom={bottom} right={right} density={density}"
                     );
-                    document::eval(&css_inset_vars(top, bottom, right, density));
+                    document::eval(&js);
+                    written = js;
                 }
             }
         });
@@ -1402,8 +1342,8 @@ fn app() -> Element {
 /// Stops iOS drawing its form-assistant bar - the floating `↑ ↓ ✓` pill - over the web content.
 ///
 /// `ui`'s `AmountOperatorBar` is the last row of `.modal-box` and is placed by that box's
-/// `padding-bottom: max(--sab, --kb)` alone, so it lands flush on the keyboard. `--kb` is measured
-/// from `visualViewport.height`, and that does not shrink for an accessory view which *floats*
+/// keyboard inset alone (`ui::common::keyboard`), so it lands flush on the keyboard. That inset is
+/// measured from `visualViewport.height`, which does not shrink for an accessory view which *floats*
 /// above the keyboard rather than docking to it - so the pill painted straight over the operator
 /// keys and none of them could be reached.
 ///

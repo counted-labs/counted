@@ -22,6 +22,7 @@ Grátis, sem publicidade, sem rastreadores, sem limite de despesas ou participan
 • Despesas recorrentes como a renda ou subscrições: registadas uma vez, adicionadas sempre que vencem
 • Mais de 150 moedas, convertidas à taxa mensal da Comissão Europeia
 • Estatísticas por categoria, por pessoa e mês a mês
+• As tuas próprias categorias, cada uma com o seu emoji, e um emoji para cada projeto
 • Histórico de quem adicionou, editou ou eliminou o quê
 • Pesquisa por nome, nota ou categoria, feita no teu dispositivo
 • Com conta, um projeto pessoal «As minhas despesas»: o que gastas sozinho mais a tua parte nos teus grupos, mês a mês

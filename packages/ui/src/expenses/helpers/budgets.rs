@@ -3,30 +3,35 @@
 
 use chrono::NaiveDate;
 use shared::{Budgets, ExpenseType};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
-use crate::categories::CHART_CATEGORIES;
+use crate::categories::{ProjectCategories, ShownCategory};
 use crate::expenses::helpers::my_spending::{in_month, shift_month, ShareRow};
 use crate::expenses::helpers::project_data::RowExpense;
 
-/// My spending per category in `month`: own expenses, plus counted shares in the personal currency.
-/// A share with no rate is left out, as it is from the month's total.
-pub fn spent_by_category(own: &[RowExpense], shares: &[ShareRow], month: NaiveDate) -> HashMap<&'static str, f64> {
-    let mut spent: HashMap<&'static str, f64> = HashMap::new();
+/// My spending per category id in `month`: own expenses, plus counted shares in the personal
+/// currency. A custom category counts for itself and for its parent; a group's share counts for the
+/// parent alone, its custom categories being that group's. A share with no rate is left out, as it is
+/// from the month's total.
+pub fn spent_by_category(own: &[RowExpense], shares: &[ShareRow], month: NaiveDate) -> HashMap<String, f64> {
+    let mut spent: HashMap<String, f64> = HashMap::new();
     for r in own.iter().filter(|r| r.expense.expense_type == ExpenseType::Expense && in_month(r.date, month)) {
-        *spent.entry(r.category).or_default() += r.expense.amount;
+        *spent.entry(r.category.parent.to_string()).or_default() += r.expense.amount;
+        if r.category.is_custom() {
+            *spent.entry(r.category.id.clone()).or_default() += r.expense.amount;
+        }
     }
     for s in shares.iter().filter(|s| s.counted && in_month(s.row.date, month)) {
         if let Some(amount) = s.converted {
-            *spent.entry(s.row.category).or_default() += amount;
+            *spent.entry(s.row.category.parent.to_string()).or_default() += amount;
         }
     }
     spent
 }
 
 /// The average of the three months before `month`, shown next to each ceiling while it is set.
-pub fn average_by_category(own: &[RowExpense], shares: &[ShareRow], month: NaiveDate) -> HashMap<&'static str, f64> {
-    let mut sum: HashMap<&'static str, f64> = HashMap::new();
+pub fn average_by_category(own: &[RowExpense], shares: &[ShareRow], month: NaiveDate) -> HashMap<String, f64> {
+    let mut sum: HashMap<String, f64> = HashMap::new();
     for back in 1..=3 {
         for (category, amount) in spent_by_category(own, shares, shift_month(month, -back)) {
             *sum.entry(category).or_default() += amount;
@@ -37,7 +42,7 @@ pub fn average_by_category(own: &[RowExpense], shares: &[ShareRow], month: Naive
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BudgetLine {
-    pub category: &'static str,
+    pub category: ShownCategory,
     pub spent: f64,
     pub limit: f64,
 }
@@ -69,14 +74,30 @@ impl BudgetLine {
 
 pub const ALERT_RATIO: f64 = 0.8;
 
-/// One line per category with a ceiling, the largest ceilings first.
-pub fn budget_lines(budgets: &Budgets, spent: &HashMap<&'static str, f64>) -> Vec<BudgetLine> {
-    let mut lines: Vec<BudgetLine> = CHART_CATEGORIES
-        .iter()
+/// One line per shown category with a ceiling, the largest ceilings first. A hidden built-in keeps
+/// its ceiling stored but shows none, its expenses filing under "Autres".
+pub fn budget_lines(
+    budgets: &Budgets,
+    custom: &BTreeMap<String, f64>,
+    categories: &ProjectCategories,
+    spent: &HashMap<String, f64>,
+) -> Vec<BudgetLine> {
+    let line = |category: ShownCategory, limit: Option<f64>| {
+        let limit = limit.filter(|l| *l > 0.0)?;
+        let spent = spent.get(&category.id).copied().unwrap_or(0.0);
+        Some(BudgetLine { category, spent, limit })
+    };
+    let mut lines: Vec<BudgetLine> = categories
+        .builtin_shown()
+        .into_iter()
         .filter_map(|c| {
-            let limit = budgets.monthly.get(*c).copied().filter(|l| *l > 0.0)?;
-            Some(BudgetLine { category: c, spent: spent.get(c).copied().unwrap_or(0.0), limit })
+            let limit = budgets.monthly.get(&c.id).copied();
+            line(c, limit)
         })
+        .chain(categories.custom_shown().into_iter().filter_map(|c| {
+            let limit = custom.get(&c.id).copied();
+            line(c, limit)
+        }))
         .collect();
     lines.sort_by(|a, b| b.limit.partial_cmp(&a.limit).unwrap_or(std::cmp::Ordering::Equal));
     lines
@@ -87,7 +108,7 @@ pub fn crossed(spent: f64, added: f64, limit: f64) -> Option<Meter> {
     if limit <= 0.0 || added <= 0.0 {
         return None;
     }
-    let after = BudgetLine { category: "", spent: spent + added, limit };
+    let after = BudgetLine { category: ShownCategory::builtin(crate::categories::custom::OTHER), spent: spent + added, limit };
     match after.meter() {
         Meter::Over(by) if spent <= limit => Some(Meter::Over(by)),
         Meter::Near(pct) if spent < limit * ALERT_RATIO => Some(Meter::Near(pct)),
@@ -154,7 +175,7 @@ mod tests {
 
     #[test]
     fn the_meter_leaves_warns_then_overflows() {
-        let line = |spent| BudgetLine { category: "Nourriture", spent, limit: 400.0 };
+        let line = |spent| BudgetLine { category: ShownCategory::builtin("Nourriture"), spent, limit: 400.0 };
         assert_eq!(line(312.0).meter(), Meter::Left(88.0));
         assert_eq!(line(380.0).meter(), Meter::Near(95));
         assert_eq!(line(400.0).meter(), Meter::Near(100));
@@ -170,10 +191,34 @@ mod tests {
                 .collect(),
             alert: true,
         };
-        let spent = HashMap::from([("Loisirs", 142.0)]);
-        let lines = budget_lines(&budgets, &spent);
-        let got: Vec<(&str, f64)> = lines.iter().map(|l| (l.category, l.spent)).collect();
+        let spent = HashMap::from([("Loisirs".to_string(), 142.0)]);
+        let lines = budget_lines(&budgets, &BTreeMap::new(), &ProjectCategories::default(), &spent);
+        let got: Vec<(&str, f64)> = lines.iter().map(|l| (l.category.id.as_str(), l.spent)).collect();
         assert_eq!(got, vec![("Hébergement", 0.0), ("Nourriture", 0.0), ("Loisirs", 142.0)]);
+    }
+
+    #[test]
+    fn a_custom_category_has_its_own_line_and_counts_in_its_parent() {
+        let list = serde_json::json!([
+            { "id": "c-0000000a", "name": "Bio", "parent": "Nourriture" },
+            { "id": "c-0000000b", "parent": "Nourriture", "deleted": true },
+            { "id": "Loisirs", "hidden": true },
+        ]);
+        let categories = ProjectCategories::from_value(Some(&list));
+        let k = test_key();
+        let row = |id, name: &str, category: &str| {
+            RowExpense::new(decrypt_expense(&k, &crate::common::test_fixtures::make_expense_with_category(&k, id, name, category)).unwrap(), &categories)
+        };
+        let own = [row(1, "Biocoop", "c-0000000a"), row(2, "Pizza", "Nourriture"), row(3, "Old", "c-0000000b"), row(4, "Cinema", "Loisirs")];
+        let spent = spent_by_category(&own, &[], day("2025-01-01"));
+        assert_eq!(spent.get("Nourriture"), Some(&30.0));
+        assert_eq!(spent.get("c-0000000a"), Some(&10.0));
+        assert_eq!(spent.get("Autres"), Some(&10.0));
+        let budgets = Budgets { monthly: [("Nourriture".to_string(), 100.0), ("Loisirs".to_string(), 50.0)].into(), alert: false };
+        let custom = BTreeMap::from([("c-0000000a".to_string(), 40.0), ("c-0000000b".to_string(), 9.0)]);
+        let lines = budget_lines(&budgets, &custom, &categories, &spent);
+        let got: Vec<(&str, f64, f64)> = lines.iter().map(|l| (l.category.id.as_str(), l.spent, l.limit)).collect();
+        assert_eq!(got, vec![("Nourriture", 30.0, 100.0), ("c-0000000a", 10.0, 40.0)]);
     }
 
     #[test]

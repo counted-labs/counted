@@ -5,7 +5,7 @@ use shared::{Budgets, EditableProject, ProjectPayload};
 use std::collections::{BTreeMap, HashMap};
 use uuid::Uuid;
 
-use crate::categories::{category_label, parent_emoji, CHART_CATEGORIES};
+use crate::categories::{ProjectCategories, ShownCategory, CHART_CATEGORIES};
 use crate::common::{error_message, update_project_fresh, ProjectKey};
 use crate::crypto::{decrypt_json, encrypt_padded_json};
 use crate::expenses::helpers::budgets::{BudgetLine, Meter};
@@ -63,13 +63,13 @@ pub fn BudgetPanel(lines: Vec<BudgetLine>, currency: String, on_manage: EventHan
                             Meter::Over(_) => "bg-error",
                         };
                         rsx! {
-                            li { key: "{line.category}", class: "budget-line flex items-center gap-3 py-2.5",
-                                span { class: "size-10 shrink-0 rounded-full flex items-center justify-center text-xl", style: "background: color-mix(in oklab, {crate::charts::category_color(&line.category)} 18%, white);", aria_hidden: "true",
-                                    "{parent_emoji(line.category)}"
+                            li { key: "{line.category.id}", class: "budget-line flex items-center gap-3 py-2.5",
+                                span { class: "size-10 shrink-0 rounded-full flex items-center justify-center text-xl", style: "background: color-mix(in oklab, {line.category.color()} 18%, white);", aria_hidden: "true",
+                                    "{line.category.emoji}"
                                 }
                                 span { class: "flex-1 min-w-0 flex flex-col gap-1.5",
                                     span { class: "flex justify-between gap-2 text-sm",
-                                        span { class: "font-medium truncate", "{category_label(line.category)}" }
+                                        span { class: "font-medium truncate", dir: "auto", {line.category.label()} }
                                         span { class: "tabular-nums whitespace-nowrap",
                                             span { aria_hidden: "true",
                                                 strong { "{money(line.spent, &currency)}" }
@@ -100,30 +100,47 @@ pub fn BudgetPanel(lines: Vec<BudgetLine>, currency: String, on_manage: EventHan
     }
 }
 
-/// The ceilings as typed, read back into budgets. `Err` names the first category that is not an amount.
-fn parsed(values: &BTreeMap<String, String>, alert: bool) -> Result<Budgets, &'static str> {
-    let mut monthly = BTreeMap::new();
-    for category in CHART_CATEGORIES {
-        let raw = values.get(*category).map(|v| v.trim()).unwrap_or("");
+/// The ceilings as typed for the categories the sheet shows, by id. `Err` names the first one that
+/// is not an amount.
+fn parsed(values: &BTreeMap<String, String>, shown: &[ShownCategory]) -> Result<BTreeMap<String, f64>, ShownCategory> {
+    let mut typed = BTreeMap::new();
+    for category in shown {
+        let raw = values.get(&category.id).map(|v| v.trim()).unwrap_or("");
         if raw.is_empty() {
             continue;
         }
         match parse_amount(raw).filter(|v| *v > 0.0) {
             Some(v) => {
-                monthly.insert(category.to_string(), v);
+                typed.insert(category.id.clone(), v);
             }
-            None => return Err(category),
+            None => return Err(category.clone()),
         }
     }
-    Ok(Budgets { monthly, alert })
+    Ok(typed)
+}
+
+/// The stored payload with the ceilings of the shown categories replaced: a built-in's in
+/// `budgets.monthly`, a custom one's in `budgetsCustom`. Every key the sheet did not show is kept.
+fn with_ceilings(payload: &mut ProjectPayload, shown: &[ShownCategory], typed: &BTreeMap<String, f64>, alert: bool) {
+    let mut monthly = payload.budgets().monthly;
+    for category in shown.iter().filter(|c| !c.is_custom()) {
+        monthly.remove(&category.id);
+        if let Some(v) = typed.get(&category.id) {
+            monthly.insert(category.id.clone(), *v);
+        }
+    }
+    payload.set_budgets(&Budgets { monthly, alert });
+    let custom: Vec<String> = shown.iter().filter(|c| c.is_custom()).map(|c| c.id.clone()).collect();
+    payload.merge_budgets_custom(&custom, typed);
 }
 
 #[component]
 pub fn BudgetSheet(
     project_id: Uuid,
     budgets: Budgets,
-    /// Every chart category with its average of the three months before, most spent first.
-    averages: Vec<(&'static str, f64)>,
+    custom: BTreeMap<String, f64>,
+    /// Every shown category with its average of the three months before, most spent first.
+    averages: Vec<(ShownCategory, f64)>,
     currency: String,
     on_close: EventHandler<()>,
     on_saved: EventHandler<()>,
@@ -133,8 +150,9 @@ pub fn BudgetSheet(
     let is_online = use_context::<Signal<bool>>();
     let initial = budgets.clone();
     let mut values = use_signal(move || {
-        initial.monthly.iter().map(|(c, v)| (c.clone(), ceiling(*v))).collect::<BTreeMap<String, String>>()
+        initial.monthly.iter().chain(custom.iter()).map(|(c, v)| (c.clone(), ceiling(*v))).collect::<BTreeMap<String, String>>()
     });
+    let shown: Vec<ShownCategory> = averages.iter().map(|(c, _)| c.clone()).collect();
     let mut alert = use_signal(|| budgets.monthly.is_empty() || budgets.alert);
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
     let mut saving = use_signal(|| false);
@@ -145,19 +163,21 @@ pub fn BudgetSheet(
             return;
         }
         let Some(key) = key_ctx() else { return };
-        let next = match parsed(&values.read(), alert()) {
-            Ok(b) => b,
+        let typed = match parsed(&values.read(), &shown) {
+            Ok(t) => t,
             Err(category) => {
-                error_msg.set(Some(tid!("budget-invalid", category: category_label(category))));
+                error_msg.set(Some(tid!("budget-invalid", category: category.label())));
                 return;
             }
         };
+        let shown = shown.clone();
+        let alert = alert();
         saving.set(true);
         error_msg.set(None);
         spawn(async move {
             let edit = |stored: &shared::ProjectDto| {
                 let mut payload: ProjectPayload = decrypt_json(&key, &stored.payload)?;
-                payload.set_budgets(&next);
+                with_ceilings(&mut payload, &shown, &typed, alert);
                 Ok(EditableProject {
                     id: project_id,
                     payload: Some(encrypt_padded_json(&key, &payload)?),
@@ -204,29 +224,33 @@ pub fn BudgetSheet(
                 }
                 ul { class: "flex flex-col gap-3",
                     for (category , average) in averages {
-                        {
-                            let index = CHART_CATEGORIES.iter().position(|c| *c == category).unwrap_or(0);
-                            let label = category_label(category);
-                            let value = values.read().get(category).cloned().unwrap_or_default();
+                            {
+                            let input_id = match CHART_CATEGORIES.iter().position(|c| *c == category.id) {
+                                Some(index) => format!("budget-{index}"),
+                                None => format!("budget-{}", category.id),
+                            };
+                            let label = category.label();
+                            let value = values.read().get(&category.id).cloned().unwrap_or_default();
+                            let id = category.id.clone();
                             rsx! {
-                                li { key: "{category}", class: "flex items-center gap-3",
-                                    span { class: "size-10 shrink-0 rounded-full flex items-center justify-center text-xl", style: "background: color-mix(in oklab, {crate::charts::category_color(&category)} 18%, white);", aria_hidden: "true",
-                                        "{parent_emoji(category)}"
+                                li { key: "{category.id}", class: "flex items-center gap-3",
+                                    span { class: "size-10 shrink-0 rounded-full flex items-center justify-center text-xl", style: "background: color-mix(in oklab, {category.color()} 18%, white);", aria_hidden: "true",
+                                        "{category.emoji}"
                                     }
                                     span { class: "flex-1 min-w-0 flex flex-col",
-                                        span { class: "font-medium truncate", "{label}" }
+                                        span { class: "font-medium truncate", dir: "auto", "{label}" }
                                         span { class: "text-xs text-base-content/70", {tid!("budget-average", amount: format!("{average:.0} {currency}"))} }
                                     }
                                     label { class: "input w-28 h-11 rounded-xl gap-1",
                                         input {
-                                            id: "budget-{index}",
+                                            id: "{input_id}",
                                             class: "grow min-w-0 text-right",
                                             r#type: "text",
                                             inputmode: "decimal",
                                             aria_label: tid!("budget-for", category: label.clone()),
                                             value: "{value}",
                                             oninput: move |e| {
-                                                values.write().insert(category.to_string(), e.value());
+                                                values.write().insert(id.clone(), e.value());
                                             },
                                         }
                                         span { class: "text-base-content/60 text-sm", "{currency}" }
@@ -275,11 +299,18 @@ pub fn BudgetSheet(
     }
 }
 
-/// Every chart category, most spent first over the three months before, so the ones that matter
+/// Every shown category, most spent first over the three months before, so the ones that matter
 /// sit at the top of the sheet.
-pub fn sheet_categories(averages: &HashMap<&'static str, f64>) -> Vec<(&'static str, f64)> {
-    let mut all: Vec<(&'static str, f64)> =
-        CHART_CATEGORIES.iter().map(|c| (*c, averages.get(c).copied().unwrap_or(0.0))).collect();
+pub fn sheet_categories(averages: &HashMap<String, f64>, categories: &ProjectCategories) -> Vec<(ShownCategory, f64)> {
+    let mut all: Vec<(ShownCategory, f64)> = categories
+        .builtin_shown()
+        .into_iter()
+        .chain(categories.custom_shown())
+        .map(|c| {
+            let average = averages.get(&c.id).copied().unwrap_or(0.0);
+            (c, average)
+        })
+        .collect();
     all.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
     all
 }
@@ -292,25 +323,49 @@ mod tests {
         pairs.iter().map(|(c, v)| (c.to_string(), v.to_string())).collect()
     }
 
+    fn builtins() -> Vec<ShownCategory> {
+        ProjectCategories::default().builtin_shown()
+    }
+
     #[test]
     fn typed_ceilings_become_budgets_and_blanks_are_dropped() {
-        let got = parsed(&typed(&[("Nourriture", "400"), ("Loisirs", "120,50"), ("Transport", "  ")]), true).unwrap();
-        assert_eq!(got.monthly.get("Nourriture"), Some(&400.0));
-        assert_eq!(got.monthly.get("Loisirs"), Some(&120.5));
-        assert_eq!(got.monthly.len(), 2);
-        assert!(got.alert);
+        let got = parsed(&typed(&[("Nourriture", "400"), ("Loisirs", "120,50"), ("Transport", "  ")]), &builtins()).unwrap();
+        assert_eq!(got.get("Nourriture"), Some(&400.0));
+        assert_eq!(got.get("Loisirs"), Some(&120.5));
+        assert_eq!(got.len(), 2);
     }
 
     #[test]
     fn a_non_amount_names_its_category() {
-        assert_eq!(parsed(&typed(&[("Shopping", "beaucoup")]), false), Err("Shopping"));
-        assert_eq!(parsed(&typed(&[("Shopping", "0")]), false), Err("Shopping"));
+        let shopping = ShownCategory::builtin("Shopping");
+        assert_eq!(parsed(&typed(&[("Shopping", "beaucoup")]), &builtins()), Err(shopping.clone()));
+        assert_eq!(parsed(&typed(&[("Shopping", "0")]), &builtins()), Err(shopping));
     }
 
     #[test]
     fn the_sheet_lists_every_category_most_spent_first() {
-        let cats = sheet_categories(&HashMap::from([("Transport", 94.0), ("Nourriture", 365.0)]));
+        let cats = sheet_categories(&HashMap::from([("Transport".to_string(), 94.0), ("Nourriture".to_string(), 365.0)]), &ProjectCategories::default());
         assert_eq!(cats.len(), CHART_CATEGORIES.len());
-        assert_eq!(&cats[..2], &[("Nourriture", 365.0), ("Transport", 94.0)]);
+        assert_eq!(&cats[..2], &[(ShownCategory::builtin("Nourriture"), 365.0), (ShownCategory::builtin("Transport"), 94.0)]);
+    }
+
+    #[test]
+    fn saving_keeps_every_ceiling_the_sheet_did_not_show() {
+        let list = serde_json::json!([{ "id": "c-0000000a", "name": "Bio", "parent": "Nourriture" }, { "id": "Loisirs", "hidden": true }]);
+        let categories = ProjectCategories::from_value(Some(&list));
+        let shown: Vec<ShownCategory> = sheet_categories(&HashMap::new(), &categories).into_iter().map(|(c, _)| c).collect();
+        let mut payload: ProjectPayload = serde_json::from_value(serde_json::json!({
+            "name": "M", "currency": "EUR",
+            "budgets": { "monthly": { "Loisirs": 50.0, "Future": 7.0, "Transport": 80.0 }, "alert": false },
+            "budgetsCustom": { "c-0000000a": 10.0, "c-000000ff": 20.0 },
+        }))
+        .unwrap();
+        let typed = parsed(&typed(&[("Nourriture", "300"), ("c-0000000a", "40")]), &shown).unwrap();
+        with_ceilings(&mut payload, &shown, &typed, true);
+        let monthly = payload.budgets().monthly;
+        assert_eq!(monthly.get("Nourriture"), Some(&300.0));
+        assert_eq!((monthly.get("Loisirs"), monthly.get("Future"), monthly.get("Transport")), (Some(&50.0), Some(&7.0), None));
+        assert_eq!(payload.budgets_custom(), BTreeMap::from([("c-0000000a".to_string(), 40.0), ("c-000000ff".to_string(), 20.0)]));
+        assert!(payload.budgets().alert);
     }
 }

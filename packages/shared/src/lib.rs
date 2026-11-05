@@ -1,5 +1,6 @@
 pub mod api;
 pub mod balances;
+pub mod emoji;
 // The settlement before the 2026-10 rewrite, kept until no store serves it: a group on mixed
 // versions must see the same transfers (docs/plans/rust-correctness.md §2.4).
 #[cfg(test)]
@@ -322,6 +323,8 @@ pub struct ProjectPayload {
 
 pub type Unknown = serde_json::Map<String, serde_json::Value>;
 
+const BUDGETS_CUSTOM: &str = "budgetsCustom";
+
 impl ProjectPayload {
     /// The account's own "Mes dépenses" project. Read from `extra` until the build that creates
     /// one makes `kind` a field: a string, so a kind added later never fails the decrypt.
@@ -332,6 +335,52 @@ impl ProjectPayload {
     /// The personal project's monthly budgets. A blob this build cannot read counts as none.
     pub fn budgets(&self) -> Budgets {
         self.extra.get("budgets").and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default()
+    }
+
+    /// Shown in place of the initial. One a member wrote that fails the check reads as none.
+    pub fn emoji(&self) -> Option<String> {
+        self.extra
+            .get("emoji")
+            .and_then(serde_json::Value::as_str)
+            .filter(|e| emoji::is_allowed_emoji(e))
+            .map(str::to_string)
+    }
+
+    pub fn set_emoji(&mut self, value: Option<&str>) {
+        match value.filter(|e| emoji::is_allowed_emoji(e)) {
+            Some(e) => {
+                self.extra.insert("emoji".into(), serde_json::Value::String(e.to_string()));
+            }
+            None => {
+                self.extra.remove("emoji");
+            }
+        }
+    }
+
+    /// Ceilings on the project's own categories, by id. Kept apart from `budgets`: 3.2.7 and 3.2.8
+    /// rebuild `budgets.monthly` from the built-in categories alone and would erase them.
+    pub fn budgets_custom(&self) -> std::collections::BTreeMap<String, f64> {
+        let Some(serde_json::Value::Object(map)) = self.extra.get(BUDGETS_CUSTOM) else { return Default::default() };
+        map.iter()
+            .filter_map(|(id, v)| Some((id.clone(), v.as_f64().filter(|v| v.is_finite() && *v > 0.0)?)))
+            .collect()
+    }
+
+    /// Writes the ceilings of the ids in `shown` from `typed`; every other id stays as stored.
+    pub fn merge_budgets_custom(&mut self, shown: &[String], typed: &std::collections::BTreeMap<String, f64>) {
+        let mut map = match self.extra.remove(BUDGETS_CUSTOM) {
+            Some(serde_json::Value::Object(map)) => map,
+            _ => serde_json::Map::new(),
+        };
+        for id in shown {
+            map.remove(id);
+            if let Some(v) = typed.get(id).copied().and_then(serde_json::Number::from_f64) {
+                map.insert(id.clone(), serde_json::Value::Number(v));
+            }
+        }
+        if !map.is_empty() {
+            self.extra.insert(BUDGETS_CUSTOM.into(), serde_json::Value::Object(map));
+        }
     }
 
     pub fn set_budgets(&mut self, budgets: &Budgets) {
@@ -465,6 +514,10 @@ pub struct ProjectSync {
     /// The server's UTC date: the one clock every member's materialization is measured against.
     #[serde(default)]
     pub server_date: Option<NaiveDate>,
+    /// The same clock as an instant, which each member reads in their own time zone for the day a
+    /// rule is due on. Clients before it keep the UTC date.
+    #[serde(default)]
+    pub server_time: Option<NaiveDateTime>,
     /// Set, with nothing else, for a project whose key changed since the token this device sent
     /// (D17): the device switches through a box or its escrow, or shows the project as lost.
     /// Clients before it find no `project` and skip the entry.
@@ -1286,7 +1339,8 @@ pub struct EditableProject {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub history: Option<HistoryContext>,
     /// The `iv` of the payload this one was derived from. When set, the server writes nothing
-    /// unless that is still the stored payload (409 `PROJECT_STALE`); `None` writes unconditionally.
+    /// unless that is still the stored payload (409 `PROJECT_STALE`). Required with a payload
+    /// (400 `INVALID_PAYLOAD` without); a status-only write sends none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub expected_iv: Option<String>,
     /// Set by the client that closes the project: the status is in the payload, so the server
@@ -2212,6 +2266,30 @@ mod tests {
 
         let odd: ProjectPayload = serde_json::from_str(r#"{"name":"X","currency":"EUR","budgets":"?"}"#).unwrap();
         assert_eq!(odd.budgets(), Budgets::default());
+    }
+
+    #[test]
+    fn custom_ceilings_survive_an_old_client_saving_its_budgets() {
+        let mut p: ProjectPayload = serde_json::from_str(r#"{"name":"M","currency":"EUR"}"#).unwrap();
+        let typed = [("c-0000000a".to_string(), 120.0), ("c-0000000b".to_string(), 30.0)].into_iter().collect();
+        p.merge_budgets_custom(&["c-0000000a".into(), "c-0000000b".into()], &typed);
+        let stored = serde_json::to_string(&p).unwrap();
+
+        let mut old: ProjectPayload = serde_json::from_str(&stored).unwrap();
+        let rebuilt = ["Nourriture", "Transport"].iter().map(|c| (c.to_string(), 50.0)).collect();
+        old.set_budgets(&Budgets { monthly: rebuilt, alert: false });
+        let after: ProjectPayload = serde_json::from_str(&serde_json::to_string(&old).unwrap()).unwrap();
+        assert_eq!(after.budgets_custom(), typed);
+
+        let mut newer = after.clone();
+        newer.merge_budgets_custom(&["c-0000000a".into()], &Default::default());
+        assert_eq!(newer.budgets_custom(), [("c-0000000b".to_string(), 30.0)].into_iter().collect());
+        newer.merge_budgets_custom(&["c-0000000b".into()], &Default::default());
+        assert!(!newer.extra.contains_key("budgetsCustom"));
+
+        let odd: ProjectPayload =
+            serde_json::from_str(r#"{"name":"X","currency":"EUR","budgetsCustom":{"a":"?","b":-1,"c":5}}"#).unwrap();
+        assert_eq!(odd.budgets_custom(), [("c".to_string(), 5.0)].into_iter().collect());
     }
 
     #[test]

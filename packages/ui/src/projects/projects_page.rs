@@ -687,9 +687,10 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
     let project_status =
         decrypted_project.as_ref().and_then(|p| p.status.clone()).unwrap_or_else(|| project.status.clone());
     let display_name = decrypted_project.as_ref().map(|p| p.name.clone()).unwrap_or_default();
+    let display_emoji = decrypted_project.as_ref().and_then(|p| p.emoji());
     let display_currency =
         decrypted_project.as_ref().map(|p| p.currency.clone()).unwrap_or_default();
-    let today = chrono::Utc::now().date_naive();
+    let today = crate::common::local_today();
     let subtitle = {
         let mut parts: Vec<String> = props.glance.as_ref().map(|g| row_subtitle(g, today)).into_iter().collect();
         match project_status {
@@ -728,6 +729,7 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
                     name_description: None,
                     status: Some(status.clone()),
                     history: None,
+                    emoji: None,
                 }),
             ));
             write_queue(&pending_ops.read());
@@ -828,7 +830,7 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
                     LockIcon {}
                 }
             } else {
-                ProjectTile { name: display_name.clone(), id: project_id }
+                ProjectTile { name: display_name.clone(), id: project_id, emoji: display_emoji.clone() }
             }
             span { class: "flex-1 min-w-0 flex flex-col gap-0.5",
                 if locked {

@@ -161,6 +161,7 @@ mod tests {
         GroupLedger {
             project_id: Uuid::from_bytes([n; 16]),
             name: format!("Groupe {n}"),
+            emoji: None,
             me,
             members: balances.len(),
             data: ProjectData {

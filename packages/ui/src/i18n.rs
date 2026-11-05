@@ -470,7 +470,7 @@ pub(crate) fn locale_ids(code: &str) -> std::collections::BTreeSet<String> {
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
-fn locale_text(code: &str) -> String {
+pub(crate) fn locale_text(code: &str) -> String {
     let path =
         std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("i18n").join(format!("{code}.ftl"));
     std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{} is missing: {e}", path.display()))
@@ -884,7 +884,7 @@ mod tests {
         #[test]
         fn plural_messages_cover_the_language_cardinal_categories() {
             use intl_pluralrules::{PluralCategory, PluralRuleType, PluralRules};
-            let plural_ids = ["offline-pending", "charts-expense-count", "charts-my-share-skipped", "invite-sent", "expenses-search-summary", "move-members", "my-spending-search-summary", "expense-people"];
+            let plural_ids = ["offline-pending", "charts-expense-count", "charts-my-share-skipped", "invite-sent", "expenses-search-summary", "move-members", "my-spending-search-summary", "expense-people", "guests-hint-title"];
             for (code, _) in SUPPORTED {
                 let rules = PluralRules::create(langid_of(code), PluralRuleType::CARDINAL)
                     .unwrap_or_else(|e| panic!("no plural rules for {code}: {e}"));

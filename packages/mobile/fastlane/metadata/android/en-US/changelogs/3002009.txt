@@ -1,0 +1,7 @@
+• Custom categories with their own emoji
+• An emoji for each project
+• Long expense names shown in full
+• Easier invites for participants who haven't joined yet
+• Let a friend know by message when you add them
+• Sheets stay visible above the keyboard
+• Small fixes and improvements

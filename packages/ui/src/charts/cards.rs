@@ -2,14 +2,14 @@ use chrono::{Datelike, NaiveDate};
 use dioxus::prelude::*;
 
 use super::model::{
-    category_color, expenses_in_category, money, percent, signed_money, Bucket, CategoryShare,
+    expenses_in_category, is_child, money, percent, signed_money, Bucket, CategoryShare, ChartCategories,
     CurrencyTotals, Scope,
 };
 use super::primitives::{
     ChartCard, Column, ColumnChart, LineChart, Note, Segment, Segmented, Swatch,
 };
 use super::svg::donut_path;
-use crate::categories::category_label;
+use crate::categories::ShownCategory;
 use crate::common::{month_abbrev, Avatar};
 use crate::decrypted::DecryptedExpense;
 use crate::route::Route;
@@ -87,14 +87,14 @@ pub fn CategoryShareCard(rows: Vec<CategoryShare>, currency: String) -> Element 
             div { class: "flex flex-col gap-2.5",
                 for row in rows {
                     {
-                        let color = category_color(row.category);
+                        let color = row.category.color();
                         let track = if max > 0.0 { row.group / max * 100.0 } else { 0.0 };
                         let fill = if row.group > 0.0 { row.mine / row.group * 100.0 } else { 0.0 };
                         rsx! {
                             div { class: "grid grid-cols-[5.25rem_1fr_auto] items-center gap-2 text-xs",
                                 span { class: "flex items-center gap-1.5 min-w-0",
-                                    Swatch { color }
-                                    span { class: "truncate", {category_label(row.category)} }
+                                    Swatch { color: color.clone() }
+                                    span { class: "truncate", dir: "auto", {row.category.label()} }
                                 }
                                 span { class: "h-2 rounded-full bg-base-300 relative", style: "width: {track:.1}%;",
                                     span { class: "absolute inset-y-0 left-0 rounded-full", style: "width: {fill:.1}%; background: {color};" }
@@ -127,28 +127,30 @@ fn short_date(date: &str) -> String {
 
 #[component]
 pub fn CategoryBreakdownCard(
-    slices: Vec<(&'static str, f64)>,
+    slices: Vec<(ShownCategory, f64)>,
     expenses: Vec<DecryptedExpense>,
     currency: String,
+    lens: ChartCategories,
 ) -> Element {
-    let mut selected: Signal<Option<&'static str>> = use_signal(|| None);
+    let mut selected: Signal<Option<ShownCategory>> = use_signal(|| None);
     let mut expanded = use_signal(|| false);
     let total: f64 = slices.iter().map(|(_, v)| v).sum();
     let mut cumulative = 0.0;
-    let arcs: Vec<(&'static str, String)> = slices
+    let arcs: Vec<(ShownCategory, String)> = slices
         .iter()
         .map(|(category, value)| {
             let start = cumulative;
             cumulative += value / total.max(f64::MIN_POSITIVE);
-            (*category, donut_path(90.0, 84.0, 54.0, start, cumulative))
+            (category.clone(), donut_path(90.0, 84.0, 54.0, start, cumulative))
         })
         .collect();
     let chosen = selected().filter(|c| slices.iter().any(|(s, _)| s == c));
-    let drill = chosen.map(|c| expenses_in_category(&expenses, c, &slices)).unwrap_or_default();
+    let drill = chosen.as_ref().map(|c| expenses_in_category(&expenses, c, &slices, &lens)).unwrap_or_default();
     let shown = if expanded() { drill.len() } else { drill.len().min(DRILL_PREVIEW) };
-    let mut toggle = move |category: &'static str| {
+    let mut toggle = move |category: ShownCategory| {
         expanded.set(false);
-        selected.set(if selected() == Some(category) { None } else { Some(category) });
+        let same = selected.peek().as_ref() == Some(&category);
+        selected.set(if same { None } else { Some(category) });
     };
 
     rsx! {
@@ -157,17 +159,17 @@ pub fn CategoryBreakdownCard(
                 for (category , d) in arcs {
                     path {
                         d,
-                        fill: category_color(category),
+                        fill: category.color(),
                         stroke: "var(--color-base-100)",
                         stroke_width: "2",
-                        opacity: if chosen.is_some() && chosen != Some(category) { "0.3" } else { "1" },
+                        opacity: if chosen.is_some() && chosen.as_ref() != Some(&category) { "0.3" } else { "1" },
                         class: "cursor-pointer transition-opacity",
-                        onclick: move |_| toggle(category),
+                        onclick: move |_| toggle(category.clone()),
                     }
                 }
-                match chosen.and_then(|c| slices.iter().find(|(s, _)| *s == c)) {
+                match chosen.as_ref().and_then(|c| slices.iter().find(|(s, _)| s == c)) {
                     Some((category, value)) => rsx! {
-                        text { x: "90", y: "76", text_anchor: "middle", style: "font-size:10px;fill:var(--color-base-content);fill-opacity:.5", {category_label(category)} }
+                        text { x: "90", y: "76", text_anchor: "middle", style: "font-size:10px;fill:var(--color-base-content);fill-opacity:.5", {category.label()} }
                         text { x: "90", y: "98", text_anchor: "middle", class: "font-display", style: "font-size:22px;font-weight:800;fill:var(--color-primary)", "{percent(*value, total)}%" }
                         text { x: "90", y: "114", text_anchor: "middle", style: "font-size:10px;fill:var(--color-base-content);fill-opacity:.5",
                             {tid!("charts-of-total", amount: money(*value, &currency), total: money(total, &currency))}
@@ -180,15 +182,19 @@ pub fn CategoryBreakdownCard(
                 }
             }
             div { class: "flex flex-col",
-                for (category , value) in slices.iter().copied() {
+                for (category , value) in slices.iter().cloned() {
                     button {
                         r#type: "button",
-                        aria_pressed: chosen == Some(category),
-                        class: if chosen == Some(category) { "grid grid-cols-[auto_1fr_auto] items-center gap-2 px-2 py-[7px] rounded-field text-xs text-left bg-base-200 font-semibold" } else { "grid grid-cols-[auto_1fr_auto] items-center gap-2 px-2 py-[7px] rounded-field text-xs text-left hover:bg-base-200" },
-                        onclick: move |_| toggle(category),
-                        Swatch { color: category_color(category) }
+                        aria_pressed: chosen.as_ref() == Some(&category),
+                        class: if chosen.as_ref() == Some(&category) { "grid grid-cols-[auto_1fr_auto] items-center gap-2 px-2 py-[7px] rounded-field text-xs text-left bg-base-200 font-semibold" } else { "grid grid-cols-[auto_1fr_auto] items-center gap-2 px-2 py-[7px] rounded-field text-xs text-left hover:bg-base-200" },
+                        style: if is_child(&category, &slices) { "padding-inline-start: 1.5rem;" },
+                        onclick: {
+                            let category = category.clone();
+                            move |_| toggle(category.clone())
+                        },
+                        Swatch { color: category.color() }
                         span { class: "min-w-0 truncate",
-                            {category_label(category)}
+                            span { dir: "auto", {format!("{} {}", category.emoji, category.label())} }
                             span { class: "font-normal text-base-content/70", {format!(" {}%", percent(value, total))} }
                         }
                         span { class: "tabular-nums", {money(value, &currency)} }
@@ -198,7 +204,8 @@ pub fn CategoryBreakdownCard(
             if let Some(category) = chosen {
                 div { class: "border-t border-base-300 pt-2.5 flex flex-col gap-1.5",
                     span { class: "text-xs text-base-content/70",
-                        {format!("{} · {}", category_label(category), tid!("charts-expense-count", count: drill.len() as i64))}
+                        bdi { {category.label()} }
+                        {format!(" · {}", tid!("charts-expense-count", count: drill.len() as i64))}
                     }
                     for e in drill.iter().take(shown) {
                         div { class: "grid grid-cols-[3.25rem_1fr_auto] gap-2 text-xs",
@@ -263,16 +270,16 @@ pub fn SpendOverTimeCard(
 
 #[component]
 pub fn CategoryOverTimeCard(
-    categories: Vec<&'static str>,
-    selected: &'static str,
-    on_select: EventHandler<&'static str>,
+    categories: Vec<ShownCategory>,
+    selected: ShownCategory,
+    on_select: EventHandler<ShownCategory>,
     columns: Vec<Column>,
     bucket: Bucket,
     average: f64,
     currency: String,
     range: String,
 ) -> Element {
-    let label = category_label(selected);
+    let label = selected.label();
     let title = match bucket {
         Bucket::Day => tid!("charts-cat-title-day", category: label),
         Bucket::Week => tid!("charts-cat-title-week", category: label),
@@ -286,15 +293,18 @@ pub fn CategoryOverTimeCard(
                         r#type: "button",
                         aria_pressed: category == selected,
                         class: if category == selected { "flex items-center gap-1.5 text-xs font-semibold rounded-field bg-base-200 px-2 py-1" } else { "flex items-center gap-1.5 text-xs text-base-content/70 rounded-field px-2 py-1 hover:bg-base-200" },
-                        onclick: move |_| on_select.call(category),
-                        Swatch { color: category_color(category) }
-                        {category_label(category)}
+                        onclick: {
+                            let category = category.clone();
+                            move |_| on_select.call(category.clone())
+                        },
+                        Swatch { color: category.color() }
+                        span { dir: "auto", {category.label()} }
                     }
                 }
             }
             ColumnChart {
                 columns,
-                color: category_color(selected).to_string(),
+                color: selected.color(),
                 average: Some((average, money(average, &currency))),
                 aria_label: title,
             }

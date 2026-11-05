@@ -143,6 +143,8 @@ pub fn EditRuleModal(
 
     rsx! {
         ExpenseForm {
+            categories: categories_of(project_id),
+            manage_categories: Some(project_id),
             title: tid!("recurring-edit-title"),
             submit_label: tid!("save"),
             loading_label: tid!("saving"),
@@ -172,4 +174,12 @@ pub fn EditRuleModal(
             banner: tid!("recurring-edit-banner", date: format_date(next)),
         }
     }
+}
+
+/// The project's own categories for the picker, when its data is the one loaded.
+fn categories_of(project_id: Uuid) -> crate::categories::ProjectCategories {
+    try_consume_context::<crate::expenses::hooks::use_project_store::ProjectStore>()
+        .and_then(|s| s.data_for(project_id))
+        .map(|d| d.categories.clone())
+        .unwrap_or_default()
 }

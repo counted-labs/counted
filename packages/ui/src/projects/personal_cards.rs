@@ -264,7 +264,7 @@ pub fn PersonalCard(project: ProjectDto, ledgers: Signal<Vec<GroupLedger>>) -> E
     let auth_ctx = use_context::<Signal<Option<Account>>>();
     let account_key_ctx = use_context::<Signal<Option<[u8; 32]>>>();
     let project_id = project.id;
-    let today = chrono::Utc::now().date_naive();
+    let today = crate::common::local_today();
     let name = ls_ctx
         .read()
         .projects

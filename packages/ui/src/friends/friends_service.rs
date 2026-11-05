@@ -165,6 +165,21 @@ fn read_label(plain: String) -> String {
     serde_json::from_str::<String>(&plain).unwrap_or(plain)
 }
 
+/// The address a sent request can be announced to. A request by email is labelled with the address
+/// typed; one made from a project carries the participant's name, and its target has an account.
+pub fn notify_address(label: &str) -> Option<&str> {
+    let label = label.trim();
+    let (local, domain) = label.split_once('@')?;
+    let printable = !label.chars().any(|c| c.is_whitespace() || c.is_control());
+    (printable && !local.is_empty() && !domain.is_empty() && !domain.contains('@')).then_some(label)
+}
+
+/// Fluent wraps every placeable in U+2068/U+2069: pasted into another app, they would sit inside the
+/// address the friend has to sign up with.
+pub fn plain_message(text: &str) -> String {
+    text.replace(['\u{2068}', '\u{2069}'], "")
+}
+
 /// The response is the same whether or not the address has an account; so is what this returns.
 pub async fn add_by_email(email: &str, account_key: &[u8; 32]) -> Result<(), ServerFnError> {
     let email = email.trim().to_string();
@@ -407,6 +422,36 @@ mod tests {
 
     fn friend(public_key: Option<Vec<u8>>) -> Friend {
         Friend { id: Uuid::new_v4(), account_id: Uuid::new_v4(), email: "bob@x.io".into(), public_key }
+    }
+
+    #[test]
+    fn only_an_address_label_can_be_notified() {
+        assert_eq!(notify_address(" tom.bernard@gmail.com "), Some("tom.bernard@gmail.com"));
+        for label in ["Tom", "", "@x.io", "tom@", "a@b@c", "tom bernard@x.io", "tom@x.io\u{0}"] {
+            assert_eq!(notify_address(label), None, "{label:?}");
+        }
+    }
+
+    #[test]
+    fn the_message_carries_no_isolation_marks() {
+        assert_eq!(plain_message("sur https://counted.fr avec \u{2068}tom@x.io\u{2069} :"), "sur https://counted.fr avec tom@x.io :");
+    }
+
+    /// The message goes through the user's messaging app: never a project link or key, in any
+    /// language, and always the site and the address to sign up with.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn every_notify_message_names_the_site_and_the_address_and_no_project() {
+        for (code, _) in crate::i18n::SUPPORTED {
+            let text = crate::i18n::locale_text(code);
+            let line = text
+                .lines()
+                .find(|l| l.starts_with("friends-notify-message ="))
+                .unwrap_or_else(|| panic!("{code}: friends-notify-message missing"));
+            assert!(line.contains("https://counted.fr "), "{code}: {line}");
+            assert!(line.contains("{ $email }"), "{code}: {line}");
+            assert!(!line.contains('#') && !line.contains("/projects"), "{code}: {line}");
+        }
     }
 
     #[test]

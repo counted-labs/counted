@@ -68,7 +68,7 @@ fn share() -> impl Strategy<Value = ExpenseShare> {
 pub(crate) fn expense_payload() -> impl Strategy<Value = ExpensePayload> {
     (
         (text(), amount(), expense_type(), text()),
-        (proptest::option::of(text()), proptest::option::of(amount()), proptest::option::of(amount())),
+        (proptest::option::of(prop_oneof![text(), category_id()]), proptest::option::of(amount()), proptest::option::of(amount())),
         (proptest::option::of(id()), proptest::option::of(prop::collection::vec(share(), 0..8)), any::<bool>()),
         proptest::option::of(any::<u128>()),
     )
@@ -156,6 +156,58 @@ pub(crate) fn users() -> impl Strategy<Value = Vec<User>> {
                 ..Default::default()
             })
             .collect()
+    })
+}
+
+fn category_id() -> impl Strategy<Value = String> {
+    prop_oneof![
+        prop::sample::select(crate::categories::CHART_CATEGORIES.to_vec()).prop_map(String::from),
+        (0u32..6).prop_map(|i| format!("c-{i:08x}")),
+        any::<String>(),
+    ]
+}
+
+fn category_entry() -> impl Strategy<Value = serde_json::Value> {
+    let name = prop_oneof![any::<String>(), Just("\u{202E}abc\u{2066}".to_string()), Just("é".repeat(500)), Just(String::new())];
+    let emoji = prop_oneof![
+        prop::sample::select(crate::common::EMOJI_CHOICES.to_vec()).prop_map(String::from),
+        any::<String>(),
+        Just("🍕".repeat(20)),
+    ];
+    let entry = (category_id(), proptest::option::of(name), proptest::option::of(emoji), proptest::option::of(category_id()), any::<bool>(), any::<bool>())
+        .prop_map(|(id, name, emoji, parent, hidden, deleted)| {
+            serde_json::json!({ "id": id, "name": name, "emoji": emoji, "parent": parent, "hidden": hidden, "deleted": deleted })
+        });
+    prop_oneof![
+        8 => entry,
+        1 => Just(serde_json::json!({ "id": 7, "name": [], "parent": {} })),
+        1 => any::<String>().prop_map(serde_json::Value::String),
+    ]
+}
+
+/// The project payload as any key holder can write it: its own categories, budgets on them and an
+/// emoji, each well-formed or not.
+pub(crate) fn project_payload() -> impl Strategy<Value = shared::ProjectPayload> {
+    let categories = prop_oneof![
+        6 => prop::collection::vec(category_entry(), 0..45).prop_map(serde_json::Value::Array),
+        1 => Just(serde_json::json!("?")),
+        1 => Just(serde_json::Value::Null),
+    ];
+    let ceilings = prop::collection::btree_map(category_id(), amount(), 0..5).prop_map(|map| {
+        serde_json::Value::Object(
+            map.into_iter()
+                .map(|(id, v)| (id, serde_json::Number::from_f64(v).map_or(serde_json::Value::Null, serde_json::Value::Number)))
+                .collect(),
+        )
+    });
+    (categories, ceilings, proptest::option::of(any::<String>())).prop_map(|(categories, ceilings, emoji)| {
+        let mut extra = shared::Unknown::new();
+        extra.insert("categories".into(), categories);
+        extra.insert("budgetsCustom".into(), ceilings);
+        if let Some(e) = emoji {
+            extra.insert("emoji".into(), serde_json::Value::String(e));
+        }
+        shared::ProjectPayload { name: "p".into(), currency: "EUR".into(), description: None, status: None, extra }
     })
 }
 

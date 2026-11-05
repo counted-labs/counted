@@ -140,10 +140,10 @@ fn project_error() -> ServerFnError {
 /// Freezes the project, reads every row, re-seals each under a new key and stages it. A wrong key
 /// stops here: the project row must open under `k1`, or nothing is staged. `hidden` is the
 /// participant a removal hides under the new key.
-pub async fn begin(project_id: Uuid, k1: [u8; 32], hidden: Option<i32>) -> Result<Scan, ServerFnError> {
+pub async fn begin(project_id: Uuid, k1: [u8; 32], me: Uuid, hidden: Option<i32>) -> Result<Scan, ServerFnError> {
     scope_key(Some(&k1));
     let started = start_rotation(Json(StartRotation { project_id })).await?;
-    let scanned = scan(project_id, started.rotation_id, &k1, hidden).await;
+    let scanned = scan(project_id, started.rotation_id, &k1, me, hidden).await;
     if scanned.is_err() {
         scope_key(Some(&k1));
         let _ = abort_rotation(Json(AbortRotation { project_id, rotation_id: started.rotation_id })).await;
@@ -158,6 +158,7 @@ async fn scan(
     project_id: Uuid,
     rotation_id: Uuid,
     k1: &[u8; 32],
+    me: Uuid,
     hidden: Option<i32>,
 ) -> Result<([u8; 32], Vec<QuarantinedRow>), ServerFnError> {
     let k2 = generate_key();
@@ -169,7 +170,7 @@ async fn scan(
             let page = read_rotation_rows(Json(ReadRotationRows { project_id, rotation_id, table: table.into(), after: after.clone() })).await?;
             let full = page.len() >= shared::ROTATION_PAGE;
             after = page.last().map(|r| r.id.clone());
-            let (staged, set_aside) = restage_page(table, page, hidden, k1, &k2)?;
+            let (staged, set_aside) = restage_page(table, page, hidden, me, k1, &k2)?;
             quarantine.extend(set_aside);
             if !staged.is_empty() {
                 scope_key(Some(k1));
@@ -183,15 +184,18 @@ async fn scan(
     Ok((k2, quarantine))
 }
 
-/// One page re-sealed under `k2`, and the rows no key opens, set aside (D10). An unreadable claim
-/// label or payment-methods copy is neither: the commit clears every membership blob not staged.
+/// One page re-sealed under `k2`, and the rows no key opens, set aside (D10). A claim label or
+/// payment-methods copy is neither unless it is the rotater's own: it has one writer, its account,
+/// and the commit clears every one not staged for its owner's device to write back.
 fn restage_page(
     table: &str,
     page: Vec<RotationRow>,
     hidden: Option<i32>,
+    me: Uuid,
     k1: &[u8; 32],
     k2: &[u8; 32],
 ) -> Result<(Vec<RotationRow>, Vec<QuarantinedRow>), ServerFnError> {
+    let membership = table == "claim_labels" || table == "payment_methods";
     let (mut staged, mut quarantine) = (Vec::new(), Vec::new());
     for row in page {
         if table == "projects" {
@@ -200,9 +204,12 @@ fn restage_page(
             staged.push(RotationRow { id: row.id, payload: encrypt(k2, &chained).map_err(|_| project_error())? });
             continue;
         }
+        if membership && row.id != me.to_string() {
+            continue;
+        }
         match restage(table, &row.id, hidden, k1, k2, &row.payload) {
             Some(payload) => staged.push(RotationRow { id: row.id, payload }),
-            None if table == "claim_labels" || table == "payment_methods" => {}
+            None if membership => {}
             None => quarantine.push(QuarantinedRow { table: table.into(), id: row.id }),
         }
     }
@@ -286,7 +293,7 @@ pub async fn rotate(
     my_user_id: Option<i32>,
     removal: Option<Removal>,
 ) -> Result<Rotated, ServerFnError> {
-    let scan = begin(project_id, k1, removal.as_ref().map(|r| r.user_id)).await?;
+    let scan = begin(project_id, k1, account.id, removal.as_ref().map(|r| r.user_id)).await?;
     let remove: Vec<Uuid> = removal.as_ref().and_then(|r| claimant(&scan.members, r.user_id)).into_iter().collect();
     let summary = match &removal {
         Some(r) => tid!("history-member-removed", name: r.name.clone()),
@@ -636,19 +643,22 @@ mod tests {
     }
 
     /// D10 and the commit check (rotation_repository::swap_all): junk in a project set is listed
-    /// as set aside, junk in a membership blob is left out of both lists for the commit to clear.
+    /// as set aside. A membership blob is re-sealed only when it is the rotater's own (M1); another
+    /// account's, or junk, is left out of both lists for the commit to clear.
     #[test]
-    fn an_unreadable_membership_blob_is_left_to_the_commit_not_quarantined() {
+    fn a_rotation_restages_only_the_rotaters_own_membership_blob() {
         let (k1, k2, other) = (generate_key(), generate_key(), generate_key());
+        let (me, them) = (Uuid::from_u128(1), Uuid::from_u128(2));
         let row = |id: &str, key: &[u8; 32]| RotationRow { id: id.into(), payload: encrypt(key, "x").unwrap() };
         for table in ["claim_labels", "payment_methods"] {
-            let (staged, quarantine) = restage_page(table, vec![row("a", &k1), row("b", &other)], None, &k1, &k2).unwrap();
-            assert_eq!(staged.iter().map(|r| r.id.as_str()).collect::<Vec<_>>(), vec!["a"], "{table}");
+            let page = vec![row(&me.to_string(), &k1), row(&them.to_string(), &k1), row("junk", &other)];
+            let (staged, quarantine) = restage_page(table, page, None, me, &k1, &k2).unwrap();
+            assert_eq!(staged.iter().map(|r| r.id.clone()).collect::<Vec<_>>(), vec![me.to_string()], "{table}");
             assert!(quarantine.is_empty(), "{table}");
         }
-        let (staged, quarantine) = restage_page("expenses", vec![row("1", &k1), row("2", &other)], None, &k1, &k2).unwrap();
+        let (staged, quarantine) = restage_page("expenses", vec![row("1", &k1), row("2", &other)], None, me, &k1, &k2).unwrap();
         assert_eq!((staged.len(), quarantine), (1, vec![QuarantinedRow { table: "expenses".into(), id: "2".into() }]));
-        assert!(restage_page("projects", vec![row("p", &other)], None, &k1, &k2).is_err(), "a wrong key stops the scan");
+        assert!(restage_page("projects", vec![row("p", &other)], None, me, &k1, &k2).is_err(), "a wrong key stops the scan");
     }
 
     #[test]
@@ -674,8 +684,8 @@ mod tests {
     #[test]
     fn a_rotated_project_keeps_its_row_until_a_key_reaches_it() {
         let syncs = vec![
-            ProjectSync { data_version: -1, project: None, users: None, expenses: None, payments: None, recurring: None, server_date: None, rotated: Some(Uuid::from_u128(1)) },
-            ProjectSync { data_version: 3, project: None, users: None, expenses: None, payments: None, recurring: None, server_date: None, rotated: None },
+            ProjectSync { data_version: -1, project: None, users: None, expenses: None, payments: None, recurring: None, server_date: None, server_time: None, rotated: Some(Uuid::from_u128(1)) },
+            ProjectSync { data_version: 3, project: None, users: None, expenses: None, payments: None, recurring: None, server_date: None, server_time: None, rotated: None },
         ];
         assert_eq!(rotated_ids(&syncs), vec![Uuid::from_u128(1)]);
         let mut state = LocalStorageState::default();

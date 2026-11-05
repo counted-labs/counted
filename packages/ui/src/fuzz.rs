@@ -24,12 +24,13 @@ pub fn pages(data: &[u8]) {
     let mut i = Input(data);
     let (expenses, payments, users, me) = (i.expenses(), i.payments(), i.users(), i.id());
     let (from, to) = (i.option(Input::date), i.option(Input::date));
+    let project = i.project_payload();
     crate::expenses::tabs::expenses_tab::exercise_hostile(expenses.clone(), payments.clone(), users.clone(), me);
-    crate::charts::charts_page::exercise_hostile(expenses.clone(), payments.clone(), users.clone(), me, from, to);
-    crate::expenses::helpers::export::exercise_hostile(expenses.clone(), payments.clone(), users.clone());
+    crate::charts::charts_page::exercise_hostile(expenses.clone(), payments.clone(), users.clone(), me, from, to, project.clone());
+    crate::expenses::helpers::export::exercise_hostile(expenses.clone(), payments.clone(), users.clone(), project.clone());
 
     let (own, my_id, budgets, rates) = (i.expenses(), i.option(Input::id), i.budgets(), i.rates());
-    crate::expenses::helpers::my_spending::exercise_hostile(expenses, payments, users, own, my_id, budgets, rates);
+    crate::expenses::helpers::my_spending::exercise_hostile(expenses, payments, users, own, my_id, budgets, rates, project);
 
     let rules = i.vec(5, Input::rule_payload);
     let (author_id, created_at) = (i.option(Input::id), i.timestamp());
@@ -294,6 +295,40 @@ impl Input<'_> {
             .into_iter()
             .collect();
         Budgets { monthly, alert: self.bool() }
+    }
+
+    fn category_id(&mut self) -> String {
+        match self.byte() % 3 {
+            0 => crate::categories::CHART_CATEGORIES[self.byte() as usize % crate::categories::CHART_CATEGORIES.len()].to_string(),
+            1 => format!("c-{:08x}", self.byte() % 6),
+            _ => self.string(),
+        }
+    }
+
+    fn project_payload(&mut self) -> shared::ProjectPayload {
+        let entries = self.vec(40, |i| {
+            let emoji = if i.bool() {
+                crate::common::EMOJI_CHOICES[i.byte() as usize % crate::common::EMOJI_CHOICES.len()].to_string()
+            } else {
+                i.string()
+            };
+            serde_json::json!({
+                "id": i.category_id(),
+                "name": i.string(),
+                "emoji": emoji,
+                "parent": i.category_id(),
+                "hidden": i.bool(),
+                "deleted": i.bool(),
+            })
+        });
+        let ceilings: serde_json::Map<String, serde_json::Value> = self
+            .vec(5, |i| (i.category_id(), serde_json::Number::from_f64(i.amount()).map_or(serde_json::Value::Null, serde_json::Value::Number)))
+            .into_iter()
+            .collect();
+        let mut extra = shared::Unknown::new();
+        extra.insert("categories".into(), serde_json::Value::Array(entries));
+        extra.insert("budgetsCustom".into(), serde_json::Value::Object(ceilings));
+        shared::ProjectPayload { name: "p".into(), currency: "EUR".into(), description: None, status: None, extra }
     }
 
     fn rates(&mut self) -> HashMap<String, f64> {

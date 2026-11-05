@@ -30,6 +30,28 @@ const FOCUS_RETRY_MS: u32 = 50;
 /// On a coarse pointer an expression is covered by an overlay showing the running result, so the
 /// field reads `83.33` while `250/3` sits in the operator bar's bubble. The input's own value is
 /// still the expression - caret, backspace and paste are the browser's, untouched.
+/// Scrolls the sheet only. `scroll_to_with_options` would reach `scrollIntoView` start-aligned
+/// (Dioxus serializes `vertical`/`horizontal`, keys the browser ignores) and scroll the root too,
+/// which panned the whole sheet 174px up on a Fairphone 3.
+#[cfg(any(target_os = "android", target_os = "ios"))]
+fn reveal(_: Option<Rc<MountedData>>) {
+    document::eval("window._countedKeyboard && window._countedKeyboard.reveal();");
+}
+
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+fn reveal(node: Option<Rc<MountedData>>) {
+    let Some(node) = node else { return };
+    spawn(async move {
+        let _ = node
+            .scroll_to_with_options(ScrollToOptions {
+                behavior: ScrollBehavior::Instant,
+                vertical: ScrollLogicalPosition::Nearest,
+                horizontal: ScrollLogicalPosition::Nearest,
+            })
+            .await;
+    });
+}
+
 #[derive(Props, Clone, PartialEq)]
 pub struct AmountInputProps {
     pub value: f64,
@@ -69,19 +91,9 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
     // after the WebView's own scroll-into-view already ran - without this a row tapped near the
     // bottom ends up behind the bar.
     use_effect(move || {
-        if !focused() {
-            return;
+        if focused() {
+            reveal(mounted.peek().clone());
         }
-        let Some(node) = mounted.peek().clone() else { return };
-        spawn(async move {
-            let _ = node
-                .scroll_to_with_options(ScrollToOptions {
-                    behavior: ScrollBehavior::Instant,
-                    vertical: ScrollLogicalPosition::Nearest,
-                    horizontal: ScrollLogicalPosition::Nearest,
-                })
-                .await;
-        });
     });
 
     rsx! {

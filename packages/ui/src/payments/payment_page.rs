@@ -17,7 +17,6 @@ use crate::expenses::hooks::use_project_store::ProjectStore;
 use crate::expenses::tabs::expenses_tab::ExpenseMutation;
 use crate::expenses::move_expense::{can_move, destinations, typed_amount, MoveDraft, MoveExpenseSheet};
 use crate::expenses::EditExpenseModal;
-use crate::categories::category_label;
 use crate::icons::{MoreIcon, PencilIcon, RepeatIcon, RightArrowIcon, TransferIcon, TrashIcon, ICON_HEADER, ICON_INLINE};
 use crate::recurring::actions::stop_rule;
 use crate::recurring::dialog::DeleteExpenseDialog;
@@ -189,12 +188,13 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                             let kind = match expense_type {
                                 ExpenseType::Transfer => tid!("expense-type-transfer"),
                                 ExpenseType::Gain => tid!("expense-type-gain"),
-                                ExpenseType::Expense => category_label(row.category),
+                                ExpenseType::Expense => row.category.label(),
                             };
                             let people = (!is_transfer && !d.personal)
                                 .then(|| tid!("expense-people", count: debtors.len() as i64));
                             let subtitle = summary_subtitle(kind, people, expense.description.as_deref());
-                            let emoji = row.emoji;
+                            let emoji = row.emoji.clone();
+                            let category_parent = row.category.parent;
                             let total = expense.amount;
                             let added_by = expense
                                 .author_id
@@ -254,7 +254,9 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                 }
 
                                 div { id: "expense-summary", class: "card bg-base-100 shadow-soft",
-                                    div { class: "card-body p-4 flex-row items-center gap-3",
+                                    div { class: "card-body p-4 gap-3",
+                                    p { id: "expense-full-name", class: "font-semibold leading-snug wrap-anywhere text-pretty", "{exp_name}" }
+                                    div { class: "flex items-center gap-3",
                                         if is_transfer {
                                             span { class: "size-11 shrink-0 rounded-2xl bg-primary/10 text-primary flex items-center justify-center",
                                                 TransferIcon { size: ICON_HEADER }
@@ -266,6 +268,7 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                             p { class: "font-display font-bold text-2xl", {crate::common::amount(total, &currency)} }
                                             p { class: "text-sm text-base-content/70 truncate", "{subtitle}" }
                                         }
+                                    }
                                     }
                                 }
 
@@ -445,6 +448,7 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                                     payload,
                                                     amount,
                                                     currency: typed_currency,
+                                                    category_parent,
                                                 }));
                                                 // Replace, not push: the expense page left behind is about to stop existing.
                                                 nav.replace(Route::ExpensesPage { project_id: to });

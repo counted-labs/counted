@@ -28,6 +28,7 @@ use crate::expenses::tabs::expenses_tab::my_debt_by_expense;
 pub struct GroupLedger {
     pub project_id: Uuid,
     pub name: String,
+    pub emoji: Option<String>,
     /// My participant there; `None` until I picked one, when no share is mine.
     pub me: Option<i32>,
     pub members: usize,
@@ -174,13 +175,21 @@ pub fn month_glance(
     let month = first_of_month(today);
     let mut shares = share_rows(ledgers, uncounted, &data.currency, fx);
     shares.retain(|s| s.project_id != personal);
-    let lines = budget_lines(&data.budgets, &spent_by_category(&data.expenses, &shares, month));
-    let budget = (!lines.is_empty()).then(|| BudgetLine {
-        category: "",
-        spent: lines.iter().map(|l| l.spent).sum(),
-        limit: lines.iter().map(|l| l.limit).sum(),
+    let lines = budget_lines(&data.budgets, &data.budgets_custom, &data.categories, &spent_by_category(&data.expenses, &shares, month));
+    let budget = (!lines.is_empty()).then(|| {
+        let outer: Vec<&BudgetLine> = lines.iter().filter(|l| !nested_line(l, &lines)).collect();
+        BudgetLine {
+            category: crate::categories::ShownCategory::builtin(crate::categories::custom::OTHER),
+            spent: outer.iter().map(|l| l.spent).sum(),
+            limit: outer.iter().map(|l| l.limit).sum(),
+        }
     });
     Some(MonthGlance { spent: month_totals(&data.expenses, &shares, month).spent(), budget })
+}
+
+/// A custom category's line inside a parent that has its own: the parent already counts it.
+fn nested_line(line: &BudgetLine, lines: &[BudgetLine]) -> bool {
+    line.category.is_custom() && lines.iter().any(|l| !l.category.is_custom() && l.category.id == line.category.parent)
 }
 
 /// What a list of results adds up to: own expenses, and counted shares in the personal currency.
@@ -316,6 +325,7 @@ fn ledger_of(
     );
     Some(GroupLedger {
         project_id: p.project_id,
+        emoji: payload.emoji(),
         name: payload.name,
         me: p.user_id,
         members: pickable_users(Some(&key), &data.users, &[]).len(),
@@ -324,6 +334,7 @@ fn ledger_of(
 }
 
 #[cfg(any(test, fuzzing))]
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn exercise_hostile(
     group: Vec<Expense>,
     payments: Vec<Payment>,
@@ -332,6 +343,7 @@ pub(crate) fn exercise_hostile(
     me: Option<i32>,
     budgets: shared::Budgets,
     rates: HashMap<String, f64>,
+    project: ProjectPayload,
 ) {
     use crate::common::test_fixtures::{make_project, TEST_KEY};
     use crate::crypto::encrypt_json;
@@ -339,12 +351,16 @@ pub(crate) fn exercise_hostile(
 
     let k = TEST_KEY;
     let (group_id, personal) = (Uuid::from_u128(1), Uuid::from_u128(2));
+    let group_project = ProjectDto {
+        payload: encrypt_json(&k, &ProjectPayload { currency: "USD".into(), ..project.clone() }).unwrap(),
+        ..make_project(&k, group_id, "g", "USD")
+    };
     let group_data = project_data::build(
         Some(k),
-        Some(&LiveData { project_id: group_id, project: Some(make_project(&k, group_id, "g", "USD")), users, expenses: group, payments, version: None }),
+        Some(&LiveData { project_id: group_id, project: Some(group_project), users, expenses: group, payments, version: None }),
         None,
     );
-    let mut payload = ProjectPayload { name: "perso".into(), currency: "EUR".into(), description: None, status: None, extra: Default::default() };
+    let mut payload = project;
     payload.set_budgets(&budgets);
     let project = ProjectDto { payload: encrypt_json(&k, &payload).unwrap(), ..make_project(&k, personal, "", "") };
     let personal_data = project_data::build(
@@ -352,7 +368,7 @@ pub(crate) fn exercise_hostile(
         Some(&LiveData { project_id: personal, project: Some(project), users: vec![], expenses: own, payments: vec![], version: None }),
         Some(personal),
     );
-    let ledgers = [GroupLedger { project_id: group_id, name: "g".into(), me, members: 2, data: group_data }];
+    let ledgers = [GroupLedger { project_id: group_id, name: "g".into(), emoji: None, me, members: 2, data: group_data }];
     let fx = CachedFx { day: "2026-11-01".into(), base: "EUR".into(), rates, fetched_at: 0 };
     let shares = share_rows(&ledgers, &HashSet::new(), "EUR", Some(&fx));
     let month = first_of_month(NaiveDate::from_ymd_opt(2026, 11, 1).unwrap());
@@ -360,9 +376,10 @@ pub(crate) fn exercise_hostile(
     assert!(totals.spent().is_finite() && totals.balance().is_finite());
     let spent = spent_by_category(&personal_data.expenses, &shares, month);
     let _ = average_by_category(&personal_data.expenses, &shares, month);
-    for line in budget_lines(&personal_data.budgets, &spent) {
-        let _ = (line.meter(), crossed(line.spent, 1.0, line.limit));
+    for line in budget_lines(&personal_data.budgets, &personal_data.budgets_custom, &personal_data.categories, &spent) {
+        let _ = (line.meter(), crossed(line.spent, 1.0, line.limit), nested_line(&line, &[]));
     }
+    let _ = crate::expenses::budget_panel::sheet_categories(&spent, &personal_data.categories);
     let by_id: HashMap<i32, &ShareRow> = shares.iter().map(|s| (s.row.expense.id, s)).collect();
     let rows: Vec<&RowExpense> = personal_data.expenses.iter().collect();
     assert!(results_total(&rows, &by_id).is_finite());
@@ -392,7 +409,7 @@ mod tests {
             }),
             None,
         );
-        GroupLedger { project_id, name: name.to_string(), me, members: 2, data }
+        GroupLedger { project_id, name: name.to_string(), emoji: None, me, members: 2, data }
     }
 
     /// Clara paid 128 for a dinner, my share 32; I paid 20 for a taxi, my share 10; a transfer and a
@@ -477,7 +494,7 @@ mod tests {
         let mut payload: ProjectPayload = decrypt_json(&k, &personal.payload).unwrap();
         payload.extra.insert("kind".into(), "personal".into());
         payload.set_budgets(&shared::Budgets {
-            monthly: [(category_of(&courses).to_string(), 100.0)].into_iter().collect(),
+            monthly: [(category_of(&courses).id, 100.0)].into_iter().collect(),
             alert: true,
         });
         personal.payload = encrypt_json(&k, &payload).unwrap();
@@ -557,6 +574,28 @@ mod tests {
     }
 
     #[test]
+    fn a_ledger_carries_its_project_emoji() {
+        use crate::crypto::{encrypt_json, key_to_fragment};
+        let k = test_key();
+        let id = Uuid::new_v4();
+        let mut project = make_project(&k, id, "Ski", "EUR");
+        let mut payload: ProjectPayload = decrypt_json(&k, &project.payload).unwrap();
+        payload.set_emoji(Some("🎿"));
+        project.payload = encrypt_json(&k, &payload).unwrap();
+        let entry = LocalStorageProject {
+            project_id: id,
+            encryption_key: Some(key_to_fragment(&k)),
+            cached_project: Some(project),
+            cached_expenses: Some(vec![]),
+            cached_payments: Some(vec![]),
+            ..Default::default()
+        };
+        let state = LocalStorageState { projects: vec![entry], ..Default::default() };
+        let ledgers = cached_ledgers(&state, Uuid::nil());
+        assert_eq!(ledgers[0].emoji.as_deref(), Some("🎿"));
+    }
+
+    #[test]
     fn another_currency_converts_or_is_left_out_and_counted_as_such() {
         let k = test_key();
         let ny = ledger(
@@ -628,6 +667,7 @@ mod tests {
             expenses,
             recurring: Some(vec![]),
             server_date: None,
+            server_time: None,
             rotated: None,
         }
     }
@@ -643,7 +683,7 @@ mod tests {
         crate::common::upsert_project_key(&mut state, id, crate::crypto::key_to_fragment(&test_key()));
         cache_sync(&mut state, &answer(id, 7, Some(cafe())));
         assert_eq!(synced_ledgers(&state, &[], Uuid::nil()).len(), 1, "a project the answer left out keeps its cache");
-        let rotated = ProjectSync { data_version: -1, project: None, users: None, expenses: None, payments: None, recurring: None, server_date: None, rotated: Some(id) };
+        let rotated = ProjectSync { data_version: -1, project: None, users: None, expenses: None, payments: None, recurring: None, server_date: None, server_time: None, rotated: Some(id) };
         assert!(synced_ledgers(&state, &[rotated], Uuid::nil()).is_empty());
     }
 
@@ -692,8 +732,8 @@ mod tests {
             #![proptest_config(ProptestConfig::with_cases(300))]
 
             #[test]
-            fn any_group_and_personal_ledger_adds_up(group in hostile::expenses(), payments in hostile::payments(), users in hostile::users(), own in hostile::expenses(), me in proptest::option::of(hostile::id()), budgets in budgets(), rates in rates()) {
-                crate::expenses::helpers::my_spending::exercise_hostile(group, payments, users, own, me, budgets, rates);
+            fn any_group_and_personal_ledger_adds_up(group in hostile::expenses(), payments in hostile::payments(), users in hostile::users(), own in hostile::expenses(), me in proptest::option::of(hostile::id()), budgets in budgets(), rates in rates(), project in hostile::project_payload()) {
+                crate::expenses::helpers::my_spending::exercise_hostile(group, payments, users, own, me, budgets, rates, project);
             }
         }
     }

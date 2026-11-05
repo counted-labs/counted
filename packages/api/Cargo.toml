@@ -28,7 +28,6 @@ dotenvy = "0.15"
 uuid = "1.6"
 # rust_decimal = "1.37.1"
 chrono = "0.4.41"
-itertools = "0.13"
 sha2 = "0.10"
 
 # optional

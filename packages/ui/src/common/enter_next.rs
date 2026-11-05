@@ -25,6 +25,7 @@ pub fn use_enter_advances_focus() {
                 const TEXT = ['text', 'email', 'password', 'number', 'tel', 'url', 'search'];
                 const textLike = el => el.tagName === 'TEXTAREA'
                     || (el.tagName === 'INPUT' && TEXT.includes((el.getAttribute('type') || 'text').toLowerCase()));
+                window._countedTextLike = textLike;
                 document.addEventListener('keydown', function(e) {
                     if (e.key !== 'Enter' || e.defaultPrevented || e.isComposing) return;
                     const from = e.target;

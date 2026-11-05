@@ -35,18 +35,6 @@ body {
      Android - whose WebView applies the system font size itself, via WebSettings.textZoom - stays
      at 1 and is scaled once rather than twice. */
   --dt-scale: 1;
-  /* On-screen keyboard height, written by the visualViewport hook in packages/mobile/src/main.rs
-     through ui::common::keyboard_inset. 0 whenever no keyboard is up - and permanently 0 on any
-     platform that resizes its own layout viewport, which is what makes the sheet rule below safe
-     to state unconditionally. */
-  --kb: 0px;
-  /* The visual viewport's own scroll within the layout viewport, written by the same hook. A sheet
-     is `position: fixed`, so it is pinned to the layout viewport while the visible band is the
-     visual one: on a platform that does not resize its layout viewport for the keyboard, scrolling
-     to reveal a focused field moves the band down and leaves the sheet's top edge that far above
-     it. --kb keeps the bottom edge honest, this keeps the top edge honest. 0 wherever the two
-     viewports coincide. */
-  --vvo: 0px;
   /* Written by the overscroll gesture (packages/ui/src/common/overscroll.rs) on the scroller and
      on `.ptr` respectively, only for the length of a gesture. */
   --overscroll: 0px;
@@ -177,11 +165,11 @@ main {
   border-radius: 1.5rem;
 }
 
-/* --vvo, because 100dvh is the layout viewport and the box is pinned to its bottom edge: without
-   it the box stays as tall as a keyboard-less screen while the visible band has scrolled down, and
-   the sheet's header leaves the top of the screen. See the variable's declaration above. */
+/* The resting value. While the keyboard is up, packages/ui/src/common/keyboard.rs writes the same
+   expression inline with the visual viewport's scroll subtracted: 100dvh is the layout viewport,
+   which does not shrink for the keyboard, so without it the sheet's header leaves the screen. */
 .modal-box {
-  max-height: calc(100dvh - var(--vvo) - var(--sat) - var(--offline-bar) - var(--sab) - 1rem);
+  max-height: calc(100dvh - var(--sat) - var(--offline-bar) - var(--sab) - 1rem);
 }
 
 /* Sheet presentation. DaisyUI's `modal-bottom` already slides the box up from the bottom edge and
@@ -207,19 +195,15 @@ main {
        The radii need nothing here: daisyUI's own `.modal-bottom :where(.modal-box)` already sets
        --modal-tl/tr to the box radius and --modal-bl/br to 0. */
     position: relative;
-    /* The keyboard or the home indicator, whichever is taller - never their sum. --kb is the strip
-       of the layout viewport hidden below the visual one, measured from the same bottom edge this
-       box is pinned to, so it already spans the bar the keyboard sits on; adding --sab left exactly
-       one bar of blank sheet between the footer and the keyboard. Padding rather than a transform:
-       daisyUI animates `translate` on this element for the open/close slide, and `place-items: end`
-       on the .modal already pins the box to the bottom edge - so growing its bottom padding lifts
-       the content clear of the keyboard without touching that animation. The body inside is
-       `flex-1 overflow-y-auto`, so it absorbs the loss by scrolling; css_viewport_vars re-scrolls
-       the focused field into it. --sab less --vvo, because a panned visual viewport leaves this
-       box's bottom edge --vvo below the visible band: once WebKit pans by the whole keyboard (--kb
-       0, --vvo 308 on an iPhone 17) the indicator is under the keys, and a full --sab of padding
-       was a strip of blank sheet above them. */
-    padding-bottom: max(calc(var(--sab) - var(--vvo)), var(--kb));
+    /* The home indicator at rest. While the keyboard is up, packages/ui/src/common/keyboard.rs
+       writes `max(calc(var(--sab) - <scroll>), <keyboard>)` inline: the keyboard or the indicator,
+       whichever is taller, never their sum (the keyboard strip is measured from the bottom edge this
+       box is pinned to, so it already spans the bar the keyboard sits on). Padding rather than a
+       transform: daisyUI animates `translate` on this element for the open/close slide, and
+       `place-items: end` on the .modal already pins the box to the bottom edge. The body inside is
+       `flex-1 overflow-y-auto`, so it absorbs the loss by scrolling, and keyboard.rs reveals the
+       focused field in it. */
+    padding-bottom: var(--sab);
     /* Just clears the grabber (0.5rem top + 0.3125rem tall). These boxes are `p-0` with their own
        section padding inside, so anything more stacks on top of the header section's `pt-5`. */
     padding-top: 0.875rem;

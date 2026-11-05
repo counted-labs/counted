@@ -44,10 +44,16 @@ mod avatar;
 pub use avatar::{Avatar, SizeClass};
 
 mod date_format;
-pub use date_format::{format_date, format_date_str, format_month_str, month_abbrev, month_name, month_title};
+pub use date_format::{
+    format_date, format_date_str, format_month_str, local_today, month_abbrev, month_name, month_title,
+    today_iso, yesterday_iso,
+};
 
 mod project_tile;
-pub use project_tile::ProjectTile;
+pub use project_tile::{project_initial, tile_class, tile_text, ProjectTile};
+
+mod emoji_grid;
+pub use emoji_grid::{EmojiGrid, EMOJI_CHOICES};
 
 mod avatar_group;
 pub use avatar_group::AvatarGroup;
@@ -114,7 +120,7 @@ pub use session_flush::{flush_session, set_session_flusher, SessionFlusher};
 mod share_sheet;
 pub use share_sheet::{
     open_external, set_native_file_sharer, set_native_opener, set_native_sharer, share_file,
-    share_text, NativeFileSharer, NativeOpener, NativeSharer,
+    share_message, share_text, NativeFileSharer, NativeOpener, NativeSharer,
 };
 
 mod mail_link;
@@ -128,8 +134,8 @@ pub use push::write_push_token;
 mod push_sync;
 pub use push_sync::{unregister_push, use_push_registration};
 
-mod viewport;
-pub use viewport::{css_viewport_vars, keyboard_inset, KEYBOARD_MIN_PX};
+mod keyboard;
+pub use keyboard::use_keyboard;
 
 mod navigation_sync;
 pub use navigation_sync::NavigationSync;

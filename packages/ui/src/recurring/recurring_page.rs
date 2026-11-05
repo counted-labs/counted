@@ -11,7 +11,7 @@ use super::split::side_amounts;
 use super::view::{
     monthly_total, my_monthly_share, next_date, progress, rate_drift, sorted, state, RuleState,
 };
-use crate::categories::{find_category, parent_emoji};
+use crate::categories::ProjectCategories;
 use crate::common::{format_date, fx_cache, pending, read_from_ls, AppHeader, Flash, ProjectKey, PullToRefresh};
 use crate::expenses::helpers::project_data::ProjectData;
 use crate::expenses::hooks::use_fx_rates::use_fx_rates;
@@ -30,12 +30,10 @@ pub fn RecurringRulePage(project_id: Uuid, rule_id: Uuid) -> Element {
     rsx! { RecurringView { project_id, open: Some(rule_id) } }
 }
 
-pub fn emoji_of(rule: &DecryptedRule) -> &'static str {
+pub fn emoji_of(rule: &DecryptedRule, categories: &ProjectCategories) -> String {
     let t = &rule.payload.template;
-    match t.category.as_deref() {
-        Some(c) => parent_emoji(c),
-        None => find_category(&t.name).emoji,
-    }
+    let shown = categories.resolve(t.category.as_deref(), &t.name);
+    categories.row_emoji(&shown, &t.name)
 }
 
 fn payer_names(rule: &DecryptedRule, data: &ProjectData) -> String {
@@ -70,7 +68,7 @@ fn RecurringView(project_id: Uuid, open: Option<Uuid>) -> Element {
     let data = store.data_for(project_id).filter(|d| d.loaded);
     let recurring = store.recurring_for(project_id);
     let rules = recurring.as_ref().map(|r| sorted(&r.rules)).unwrap_or_default();
-    let today = recurring.as_ref().map(|r| r.today()).unwrap_or_else(|| chrono::Utc::now().date_naive());
+    let today = recurring.as_ref().map(|r| r.today()).unwrap_or_else(crate::common::local_today);
     let stored_user_id = read_from_ls()
         .projects
         .iter()
@@ -145,6 +143,7 @@ fn RecurringView(project_id: Uuid, open: Option<Uuid>) -> Element {
                                                         rule: rule.clone(),
                                                         currency: d.currency.clone(),
                                                         payers: payer_names(rule, &d),
+                                                        emoji: emoji_of(rule, &d.categories),
                                                         estimates,
                                                         drift,
                                                         on_open: move |_| selected.set(Some(id)),
@@ -275,6 +274,7 @@ fn RuleCard(
     rule: DecryptedRule,
     currency: String,
     payers: String,
+    emoji: String,
     estimates: usize,
     drift: Option<f64>,
     on_open: EventHandler<()>,
@@ -291,10 +291,10 @@ fn RuleCard(
                 r#type: "button",
                 class: if st == RuleState::Active { "w-full text-left flex items-start gap-3 p-3 rounded-box shadow-soft bg-base-100 hover:bg-base-200" } else { "w-full text-left flex items-start gap-3 p-3 rounded-box shadow-soft bg-base-100 hover:bg-base-200 opacity-70" },
                 onclick: move |_| on_open.call(()),
-                span { class: "w-9 h-9 shrink-0 flex items-center justify-center text-xl", aria_hidden: "true", "{emoji_of(&rule)}" }
+                span { class: "w-9 h-9 shrink-0 flex items-center justify-center text-xl", aria_hidden: "true", "{emoji}" }
                 div { class: "flex-1 min-w-0 flex flex-col gap-0.5",
                     div { class: "flex justify-between gap-2 min-w-0",
-                        span { class: "font-semibold truncate", "{t.name}" }
+                        span { class: "font-semibold line-clamp-2 wrap-anywhere", "{t.name}" }
                         span { class: "shrink-0 font-semibold text-sm tabular-nums", "{amount}" }
                     }
                     span { class: "text-xs text-base-content/70 truncate",
@@ -361,8 +361,8 @@ fn RuleSheet(
             aria_labelledby: "rule-sheet-title",
             tabindex: "-1",
             div { class: "modal-box max-w-md p-0 flex flex-col",
-                div { class: "flex items-center gap-2 px-5 pt-4 pb-1",
-                    h2 { id: "rule-sheet-title", class: "flex-1 min-w-0 truncate font-bold text-lg font-display", "{t.name}" }
+                div { class: "flex items-start gap-2 px-5 pt-4 pb-1",
+                    h2 { id: "rule-sheet-title", class: "flex-1 min-w-0 self-center font-bold text-lg font-display leading-snug wrap-anywhere text-pretty", "{t.name}" }
                     button {
                         r#type: "button",
                         class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",

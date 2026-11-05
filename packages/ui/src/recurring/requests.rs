@@ -64,7 +64,7 @@ pub fn edit_request(
 }
 
 /// Claims `due` (consecutive, oldest first) and writes one expense per date. `summary` gives each
-/// occurrence's history line; it is passed in already translated so this stays pure. `today` is the
+/// occurrence's history line; it is passed in already translated so this stays pure. `server_date` is the
 /// sync's server date, sent as `due_through` in place of the last occurrence's date, which would
 /// reveal the rule's schedule (audit 2026-10-19 M7).
 pub fn materialize_request(
@@ -72,7 +72,7 @@ pub fn materialize_request(
     project_id: Uuid,
     rule: &DecryptedRule,
     due: &[(u32, NaiveDate)],
-    today: NaiveDate,
+    server_date: NaiveDate,
     actor_user_id: i32,
     summary: impl Fn(NaiveDate) -> String,
 ) -> Result<MaterializeRecurringRequest, String> {
@@ -142,7 +142,7 @@ pub fn materialize_request(
         project_id,
         expected_version: rule.version,
         payload: encrypt_padded_json(key, &advanced)?,
-        due_through: today,
+        due_through: server_date,
         occurrences,
     })
 }

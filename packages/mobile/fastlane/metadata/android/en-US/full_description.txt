@@ -22,6 +22,7 @@ Free, with no ads, no trackers and no cap on expenses or participants. Everythin
 • Recurring expenses like rent or subscriptions: entered once, added every time they fall due
 • Over 150 currencies, converted at the European Commission's monthly rate
 • Statistics by category, by person and month by month
+• Your own categories, each with its emoji, and an emoji for every project
 • History of who added, edited or deleted what
 • Search by name, note or category, run on your device
 • With an account, a personal “My expenses” project: what you spend alone plus your share of your groups, month by month

@@ -9,7 +9,7 @@ use super::amount_input::FocusedAmount;
 /// whichever amount field has focus - the total or any participant row.
 ///
 /// Rendered as the last row of `.modal-box`, below the footer: on phones the box's
-/// `padding-bottom: max(--sab, --kb)` is what puts it directly above the keyboard, so nothing here
+/// keyboard inset (`common::keyboard`) is what puts it directly above the keyboard, so nothing here
 /// positions itself. Each key cancels both `pointerdown` and `mousedown` so the field keeps focus
 /// across the tap, which is also what keeps the keyboard up and this bar on screen. `pointerdown`
 /// alone is enough for Chromium, which then suppresses the compatibility `mousedown`; iOS WebKit

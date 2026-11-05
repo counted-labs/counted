@@ -3,7 +3,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::categories::{normalize, CHART_CATEGORIES};
+use crate::categories::{normalize, ShownCategory};
 use crate::expenses::helpers::project_data::{ProjectData, RowExpense};
 
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
@@ -29,12 +29,12 @@ impl ExpenseQuery {
     }
 
     /// `user_id` is the viewer's participant, `None` before they picked one, when the scope chips
-    /// filter nothing. `label` translates a category id, which the search also matches.
+    /// filter nothing. `label` names a row's category, which the search also matches.
     pub fn select<'a>(
         &self,
         data: &'a ProjectData,
         user_id: Option<i32>,
-        label: impl Fn(&str) -> String,
+        label: impl Fn(&ShownCategory) -> String,
     ) -> Vec<&'a RowExpense> {
         let scoped: Option<HashSet<i32>> = match (self.scope, user_id) {
             (ExpenseFilter::All, _) | (_, None) => None,
@@ -59,21 +59,18 @@ impl ExpenseQuery {
     pub fn search<'a>(
         &self,
         rows: impl Iterator<Item = &'a RowExpense>,
-        label: impl Fn(&str) -> String,
+        label: impl Fn(&ShownCategory) -> String,
     ) -> Vec<&'a RowExpense> {
         let words = self.words();
-        let labels: HashMap<&str, Vec<String>> = if words.is_empty() {
-            HashMap::new()
-        } else {
-            CHART_CATEGORIES.iter().map(|c| (*c, normalize(&label(c)))).collect()
-        };
+        let mut labels: HashMap<ShownCategory, Vec<String>> = HashMap::new();
         rows.filter(|r| {
                 words.is_empty() || {
                     let mut haystack = normalize(&r.expense.name);
                     if let Some(d) = &r.expense.description {
                         haystack.extend(normalize(d));
                     }
-                    haystack.extend(labels.get(r.category).into_iter().flatten().cloned());
+                    let category = labels.entry(r.category.clone()).or_insert_with(|| normalize(&label(&r.category)));
+                    haystack.extend(category.iter().cloned());
                     words.iter().all(|w| haystack.iter().any(|h| h.starts_with(w.as_str())))
                 }
             })
@@ -175,8 +172,11 @@ mod tests {
         )
     }
 
-    fn english(id: &str) -> String {
-        match id {
+    fn english(category: &ShownCategory) -> String {
+        if let Some(name) = &category.name {
+            return name.clone();
+        }
+        match category.id.as_str() {
             "Transport" => "Transport".to_string(),
             "Nourriture" => "Food".to_string(),
             other => other.to_string(),
@@ -192,6 +192,17 @@ mod tests {
 
     fn search(t: &str) -> ExpenseQuery {
         ExpenseQuery { searching: true, text: t.to_string(), ..Default::default() }
+    }
+
+    #[test]
+    fn a_custom_category_is_found_by_its_name() {
+        let k = test_key();
+        let list = serde_json::json!([{ "id": "c-0000000a", "name": "Courses bio", "parent": "Nourriture" }]);
+        let categories = crate::categories::ProjectCategories::from_value(Some(&list));
+        let expense = crate::common::test_fixtures::make_expense_with_category(&k, 1, "Biocoop", "c-0000000a");
+        let rows = [RowExpense::new(crate::decrypted::decrypt_expense(&k, &expense).unwrap(), &categories)];
+        assert_eq!(search("courses").search(rows.iter(), english).len(), 1);
+        assert_eq!(search("food").search(rows.iter(), english).len(), 0);
     }
 
     #[test]

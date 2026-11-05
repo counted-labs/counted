@@ -304,7 +304,7 @@ pub fn ExpenseRow(props: ExpenseRowProps) -> Element {
                 span { class: "size-10 shrink-0 flex items-center justify-center text-2xl leading-none", aria_hidden: "true", "{props.emoji}" }
                 div { class: "flex-1 min-w-0",
                     p { class: "font-medium flex items-center gap-1.5 min-w-0",
-                        span { class: "truncate",
+                        span { class: "line-clamp-2 wrap-anywhere",
                             Marked { text: props.name.clone(), words: props.highlight.clone() }
                         }
                         if props.recurring {

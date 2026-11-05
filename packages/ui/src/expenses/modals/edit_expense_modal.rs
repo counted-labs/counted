@@ -65,7 +65,7 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
                 (ep.name.clone(), ep.date.clone(), ep.amount, etype, ep.category.clone())
             })
             .unwrap_or_else(|| {
-                let today = chrono::Utc::now().naive_utc().date().format("%Y-%m-%d").to_string();
+                let today = crate::common::today_iso();
                 (String::new(), today, 0.0, ExpenseType::Expense, None)
             });
 
@@ -283,6 +283,8 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
 
     rsx! {
         ExpenseForm {
+            categories: categories_of(props.project_id),
+            manage_categories: Some(props.project_id),
             title: tid!("expense-edit-title"),
             submit_label: tid!("save"),
             loading_label: tid!("saving"),
@@ -366,6 +368,15 @@ fn build_editable_expense(
         history,
     })
 }
+
+/// The project's own categories for the picker, when its data is the one loaded.
+fn categories_of(project_id: Uuid) -> crate::categories::ProjectCategories {
+    try_consume_context::<crate::expenses::hooks::use_project_store::ProjectStore>()
+        .and_then(|s| s.data_for(project_id))
+        .map(|d| d.categories.clone())
+        .unwrap_or_default()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

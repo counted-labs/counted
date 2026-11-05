@@ -11,7 +11,8 @@ use shared::{
 
 use crate::common::creator_proof::{keep_creator_secret, new_creator_proof};
 use crate::common::{
-    error_message, update_ls, CurrencyPicker, upsert_project, upsert_project_key, InviteRetry, LocalStorageState,
+    error_message, haptic, project_initial, tile_class, tile_text, update_ls, CurrencyPicker, EmojiGrid, Haptic,
+    upsert_project, upsert_project_key, InviteRetry, LocalStorageState,
 };
 use crate::crypto::{
     claim_token, claim_verifier, decrypt_json, encrypt_padded_json, generate_key, key_to_fragment,
@@ -47,6 +48,8 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
     let prefill = props.prefill.clone();
     let mut project_name = use_signal(|| prefill.as_ref().map(|p| p.name.clone()).unwrap_or_default());
     let mut description = use_signal(String::new);
+    let mut emoji: Signal<Option<String>> = use_signal(|| None);
+    let mut emoji_open = use_signal(|| false);
     // The project's currency is fixed at creation - every amount in it is stored converted into
     // this one, and there is no migration that could re-price an existing ledger, so
     // `EditProjectModal` shows it read-only.
@@ -114,6 +117,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
         error_msg.set(None);
 
         let desc_val = description().trim().to_string();
+        let emoji_val = emoji();
         let currency_val = currency();
         let account = auth_ctx();
         let account_key = account_key_ctx();
@@ -122,13 +126,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
 
         spawn(async move {
             // Encrypt all project fields as a single JSON blob
-            let payload = match encrypt_padded_json(&key, &ProjectPayload {
-                name: name_val.clone(),
-                currency: currency_val.clone(),
-                description: if desc_val.is_empty() { None } else { Some(desc_val.clone()) },
-                status: Some(shared::ProjectStatus::Ongoing),
-                extra: Default::default(),
-            }) {
+            let payload = match encrypt_padded_json(&key, &new_project_payload(&name_val, &currency_val, &desc_val, emoji_val.as_deref())) {
                 Ok(v) => v,
                 Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
             };
@@ -246,6 +244,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
     let taken = taken_names(&me_name(), &[], &[]);
     let invites = invite_count(&drafts.read());
     let ready = can_create(&me_name(), &drafts.read());
+    let (tile, tile_is_emoji) = tile_text(&project_name(), emoji().as_deref());
 
     rsx! {
         div {
@@ -274,19 +273,48 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 }
 
                     div { class: "flex flex-col gap-3",
-                        div {
-                            label { class: "text-xs font-semibold text-base-content/70 block mb-1.5", r#for: "add-project-name", {tid!("add-project-name-label")} }
-                            input {
-                                id: "add-project-name",
-                                class: "input w-full",
-                                r#type: "text",
-                                enterkeyhint: "next",
-                                aria_required: "true",
-                                aria_invalid: if error_msg().is_some() && project_name().trim().is_empty() { "true" },
-                                aria_describedby: if error_msg().is_some() { "add-project-error" },
-                                placeholder: tid!("add-project-name-placeholder"),
-                                value: "{project_name}",
-                                oninput: move |e| project_name.set(e.value()),
+                        div { class: "flex items-end gap-3",
+                            div { class: "flex flex-col items-center shrink-0",
+                                span { class: "text-xs font-semibold text-base-content/70 block mb-1", {tid!("emoji-picker-label")} }
+                                button {
+                                    id: "add-project-emoji",
+                                    r#type: "button",
+                                    class: if emoji_open() { "size-11 flex items-center justify-center rounded-2xl ring-2 ring-primary" } else { "size-11 flex items-center justify-center rounded-2xl" },
+                                    aria_label: format!("{}, {}", tid!("emoji-picker-label"), emoji().unwrap_or_else(|| tid!("emoji-none"))),
+                                    aria_expanded: emoji_open(),
+                                    aria_controls: "add-project-emoji-grid",
+                                    onclick: move |_| {
+                                        haptic(Haptic::Light);
+                                        emoji_open.toggle();
+                                    },
+                                    span { class: "{tile_class(tile_is_emoji)} bg-base-200 text-base-content/70", aria_hidden: "true", "{tile}" }
+                                }
+                            }
+                            div { class: "flex-1 min-w-0",
+                                label { class: "text-xs font-semibold text-base-content/70 block mb-1.5", r#for: "add-project-name", {tid!("add-project-name-label")} }
+                                input {
+                                    id: "add-project-name",
+                                    class: "input w-full",
+                                    r#type: "text",
+                                    enterkeyhint: "next",
+                                    aria_required: "true",
+                                    aria_invalid: if error_msg().is_some() && project_name().trim().is_empty() { "true" },
+                                    aria_describedby: if error_msg().is_some() { "add-project-error" },
+                                    placeholder: tid!("add-project-name-placeholder"),
+                                    value: "{project_name}",
+                                    oninput: move |e| project_name.set(e.value()),
+                                }
+                            }
+                        }
+                        if emoji_open() {
+                            EmojiGrid {
+                                id: "add-project-emoji-grid",
+                                selected: emoji(),
+                                none_preview: Some(project_initial(&project_name())),
+                                onpick: move |picked| {
+                                    emoji.set(picked);
+                                    emoji_open.set(false);
+                                },
                             }
                         }
                         div { class: "flex gap-2",
@@ -392,6 +420,18 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
     }
 }
 
+fn new_project_payload(name: &str, currency: &str, description: &str, emoji: Option<&str>) -> ProjectPayload {
+    let mut payload = ProjectPayload {
+        name: name.to_string(),
+        currency: currency.to_string(),
+        description: if description.is_empty() { None } else { Some(description.to_string()) },
+        status: Some(shared::ProjectStatus::Ongoing),
+        extra: Default::default(),
+    };
+    payload.set_emoji(emoji);
+    payload
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -440,6 +480,14 @@ mod tests {
             payload: encrypt_json(key, &UserPayload { name: name.to_string(), removed: false }).unwrap(),
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn a_new_project_is_born_with_the_picked_emoji_or_none() {
+        let picked = new_project_payload("Ski", "EUR", "", Some("🎿"));
+        assert_eq!(picked.emoji().as_deref(), Some("🎿"));
+        assert_eq!(picked.description, None);
+        assert_eq!(new_project_payload("Ski", "EUR", "Tignes", None).extra.get("emoji"), None);
     }
 
     #[test]

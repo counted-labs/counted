@@ -8,8 +8,9 @@ use std::collections::VecDeque;
 use uuid::Uuid;
 
 use crate::common::{
-    error_message, identity_locked, update_ls, update_project_fresh, write_queue, Flash,
-    InviteRetry, LocalStorageState, OpKind, ProjectEdit, ProjectKey, QueuedOp,
+    error_message, haptic, identity_locked, project_initial, update_ls, update_project_fresh, write_queue,
+    EmojiGrid, Flash, Haptic, InviteRetry, LocalStorageState, OpKind, ProjectEdit, ProjectKey, ProjectTile,
+    QueuedOp,
 };
 use std::collections::HashSet;
 use crate::crypto::{decrypt_json, encrypt_json, encrypt_padded_json};
@@ -63,6 +64,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
         .as_ref()
         .and_then(|p| p.description.clone())
         .unwrap_or_default();
+    let initial_emoji = initial_project.as_ref().and_then(|p| p.emoji());
     let displayed_currency = initial_project
         .as_ref()
         .map(|p| p.currency.clone())
@@ -74,6 +76,8 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
 
     let mut name = use_signal(|| initial_name.clone());
     let mut description = use_signal(|| initial_description.clone());
+    let mut emoji = use_signal(|| initial_emoji.clone());
+    let mut emoji_open = use_signal(|| false);
     // Existing users stored as decrypted so display and comparison work directly
     let mut existing_users: Signal<Vec<DecryptedUser>> =
         use_signal(|| initial_users.iter().filter(|u| !u.removed).cloned().collect());
@@ -82,6 +86,10 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
         use_signal(|| initial_users.iter().filter(|u| u.removed).cloned().collect());
     let mut drafts: Signal<Vec<DraftParticipant>> = use_signal(Vec::new);
     let mut member_sheet: Signal<Option<i32>> = use_signal(|| None);
+    let mut categories_now = use_signal(|| {
+        initial_project.as_ref().map(crate::categories::ProjectCategories::from_payload).unwrap_or_default()
+    });
+    let mut managing_categories = use_signal(|| false);
     let mut stepped_down = use_signal(|| false);
     let mut loading = use_signal(|| false);
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
@@ -142,6 +150,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
         let desc_val = description();
         let desc: Option<String> =
             if desc_val.trim().is_empty() { None } else { Some(desc_val.trim().to_string()) };
+        let new_emoji = emoji_change(&initial_emoji, &emoji());
 
         let current_existing = existing_users();
         let current_removed = removed_users();
@@ -213,10 +222,20 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                 Ok(v) => v,
                 Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
             };
+            let sealed_emoji = match new_emoji.as_ref().map(|e| encrypt_json(&key, e)).transpose() {
+                Ok(v) => v,
+                Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
+            };
             pending_ops.write().push_back(QueuedOp::new(
                 Uuid::new_v4(),
                 &name_val,
-                OpKind::EditProject(ProjectEdit { project_id, name_description: Some(sealed), status: None, history }),
+                OpKind::EditProject(ProjectEdit {
+                    project_id,
+                    name_description: Some(sealed),
+                    status: None,
+                    history,
+                    emoji: sealed_emoji,
+                }),
             ));
             write_queue(&pending_ops.read());
             // Warn about anything that can't be applied offline.
@@ -243,7 +262,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             let edit = |stored: &ProjectDto| {
                 Ok(EditableProject {
                     id: project_id,
-                    payload: Some(edited_project_payload(&key, stored, &name_val, desc.clone())?),
+                    payload: Some(edited_project_payload(&key, stored, &name_val, desc.clone(), new_emoji.as_ref().map(|e| e.as_deref()))?),
                     status: None,
                     history: history.clone(),
                     expected_iv: None,
@@ -458,17 +477,46 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                 div { class: "flex-1 overflow-y-auto px-6 py-4",
                 div { class: "flex flex-col gap-5",
                     div { class: "flex flex-col gap-3",
-                        div {
-                            label { class: "text-xs font-semibold text-base-content/70 block mb-1.5", r#for: "edit-project-name", {tid!("add-project-name-label")} }
-                            input {
-                                id: "edit-project-name",
-                                class: "input w-full",
-                                r#type: "text",
-                                enterkeyhint: "next",
-                                aria_invalid: if error_msg().is_some() && name().trim().is_empty() { "true" },
-                                aria_describedby: if error_msg().is_some() { "edit-project-error" },
-                                value: "{name}",
-                                oninput: move |e| name.set(e.value()),
+                        div { class: "flex items-end gap-3",
+                            div { class: "flex flex-col items-center shrink-0",
+                                span { class: "text-xs font-semibold text-base-content/70 block mb-1", {tid!("emoji-picker-label")} }
+                                button {
+                                    id: "edit-project-emoji",
+                                    r#type: "button",
+                                    class: if emoji_open() { "size-11 flex items-center justify-center rounded-2xl ring-2 ring-primary" } else { "size-11 flex items-center justify-center rounded-2xl" },
+                                    aria_label: format!("{}, {}", tid!("emoji-picker-label"), emoji().unwrap_or_else(|| tid!("emoji-none"))),
+                                    aria_expanded: emoji_open(),
+                                    aria_controls: "edit-project-emoji-grid",
+                                    onclick: move |_| {
+                                        haptic(Haptic::Light);
+                                        emoji_open.toggle();
+                                    },
+                                    ProjectTile { name: name(), id: project_id, emoji: emoji() }
+                                }
+                            }
+                            div { class: "flex-1 min-w-0",
+                                label { class: "text-xs font-semibold text-base-content/70 block mb-1.5", r#for: "edit-project-name", {tid!("add-project-name-label")} }
+                                input {
+                                    id: "edit-project-name",
+                                    class: "input w-full",
+                                    r#type: "text",
+                                    enterkeyhint: "next",
+                                    aria_invalid: if error_msg().is_some() && name().trim().is_empty() { "true" },
+                                    aria_describedby: if error_msg().is_some() { "edit-project-error" },
+                                    value: "{name}",
+                                    oninput: move |e| name.set(e.value()),
+                                }
+                            }
+                        }
+                        if emoji_open() {
+                            EmojiGrid {
+                                id: "edit-project-emoji-grid",
+                                selected: emoji(),
+                                none_preview: Some(project_initial(&name())),
+                                onpick: move |picked| {
+                                    emoji.set(picked);
+                                    emoji_open.set(false);
+                                },
                             }
                         }
                         div { class: "grid grid-cols-[minmax(0,1fr)_7rem] gap-2",
@@ -497,6 +545,25 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                                 }
                             }
                         }
+                    }
+
+                    button {
+                        id: "edit-project-categories",
+                        r#type: "button",
+                        class: "flex items-center gap-3 px-3 py-2.5 min-h-13 rounded-box bg-base-200 text-left",
+                        aria_haspopup: "dialog",
+                        onclick: move |_| {
+                            crate::common::haptic(crate::common::Haptic::Light);
+                            managing_categories.set(true);
+                        },
+                        span { class: "text-xl", aria_hidden: "true", "🏷️" }
+                        span { class: "flex-1 min-w-0 flex flex-col",
+                            span { class: "font-semibold", {tid!("categories-title")} }
+                            span { class: "text-xs text-base-content/70 truncate",
+                                {crate::expenses::category_manager::summary_text(&categories_now.read())}
+                            }
+                        }
+                        crate::icons::ChevronRightIcon { size: ICON_INLINE }
                     }
 
                     div { class: "flex flex-col gap-2",
@@ -683,6 +750,14 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                 on_close: move |_| member_sheet.set(None),
             }
         }
+        if managing_categories() {
+            crate::expenses::category_manager::CategoryManager {
+                project_id,
+                initial: categories_now(),
+                on_close: move |_| managing_categories.set(false),
+                on_changed: move |next| categories_now.set(next),
+            }
+        }
     }
 }
 
@@ -806,17 +881,27 @@ fn SavedRow(props: SavedRowProps) -> Element {
     }
 }
 
-/// `stored` with the name and description the form owns. Everything else - currency, status and
-/// fields from newer builds - is kept as stored.
+/// `Some` only when the user changed it, so a save leaves alone an emoji another member set since
+/// this sheet opened.
+fn emoji_change(initial: &Option<String>, current: &Option<String>) -> Option<Option<String>> {
+    (initial != current).then(|| current.clone())
+}
+
+/// `stored` with the name and description the form owns, and the emoji when it changed. Everything
+/// else - currency, status and fields from newer builds - is kept as stored.
 fn edited_project_payload(
     key: &[u8; 32],
     stored: &ProjectDto,
     name: &str,
     description: Option<String>,
+    emoji: Option<Option<&str>>,
 ) -> Result<shared::EncryptedPair, String> {
     let mut payload: ProjectPayload = decrypt_json(key, &stored.payload)?;
     payload.name = name.to_string();
     payload.description = description;
+    if let Some(emoji) = emoji {
+        payload.set_emoji(emoji);
+    }
     encrypt_padded_json(key, &payload)
 }
 
@@ -864,7 +949,7 @@ mod tests {
             ..crate::common::test_fixtures::make_project(&key, Uuid::nil(), "x", "EUR")
         };
 
-        let pair = edited_project_payload(&key, &project, "Flat", None).unwrap();
+        let pair = edited_project_payload(&key, &project, "Flat", None, None).unwrap();
 
         let edited: serde_json::Value = decrypt_json(&key, &pair).unwrap();
         assert_eq!(
@@ -873,6 +958,39 @@ mod tests {
                 "name": "Flat", "currency": "CHF", "status": "closed", "finance": { "budgets": [] },
             })
         );
+    }
+
+    #[test]
+    fn saving_the_emoji_keeps_every_other_field() {
+        let key = test_key();
+        let stored: ProjectPayload = serde_json::from_value(serde_json::json!({
+            "name": "Coloc", "currency": "CHF", "emoji": "🏠", "budgets": { "monthly": { "Nourriture": 300.0 } },
+        }))
+        .unwrap();
+        let project = ProjectDto {
+            payload: encrypt_json(&key, &stored).unwrap(),
+            ..crate::common::test_fixtures::make_project(&key, Uuid::nil(), "x", "EUR")
+        };
+        let edited = |emoji| -> serde_json::Value {
+            decrypt_json(&key, &edited_project_payload(&key, &project, "Coloc", None, emoji).unwrap()).unwrap()
+        };
+
+        assert_eq!(
+            edited(Some(Some("🏡"))),
+            serde_json::json!({
+                "name": "Coloc", "currency": "CHF", "emoji": "🏡", "budgets": { "monthly": { "Nourriture": 300.0 } },
+            })
+        );
+        assert_eq!(edited(Some(None)).get("emoji"), None, "back to the initial");
+        assert_eq!(edited(None)["emoji"], "🏠", "untouched, it stays as stored");
+    }
+
+    #[test]
+    fn only_a_changed_emoji_is_written() {
+        let island = Some("🏝️".to_string());
+        assert_eq!(emoji_change(&island, &island), None);
+        assert_eq!(emoji_change(&None, &island), Some(island.clone()));
+        assert_eq!(emoji_change(&island, &None), Some(None));
     }
 
     fn make_creatable_user(

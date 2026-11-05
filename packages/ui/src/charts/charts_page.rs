@@ -1,6 +1,6 @@
 use api::projects::projects_controller::get_projects_by_ids;
 use api::users::users_controller::get_users_by_project_id;
-use chrono::{Datelike, Local, NaiveDate};
+use chrono::{Datelike, NaiveDate};
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use shared::{BatchProject, Expense, ExpenseType, Payment, ProjectPayload, ProjectSync, NO_CACHED_VERSION};
@@ -14,11 +14,11 @@ use super::cards::{
 use super::model::{
     aggregate_by_category, auto_bucket, average, balance_by_bucket, bucket_count, bucket_starts, category_shares, currencies, expense_count, filter_by_date_range, fold_categories,
     in_projects, paid_vs_share, per_person, running_total, sum_by_bucket, sum_by_expense, sum_over,
-    total_spend, totals_by_project, with_my_share, Bucket, ProjectInfo, Scope, MAX_BUCKETS, OTHER,
+    total_spend, totals_by_project, with_my_share, Bucket, ChartCategories, ProjectInfo, Scope, MAX_BUCKETS, OTHER,
 };
 use super::primitives::{Column, EmptyState, Segment, Segmented};
 use super::svg::label_every;
-use crate::categories::get_expense_category;
+use crate::categories::{ProjectCategories, ShownCategory};
 use crate::common::{
     format_date, initials, key_of, month_abbrev, pending, project_key, read_from_ls, user_color_class,
     AppHeader, DropdownButton, DropdownItem, LocalStorageProject, PullToRefresh,
@@ -34,7 +34,7 @@ use crate::expenses::helpers::my_spending::sync_all;
 use crate::route::Route;
 use crate::tid;
 
-pub fn export_csv_string(expenses: &[DecryptedExpense], users: &[DecryptedUser]) -> String {
+pub fn export_csv_string(expenses: &[DecryptedExpense], users: &[DecryptedUser], categories: &ChartCategories) -> String {
     // Machine-readable header and type values, deliberately not translated: a CSV whose columns
     // rename themselves per UI language cannot be reimported or diffed against an older export.
     let mut out = format!("{CSV_BOM}date,name,category,amount,author,type,description\n");
@@ -53,7 +53,7 @@ pub fn export_csv_string(expenses: &[DecryptedExpense], users: &[DecryptedUser])
             "{},{},{},{:.2},{},{},{}\n",
             csv_field(&e.date),
             csv_field(&e.name),
-            get_expense_category(e),
+            csv_field(&categories.unrolled(e).export_label()),
             e.amount,
             csv_field(author),
             etype,
@@ -69,6 +69,7 @@ struct ChartData {
     payments: Vec<DecryptedPayment>,
     my_share: HashMap<i32, f64>,
     my_paid: HashMap<i32, f64>,
+    categories: HashMap<Uuid, ProjectCategories>,
     /// Projects whose payments could not be read, or where I am nobody: their expenses are
     /// loaded but carry no share, so the headline says it is short.
     left_out: usize,
@@ -98,7 +99,7 @@ fn apply_period(
     mut preset: Signal<&'static str>,
     earliest: Option<NaiveDate>,
 ) {
-    let now = Local::now().date_naive();
+    let now = crate::common::local_today();
     match value {
         "all" => {
             date_from.set(earliest);
@@ -220,6 +221,8 @@ async fn load_data(project_filter: Option<Uuid>) -> ChartData {
         };
         let (decrypted_expenses, decrypted): (_, Vec<DecryptedPayment>) =
             decrypt_ledger(&key, &expenses, &payments);
+        let payload = sync.project.as_ref().and_then(|d| decrypt_json::<ProjectPayload>(&key, &d.payload).ok());
+        data.categories.insert(p.project_id, payload.as_ref().map(ProjectCategories::from_payload).unwrap_or_default());
         data.expenses.extend(decrypted_expenses);
         match p.user_id {
             Some(user_id) => {
@@ -257,7 +260,7 @@ pub fn ChartsPage() -> Element {
     let mut scope = use_signal(|| Scope::Me);
     let mut chosen_currency: Signal<Option<String>> = use_signal(|| None);
     let mut chosen_bucket: Signal<Option<Bucket>> = use_signal(|| None);
-    let mut trend_category: Signal<Option<&'static str>> = use_signal(|| None);
+    let mut trend_category: Signal<Option<ShownCategory>> = use_signal(|| None);
 
     let projects = use_resource(load_projects);
     let data = use_resource(move || load_data(selected_project()));
@@ -267,7 +270,7 @@ pub fn ChartsPage() -> Element {
     use_effect(move || {
         if let Some(d) = data.read().as_ref() {
             date_from.set(earliest_date(&d.expenses));
-            date_to.set(Some(Local::now().date_naive()));
+            date_to.set(Some(crate::common::local_today()));
             preset.set("all");
             chosen_bucket.set(None);
         }
@@ -279,11 +282,12 @@ pub fn ChartsPage() -> Element {
             return;
         };
         let users = users.read().as_ref().cloned().unwrap_or_default();
-        let csv = export_csv_string(&filter_by_date_range(&d.expenses, date_from(), date_to()), &users);
+        let categories = ChartCategories { projects: d.categories.clone(), roll_up: false };
+        let csv = export_csv_string(&filter_by_date_range(&d.expenses, date_from(), date_to()), &users, &categories);
         crate::expenses::helpers::export::trigger_download(&csv, "depenses.csv", "text/csv;charset=utf-8");
     };
 
-    let today = Local::now().date_naive();
+    let today = crate::common::local_today();
     let projects_list = projects.read().as_ref().cloned().unwrap_or_default();
     let all_mode = selected_project().is_none();
     let selected_info = selected_project().and_then(|id| projects_list.iter().find(|p| p.id == id).cloned());
@@ -424,6 +428,7 @@ pub fn ChartsPage() -> Element {
                     let group_total = total_spend(&group);
                     let mine = with_my_share(&group, &d.my_share);
                     let chart_expenses = if effective_scope == Scope::Me { mine.clone() } else { group.clone() };
+                    let lens = ChartCategories { projects: d.categories.clone(), roll_up: all_mode };
                     let users = users.read().as_ref().cloned().unwrap_or_default();
                     let from = date_from().or_else(|| earliest_date(&group)).unwrap_or(today);
                     let to = date_to().unwrap_or(today).max(from);
@@ -478,12 +483,12 @@ pub fn ChartsPage() -> Element {
                             } else {
                                 match active_tab() {
                                     Tab::Categories => {
-                                        let slices = fold_categories(&aggregate_by_category(&chart_expenses));
+                                        let slices = fold_categories(&aggregate_by_category(&chart_expenses, &lens), &lens.other());
                                         rsx! {
                                             if effective_scope == Scope::Me {
-                                                CategoryShareCard { rows: category_shares(&group, &d.my_share), currency: currency.clone() }
+                                                CategoryShareCard { rows: category_shares(&group, &d.my_share, &lens), currency: currency.clone() }
                                             }
-                                            CategoryBreakdownCard { slices, expenses: chart_expenses.clone(), currency: currency.clone() }
+                                            CategoryBreakdownCard { slices, expenses: chart_expenses.clone(), currency: currency.clone(), lens: lens.clone() }
                                         }
                                     }
                                     Tab::People if all_mode => {
@@ -524,14 +529,14 @@ pub fn ChartsPage() -> Element {
                                         let spend_starts = bucket_starts(from, to, spend_bucket);
                                         let spend = sum_by_bucket(&chart_expenses, &spend_starts, spend_bucket);
                                         let spend_labels = axis_labels(&spend_starts, spend_bucket);
-                                        let categories: Vec<&'static str> = aggregate_by_category(&chart_expenses).into_iter().map(|(c, _)| c).collect();
+                                        let categories: Vec<ShownCategory> = aggregate_by_category(&chart_expenses, &lens).into_iter().map(|(c, _)| c).collect();
                                         let category = trend_category()
                                             .filter(|c| categories.contains(c))
-                                            .or_else(|| categories.iter().find(|c| **c != OTHER).copied())
-                                            .unwrap_or(OTHER);
+                                            .or_else(|| categories.iter().find(|c| c.id != OTHER).cloned())
+                                            .unwrap_or_else(|| lens.other());
                                         let starts = bucket_starts(from, to, auto);
                                         let labels = axis_labels(&starts, auto);
-                                        let in_category: Vec<DecryptedExpense> = chart_expenses.iter().filter(|e| get_expense_category(e) == category).cloned().collect();
+                                        let in_category: Vec<DecryptedExpense> = chart_expenses.iter().filter(|e| lens.of(e) == category).cloned().collect();
                                         let category_values = sum_by_bucket(&in_category, &starts, auto);
                                         let totals = sum_by_bucket(&chart_expenses, &starts, auto);
                                         rsx! {
@@ -580,7 +585,7 @@ pub fn ChartsPage() -> Element {
 }
 
 #[cfg(any(test, fuzzing))]
-pub(crate) fn exercise_hostile(expenses: Vec<Expense>, payments: Vec<shared::Payment>, users: Vec<shared::User>, me: i32, from: Option<NaiveDate>, to: Option<NaiveDate>) {
+pub(crate) fn exercise_hostile(expenses: Vec<Expense>, payments: Vec<shared::Payment>, users: Vec<shared::User>, me: i32, from: Option<NaiveDate>, to: Option<NaiveDate>, project: ProjectPayload) {
     use super::model::{aggregate_by_category, expenses_in_category, folded_category, percent};
     use crate::common::test_fixtures::TEST_KEY;
 
@@ -606,26 +611,33 @@ pub(crate) fn exercise_hostile(expenses: Vec<Expense>, payments: Vec<shared::Pay
         let _ = (running_total(&spend), average(&spend));
         let _ = balance_by_bucket(&expenses, &payments, me, &starts, auto);
     }
-    for set in [&group, &mine] {
-        let slices = fold_categories(&aggregate_by_category(set));
-        for (category, _) in &slices {
-            let _ = expenses_in_category(set, category, &slices);
+    let categories = HashMap::from([(Uuid::nil(), ProjectCategories::from_payload(&project))]);
+    for roll_up in [false, true] {
+        let lens = ChartCategories { projects: categories.clone(), roll_up };
+        for set in [&group, &mine] {
+            let slices = fold_categories(&aggregate_by_category(set, &lens), &lens.other());
+            assert!(slices.len() <= super::model::TOP_CATEGORIES + 1);
+            for (category, _) in &slices {
+                let _ = (expenses_in_category(set, category, &slices, &lens), category.color(), super::model::is_child(category, &slices));
+                assert!(category.name.as_ref().is_none_or(|n| n.chars().count() <= crate::categories::custom::MAX_NAME_CHARS));
+                assert!(shared::emoji::is_allowed_emoji(&category.emoji));
+            }
+            for e in set.iter() {
+                let _ = folded_category(e, &slices, &lens);
+            }
         }
-        for e in set.iter() {
-            let _ = folded_category(e, &slices);
-        }
+        let _ = category_shares(&group, &my_share, &lens);
     }
-    let _ = category_shares(&group, &my_share);
+    let lens = ChartCategories { projects: categories, roll_up: false };
     let _ = paid_vs_share(&group, &payments);
     let project = ProjectInfo { id: Uuid::nil(), name: "p".into(), currency: "EUR".into(), my_user_id: Some(me) };
     let _ = totals_by_project(&mine, &[project]);
-    let _ = export_csv_string(&group, &users);
+    let _ = export_csv_string(&group, &users, &lens);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::categories::get_expense_category;
     use crate::charts::model::aggregate_by_category;
     use crate::common::test_fixtures::{make_expense as make_row, make_payment, test_key};
     use chrono::NaiveDateTime;
@@ -649,6 +661,7 @@ mod tests {
             expenses: rows,
             recurring: None,
             server_date: None,
+            server_time: None,
             rotated: None,
         }
     }
@@ -691,7 +704,7 @@ mod tests {
     }
 
     fn category_of(name: &str) -> &'static str {
-        get_expense_category(&make_expense(name, 0.0, ExpenseType::Expense, Some(1)))
+        ChartCategories::default().of(&make_expense(name, 0.0, ExpenseType::Expense, Some(1))).parent
     }
 
     #[test]
@@ -717,10 +730,11 @@ mod tests {
     #[test]
     fn stored_category_takes_priority_unless_unknown() {
         let mut e = make_expense("pizza", 10.0, ExpenseType::Expense, Some(1));
+        let lens = ChartCategories::default();
         e.category = Some("Loisirs".to_string());
-        assert_eq!(get_expense_category(&e), "Loisirs");
+        assert_eq!(lens.of(&e).id, "Loisirs");
         e.category = Some("UnknownCategory".to_string());
-        assert_eq!(get_expense_category(&e), "Nourriture");
+        assert_eq!(lens.of(&e).id, "Nourriture");
     }
 
     #[test]
@@ -731,7 +745,7 @@ mod tests {
             make_expense("transfer", 100.0, ExpenseType::Transfer, Some(1)),
             make_expense("refund", 50.0, ExpenseType::Gain, Some(1)),
         ];
-        assert_eq!(aggregate_by_category(&expenses), vec![("Nourriture", 50.0)]);
+        assert_eq!(aggregate_by_category(&expenses, &ChartCategories::default()), vec![(ShownCategory::builtin("Nourriture"), 50.0)]);
     }
 
     #[test]
@@ -752,7 +766,7 @@ mod tests {
 
     #[test]
     fn export_csv_renders_removed_author_as_blank() {
-        let csv = export_csv_string(&[make_expense("orphan", 10.0, ExpenseType::Expense, None)], &[]);
+        let csv = export_csv_string(&[make_expense("orphan", 10.0, ExpenseType::Expense, None)], &[], &ChartCategories::default());
         let row = csv.lines().nth(1).unwrap();
         assert!(row.contains("orphan"), "{row}");
         assert!(row.contains(",,"), "author column must be blank: {row}");
@@ -760,23 +774,34 @@ mod tests {
 
     #[test]
     fn export_csv_comma_in_name_is_quoted() {
-        let csv = export_csv_string(&[make_expense("Bière, frites", 12.0, ExpenseType::Expense, Some(1))], &[]);
+        let csv = export_csv_string(&[make_expense("Bière, frites", 12.0, ExpenseType::Expense, Some(1))], &[], &ChartCategories::default());
         assert!(csv.contains("\"Bière, frites\""));
     }
 
     #[test]
     fn export_csv_has_header() {
-        assert!(export_csv_string(&[], &[]).starts_with("\u{feff}date,name,category,amount,author,type,description\n"));
+        assert!(export_csv_string(&[], &[], &ChartCategories::default()).starts_with("\u{feff}date,name,category,amount,author,type,description\n"));
     }
 
     #[test]
     fn export_csv_one_row() {
         let mut e = make_expense("Dîner", 45.5, ExpenseType::Expense, Some(1));
         e.date = "2025-06-15".to_string();
-        let csv = export_csv_string(&[e], &[]);
+        let csv = export_csv_string(&[e], &[], &ChartCategories::default());
         for part in ["2025-06-15", "Dîner", "45.50", "expense"] {
             assert!(csv.contains(part), "{part} in {csv}");
         }
+    }
+
+    #[test]
+    fn export_csv_writes_a_custom_category_by_its_name_and_guards_formulas() {
+        let mut e = make_expense("Biocoop", 9.0, ExpenseType::Expense, Some(1));
+        e.category = Some("c-0000000a".into());
+        let list = serde_json::json!([{ "id": "c-0000000a", "name": "=Bio", "parent": "Nourriture" }]);
+        let lens = ChartCategories { projects: HashMap::from([(Uuid::nil(), ProjectCategories::from_value(Some(&list)))]), roll_up: true };
+        let csv = export_csv_string(&[e], &[], &lens);
+        assert!(csv.contains("'=Bio") || csv.contains("\"'=Bio\""), "{csv}");
+        assert!(!csv.contains("c-0000000a"), "{csv}");
     }
     #[test]
     fn an_expense_dated_at_the_calendar_floor_charts_by_week() {
@@ -797,8 +822,8 @@ mod tests {
             #![proptest_config(ProptestConfig::with_cases(300))]
 
             #[test]
-            fn any_ledger_charts(expenses in hostile::expenses(), payments in hostile::payments(), users in hostile::users(), me in hostile::id(), from in proptest::option::of(hostile::date()), to in proptest::option::of(hostile::date())) {
-                crate::charts::charts_page::exercise_hostile(expenses, payments, users, me, from, to);
+            fn any_ledger_charts(expenses in hostile::expenses(), payments in hostile::payments(), users in hostile::users(), me in hostile::id(), from in proptest::option::of(hostile::date()), to in proptest::option::of(hostile::date()), project in hostile::project_payload()) {
+                crate::charts::charts_page::exercise_hostile(expenses, payments, users, me, from, to, project);
             }
         }
     }

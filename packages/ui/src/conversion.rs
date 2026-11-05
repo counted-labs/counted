@@ -438,6 +438,7 @@ mod tests {
             payments,
             recurring: Some(vec![]),
             server_date: None,
+            server_time: None,
             rotated: None,
         }
     }

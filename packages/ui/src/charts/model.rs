@@ -3,10 +3,10 @@ use shared::ExpenseType;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
-use crate::categories::get_expense_category;
+use crate::categories::{ProjectCategories, ShownCategory};
 use crate::decrypted::{DecryptedExpense, DecryptedPayment};
 
-pub const OTHER: &str = "Autres";
+pub const OTHER: &str = crate::categories::custom::OTHER;
 pub const TOP_CATEGORIES: usize = 5;
 pub const MAX_BUCKETS: usize = 62;
 
@@ -123,67 +123,117 @@ pub fn sum_over(expenses: &[DecryptedExpense], by_expense: &HashMap<i32, f64>) -
     expenses.iter().filter(|e| is_expense(e)).filter_map(|e| by_expense.get(&e.id)).sum()
 }
 
-pub fn aggregate_by_category(expenses: &[DecryptedExpense]) -> Vec<(&'static str, f64)> {
-    let mut map: HashMap<&'static str, f64> = HashMap::new();
-    for e in expenses.iter().filter(|e| is_expense(e)) {
-        *map.entry(get_expense_category(e)).or_default() += e.amount;
+/// Each project's own categories, by project. Across projects every category rolls up into its
+/// built-in parent: two groups that each have a "Courses" are not two slices of the same name.
+#[derive(Clone, PartialEq, Debug, Default)]
+pub struct ChartCategories {
+    pub projects: HashMap<Uuid, ProjectCategories>,
+    pub roll_up: bool,
+}
+
+impl ChartCategories {
+    pub fn of(&self, e: &DecryptedExpense) -> ShownCategory {
+        let shown = self.unrolled(e);
+        if self.roll_up { shown.rolled_up() } else { shown }
     }
-    let mut result: Vec<(&'static str, f64)> = map.into_iter().collect();
-    sort_desc(&mut result);
+
+    pub fn unrolled(&self, e: &DecryptedExpense) -> ShownCategory {
+        match self.projects.get(&e.project_id) {
+            Some(c) => c.resolve(e.category.as_deref(), &e.name),
+            None => ProjectCategories::default().resolve(e.category.as_deref(), &e.name),
+        }
+    }
+
+    pub fn other(&self) -> ShownCategory {
+        match self.projects.values().next() {
+            Some(c) if !self.roll_up && self.projects.len() == 1 => c.shown_builtin(OTHER),
+            _ => ShownCategory::builtin(OTHER),
+        }
+    }
+}
+
+fn by_value(a: &(ShownCategory, f64), b: &(ShownCategory, f64)) -> std::cmp::Ordering {
+    b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal).then_with(|| a.0.cmp(&b.0))
+}
+
+pub fn aggregate_by_category(expenses: &[DecryptedExpense], lens: &ChartCategories) -> Vec<(ShownCategory, f64)> {
+    let mut map: HashMap<ShownCategory, f64> = HashMap::new();
+    for e in expenses.iter().filter(|e| is_expense(e)) {
+        *map.entry(lens.of(e)).or_default() += e.amount;
+    }
+    let mut result: Vec<(ShownCategory, f64)> = map.into_iter().collect();
+    result.sort_by(by_value);
     result
 }
 
-/// The five largest categories, then everything else as one `OTHER` slice, last.
-pub fn fold_categories(data: &[(&'static str, f64)]) -> Vec<(&'static str, f64)> {
+/// The five largest categories, then everything else as one `other` slice, last. A custom
+/// category follows its parent when both are shown.
+pub fn fold_categories(data: &[(ShownCategory, f64)], other: &ShownCategory) -> Vec<(ShownCategory, f64)> {
     let mut sorted = data.to_vec();
-    sort_desc(&mut sorted);
-    let mut kept: Vec<(&'static str, f64)> =
-        sorted.iter().take(TOP_CATEGORIES).filter(|(k, _)| *k != OTHER).copied().collect();
-    let other: f64 = sorted.iter().filter(|(k, _)| !kept.iter().any(|(c, _)| c == k)).map(|(_, v)| v).sum();
-    if other > 0.0 {
-        kept.push((OTHER, other));
+    sorted.sort_by(by_value);
+    let kept: Vec<(ShownCategory, f64)> =
+        sorted.iter().take(TOP_CATEGORIES).filter(|(k, _)| k != other).cloned().collect();
+    let rest: f64 = sorted.iter().filter(|(k, _)| !kept.iter().any(|(c, _)| c == k)).map(|(_, v)| v).sum();
+    let mut out: Vec<(ShownCategory, f64)> = Vec::new();
+    for (category, value) in kept.iter().filter(|(c, _)| !is_child(c, &kept)) {
+        out.push((category.clone(), *value));
+        if !category.is_custom() {
+            out.extend(kept.iter().filter(|(c, _)| is_child(c, &kept) && c.parent == category.id).cloned());
+        }
     }
-    kept
+    if rest > 0.0 {
+        out.push((other.clone(), rest));
+    }
+    out
 }
 
-pub fn folded_category(expense: &DecryptedExpense, shown: &[(&'static str, f64)]) -> &'static str {
-    let category = get_expense_category(expense);
+/// Whether the legend draws `category` indented under its parent.
+pub fn is_child(category: &ShownCategory, slices: &[(ShownCategory, f64)]) -> bool {
+    category.is_custom() && slices.iter().any(|(p, _)| !p.is_custom() && p.id == category.parent)
+}
+
+pub fn folded_category(expense: &DecryptedExpense, shown: &[(ShownCategory, f64)], lens: &ChartCategories) -> ShownCategory {
+    let category = lens.of(expense);
     if shown.iter().any(|(c, _)| *c == category) {
         category
     } else {
-        OTHER
+        lens.other()
     }
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct CategoryShare {
-    pub category: &'static str,
+    pub category: ShownCategory,
     pub mine: f64,
     pub group: f64,
 }
 
-pub fn category_shares(group: &[DecryptedExpense], my_share: &HashMap<i32, f64>) -> Vec<CategoryShare> {
-    let shown = fold_categories(&aggregate_by_category(group));
-    let mut mine: HashMap<&'static str, f64> = HashMap::new();
+pub fn category_shares(group: &[DecryptedExpense], my_share: &HashMap<i32, f64>, lens: &ChartCategories) -> Vec<CategoryShare> {
+    let shown = fold_categories(&aggregate_by_category(group, lens), &lens.other());
+    let mut mine: HashMap<ShownCategory, f64> = HashMap::new();
     for e in group.iter().filter(|e| is_expense(e)) {
         if let Some(share) = my_share.get(&e.id) {
-            *mine.entry(folded_category(e, &shown)).or_default() += share;
+            *mine.entry(folded_category(e, &shown, lens)).or_default() += share;
         }
     }
     shown
         .into_iter()
-        .map(|(category, group)| CategoryShare { category, mine: mine.get(category).copied().unwrap_or(0.0), group })
+        .map(|(category, group)| {
+            let mine = mine.get(&category).copied().unwrap_or(0.0);
+            CategoryShare { category, mine, group }
+        })
         .collect()
 }
 
 /// Newest first.
 pub fn expenses_in_category(
     expenses: &[DecryptedExpense],
-    category: &str,
-    shown: &[(&'static str, f64)],
+    category: &ShownCategory,
+    shown: &[(ShownCategory, f64)],
+    lens: &ChartCategories,
 ) -> Vec<DecryptedExpense> {
     let mut out: Vec<DecryptedExpense> =
-        expenses.iter().filter(|e| is_expense(e) && folded_category(e, shown) == category).cloned().collect();
+        expenses.iter().filter(|e| is_expense(e) && folded_category(e, shown, lens) == *category).cloned().collect();
     out.sort_by(|a, b| b.date.cmp(&a.date).then(b.id.cmp(&a.id)));
     out
 }
@@ -535,7 +585,7 @@ mod tests {
 
     #[test]
     fn fold_keeps_five_then_other_last() {
-        let data = [
+        let data: Vec<(ShownCategory, f64)> = [
             ("Nourriture", 60.0),
             ("Autres", 50.0),
             ("Transport", 40.0),
@@ -543,9 +593,12 @@ mod tests {
             ("Loisirs", 20.0),
             ("Shopping", 10.0),
             ("Services", 5.0),
-        ];
-        let folded = fold_categories(&data);
-        let names: Vec<_> = folded.iter().map(|(k, _)| *k).collect();
+        ]
+        .into_iter()
+        .map(|(c, v)| (ShownCategory::builtin(crate::categories::custom::builtin_id(c).unwrap()), v))
+        .collect();
+        let folded = fold_categories(&data, &ShownCategory::builtin(OTHER));
+        let names: Vec<_> = folded.iter().map(|(k, _)| k.id.as_str()).collect();
         assert_eq!(names, ["Nourriture", "Transport", "Hébergement", "Loisirs", "Autres"]);
         assert_eq!(folded.last().unwrap().1, 65.0);
         assert_eq!(folded.iter().map(|(_, v)| v).sum::<f64>(), 215.0);
@@ -555,9 +608,47 @@ mod tests {
     fn category_shares_split_mine_from_the_group() {
         let group = [expense(1, 100.0, "2026-01-01", "Nourriture"), expense(2, 60.0, "2026-01-01", "Transport")];
         let share = HashMap::from([(1, 25.0)]);
-        let rows = category_shares(&group, &share);
-        assert_eq!(rows[0], CategoryShare { category: "Nourriture", mine: 25.0, group: 100.0 });
-        assert_eq!(rows[1], CategoryShare { category: "Transport", mine: 0.0, group: 60.0 });
+        let rows = category_shares(&group, &share, &ChartCategories::default());
+        assert_eq!(rows[0], CategoryShare { category: ShownCategory::builtin("Nourriture"), mine: 25.0, group: 100.0 });
+        assert_eq!(rows[1], CategoryShare { category: ShownCategory::builtin("Transport"), mine: 0.0, group: 60.0 });
+    }
+
+    fn lens(categories: serde_json::Value, roll_up: bool) -> ChartCategories {
+        ChartCategories { projects: HashMap::from([(Uuid::nil(), ProjectCategories::from_value(Some(&categories)))]), roll_up }
+    }
+
+    #[test]
+    fn a_custom_category_is_its_own_slice_under_its_parent_and_rolls_up_across_projects() {
+        let list = serde_json::json!([{ "id": "c-0000000a", "name": "Courses bio", "parent": "Nourriture" }]);
+        let expenses = [
+            expense(1, 300.0, "2026-01-01", "Nourriture"),
+            expense(2, 200.0, "2026-01-01", "Transport"),
+            expense(3, 96.0, "2026-01-01", "c-0000000a"),
+        ];
+        let one = lens(list.clone(), false);
+        let slices = fold_categories(&aggregate_by_category(&expenses, &one), &one.other());
+        let ids: Vec<&str> = slices.iter().map(|(c, _)| c.id.as_str()).collect();
+        assert_eq!(ids, ["Nourriture", "c-0000000a", "Transport"]);
+        assert!(is_child(&slices[1].0, &slices));
+        assert_eq!(slices[1].0.parent, "Nourriture");
+        let all = lens(list, true);
+        let rolled = aggregate_by_category(&expenses, &all);
+        assert_eq!(rolled[0], (ShownCategory::builtin("Nourriture"), 396.0));
+        assert_eq!(rolled.len(), 2);
+    }
+
+    #[test]
+    fn a_renamed_other_is_still_the_folded_tail() {
+        let one = lens(serde_json::json!([{ "id": "Autres", "name": "Divers" }]), false);
+        let expenses: Vec<_> = ["Nourriture", "Transport", "Hébergement", "Loisirs", "Shopping", "Services", "Autres"]
+            .iter()
+            .enumerate()
+            .map(|(i, c)| expense(i as i32, 100.0 - i as f64, "2026-01-01", c))
+            .collect();
+        let slices = fold_categories(&aggregate_by_category(&expenses, &one), &one.other());
+        let last = slices.last().unwrap();
+        assert_eq!((last.0.name.as_deref(), last.1), (Some("Divers"), 95.0 + 94.0));
+        assert_eq!(slices.iter().filter(|(c, _)| c.id == "Autres").count(), 1);
     }
 
     #[test]
@@ -575,8 +666,9 @@ mod tests {
             .enumerate()
             .map(|(i, c)| expense(i as i32, 100.0 - i as f64, "2026-01-01", c))
             .collect();
-        let shown = fold_categories(&aggregate_by_category(&expenses));
-        let other = expenses_in_category(&expenses, OTHER, &shown);
+        let lens = ChartCategories::default();
+        let shown = fold_categories(&aggregate_by_category(&expenses, &lens), &lens.other());
+        let other = expenses_in_category(&expenses, &lens.other(), &shown, &lens);
         assert_eq!(other.len(), 1);
         assert_eq!(other[0].category.as_deref(), Some("Services"));
     }

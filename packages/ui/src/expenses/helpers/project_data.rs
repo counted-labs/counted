@@ -12,7 +12,7 @@ use shared::{
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
-use crate::categories::{find_category, get_expense_category, parent_emoji};
+use crate::categories::{ProjectCategories, ShownCategory};
 use crate::decrypted::{
     decrypt_ledger, decrypt_user, DecryptedExpense,
     DecryptedPayment,
@@ -30,22 +30,26 @@ use crate::expenses::tabs::expenses_tab::inconsistent_expense_ids;
 #[derive(Clone, Debug, PartialEq)]
 pub struct RowExpense {
     pub expense: DecryptedExpense,
-    pub emoji: &'static str,
-    /// One of `CHART_CATEGORIES`, as the charts file it.
-    pub category: &'static str,
+    pub emoji: String,
+    pub category: ShownCategory,
     pub date: chrono::NaiveDate,
 }
 
 impl From<DecryptedExpense> for RowExpense {
     fn from(expense: DecryptedExpense) -> Self {
-        let inferred = find_category(&expense.name);
-        let parent = get_expense_category(&expense);
-        let emoji = if parent == inferred.parent { inferred.emoji } else { parent_emoji(parent) };
+        Self::new(expense, &ProjectCategories::default())
+    }
+}
+
+impl RowExpense {
+    pub fn new(expense: DecryptedExpense, categories: &ProjectCategories) -> Self {
+        let category = categories.resolve(expense.category.as_deref(), &expense.name);
+        let emoji = categories.row_emoji(&category, &expense.name);
         // `created_at` rather than dropping the row: an unparseable date is still an expense, and
         // vanishing unexplained is worse than being filed under the day it was entered.
         let date = chrono::NaiveDate::parse_from_str(&expense.date, "%Y-%m-%d")
             .unwrap_or_else(|_| expense.created_at.date());
-        Self { expense, emoji, category: parent, date }
+        Self { expense, emoji, category, date }
     }
 }
 
@@ -98,6 +102,9 @@ pub struct ProjectData {
     pub personal: bool,
     /// The personal project's budgets; empty anywhere else.
     pub budgets: shared::Budgets,
+    /// The personal project's ceilings on its own categories, by id; empty anywhere else.
+    pub budgets_custom: std::collections::BTreeMap<String, f64>,
+    pub categories: ProjectCategories,
     /// Expenses whose payload would not open or parse, left out of every figure. Not zero means the
     /// totals are partial, which the page has to say rather than present them as the whole project.
     pub unreadable_expenses: usize,
@@ -134,6 +141,8 @@ impl Default for ProjectData {
             read_only: false,
             personal: false,
             budgets: Default::default(),
+            budgets_custom: Default::default(),
+            categories: Default::default(),
             unreadable_expenses: 0,
             project_unreadable: false,
             loaded: false,
@@ -203,6 +212,7 @@ pub fn build(key: Option<[u8; 32]>, live: Option<&LiveData>, personal_project: O
     let project = live.project.as_ref();
     let payload = project.and_then(|p| crate::crypto::decrypt_json::<shared::ProjectPayload>(&k, &p.payload).ok());
     let personal = personal_project == Some(live.project_id);
+    let categories = payload.as_ref().map(ProjectCategories::from_payload).unwrap_or_default();
 
     // Only the payments of expenses the page lists: the rest used to move balances by rows nobody
     // could see.
@@ -243,7 +253,7 @@ pub fn build(key: Option<[u8; 32]>, live: Option<&LiveData>, personal_project: O
 
     ProjectData {
         project_id: Some(live.project_id),
-        expenses: decrypted.into_iter().map(RowExpense::from).collect(),
+        expenses: decrypted.into_iter().map(|e| RowExpense::new(e, &categories)).collect(),
         payments,
         users: live.users.clone(),
         user_names,
@@ -257,6 +267,8 @@ pub fn build(key: Option<[u8; 32]>, live: Option<&LiveData>, personal_project: O
         read_only: project.is_some_and(|p| p.read_only),
         personal,
         budgets: payload.as_ref().filter(|_| personal).map(|p| p.budgets()).unwrap_or_default(),
+        budgets_custom: payload.as_ref().filter(|_| personal).map(|p| p.budgets_custom()).unwrap_or_default(),
+        categories,
         unreadable_expenses,
         project_unreadable: project.is_some() && payload.is_none(),
         loaded: true,
@@ -533,6 +545,31 @@ mod tests {
         let e = make_expense_with_category(&k, 1, "Pizza", "Nourriture");
         let data = build(Some(k), Some(&live(vec![], vec![e], vec![])), None);
         assert_eq!(data.expenses[0].emoji, "🍕");
+    }
+
+    #[test]
+    fn the_project_list_resolves_custom_categories_and_overrides() {
+        let k = test_key();
+        let mut payload = crate::crypto::decrypt_json::<shared::ProjectPayload>(
+            &k,
+            &crate::common::test_fixtures::make_project(&k, Uuid::nil(), "p", "EUR").payload,
+        )
+        .unwrap();
+        payload.extra.insert(
+            "categories".into(),
+            serde_json::json!([
+                { "id": "c-0000000a", "name": "Courses bio", "emoji": "🥕", "parent": "Nourriture" },
+                { "id": "Transport", "hidden": true },
+            ]),
+        );
+        let project = ProjectDto { payload: crate::crypto::encrypt_json(&k, &payload).unwrap(), ..crate::common::test_fixtures::make_project(&k, Uuid::nil(), "p", "EUR") };
+        let rows = vec![make_expense_with_category(&k, 1, "Biocoop", "c-0000000a"), expense(&k, 2, "Taxi", "2025-01-01")];
+        let data = build(Some(k), Some(&LiveData { project: Some(project), ..live(vec![], rows, vec![]) }), None);
+        let bio = data.expenses.iter().find(|r| r.expense.id == 1).unwrap();
+        assert_eq!((bio.category.id.as_str(), bio.category.parent, bio.emoji.as_str()), ("c-0000000a", "Nourriture", "🥕"));
+        let taxi = data.expenses.iter().find(|r| r.expense.id == 2).unwrap();
+        assert_eq!((taxi.category.id.as_str(), taxi.emoji.as_str()), ("Autres", "💵"));
+        assert_eq!(data.categories.custom_count(), 1);
     }
 
     #[test]

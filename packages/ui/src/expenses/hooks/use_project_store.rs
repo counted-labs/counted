@@ -259,6 +259,7 @@ pub fn use_project_store() -> ProjectStore {
                     project_id: id,
                     rules: s.recurring.clone().unwrap_or_default(),
                     server_date: s.server_date,
+                    member_day: recurring_store::member_day(s.server_time, s.server_date, &chrono::Local),
                 });
             // `peek`: this effect writes `live` below.
             let live = live.peek();

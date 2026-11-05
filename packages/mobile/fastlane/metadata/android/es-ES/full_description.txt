@@ -22,6 +22,7 @@ Gratis, sin anuncios ni rastreadores, sin límite de gastos ni de participantes.
 • Gastos recurrentes como el alquiler o las suscripciones: se apuntan una vez y se añaden cada vez que vencen
 • Más de 150 monedas, convertidas al tipo de cambio mensual de la Comisión Europea
 • Estadísticas por categoría, por persona y mes a mes
+• Tus propias categorías, cada una con su emoji, y un emoji para cada proyecto
 • Historial de quién añadió, editó o eliminó qué
 • Búsqueda por nombre, nota o categoría, hecha en tu dispositivo
 • Con cuenta, un proyecto personal «Mis gastos»: lo que gastas por tu cuenta más tu parte en tus grupos, mes a mes

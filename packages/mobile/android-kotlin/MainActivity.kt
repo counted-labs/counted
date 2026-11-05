@@ -25,9 +25,15 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.provider.Settings
+import android.webkit.WebView
 import androidx.core.content.FileProvider
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsAnimationCompat
+import androidx.core.view.WindowInsetsCompat
 import java.io.File
+import java.util.Locale
 import org.unifiedpush.android.connector.UnifiedPush
 
 typealias BuildConfig = fr.counted.app.BuildConfig
@@ -83,5 +89,38 @@ class MainActivity : WryActivity() {
                 }
             }
         }
+    }
+
+    // The page learns the keyboard's height from one visualViewport resize at the start of the
+    // keyboard's slide; this hands it the slide's duration and curve so the open sheet moves with it
+    // (`motion` in packages/ui/src/common/keyboard.rs). On the decor view: the WebView has no parent
+    // yet here. API 30+: below, the compat callback runs its own animator, not the keyboard's.
+    // `durationMillis` ignores the animator scale; 0 ms (animations off) tells the page to snap.
+    override fun onWebViewCreate(webView: WebView) {
+        super.onWebViewCreate(webView)
+        if (Build.VERSION.SDK_INT < 30) return
+        val ime = WindowInsetsCompat.Type.ime()
+        ViewCompat.setWindowInsetsAnimationCallback(
+            window.decorView,
+            object : WindowInsetsAnimationCompat.Callback(DISPATCH_MODE_CONTINUE_ON_SUBTREE) {
+                override fun onProgress(
+                    insets: WindowInsetsCompat,
+                    running: MutableList<WindowInsetsAnimationCompat>,
+                ): WindowInsetsCompat = insets
+
+                override fun onStart(
+                    animation: WindowInsetsAnimationCompat,
+                    bounds: WindowInsetsAnimationCompat.BoundsCompat,
+                ): WindowInsetsAnimationCompat.BoundsCompat {
+                    if (animation.typeMask and ime == 0) return bounds
+                    val curve = animation.interpolator ?: return bounds
+                    val scale = Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f)
+                    val ms = (animation.durationMillis * scale).toLong().coerceAtLeast(0)
+                    val points = (0..16).joinToString(",") { "%.4f".format(Locale.ROOT, curve.getInterpolation(it / 16f)) }
+                    webView.evaluateJavascript("window._countedKeyboard&&window._countedKeyboard.motion($ms,[$points])", null)
+                    return bounds
+                }
+            },
+        )
     }
 }

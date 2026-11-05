@@ -34,7 +34,7 @@ The server is not in this repository. Statements are therefore of three kinds:
 | Party | Holds | Can |
 | --- | --- | --- |
 | A project member (anyone holding the project key, signed in or not) | The key, from the share link, an invitation or escrow | Read, alter, add or delete every row of the project, under any participant's name. Nothing authenticates who wrote a row, an account holder's included: the author and actor fields are inside the payload and self-asserted |
-| A project admin (an account member holding the role, section 8.4) | The key, and a role the server stores in clear | Change the key and remove members (8.5), grant and take the role. The server enforces the role **[Not independently verified]**; it gives no cryptographic power beyond the key |
+| A project admin (an account member holding the role, section 8.4) | The key, and a role the server stores in clear | Change the key and remove members (8.5), grant and take the role. The server enforces the role **[Not independently verified]**; it gives no cryptographic power beyond the key, and no write to another member's claim label or payment-method copy (8.5) **[Not independently verified]**. One exception: during a rotation the admin can rewrite or set aside any history entry, since history is otherwise append-only, a rotation must re-encrypt it, and nothing tells a faithful reseal from a forged one until entries are signed |
 | A former member | The key they held, and whatever they read or cached | Everything above, until an admin changes the key (8.5). After the switch: against an honest server, nothing (the old key's token is refused); against a hostile server alone, nothing written under the new key; **colluding with a hostile server**, get a key of their own adopted by a member device that has not switched yet, or boxed to by the admin (8.5, 8.6). A project with no admin cannot change its key (8.4): there a former member keeps everything above for as long as the project exists |
 | Anyone holding a project id (a UUID), without the key | The id, which is in the share link | On a project with a verifier, once the server enforces project tokens (8.1): nothing, every request is refused. Otherwise: read the project's ciphertext, and write or delete its rows. Rows written without the key fail the AEAD check and are dropped by members' clients (section 5.5) |
 | The server, passive | Every ciphertext and all metadata | Learn the metadata in section 12. Nothing else |
@@ -532,7 +532,8 @@ The copies have one write path: a save replaces all of them, and the client
 sends `expected_iv`, the nonce of the account blob it started from, which the server must still
 hold **[Not independently verified]**. Because every encryption draws a fresh nonce, the IV serves as
 a compare-and-swap token (unordered, not a version number). Unsharing asks the server to delete copies. A dishonest server can keep serving
-an old copy, and members cannot tell.
+an old copy, and members cannot tell. A key rotation (8.5) re-seals only the rotating admin's own
+copy and clears the others, which their owners' devices write back under the new key.
 
 ### 8.4 Project roles and proof of creator
 
@@ -589,7 +590,10 @@ project by id.
    commit fail. The app asks whoever is refused to try again in a moment.
 2. **Staged rewrite.** The device reads every row in pages of `ROTATION_PAGE` (200), set by set
    (`ROTATION_TABLES`: the project row, participants, expenses, payments, recurring rules,
-   history, claim labels, payment-method copies), and uploads them re-encrypted. The project row
+   history, and the admin's own claim label and payment-method copy), and uploads them
+   re-encrypted. Another member's label or copy has one writer, that member's account: the server
+   refuses to stage it **[Not independently verified]**, the commit clears it, and the member's
+   device writes it back under K2. The project row
    must open under K1, or the rotation stops there: a wrong key never reaches the commit. Every
    other row is decrypted to bytes and the same bytes are sealed under K2 with a fresh nonce
    (`reseal`), so padding, fields this client does not know and plaintext that does not parse
@@ -601,12 +605,12 @@ project by id.
    A row whose AEAD tag fails under K1 is junk written by an id holder (5.5) and opens under no key
    a member holds. It is not re-encrypted. A participant, expense, payment, recurring or history row
    is listed as set aside (`quarantine`) and stays as it is, unreadable under K2 as it was under K1;
-   the server keeps the list 30 days **[Not independently verified]**. A claim label or
-   payment-method copy is left out and the commit clears it. There is no threshold: a cap would let
+   the server keeps the list 30 days **[Not independently verified]**. The admin's own claim label
+   or payment-method copy is left out and the commit clears it. There is no threshold: a cap would let
    the person being removed block the rotation with a few rows of random bytes.
 3. **Commit**, one transaction **[Not independently verified]**. The staged and set-aside ids must
-   be exactly the live ids, set by set (for claim labels and copies, every staged one must still
-   exist). Then the ciphertexts are swapped; the memberships listed in `remove` are deleted, here
+   be exactly the live ids, set by set (for claim labels and copies, the admin's own staged one must
+   still exist). Then the ciphertexts are swapped; the memberships listed in `remove` are deleted, here
    and not earlier, since a member removed before the switch could rejoin with K1's still-valid
    token; the old verifier joins the previous verifiers, and the new one,
    `SHA-256(claim_token(K2))`, and `key_epoch + 1` are set; the admin's escrow of K2 and own

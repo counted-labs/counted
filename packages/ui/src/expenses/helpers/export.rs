@@ -6,8 +6,18 @@ use crate::tid;
 use shared::{Expense, Payment, ProjectDto, User};
 use std::collections::HashMap;
 
-use crate::categories::get_expense_category;
-use crate::decrypted::{decrypt_expense, decrypt_ledger, decrypt_project, decrypt_user};
+use crate::categories::ProjectCategories;
+use crate::decrypted::{decrypt_expense, decrypt_ledger, decrypt_project, decrypt_user, DecryptedExpense};
+
+fn categories_of(key: &[u8; 32], project: &ProjectDto) -> ProjectCategories {
+    crate::crypto::decrypt_json::<shared::ProjectPayload>(key, &project.payload)
+        .map(|p| ProjectCategories::from_payload(&p))
+        .unwrap_or_default()
+}
+
+fn category_label(categories: &ProjectCategories, e: &DecryptedExpense) -> String {
+    categories.resolve(e.category.as_deref(), &e.name).export_label()
+}
 
 pub fn download_json(
     key: &[u8; 32],
@@ -36,7 +46,9 @@ pub fn download_csv(
 /// Excel opens a UTF-8 CSV without it as the system code page, so "Café" reads "CafÃ©".
 pub(crate) const CSV_BOM: char = '\u{feff}';
 
-/// `category` is the one the charts file the expense under - picked, or inferred from the name.
+/// `category` is the one the charts file the expense under - picked, or inferred from the name -
+/// by its name in this project: a custom category or a rename by what members see, a built-in by
+/// its stable id.
 /// The `original_*` and `rate` columns are empty unless the expense was entered in another currency.
 const CSV_HEADER: &str = "date,name,type,amount,currency,paid_by,owes,category,original_amount,original_currency,rate,description";
 
@@ -48,6 +60,7 @@ fn to_csv(
     payments: &[Payment],
 ) -> String {
     let currency = decrypt_project(key, project).map(|p| p.currency).unwrap_or_default();
+    let categories = categories_of(key, project);
 
     let user_names: HashMap<i32, String> = users
         .iter()
@@ -90,7 +103,7 @@ fn to_csv(
             .collect::<Vec<_>>()
             .join("; ");
 
-        let category = de.as_ref().map(get_expense_category).unwrap_or_default();
+        let category = de.as_ref().map(|d| category_label(&categories, d)).unwrap_or_default();
         let conversion = de.as_ref().and_then(|d| d.conversion());
         let original_amount = conversion.map(|(a, _, _)| format!("{a:.2}")).unwrap_or_default();
         let original_currency = conversion.map(|(_, c, _)| c).unwrap_or_default();
@@ -106,7 +119,7 @@ fn to_csv(
             csv_field(&currency),
             csv_field(&payers),
             csv_field(&debtors),
-            csv_field(category),
+            csv_field(&category),
             original_amount,
             csv_field(original_currency),
             rate,
@@ -125,6 +138,7 @@ fn to_json(
     payments: &[Payment],
 ) -> String {
     let dp = decrypt_project(key, project);
+    let categories = categories_of(key, project);
     let proj_json = match &dp {
         Ok(p) => serde_json::json!({
             "id": p.id,
@@ -155,7 +169,7 @@ fn to_json(
                 "amount": de.amount,
                 "type": format!("{:?}", de.expense_type),
                 "date": de.date,
-                "category": get_expense_category(&de),
+                "category": category_label(&categories, &de),
                 "source_amount": de.source_amount,
                 "source_currency": de.source_currency,
                 "rate": de.rate,
@@ -238,10 +252,13 @@ pub(crate) fn trigger_download(content: &str, filename: &str, mime_type: &str) {
 }
 
 #[cfg(any(test, fuzzing))]
-pub(crate) fn exercise_hostile(expenses: Vec<Expense>, payments: Vec<Payment>, users: Vec<User>) {
+pub(crate) fn exercise_hostile(expenses: Vec<Expense>, payments: Vec<Payment>, users: Vec<User>, payload: shared::ProjectPayload) {
     use crate::common::test_fixtures::{make_project, TEST_KEY};
 
-    let project = make_project(&TEST_KEY, uuid::Uuid::nil(), "p", "EUR");
+    let project = ProjectDto {
+        payload: crate::crypto::encrypt_json(&TEST_KEY, &payload).unwrap(),
+        ..make_project(&TEST_KEY, uuid::Uuid::nil(), "p", "EUR")
+    };
     let _ = to_csv(&TEST_KEY, &project, &users, &expenses, &payments);
     let _ = to_json(&TEST_KEY, &project, &users, &expenses, &payments);
 }
@@ -526,8 +543,8 @@ mod tests {
             #![proptest_config(ProptestConfig::with_cases(300))]
 
             #[test]
-            fn any_ledger_exports(expenses in hostile::expenses(), payments in hostile::payments(), users in hostile::users()) {
-                crate::expenses::helpers::export::exercise_hostile(expenses, payments, users);
+            fn any_ledger_exports(expenses in hostile::expenses(), payments in hostile::payments(), users in hostile::users(), project in hostile::project_payload()) {
+                crate::expenses::helpers::export::exercise_hostile(expenses, payments, users, project);
             }
         }
     }

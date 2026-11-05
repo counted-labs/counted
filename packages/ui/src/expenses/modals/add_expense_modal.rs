@@ -10,7 +10,7 @@ use shared::{
 use std::collections::VecDeque;
 use uuid::Uuid;
 
-use crate::common::{error_message, fx_cache, write_queue, OpKind, ProjectKey, QueuedOp};
+use crate::common::{error_message, fx_cache, today_iso, write_queue, OpKind, ProjectKey, QueuedOp};
 
 use super::expense_form::{ExpenseForm, RepeatSlot};
 use crate::expenses::hooks::use_project_store::ProjectStore;
@@ -70,12 +70,6 @@ pub struct AddExpenseModalProps {
     pub move_banner: Option<String>,
 }
 
-/// Today, in the shape `date_str` holds. Extracted so the default stays one expression now that
-/// `initial_date` can override it.
-fn today_iso() -> String {
-    chrono::Utc::now().naive_utc().date().format("%Y-%m-%d").to_string()
-}
-
 #[component]
 pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
     let followed_key = use_context::<ProjectKey>().0;
@@ -128,7 +122,7 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
     let today = use_context::<ProjectStore>()
         .recurring_for(props.project_id)
         .map(|r| r.today())
-        .unwrap_or_else(|| chrono::Utc::now().date_naive());
+        .unwrap_or_else(crate::common::local_today);
 
     // Only ever true once the user picks a different currency, so a single-currency project never
     // reaches `use_fx_rates`' resource body and never hits the server.
@@ -309,6 +303,8 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
 
     rsx! {
         ExpenseForm {
+            categories: categories_of(props.project_id),
+            manage_categories: Some(props.project_id),
             title,
             submit_label,
             repeat: (!props.restrict_to_transfer && !moving).then_some(RepeatSlot { value: repeat, today, backfill: true }),
@@ -387,6 +383,15 @@ fn build_creatable_expense(
         client_op_id: None,
     })
 }
+
+/// The project's own categories for the picker, when its data is the one loaded.
+fn categories_of(project_id: Uuid) -> crate::categories::ProjectCategories {
+    try_consume_context::<crate::expenses::hooks::use_project_store::ProjectStore>()
+        .and_then(|s| s.data_for(project_id))
+        .map(|d| d.categories.clone())
+        .unwrap_or_default()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

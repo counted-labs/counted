@@ -29,7 +29,7 @@ pub fn ChartCard(title: String, description: Option<String>, children: Element) 
 }
 
 #[component]
-pub fn Swatch(color: &'static str) -> Element {
+pub fn Swatch(color: String) -> Element {
     rsx! {
         span {
             class: "w-2.5 h-2.5 rounded-[3px] inline-block shrink-0",

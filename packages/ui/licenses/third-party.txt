@@ -3426,7 +3426,7 @@ THE SOFTWARE.
 
 ================================================================================
 MIT License
-Used by: either 1.17.0, itertools 0.13.0, itertools 0.14.0
+Used by: either 1.17.0, itertools 0.14.0
 
 Copyright (c) 2015
 

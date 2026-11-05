@@ -1,7 +1,7 @@
 use api::expenses::expenses_controller::batch_add_expenses;
 use api::projects::projects_controller::add_project;
 use api::users::users_controller::add_user;
-use chrono::{Duration, Local, NaiveDate};
+use chrono::{Duration, NaiveDate};
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use shared::{
@@ -57,7 +57,7 @@ pub async fn seed_demo(ls_ctx: Signal<LocalStorageState>, data: &'static Dataset
         return Err(tid!("demo-failed"));
     }
 
-    let expenses = expense_creatables(&key, data, project.id, &user_ids, Local::now().date_naive())?;
+    let expenses = expense_creatables(&key, data, project.id, &user_ids, crate::common::local_today())?;
     crate::common::project_token::scope_key(Some(&key));
     batch_add_expenses(Json(expenses)).await.map_err(|e| error_message(&e))?;
 

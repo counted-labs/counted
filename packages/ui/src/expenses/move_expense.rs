@@ -12,6 +12,7 @@ use uuid::Uuid;
 use crate::common::{
     key_of, Flash, LocalStorageState, ProjectTile, QueuedOp,
 };
+use crate::categories::ProjectCategories;
 use crate::crypto::decrypt_json;
 use crate::decrypted::{pickable_users, project_status};
 use crate::expenses::helpers::delete_expense_action::{delete_expense_request, run_delete_expense};
@@ -36,11 +37,16 @@ pub struct MoveDraft {
     /// currency, so the destination converts from what was paid rather than from a conversion.
     pub amount: f64,
     pub currency: String,
+    /// The built-in the source files the expense under, for a destination without its category.
+    pub category_parent: &'static str,
 }
 
 impl MoveDraft {
-    pub fn category(&self) -> Option<String> {
-        self.payload.category.clone()
+    /// The category as picked when the destination has it, its parent when it is a custom category
+    /// of the source only.
+    pub fn category_for(&self, destination: &ProjectCategories) -> Option<String> {
+        let picked = self.payload.category.as_deref()?;
+        Some(if destination.knows(picked) { picked.to_string() } else { self.category_parent.to_string() })
     }
 
     pub fn expense_type(&self) -> ExpenseType {
@@ -68,6 +74,7 @@ pub fn can_move(expense_type: &ExpenseType) -> bool {
 pub struct Destination {
     pub project_id: Uuid,
     pub name: String,
+    pub emoji: Option<String>,
     pub currency: String,
     /// Participants still in the project, when this device has them cached.
     pub members: Option<usize>,
@@ -97,6 +104,7 @@ pub fn destinations(list: &[ProjectDto], state: &LocalStorageState, from: Uuid) 
             (current || open).then(|| Destination {
                 project_id: p.id,
                 personal: state.personal_project == Some(p.id),
+                emoji: payload.emoji(),
                 name: payload.name,
                 currency: payload.currency,
                 members: entry.cached_users.as_ref().map(|u| pickable_users(Some(&key), u, &[]).len()),
@@ -153,7 +161,7 @@ pub fn MoveExpenseSheet(
                                         }
                                     }
                                 } else {
-                                    rsx! { ProjectTile { name: d.name.clone(), id } }
+                                    rsx! { ProjectTile { name: d.name.clone(), id, emoji: d.emoji.clone() } }
                                 };
                                 rsx! {
                                     li { key: "{id}",
@@ -319,7 +327,7 @@ mod tests {
     fn destinations_are_the_open_projects_this_device_can_write_to() {
         let k = test_key();
         let source = with(&k, "Offsite", |_| {});
-        let corsica = with(&k, "Corsica", |_| {});
+        let corsica = with(&k, "Corsica", |p| p.set_emoji(Some("🏝️")));
         let mine = with(&k, "Mes dépenses", |p| { p.extra.insert("kind".into(), "personal".into()); });
         let archived = with(&k, "Old", |p| p.status = Some(ProjectStatus::Archived));
         let mut demo = with(&k, "Demo", |_| {});
@@ -342,6 +350,8 @@ mod tests {
         assert_eq!(names, ["Offsite", "Corsica", "Mes dépenses"], "source first, personal last");
         assert!(got[0].current);
         assert_eq!(got[1].members, Some(2));
+        assert_eq!(got[1].emoji.as_deref(), Some("🏝️"));
+        assert_eq!(got[0].emoji, None);
         assert!(got[2].personal);
     }
 
@@ -375,7 +385,32 @@ mod tests {
             payload: ExpensePayload { expense_type: "gain".into(), ..payload(10.0) },
             amount: 10.0,
             currency: "EUR".into(),
+            category_parent: "Autres",
         };
         assert_eq!(draft.expense_type(), ExpenseType::Gain);
+    }
+
+    #[test]
+    fn a_custom_category_the_destination_lacks_becomes_its_parent() {
+        let draft = |category: Option<&str>| MoveDraft {
+            from_project: Uuid::nil(),
+            from_name: "A".into(),
+            from_key: test_key(),
+            from_user_id: None,
+            expense_id: 1,
+            to_project: Uuid::nil(),
+            to_name: "B".into(),
+            to_personal: false,
+            payload: ExpensePayload { category: category.map(String::from), ..payload(10.0) },
+            amount: 10.0,
+            currency: "EUR".into(),
+            category_parent: "Nourriture",
+        };
+        let empty = ProjectCategories::default();
+        let has = ProjectCategories::from_value(Some(&serde_json::json!([{ "id": "c-0000000a", "name": "Bio", "parent": "Shopping" }])));
+        assert_eq!(draft(Some("c-0000000a")).category_for(&empty).as_deref(), Some("Nourriture"));
+        assert_eq!(draft(Some("c-0000000a")).category_for(&has).as_deref(), Some("c-0000000a"));
+        assert_eq!(draft(Some("Transport")).category_for(&empty).as_deref(), Some("Transport"));
+        assert_eq!(draft(None).category_for(&empty), None);
     }
 }

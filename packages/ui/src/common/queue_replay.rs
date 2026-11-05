@@ -37,6 +37,12 @@ pub async fn replay_queue(
         let Some(queued) = pending_ops.read().front().cloned() else {
             return true;
         };
+        if is_legacy_overwrite(&queued.op) {
+            conflict_msg.set(Some(SyncFailure::ConflictOther(queued.label())));
+            pending_ops.write().pop_front();
+            write_queue(&pending_ops.read());
+            continue;
+        }
         if !first {
             sleep(REQUEST_PACE_MS).await;
         }
@@ -107,6 +113,12 @@ async fn replay(op: &OpKind) -> Result<(), ServerFnError> {
     }
 }
 
+/// A whole payload queued by a build before 3.2.5, the last to write `UpdateProject`. It carries no
+/// `expected_iv`, which the server refuses with a payload, and was built on a payload long replaced.
+fn is_legacy_overwrite(op: &OpKind) -> bool {
+    matches!(op, OpKind::UpdateProject(p) if p.payload.is_some())
+}
+
 /// Matched on the variant, never the text: `error_message` returns translated copy, which no
 /// substring check can recognise in every locale.
 fn is_conflict(err: &ServerFnError) -> bool {
@@ -119,8 +131,31 @@ fn is_conflict(err: &ServerFnError) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::is_conflict;
+    use super::{is_conflict, is_legacy_overwrite, OpKind};
     use dioxus::prelude::ServerFnError;
+    use shared::{EditableProject, EncryptedPair, ProjectStatus};
+    use uuid::Uuid;
+
+    fn update_project(payload: Option<EncryptedPair>) -> OpKind {
+        OpKind::UpdateProject(EditableProject {
+            id: Uuid::nil(),
+            payload,
+            status: Some(ProjectStatus::Closed),
+            history: None,
+            expected_iv: None,
+            notify_closed: false,
+        })
+    }
+
+    #[test]
+    fn a_legacy_whole_payload_is_dropped() {
+        assert!(is_legacy_overwrite(&update_project(Some(EncryptedPair { ct: "ct".into(), iv: "iv".into() }))));
+    }
+
+    #[test]
+    fn a_legacy_status_alone_still_replays() {
+        assert!(!is_legacy_overwrite(&update_project(None)));
+    }
 
     fn server_error(message: &str, code: u16) -> ServerFnError {
         ServerFnError::ServerError { message: message.into(), code, details: None }

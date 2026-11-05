@@ -9,8 +9,8 @@ use super::super::helpers::expense_form_helpers::{
 use super::amount_input::{AmountInput, FocusedAmount};
 use super::amount_operator_bar::AmountOperatorBar;
 use super::participants_fieldset::ParticipantsFieldset;
-use crate::categories::{category_label, infer_chart_category, parent_emoji, CHART_CATEGORIES as CATEGORIES};
-use crate::common::{format_month_str, haptic, CurrencyPicker, Haptic};
+use crate::categories::ProjectCategories;
+use crate::common::{format_month_str, haptic, today_iso, yesterday_iso, CurrencyPicker, Haptic};
 use crate::icons::{CloseIcon, ICON_HEADER};
 use crate::recurring::repeat_picker::RepeatRow;
 use crate::recurring::view::Repeat;
@@ -28,18 +28,6 @@ fn type_value(t: &ExpenseType) -> &'static str {
         ExpenseType::Gain => "Gain",
         ExpenseType::Transfer => "Transfer",
     }
-}
-
-/// `date_str`'s shape, matching `AddExpenseModal::today_iso`. The chips both set and highlight
-/// against these, so a stale one would light up the wrong chip rather than write a wrong date.
-fn today_iso() -> String {
-    chrono::Utc::now().naive_utc().date().format("%Y-%m-%d").to_string()
-}
-
-fn yesterday_iso() -> String {
-    (chrono::Utc::now().naive_utc().date() - chrono::Duration::days(1))
-        .format("%Y-%m-%d")
-        .to_string()
 }
 
 fn type_from_value(v: &str) -> ExpenseType {
@@ -135,6 +123,12 @@ pub struct ExpenseFormProps {
     /// the date that change applies from.
     #[props(default)]
     pub apply_to_next: Option<(Signal<bool>, String)>,
+    /// The project's own categories, offered in the picker.
+    #[props(default)]
+    pub categories: ProjectCategories,
+    /// The project whose categories "Gérer les catégories" opens, stacked on the form.
+    #[props(default)]
+    pub manage_categories: Option<uuid::Uuid>,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -206,6 +200,12 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
 
     // Debtors is the side that actually gets edited; payers is almost always right as seeded.
     let mut payers_open = use_signal(|| false);
+    let mut managing = use_signal(|| false);
+    let categories = props.categories.clone();
+    let chip = categories.resolve(category().as_deref(), &expense_name());
+    let inferred = categories.resolve(None, &expense_name());
+    let customs = categories.custom_shown();
+    let builtins = categories.builtin_shown();
     let mut debtors_open = use_signal(|| true);
 
     // Every `AmountInput` below publishes its draft here while focused; `AmountOperatorBar` reads it.
@@ -355,9 +355,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                             // takes the tap and opens the full labelled list. A closed `<select>`
                             // is sized to its widest option, so shown directly it truncated.
                             label { class: "relative shrink-0 flex items-center gap-1 h-full ps-3 pe-2.5 border-e border-base-300 text-lg has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-primary",
-                            span { aria_hidden: "true",
-                                {parent_emoji(category().as_deref().unwrap_or(infer_chart_category(&expense_name())))}
-                            }
+                            span { aria_hidden: "true", "{chip.emoji}" }
                             span { aria_hidden: "true", class: "text-xs opacity-60", "▾" }
                             select {
                                 id: "expense-category",
@@ -370,17 +368,33 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                                 },
                                 // The empty option previews what the name files under, so
                                 // "automatic" stops being a guess.
-                                {
-                                    let inferred = infer_chart_category(&expense_name());
-                                    rsx! {
-                                        option { value: "", {tid!("expense-category-auto", emoji: parent_emoji(inferred))} }
+                                option { value: "", {tid!("expense-category-auto", emoji: inferred.emoji.clone())} }
+                                if customs.is_empty() {
+                                    for cat in builtins.iter() {
+                                        option {
+                                            value: "{cat.id}",
+                                            selected: category().as_deref() == Some(cat.id.as_str()),
+                                            "{cat.emoji} {cat.label()}"
+                                        }
                                     }
-                                }
-                                for cat in CATEGORIES.iter().copied() {
-                                    option {
-                                        value: "{cat}",
-                                        selected: category().as_deref() == Some(cat),
-                                        "{parent_emoji(cat)} {category_label(cat)}"
+                                } else {
+                                    optgroup { label: tid!("categories-yours"),
+                                        for cat in customs.iter() {
+                                            option {
+                                                value: "{cat.id}",
+                                                selected: category().as_deref() == Some(cat.id.as_str()),
+                                                "{cat.emoji} {cat.label()}"
+                                            }
+                                        }
+                                    }
+                                    optgroup { label: tid!("categories-builtin"),
+                                        for cat in builtins.iter() {
+                                            option {
+                                                value: "{cat.id}",
+                                                selected: category().as_deref() == Some(cat.id.as_str()),
+                                                "{cat.emoji} {cat.label()}"
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -398,6 +412,19 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                             value: "{expense_name}",
                             oninput: move |e| expense_name.set(e.value()),
                         }
+                        }
+                        if expense_type() == ExpenseType::Expense && props.manage_categories.is_some() {
+                            button {
+                                id: "expense-manage-categories",
+                                r#type: "button",
+                                class: "self-start text-xs font-semibold text-primary py-1",
+                                aria_haspopup: "dialog",
+                                onclick: move |_| {
+                                    crate::common::haptic(crate::common::Haptic::Light);
+                                    managing.set(true);
+                                },
+                                {tid!("categories-manage")}
+                            }
                         }
                     }
 
@@ -599,6 +626,13 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
             div {
                 class: "modal-backdrop",
                 onclick: move |_| on_close_backdrop.call(()),
+            }
+        }
+        if let Some(project_id) = props.manage_categories.filter(|_| managing()) {
+            crate::expenses::category_manager::CategoryManager {
+                project_id,
+                initial: categories.clone(),
+                on_close: move |_| managing.set(false),
             }
         }
     }

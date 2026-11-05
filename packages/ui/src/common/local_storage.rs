@@ -197,6 +197,9 @@ pub struct LocalStorageProject {
     /// never in a link or a synced payload. Dropped once the server settles it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub creator_secret: Option<String>,
+    /// "Later" on the card listing the participants who may not have the project yet.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub guests_hint_dismissed: bool,
 }
 
 /// How many expenses are cached per project. **Web is the only target with a ceiling.**

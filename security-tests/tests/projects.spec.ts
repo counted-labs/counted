@@ -120,7 +120,7 @@ test.describe('B - project boundaries', () => {
     }
 
     const sync = await json<Record<string, unknown>>(await anon.get(`/api/v1/projects/${p.id}/sync/0`), 'sync');
-    expect(keysOf(sync)).toEqual(['dataVersion', 'expenses', 'payments', 'project', 'recurring', 'serverDate', 'users']);
+    expect(keysOf(sync)).toEqual(['dataVersion', 'expenses', 'payments', 'project', 'recurring', 'serverDate', 'serverTime', 'users']);
 
     const history = await json<Record<string, unknown>[]>(await anon.get(`/api/v1/projects/${p.id}/history`), 'history');
     for (const entry of history) {

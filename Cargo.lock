@@ -116,7 +116,6 @@ dependencies = [
  "dotenvy",
  "hkdf",
  "hmac",
- "itertools 0.13.0",
  "lettre",
  "once_cell",
  "rand 0.8.7",
@@ -3689,15 +3688,6 @@ checksum = "6a756c3fac73139e83f14c2d742155dd2b78d3ee56597b419a0579b7bdd6dd78"
 
 [[package]]
 name = "itertools"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
-dependencies = [
- "either",
-]
-
-[[package]]
-name = "itertools"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
@@ -4343,16 +4333,12 @@ dependencies = [
 
 [[package]]
 name = "mobile"
-version = "3.2.8"
+version = "3.2.9"
 dependencies = [
  "api",
- "axum 0.7.9",
  "block2",
- "chrono",
  "dioxus",
- "dioxus-logger 0.6.2",
  "dispatch2",
- "dotenvy",
  "jni 0.21.1",
  "ndk-context",
  "objc2",
@@ -4363,14 +4349,9 @@ dependencies = [
  "reqwest",
  "reqwest_cookie_store",
  "rustls",
- "serde",
- "serde_json",
  "shared",
- "sqlx",
  "tracing",
  "ui",
- "uuid",
- "web-sys",
 ]
 
 [[package]]
@@ -5740,7 +5721,7 @@ dependencies = [
  "built",
  "cfg-if",
  "interpolate_name",
- "itertools 0.14.0",
+ "itertools",
  "libc",
  "libfuzzer-sys",
  "log",
@@ -8026,21 +8007,11 @@ name = "web"
 version = "0.1.0"
 dependencies = [
  "api",
- "axum 0.7.9",
- "chrono",
  "dioxus",
- "dioxus-logger 0.6.2",
- "dotenvy",
- "serde",
- "serde_json",
  "shared",
- "sqlx",
- "tokio",
  "tracing",
  "ui",
- "uuid",
  "wasm-bindgen-futures",
- "web-sys",
 ]
 
 [[package]]

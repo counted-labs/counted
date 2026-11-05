@@ -2,10 +2,10 @@ use dioxus::prelude::*;
 use crate::tid;
 use shared::Account;
 
-use super::friends_service::FriendRow;
+use super::friends_service::{notify_address, FriendRow};
 use super::use_friends::use_friends;
 use crate::common::{AppHeader, AuthResolved, ConfirmModal, PullToRefresh};
-use crate::icons::{TrashIcon, ICON_INLINE};
+use crate::icons::{SendIcon, TrashIcon, ICON_INLINE};
 use crate::route::Route;
 
 #[component]
@@ -69,6 +69,23 @@ pub fn FriendsPage() -> Element {
                         }
                         if let Some(err) = (friends.error)() {
                             div { role: "alert", class: "alert alert-error text-sm", "{err}" }
+                        }
+                    }
+                }
+
+                if let Some(sent) = (friends.sent_to)() {
+                    div { id: "friend-request-sent", role: "status", class: "alert alert-success alert-soft flex flex-col items-start gap-2",
+                        span { class: "flex flex-col min-w-0 max-w-full text-sm",
+                            span { class: "font-semibold", {tid!("friends-request-sent")} }
+                            bdi { class: "break-all", "{sent}" }
+                        }
+                        button {
+                            id: "friend-notify",
+                            r#type: "button",
+                            class: "btn btn-primary btn-sm",
+                            onclick: move |_| friends.notify(sent.clone()),
+                            SendIcon { size: ICON_INLINE }
+                            {tid!("friends-notify")}
                         }
                     }
                 }
@@ -204,9 +221,19 @@ pub fn FriendsPage() -> Element {
                                         for req in lists.outgoing.iter() {
                                             {
                                                 let id = req.id;
+                                                let address = notify_address(&req.label).map(str::to_string);
                                                 rsx! {
                                                     li { class: "list-row items-center",
-                                                        span { class: "font-medium truncate", "{req.label}" }
+                                                        bdi { class: "list-col-grow min-w-0 font-medium truncate", "{req.label}" }
+                                                        if let Some(address) = address {
+                                                            button {
+                                                                r#type: "button",
+                                                                class: "btn btn-ghost btn-square btn-xs",
+                                                                aria_label: tid!("friends-notify-label", email: address.clone()),
+                                                                onclick: move |_| friends.notify(address.clone()),
+                                                                SendIcon { size: ICON_INLINE }
+                                                            }
+                                                        }
                                                         button {
                                                             r#type: "button",
                                                             class: "btn btn-ghost btn-xs",

@@ -1,5 +1,5 @@
 use crate::common::{
-    is_mobile, replay_queue, use_overscroll, use_route_focus, use_sheet_drag, BottomDock, DeepLinkListener, Flash,
+    is_mobile, replay_queue, use_keyboard, use_overscroll, use_route_focus, use_sheet_drag, BottomDock, DeepLinkListener, Flash,
     LocalStorageState, NavigationSync, PageTransition, QueuedOp, SyncFailure, Toast,
 };
 use crate::demo::DemoBar;
@@ -37,6 +37,7 @@ pub fn AppLayout() -> Element {
     // Elastic scrolling + pull-to-refresh gesture, one JS install for every page. No-op off mobile.
     use_overscroll();
     use_sheet_drag();
+    use_keyboard();
 
     // Onboarding depends on localStorage + user agent, which SSR can't know. Deciding it on the
     // first render diverges from the served HTML and breaks hydration (dead app, no listeners).

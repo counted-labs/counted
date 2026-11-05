@@ -4,7 +4,7 @@ use shared::Account;
 use uuid::Uuid;
 
 use super::friends_service::{self, FriendRow, FriendsLists};
-use crate::common::{error_message, Flash, LocalStorageState};
+use crate::common::{copy_text, error_message, haptic, share_message, Flash, Haptic, LocalStorageState};
 
 /// The friends page's state and every action on it. The page renders what this holds and calls
 /// back into it; nothing on the page decides anything.
@@ -14,6 +14,8 @@ pub struct Friends {
     pub email: Signal<String>,
     pub busy: Signal<bool>,
     pub error: Signal<Option<String>>,
+    /// The address of the request just sent, offered "Let them know by message" until the next one.
+    pub sent_to: Signal<Option<String>>,
     version: Signal<u64>,
     account_key: Signal<Option<[u8; 32]>>,
     flash: Signal<Option<Flash>>,
@@ -29,6 +31,7 @@ pub fn use_friends() -> Friends {
     let email = use_signal(String::new);
     let busy = use_signal(|| false);
     let error = use_signal(|| None);
+    let sent_to = use_signal(|| None);
 
     // Not `auth_ctx()`: every write to the account (a preference saved, a refill) would reload the
     // lists. The keypair is all `load` reads from it.
@@ -47,7 +50,7 @@ pub fn use_friends() -> Friends {
         }
     });
 
-    Friends { lists, email, busy, error, version, account_key, flash, ls_ctx }
+    Friends { lists, email, busy, error, sent_to, version, account_key, flash, ls_ctx }
 }
 
 impl Friends {
@@ -82,7 +85,36 @@ impl Friends {
             return;
         };
         self.email.set(String::new());
-        self.run(async move { friends_service::add_by_email(&email, &key).await }, Some(tid!("friends-request-sent")));
+        self.sent_to.set(None);
+        let mut sent_to = self.sent_to;
+        self.run(
+            async move {
+                friends_service::add_by_email(&email, &key).await?;
+                sent_to.set(Some(email));
+                Ok(())
+            },
+            None,
+        );
+    }
+
+    /// Hands the user's own messaging app a note to the address: the site and the address to sign
+    /// up with, never a project link. Offered whether or not the address has an account.
+    pub fn notify(self, email: String) {
+        haptic(Haptic::Light);
+        let text = friends_service::plain_message(&tid!("friends-notify-message", email: email));
+        let copied = tid!("friends-notify-copied");
+        let failed = tid!("friends-notify-copy-failed");
+        let (mut flash, mut error) = (self.flash, self.error);
+        spawn(async move {
+            if share_message(&text).await {
+                return;
+            }
+            if copy_text(&text).await {
+                flash.set(Some(Flash::ok(copied)));
+            } else {
+                error.set(Some(failed));
+            }
+        });
     }
 
     pub fn accept(self, id: Uuid) {

@@ -227,12 +227,23 @@ fn navigator_with_share() -> Option<web_sys::Navigator> {
 /// `navigator.share({ url })`. The user dismissing the sheet rejects with `AbortError` and counts
 /// as handled - only a sheet that could not open is a failure.
 pub async fn share_url(url: &str) -> bool {
+    let data = web_sys::ShareData::new();
+    data.set_url(url);
+    share(&data).await
+}
+
+/// `navigator.share({ text })`, for a message rather than a link: `url` would refuse it.
+pub async fn share_message(text: &str) -> bool {
+    let data = web_sys::ShareData::new();
+    data.set_text(text);
+    share(&data).await
+}
+
+async fn share(data: &web_sys::ShareData) -> bool {
     let Some(nav) = navigator_with_share() else {
         return false;
     };
-    let data = web_sys::ShareData::new();
-    data.set_url(url);
-    match JsFuture::from(nav.share_with_data(&data)).await {
+    match JsFuture::from(nav.share_with_data(data)).await {
         Ok(_) => true,
         Err(e) => js_sys::Reflect::get(&e, &JsValue::from_str("name"))
             .ok()

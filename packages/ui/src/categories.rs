@@ -3,7 +3,8 @@ use std::sync::LazyLock;
 
 use crate::tid;
 
-use crate::decrypted::DecryptedExpense;
+pub mod custom;
+pub use custom::{ProjectCategories, ShownCategory};
 
 /// A leaf of the taxonomy. `id` keys the keyword files and is never persisted; `parent` is.
 pub struct Category {
@@ -158,7 +159,7 @@ impl Index {
 /// The display label for a chart category.
 ///
 /// **`CHART_CATEGORIES` are stable ids, not labels.** `ExpensePayload.category` persists one of
-/// these strings *inside the encrypted payload*, and `get_expense_category` groups on them, so
+/// these strings *inside the encrypted payload*, and `ProjectCategories::resolve` groups on them, so
 /// translating them in place would orphan every expense already categorised and break the charts.
 /// Only the label moves; the id stays French forever.
 pub fn category_label(id: &str) -> String {
@@ -285,16 +286,6 @@ pub fn get_expense_emoji(name: &str) -> &'static str {
 
 pub fn infer_chart_category(name: &str) -> &'static str {
     find_category(name).parent
-}
-
-/// What the user picked while it is still in `CHART_CATEGORIES`, else what the name says.
-pub fn get_expense_category(expense: &DecryptedExpense) -> &'static str {
-    if let Some(ref cat) = expense.category {
-        if let Some(&found) = CHART_CATEGORIES.iter().find(|&&c| c == cat.as_str()) {
-            return found;
-        }
-    }
-    infer_chart_category(&expense.name)
 }
 
 /// The first child of each parent is its most representative one, so no second table is needed.

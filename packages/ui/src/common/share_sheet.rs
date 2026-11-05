@@ -26,6 +26,19 @@ pub async fn share_text(text: &str) -> bool {
     }
 }
 
+/// [`share_text`] for a message: the web sheet takes it as text, which `navigator.share` refuses
+/// as a URL. The native sheets share plain text either way.
+pub async fn share_message(text: &str) -> bool {
+    #[cfg(target_arch = "wasm32")]
+    {
+        super::web_dom::share_message(text).await
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        SHARER.get().map(|share| share(text)).unwrap_or(false)
+    }
+}
+
 /// Hands a URL the webview cannot open to the OS, true when something took it.
 ///
 /// The native interpreter routes every link through `webbrowser::open`, which on Android and iOS

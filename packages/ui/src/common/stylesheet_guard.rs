@@ -179,7 +179,7 @@ mod tests {
             .filter(|d| d.selector().is_some_and(|s| s == ":root") && d.prop.starts_with("--"))
             .map(|d| d.prop.clone())
             .collect();
-        for var in ["--sat", "--sab", "--sar", "--dt-scale", "--kb", "--overscroll", "--ptr-pull"] {
+        for var in ["--sat", "--sab", "--sar", "--dt-scale", "--overscroll", "--ptr-pull"] {
             assert!(rooted.contains(var), "{var} has no :root default in {}", STYLESHEETS[0]);
         }
     }

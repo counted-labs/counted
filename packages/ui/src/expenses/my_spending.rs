@@ -14,13 +14,14 @@ use crate::expenses::helpers::my_spending::{shift_month, GroupLedger, MonthTotal
 pub struct CountedGroup {
     pub project_id: Uuid,
     pub name: String,
+    pub emoji: Option<String>,
     pub members: usize,
     pub currency: String,
 }
 
 impl From<&GroupLedger> for CountedGroup {
     fn from(l: &GroupLedger) -> Self {
-        Self { project_id: l.project_id, name: l.name.clone(), members: l.members, currency: l.data.currency.clone() }
+        Self { project_id: l.project_id, name: l.name.clone(), emoji: l.emoji.clone(), members: l.members, currency: l.data.currency.clone() }
     }
 }
 use crate::icons::{BackArrowIcon, ChevronRightIcon, CloseIcon, LockIcon, SearchIcon, ICON_HEADER};
@@ -168,7 +169,7 @@ pub fn CountedGroupsSheet(
                             rsx! {
                                 li { key: "{id}",
                                     label { class: "flex items-center gap-3 py-2.5 cursor-pointer",
-                                        ProjectTile { name: ledger.name.clone(), id }
+                                        ProjectTile { name: ledger.name.clone(), id, emoji: ledger.emoji.clone() }
                                         span { class: "flex-1 min-w-0 flex flex-col gap-0.5",
                                             span { class: "font-semibold truncate", "{ledger.name}" }
                                             span { class: "text-xs text-base-content/70", "{detail}" }

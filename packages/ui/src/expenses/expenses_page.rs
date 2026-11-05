@@ -8,13 +8,15 @@ use super::helpers::export;
 use crate::common::persist::is_demo;
 use crate::common::{
     copy_text, is_mobile, leave_project_and_forget, pending, read_from_ls, InviteRetry,
-    remove_project, scheme_link_for, share_link_for, share_text, update_project_fresh, write_queue, write_to_ls, AppHeader, AvatarGroup, ConfirmModal, Flash,
+    remove_project, scheme_link_for, share_link_for, share_text, update_ls, update_project_fresh, write_queue, write_to_ls, AppHeader, AvatarGroup, ConfirmModal, Flash,
     LocalStorageState, ProjectKey, PullToRefresh, QueuedOp, SizeClass, Toast, LEAVE_CONFIRM_MESSAGE,
     LEAVE_CONFIRM_TITLE,
 };
 use crate::common::offline_queue::drop_project_ops;
 use crate::expenses::rotation_sheets::ProjectRotation;
 use crate::expenses::helpers::my_spending::load_ledgers;
+use crate::expenses::helpers::guest_invites::{dismiss_guests_hint, guests_hint_dismissed, unclaimed_guests};
+use crate::expenses::guests_card::{GuestsCard, SendToGuestsSheet};
 use crate::expenses::my_spending::{CountedGroup, CountedGroupsSheet};
 use crate::preferences::{push_counted, uncounted_projects};
 use crate::projects::personal_cards::is_personal_dto;
@@ -72,6 +74,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
     let mut show_edit_modal = use_signal(|| false);
     let mut recreate: Signal<Option<GroupPrefill>> = use_signal(|| None);
     let mut show_invite_modal = use_signal(|| false);
+    let mut show_guests_sheet = use_signal(|| false);
     let mut show_switch = use_signal(|| false);
     let mut invite_retry = use_context::<Signal<Option<InviteRetry>>>();
     let mut retry_invitees: Signal<Vec<Invitee>> = use_signal(Vec::new);
@@ -222,6 +225,26 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
     let is_stale = body_err.as_ref().map(|(_, offline)| *offline).unwrap_or(false);
     let body_err_msg = body_err.as_ref().map(|(msg, _)| msg.clone());
 
+    // `share_text` is false without a sheet (desktop browsers) or when it could not open, and true
+    // on dismiss - so the clipboard is only the fallback, never a second prompt after a shown sheet.
+    // Only a key proven on this project's row: a server can file another account-key blob where
+    // the escrowed key belongs, and this would put it in a link.
+    let share_link = (!demo && !personal && key_opens).then(|| EventHandler::new(move |_| {
+        let url = share_link_for(project_id, &key);
+        spawn(async move {
+            if share_text(&url).await {
+                return;
+            }
+            if copy_text(&url).await {
+                flash.set(Some(Flash::ok(tid!("link-copied"))));
+            } else {
+                copy_error.set(Some(tid!("copy-link-failed")));
+            }
+        });
+    }));
+    let invite = (auth_ctx().is_some() && !personal).then(|| EventHandler::new(move |_| show_invite_modal.set(true)));
+    let dismiss_guests = move || update_ls(ls_ctx, |state| dismiss_guests_hint(state, project_id));
+
     rsx! {
         div { class: "container app-container bg-base-100 overflow-auto p-4 pb-36 max-w-md w-full mx-auto flex flex-col gap-4",
             PullToRefresh {
@@ -250,26 +273,9 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                 },
                 on_export_json: move |_| export_all(export::download_json),
                 on_export_csv: move |_| export_all(export::download_csv),
-                // `share_text` is false without a sheet (desktop browsers) or when it could not
-                // open, and true on dismiss - so the clipboard is only the fallback, never a second
-                // prompt after a shown sheet.
                 badge: personal.then(|| tid!("personal-badge")),
-                // Only a key proven on this project's row: a server can file another account-key
-                // blob where the escrowed key belongs, and this would put it in a link.
-                on_share: (!demo && !personal && key_opens).then(|| EventHandler::new(move |_| {
-                    let url = share_link_for(project_id, &key);
-                    spawn(async move {
-                        if share_text(&url).await {
-                            return;
-                        }
-                        if copy_text(&url).await {
-                            flash.set(Some(Flash::ok(tid!("link-copied"))));
-                        } else {
-                            copy_error.set(Some(tid!("copy-link-failed")));
-                        }
-                    });
-                })),
-                on_invite: (auth_ctx().is_some() && !personal).then(|| EventHandler::new(move |_| show_invite_modal.set(true))),
+                on_share: share_link,
+                on_invite: invite,
                 on_forget: forget_project,
                 on_open_link: EventHandler::new(move |_| show_unlock_modal.set(true)),
                 counted,
@@ -379,6 +385,12 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                     let currency = d.currency.clone();
                     let project_status = d.project_status.clone();
                     let read_only = d.read_only;
+                    let guests = match (share_link, uid) {
+                        (Some(_), Some(me)) if !read_only && !guests_hint_dismissed(&ls_ctx.read(), project_id) => {
+                            unclaimed_guests(&key, &pickable, me)
+                        }
+                        _ => Vec::new(),
+                    };
                     // The edit modal must never open on another project's row.
                     let project_dto = live
                         .read()
@@ -416,6 +428,30 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                                 users: pickable.clone(),
                                 project_id,
                                 on_close: move |_| show_switch.set(false),
+                            }
+                        }
+
+                        if !guests.is_empty() {
+                            GuestsCard {
+                                names: guests,
+                                on_later: move |_| dismiss_guests(),
+                                on_send: move |_| show_guests_sheet.set(true),
+                            }
+                        }
+
+                        if show_guests_sheet() {
+                            if let Some(share_link) = share_link {
+                                SendToGuestsSheet {
+                                    on_invite: invite.map(|open| EventHandler::new(move |_| {
+                                        dismiss_guests();
+                                        open.call(());
+                                    })),
+                                    on_share_link: move |_| {
+                                        dismiss_guests();
+                                        share_link.call(());
+                                    },
+                                    on_close: move |_| show_guests_sheet.set(false),
+                                }
                             }
                         }
 
