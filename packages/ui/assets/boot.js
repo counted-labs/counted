@@ -24,30 +24,11 @@
   document.addEventListener('touchstart', function () {}, { passive: true });
   // Capture, because `scroll` does not bubble. Scoped to the element that scrolled: mid-transition
   // the exiting page overlay holds a header too, and only the live one may change.
-  // On a tab root the large title hands over to the bar's own: once a frame, `--large-title-out`
-  // says how far it has slid under the bar (0 to 1) and `.is-collapsed` that it is all the way.
-  // A hidden large title (every platform but iOS) has no height and is left alone.
-  var titleFrame = 0;
   document.addEventListener('scroll', function (e) {
     var t = e.target;
     if (!t || t.nodeType !== 1) return;
     var bar = t.querySelector('.nav-material');
-    if (!bar) return;
-    bar.classList.toggle('is-scrolled', t.scrollTop > 2);
-    if (titleFrame || !bar.hasAttribute('data-large')) return;
-    titleFrame = requestAnimationFrame(function () {
-      titleFrame = 0;
-      var large = t.querySelector('.large-title');
-      var r = large && large.getBoundingClientRect();
-      if (!r || !r.height) return;
-      var out = Math.min(1, Math.max(0, (bar.getBoundingClientRect().bottom - r.top) / r.height));
-      out = Math.round(out * 100) / 100;
-      if (bar._titleOut === out) return;
-      bar._titleOut = out;
-      bar.style.setProperty('--large-title-out', out);
-      large.style.setProperty('--large-title-out', out);
-      bar.classList.toggle('is-collapsed', out === 1);
-    });
+    if (bar) bar.classList.toggle('is-scrolled', t.scrollTop > 2);
   }, { capture: true, passive: true });
   // The iOS toast is a banner: it follows a drag (down only grudgingly) and a release 24px up
   // dismisses it through its own click, the one event Rust sees. `transform`, because the CSS

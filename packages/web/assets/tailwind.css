@@ -4512,6 +4512,9 @@
   .text-\[1\.0625rem\] {
     font-size: 1.0625rem;
   }
+  .text-\[1\.625rem\] {
+    font-size: 1.625rem;
+  }
   .leading-\[1\.12\] {
     --tw-leading: 1.12;
     line-height: 1.12;
@@ -5135,6 +5138,11 @@
       @supports (color: color-mix(in lab, red, red)) {
         background-color: color-mix(in oklab, var(--color-white) 25%, transparent);
       }
+    }
+  }
+  .active\:text-secondary-content {
+    &:active {
+      color: var(--color-secondary-content);
     }
   }
   .active\:brightness-95 {

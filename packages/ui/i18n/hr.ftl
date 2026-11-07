@@ -320,7 +320,6 @@ budget-invalid = Neispravan iznos za { $category }.
 budget-offline = Proračuni se spremaju samo uz vezu. Ponovno se poveži i pokušaj opet.
 budget-alert-near = { $category }: { $percent } % mjesečnog proračuna
 budget-alert-over = { $category }: mjesečni proračun prekoračen
-personal-card-budget = { $month } · proračun { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } rezultat
@@ -860,7 +859,7 @@ participants-invited-pending = Pozivnica još nije prihvaćena
 participants-unlinked = Nije povezano s računom
 add-project-create-invite = Stvori i pozovi: { $count }
 edit-project-save-invite = Spremi i pozovi: { $count }
-edit-project-you-are = Na ovom uređaju ti si { $name }
+edit-project-you-are = U ovom projektu ti si { $name }
 edit-project-no-identity = Još nisi odabrao/la tko si
 edit-project-switch = Promijeni
 edit-project-choose = Odaberi

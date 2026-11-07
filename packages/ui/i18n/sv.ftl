@@ -319,7 +319,6 @@ budget-invalid = Ogiltigt belopp för { $category }.
 budget-offline = Budgetar kan bara sparas online. Anslut igen och försök på nytt.
 budget-alert-near = { $category }: { $percent } % av månadens budget
 budget-alert-over = { $category }: månadens budget är överskriden
-personal-card-budget = { $month } · budget { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } resultat
@@ -851,7 +850,7 @@ participants-invited-pending = Inbjudan inte accepterad än
 participants-unlinked = Inte kopplad till något konto
 add-project-create-invite = Skapa och bjud in { $count }
 edit-project-save-invite = Spara och bjud in { $count }
-edit-project-you-are = På den här enheten är du { $name }
+edit-project-you-are = I det här projektet är du { $name }
 edit-project-no-identity = Du har inte valt vem du är än
 edit-project-switch = Byt
 edit-project-choose = Välj

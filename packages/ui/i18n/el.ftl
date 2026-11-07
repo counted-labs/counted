@@ -319,7 +319,6 @@ budget-invalid = Μη έγκυρο ποσό για { $category }.
 budget-offline = Οι προϋπολογισμοί αποθηκεύονται μόνο online. Συνδέσου ξανά και δοκίμασε πάλι.
 budget-alert-near = { $category }: { $percent } % του προϋπολογισμού του μήνα
 budget-alert-over = { $category }: υπέρβαση προϋπολογισμού του μήνα
-personal-card-budget = { $month } · προϋπολογισμός { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } αποτέλεσμα
@@ -851,7 +850,7 @@ participants-invited-pending = Η πρόσκληση δεν έγινε ακόμ�
 participants-unlinked = Δεν συνδέεται με λογαριασμό
 add-project-create-invite = Δημιουργία και πρόσκληση: { $count }
 edit-project-save-invite = Αποθήκευση και πρόσκληση: { $count }
-edit-project-you-are = Σε αυτή τη συσκευή είσαι ο/η { $name }
+edit-project-you-are = Σε αυτό το έργο είσαι ο/η { $name }
 edit-project-no-identity = Δεν έχεις διαλέξει ακόμα ποιος είσαι
 edit-project-switch = Αλλαγή
 edit-project-choose = Επιλογή

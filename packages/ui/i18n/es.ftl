@@ -296,7 +296,6 @@ budget-invalid = Importe no válido para { $category }.
 budget-offline = Los presupuestos solo se guardan con conexión. Vuelve a conectarte e inténtalo de nuevo.
 budget-alert-near = { $category }: { $percent } % del presupuesto del mes
 budget-alert-over = { $category }: presupuesto del mes superado
-personal-card-budget = { $month } · presupuesto { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } resultado
@@ -879,7 +878,7 @@ participants-invited-pending = Invitación aún no aceptada
 participants-unlinked = No vinculado a ninguna cuenta
 add-project-create-invite = Crear e invitar a { $count }
 edit-project-save-invite = Guardar e invitar a { $count }
-edit-project-you-are = En este dispositivo eres { $name }
+edit-project-you-are = En este proyecto eres { $name }
 edit-project-no-identity = Aún no has elegido quién eres
 edit-project-switch = Cambiar
 edit-project-choose = Elegir

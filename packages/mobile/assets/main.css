@@ -241,17 +241,15 @@ main {
 /* The bar's material reaches under the status bar and to both screen edges: pulled up over the
    scroller's top padding and out over its side padding, and pinned to the scroller's own top edge
    (sticky offsets count from inside the padding). On iOS the bar is zoomed back at large Dynamic
-   Type (`--chrome-zoom`), which scales these lengths too, hence the division. `--bar-min` and
-   `--bar-pad` are the platform's bar height and padding (native-feel.css), the visible bar below
-   the inset. */
+   Type (`--chrome-zoom`), which scales these lengths too, hence the division. */
 .app-container > header.nav-material {
   --sat-z: calc(var(--sat) / var(--chrome-zoom));
   --edge-z: calc(1rem / var(--chrome-zoom));
   width: auto;
   top: calc(-1 * var(--sat-z));
   margin: calc(-1 * var(--sat-z)) calc(-1 * var(--edge-z)) 0;
-  padding: calc(var(--sat-z) + var(--bar-pad, 0.5rem)) var(--edge-z) var(--bar-pad, 0.5rem);
-  min-height: calc(var(--bar-min, 4rem) + var(--sat-z));
+  padding: calc(var(--sat-z) + 0.5rem) var(--edge-z) 0.5rem;
+  min-height: calc(4rem + var(--sat-z));
 }
 
 /* The welcome page has no scroller: it clears the status bar itself. */
@@ -303,11 +301,28 @@ main {
   .modal-bottom .modal-box[data-sheet-detent="medium"] {
     height: var(--sheet-medium, 50dvh);
   }
+  /* Pulled above its rest, the sheet keeps its surface down to the screen's bottom edge, as on iOS:
+     a solid copy of the box, offset back down by the pull, fills the gap. A shadow, because the
+     box clips its own overflow and a pseudo-element would be cut off. */
   .modal-bottom .modal-box[data-sheet-drag] {
     transform: translateY(var(--sheet-drag, 0px));
+    box-shadow:
+      0 max(0px, calc(-1 * var(--sheet-drag, 0px))) 0 0 var(--color-base-100),
+      oklch(0% 0 0 / 0.25) 0px 25px 50px -12px;
+  }
+  .modal-bottom .modal-box[data-sheet-drag="pulling"] {
+    transition: none;
+  }
+  [data-theme="counted-dark"] .modal-bottom .modal-box[data-sheet-drag] {
+    box-shadow:
+      0 max(0px, calc(-1 * var(--sheet-drag, 0px))) 0 0 var(--color-base-100),
+      0 0 0 1px oklch(100% 0 0 / 0.08),
+      0 8px 18px -6px oklch(0% 0 0 / 0.5);
   }
   .modal-bottom .modal-box[data-sheet-drag="settling"] {
-    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    transition:
+      transform 0.3s cubic-bezier(0.32, 0.72, 0, 1),
+      box-shadow 0.3s cubic-bezier(0.32, 0.72, 0, 1);
   }
   .modal-bottom[data-sheet-drag] {
     background-color: oklch(0% 0 0 / calc(0.4 * var(--sheet-scrim, 1)));

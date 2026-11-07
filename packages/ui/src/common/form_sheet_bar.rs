@@ -8,12 +8,13 @@ use crate::tid;
 /// xmark and a tinted checkmark, iOS 16-18 the text buttons "Cancel" and a bold confirm, Android
 /// the xmark and a text confirm (the M3 full-screen dialog bar). Each button carries both its icon
 /// and its text, so the text is the accessible name whichever is shown. The confirm submits
-/// `form` by id when given, else calls `on_confirm`. The form's own bottom button stays.
+/// `form` by id when given, else calls `on_confirm`; with neither, the bar has no confirm and a
+/// spacer keeps the title centred. The form's own bottom button stays.
 #[component]
 pub fn FormSheetBar(
     close_id: &'static str,
-    confirm_id: &'static str,
-    confirm_label: String,
+    #[props(default)] confirm_id: &'static str,
+    #[props(default)] confirm_label: String,
     on_close: EventHandler<()>,
     #[props(default)] form: Option<&'static str>,
     #[props(default)] on_confirm: Option<EventHandler<()>>,
@@ -31,6 +32,9 @@ pub fn FormSheetBar(
                 span { class: "sheet-bar-text", {tid!("cancel")} }
             }
             div { class: "flex-1 min-w-0 flex items-center", {children} }
+            if form.is_none() && on_confirm.is_none() {
+                span { class: "size-11 shrink-0", aria_hidden: "true" }
+            } else {
             button {
                 id: confirm_id,
                 r#type: if form.is_some() { "submit" } else { "button" },
@@ -44,6 +48,7 @@ pub fn FormSheetBar(
                 },
                 span { class: "sheet-bar-icon", aria_hidden: "true", CheckIcon { size: ICON_HEADER } }
                 span { class: "sheet-bar-text", "{confirm_label}" }
+            }
             }
         }
     }

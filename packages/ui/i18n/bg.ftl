@@ -319,7 +319,6 @@ budget-invalid = Невалидна сума за { $category }.
 budget-offline = Бюджетите се запазват само онлайн. Свържи се отново и опитай пак.
 budget-alert-near = { $category }: { $percent } % от бюджета за месеца
 budget-alert-over = { $category }: бюджетът за месеца е надвишен
-personal-card-budget = { $month } · бюджет { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } резултат
@@ -851,7 +850,7 @@ participants-invited-pending = Поканата още не е приета
 participants-unlinked = Не е свързан с профил
 add-project-create-invite = Създай и покани: { $count }
 edit-project-save-invite = Запази и покани: { $count }
-edit-project-you-are = На това устройство ти си { $name }
+edit-project-you-are = В този проект ти си { $name }
 edit-project-no-identity = Още не си избрал(а) кой си
 edit-project-switch = Смени
 edit-project-choose = Избери

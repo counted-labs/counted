@@ -96,32 +96,6 @@ pub fn SpeedDialFab(props: SpeedDialFabProps) -> Element {
     }
 }
 
-/// The add button as iOS draws it, a trailing "+" in the page's navigation bar (D3), opening the
-/// same actions as the FAB in a bottom sheet. The FAB is hidden on iOS and this shown only there
-/// (native-feel.css, `.nav-add`); the web never ships it.
-#[component]
-pub fn NavAddButton(id: &'static str, label: String, open: Signal<bool>) -> Element {
-    let mut open = open;
-    if !cfg!(any(target_os = "android", target_os = "ios")) {
-        return rsx! {};
-    }
-    rsx! {
-        button {
-            id,
-            r#type: "button",
-            class: "nav-add btn btn-circle size-11 min-h-11 border-0 bg-base-300 glass-button",
-            aria_label: "{label}",
-            aria_haspopup: "dialog",
-            aria_expanded: open(),
-            onclick: move |_| {
-                haptic(Haptic::Light);
-                open.set(true);
-            },
-            PlusIcon { size: 24 }
-        }
-    }
-}
-
 #[derive(PartialEq, Props, Clone)]
 pub struct SpeedDialActionProps {
     pub label: String,

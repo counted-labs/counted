@@ -319,7 +319,6 @@ budget-invalid = Ógild upphæð fyrir { $category }.
 budget-offline = Áætlanir vistast aðeins á netinu. Tengstu aftur og reyndu aftur.
 budget-alert-near = { $category }: { $percent } % af áætlun mánaðarins
 budget-alert-over = { $category }: farið yfir áætlun mánaðarins
-personal-card-budget = { $month } · fjárhagsáætlun { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } niðurstaða
@@ -851,7 +850,7 @@ participants-invited-pending = Boð ekki samþykkt enn
 participants-unlinked = Ekki tengt aðgangi
 add-project-create-invite = Stofna og bjóða { $count }
 edit-project-save-invite = Vista og bjóða { $count }
-edit-project-you-are = Í þessu tæki ert þú { $name }
+edit-project-you-are = Í þessu verkefni ert þú { $name }
 edit-project-no-identity = Þú hefur ekki enn valið hver þú ert
 edit-project-switch = Skipta
 edit-project-choose = Velja

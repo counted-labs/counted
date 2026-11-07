@@ -19,7 +19,6 @@ use crate::common::{
 };
 use crate::crypto::decrypt_json;
 use crate::decrypted::{pickable_users, DecryptedExpense};
-use crate::expenses::helpers::budgets::{budget_lines, spent_by_category, BudgetLine};
 use crate::expenses::helpers::project_data::{self, LiveData, ProjectData, RowExpense};
 use crate::expenses::tabs::expenses_tab::my_debt_by_expense;
 
@@ -140,12 +139,11 @@ pub fn month_totals(own: &[RowExpense], shares: &[ShareRow], month: NaiveDate) -
     totals
 }
 
-/// The personal card on the projects page (designs J3, P4): the month as Mes dépenses adds it up,
-/// and every ceiling taken together against what their categories spent.
+/// The personal card on the projects page (designs J3, P4): the month as Mes dépenses adds it up.
+/// No budget: the ceilings are per category and one bar cannot stand for several.
 #[derive(Clone, Debug, PartialEq)]
 pub struct MonthGlance {
     pub spent: f64,
-    pub budget: Option<BudgetLine>,
 }
 
 /// From this device's cache alone; `None` until the personal project has been opened here once.
@@ -175,21 +173,7 @@ pub fn month_glance(
     let month = first_of_month(today);
     let mut shares = share_rows(ledgers, uncounted, &data.currency, fx);
     shares.retain(|s| s.project_id != personal);
-    let lines = budget_lines(&data.budgets, &data.budgets_custom, &data.categories, &spent_by_category(&data.expenses, &shares, month));
-    let budget = (!lines.is_empty()).then(|| {
-        let outer: Vec<&BudgetLine> = lines.iter().filter(|l| !nested_line(l, &lines)).collect();
-        BudgetLine {
-            category: crate::categories::ShownCategory::builtin(crate::categories::custom::OTHER),
-            spent: outer.iter().map(|l| l.spent).sum(),
-            limit: outer.iter().map(|l| l.limit).sum(),
-        }
-    });
-    Some(MonthGlance { spent: month_totals(&data.expenses, &shares, month).spent(), budget })
-}
-
-/// A custom category's line inside a parent that has its own: the parent already counts it.
-fn nested_line(line: &BudgetLine, lines: &[BudgetLine]) -> bool {
-    line.category.is_custom() && lines.iter().any(|l| !l.category.is_custom() && l.category.id == line.category.parent)
+    Some(MonthGlance { spent: month_totals(&data.expenses, &shares, month).spent() })
 }
 
 /// What a list of results adds up to: own expenses, and counted shares in the personal currency.
@@ -347,7 +331,7 @@ pub(crate) fn exercise_hostile(
 ) {
     use crate::common::test_fixtures::{make_project, TEST_KEY};
     use crate::crypto::encrypt_json;
-    use crate::expenses::helpers::budgets::{average_by_category, crossed};
+    use crate::expenses::helpers::budgets::{average_by_category, budget_lines, crossed, spent_by_category};
 
     let k = TEST_KEY;
     let (group_id, personal) = (Uuid::from_u128(1), Uuid::from_u128(2));
@@ -377,7 +361,7 @@ pub(crate) fn exercise_hostile(
     let spent = spent_by_category(&personal_data.expenses, &shares, month);
     let _ = average_by_category(&personal_data.expenses, &shares, month);
     for line in budget_lines(&personal_data.budgets, &personal_data.budgets_custom, &personal_data.categories, &spent) {
-        let _ = (line.meter(), crossed(line.spent, 1.0, line.limit), nested_line(&line, &[]));
+        let _ = (line.meter(), crossed(line.spent, 1.0, line.limit));
     }
     let _ = crate::expenses::budget_panel::sheet_categories(&spent, &personal_data.categories);
     let by_id: HashMap<i32, &ShareRow> = shares.iter().map(|s| (s.row.expense.id, s)).collect();
@@ -484,7 +468,7 @@ mod tests {
     }
 
     #[test]
-    fn the_home_card_adds_up_the_month_and_the_budgets_from_the_cache() {
+    fn the_home_card_adds_up_the_month_from_the_cache_whatever_the_ceilings() {
         use crate::crypto::{encrypt_json, key_to_fragment};
         let k = test_key();
         let category_of = |e: &Expense| RowExpense::from(crate::decrypted::decrypt_expense(&k, e).unwrap()).category;
@@ -530,10 +514,6 @@ mod tests {
 
         let glance = month_glance(&state, personal_id, &cached_ledgers(&state, personal_id), &HashSet::new(), None, today).unwrap();
         assert!((glance.spent - 78.30).abs() < 1e-9);
-        let budget = glance.budget.unwrap();
-        assert_eq!(budget.limit, 100.0);
-        let dinner_counts = if category_of(&dinner) == category_of(&courses) { 32.0 } else { 0.0 };
-        assert!((budget.spent - (46.30 + dinner_counts)).abs() < 1e-9);
 
         let uncounted = month_glance(&state, personal_id, &cached_ledgers(&state, personal_id), &HashSet::from([group_id]), None, today).unwrap();
         assert!((uncounted.spent - 46.30).abs() < 1e-9);

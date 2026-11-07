@@ -319,7 +319,6 @@ budget-invalid = { $category } için geçersiz tutar.
 budget-offline = Bütçeler yalnızca çevrimiçi kaydedilir. Yeniden bağlanıp tekrar dene.
 budget-alert-near = { $category }: ay bütçesinin %{ $percent } kadarı
 budget-alert-over = { $category }: ay bütçesi aşıldı
-personal-card-budget = { $month } · bütçe { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } sonuç
@@ -851,7 +850,7 @@ participants-invited-pending = Davet henüz kabul edilmedi
 participants-unlinked = Bir hesaba bağlı değil
 add-project-create-invite = Oluştur ve davet et: { $count }
 edit-project-save-invite = Kaydet ve davet et: { $count }
-edit-project-you-are = Bu cihazda sen { $name } olarak görünüyorsun
+edit-project-you-are = Bu projede sen { $name } olarak görünüyorsun
 edit-project-no-identity = Henüz kim olduğunu seçmedin
 edit-project-switch = Değiştir
 edit-project-choose = Seç

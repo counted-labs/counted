@@ -330,7 +330,6 @@ budget-invalid = Not an amount for { $category }.
 budget-offline = Budgets can only be saved online. Reconnect and try again.
 budget-alert-near = { $category }: { $percent } % of this month’s budget
 budget-alert-over = { $category }: this month’s budget is exceeded
-personal-card-budget = { $month } · budget { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } result
@@ -1055,7 +1054,7 @@ participants-invited-pending = Invitation not accepted yet
 participants-unlinked = Not linked to an account
 add-project-create-invite = Create and invite { $count }
 edit-project-save-invite = Save and invite { $count }
-edit-project-you-are = On this device you are { $name }
+edit-project-you-are = In this project you are { $name }
 edit-project-no-identity = You haven’t picked who you are yet
 edit-project-switch = Switch
 edit-project-choose = Choose

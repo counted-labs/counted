@@ -21,7 +21,6 @@ use crate::crypto::{
 };
 use crate::common::fx_cache::read_fx;
 use crate::expenses::budget_panel::money;
-use crate::expenses::helpers::budgets::Meter;
 use crate::expenses::helpers::my_spending::{month_glance, GroupLedger};
 use crate::preferences::uncounted_projects;
 use crate::icons::{ChartIcon, CloseIcon, LockIcon, UserIcon, WalletIcon, ICON_HEADER};
@@ -257,7 +256,7 @@ pub fn PersonalCreateSheet(on_close: EventHandler<()>) -> Element {
 }
 
 /// J3, P4: the personal project, pinned above the groups, with the month as Mes dépenses adds it
-/// up and, once ceilings are set, the budget left.
+/// up. No budget bar: the ceilings are per category, and the budget panel shows each one.
 #[component]
 pub fn PersonalCard(project: ProjectDto, ledgers: Signal<Vec<GroupLedger>>) -> Element {
     let ls_ctx = use_context::<Signal<LocalStorageState>>();
@@ -282,7 +281,6 @@ pub fn PersonalCard(project: ProjectDto, ledgers: Signal<Vec<GroupLedger>>) -> E
     });
     let (name, currency) = name.unwrap_or_default();
     let month = month_title(chrono::Datelike::month0(&today) as usize);
-    let budget = glance().and_then(|g| g.budget);
     rsx! {
         Link {
             id: "personal-card",
@@ -297,38 +295,10 @@ pub fn PersonalCard(project: ProjectDto, ledgers: Signal<Vec<GroupLedger>>) -> E
                             span { class: "font-semibold truncate", "{name}" }
                             span { class: "badge badge-sm badge-soft badge-success shrink-0 font-semibold", {tid!("personal-badge")} }
                         }
-                        span { id: "personal-card-month", class: "text-xs text-base-content/70",
-                            match &budget {
-                                Some(b) => tid!("personal-card-budget", month: month.clone(), amount: crate::common::round_amount(b.limit, &currency)),
-                                None => month.clone(),
-                            }
-                        }
+                        span { id: "personal-card-month", class: "text-xs text-base-content/70", "{month}" }
                     }
                     if let Some(g) = glance() {
-                        span { class: "flex flex-col items-end",
-                            span { id: "personal-card-spent", class: "font-bold tabular-nums", "{money(g.spent, &currency)}" }
-                            if let Some(b) = &budget {
-                                span { id: "personal-card-left", class: "text-[0.6875rem] font-semibold tabular-nums",
-                                    match b.meter() {
-                                        Meter::Left(left) => rsx! { span { class: "text-success", {tid!("budget-left", amount: money(left, &currency))} } },
-                                        Meter::Near(_) => rsx! { span { class: "text-warning", {tid!("budget-left", amount: money(b.limit - b.spent, &currency))} } },
-                                        Meter::Over(by) => rsx! { span { class: "text-error", {tid!("budget-over", amount: money(by, &currency))} } },
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                if let Some(b) = &budget {
-                    span { class: "block h-1.5 rounded-full bg-base-300 overflow-hidden",
-                        span {
-                            class: match b.meter() {
-                                Meter::Left(_) => "block h-full rounded-full bg-success",
-                                Meter::Near(_) => "block h-full rounded-full bg-warning",
-                                Meter::Over(_) => "block h-full rounded-full bg-error",
-                            },
-                            style: "width: {(b.ratio() * 100.0).clamp(0.0, 100.0)}%;",
-                        }
+                        span { id: "personal-card-spent", class: "font-bold tabular-nums", "{money(g.spent, &currency)}" }
                     }
                 }
         }

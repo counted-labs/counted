@@ -322,7 +322,6 @@ budget-invalid = Montant invalide pour { $category }.
 budget-offline = Les budgets ne s’enregistrent qu’en ligne. Reconnectez-vous et réessayez.
 budget-alert-near = { $category } : { $percent } % du budget du mois
 budget-alert-over = { $category } : budget du mois dépassé
-personal-card-budget = { $month } · budget { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } résultat
@@ -1037,7 +1036,7 @@ participants-invited-pending = Invitation pas encore acceptée
 participants-unlinked = Non lié à un compte
 add-project-create-invite = Créer et inviter { $count }
 edit-project-save-invite = Enregistrer et inviter { $count }
-edit-project-you-are = Sur cet appareil, vous êtes { $name }
+edit-project-you-are = Dans ce projet, vous êtes { $name }
 edit-project-no-identity = Vous n’avez pas encore indiqué qui vous êtes
 edit-project-switch = Changer
 edit-project-choose = Choisir
@@ -1175,7 +1174,7 @@ home-remind-message = Petit rappel : il reste des remboursements à régler sur 
 home-row-owed = on vous doit
 home-row-owe = vous devez
 home-row-settled = À l’équilibre
-home-row-quits = Vous êtes quitte
+home-row-quits = Vous êtes à l’équilibre
 home-row-pending =
     { $count ->
         [one] { $count } remboursement en attente

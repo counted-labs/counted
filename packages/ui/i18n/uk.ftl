@@ -321,7 +321,6 @@ budget-invalid = Неправильна сума для { $category }.
 budget-offline = Бюджети зберігаються лише онлайн. Підключись та спробуй ще раз.
 budget-alert-near = { $category }: { $percent } % бюджету місяця
 budget-alert-over = { $category }: бюджет місяця перевищено
-personal-card-budget = { $month } · бюджет { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } результат
@@ -869,7 +868,7 @@ participants-invited-pending = Запрошення ще не прийнято
 participants-unlinked = Не пов’язано з обліковим записом
 add-project-create-invite = Створити й запросити: { $count }
 edit-project-save-invite = Зберегти й запросити: { $count }
-edit-project-you-are = На цьому пристрої ти { $name }
+edit-project-you-are = У цьому проєкті ти { $name }
 edit-project-no-identity = Ти ще не вибрав(-ла), хто ти
 edit-project-switch = Змінити
 edit-project-choose = Вибрати

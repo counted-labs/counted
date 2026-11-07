@@ -143,7 +143,6 @@ pub fn SettingsPage() -> Element {
                 title: tid!("settings-title"),
                 back_button_route: Route::ProjectsPage {},
                 back: false,
-                large: true,
             }
 
             if let Some(err) = error_msg() {

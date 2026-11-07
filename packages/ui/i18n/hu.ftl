@@ -319,7 +319,6 @@ budget-invalid = Érvénytelen összeg: { $category }.
 budget-offline = A költségkeretek csak online menthetők. Csatlakozz újra, és próbáld meg ismét.
 budget-alert-near = { $category }: a havi keret { $percent } %-a
 budget-alert-over = { $category }: a havi keret túllépve
-personal-card-budget = { $month } · költségkeret { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } találat
@@ -851,7 +850,7 @@ participants-invited-pending = A meghívó még nincs elfogadva
 participants-unlinked = Nincs fiókhoz kapcsolva
 add-project-create-invite = Létrehozás és { $count } meghívása
 edit-project-save-invite = Mentés és { $count } meghívása
-edit-project-you-are = Ezen az eszközön te vagy: { $name }
+edit-project-you-are = Ebben a projektben te vagy: { $name }
 edit-project-no-identity = Még nem választottad ki, ki vagy
 edit-project-switch = Váltás
 edit-project-choose = Kiválasztás

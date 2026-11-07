@@ -26,7 +26,7 @@ const THEME_KEY: &str = "counted_theme";
 /// `Integrity-Policy` refuses a script without `integrity`, and a no-cors one even with it, so the
 /// web tag also carries `crossorigin` (docs/dioxus-overrides.md §17).
 pub const BOOT_JS: Asset = asset!("/assets/boot.js", AssetOptions::js().with_minify(false));
-pub const BOOT_JS_INTEGRITY: &str = "sha384-zVxYHLdNxiCgt0m9q8+BtL19oRxh4K3Dmb7v0zy2EcHMYcPbM0MCjq6KwBhtvzr/";
+pub const BOOT_JS_INTEGRITY: &str = "sha384-jqiXaidSyOC/hi2UeimuyHvBYQUhye6tso8U1hbQ58gMbh6Zj9YLnc5EYJOi36x7";
 /// `assets/native-feel.css`, linked by web and mobile between tailwind.css and their main.css.
 pub const NATIVE_FEEL_CSS: Asset = asset!("/assets/native-feel.css");
 pub const BOOT_JS_SOURCE: &str = include_str!("../../assets/boot.js");

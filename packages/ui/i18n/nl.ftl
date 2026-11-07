@@ -296,7 +296,6 @@ budget-invalid = Geen geldig bedrag voor { $category }.
 budget-offline = Budgetten worden alleen online opgeslagen. Maak verbinding en probeer het opnieuw.
 budget-alert-near = { $category }: { $percent } % van het maandbudget
 budget-alert-over = { $category }: maandbudget overschreden
-personal-card-budget = { $month } · budget { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } resultaat
@@ -879,7 +878,7 @@ participants-invited-pending = Uitnodiging nog niet geaccepteerd
 participants-unlinked = Niet gekoppeld aan een account
 add-project-create-invite = Aanmaken en { $count } uitnodigen
 edit-project-save-invite = Opslaan en { $count } uitnodigen
-edit-project-you-are = Op dit apparaat ben je { $name }
+edit-project-you-are = In dit project ben je { $name }
 edit-project-no-identity = Je hebt nog niet gekozen wie je bent
 edit-project-switch = Wisselen
 edit-project-choose = Kiezen

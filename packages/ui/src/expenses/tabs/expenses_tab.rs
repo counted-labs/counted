@@ -29,8 +29,7 @@ use crate::expenses::my_spending::{MonthSummary, SearchPill};
 use crate::expenses::project_states::ExpenseRowsSkeleton;
 use crate::preferences::uncounted_projects;
 use crate::expenses::{AddExpenseModal, EditExpenseModal, ExpenseRow, ExpenseSwipe, QueuedAdd};
-use crate::expenses::project_actions_sheet::{MenuSheet, Row, GROUP_CLASS};
-use crate::icons::{CameraIcon, CloseIcon, PhotoIcon, PlusIcon, ICON_HEADER, ICON_INLINE};
+use crate::icons::{CameraIcon, CloseIcon, PhotoIcon, PlusIcon, ICON_INLINE};
 use crate::expenses::hooks::use_project_store::ProjectStore;
 use crate::recurring::actions::stop_rule;
 use crate::recurring::dialog::DeleteExpenseDialog;
@@ -721,8 +720,6 @@ pub struct ExpensesTabProps {
     pub ledgers: ReadSignal<Arc<Vec<GroupLedger>>>,
     /// The first `ledgers` load: an empty list then is not an empty month yet.
     pub ledgers_loading: bool,
-    /// Raised by the iOS bar's "+": the add form, or with a scanner the add actions sheet.
-    pub add_request: Signal<bool>,
 }
 
 #[component]
@@ -739,18 +736,6 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
     let mut show_add_expense = use_signal(|| false);
     let mut scan = use_receipt_scan(show_add_expense);
     let mut scan_menu = use_signal(|| false);
-    let mut add_menu = use_signal(|| false);
-    let mut add_request = props.add_request;
-    use_effect(move || {
-        if add_request() {
-            add_request.set(false);
-            if scan.available() {
-                add_menu.set(true);
-            } else {
-                show_add_expense.set(true);
-            }
-        }
-    });
     // Delete carries the name so the confirmation can quote it - the expense may be gone by then.
     let mut confirming_delete: Signal<Option<(i32, String)>> = use_signal(|| None);
     let mut editing: Signal<Option<i32>> = use_signal(|| None);
@@ -1222,40 +1207,6 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                                 show_add_expense.set(true);
                             },
                             PlusIcon { size: ICON_INLINE }
-                        }
-                    }
-                }
-            }
-
-            if add_menu() {
-                MenuSheet { id: "expense-add-sheet", title: tid!("expense-add"), on_close: move |_| add_menu.set(false),
-                    div { class: GROUP_CLASS,
-                        Row {
-                            id: "expense-add-sheet-form",
-                            label: tid!("expense-add"),
-                            onclick: move |_| {
-                                add_menu.set(false);
-                                show_add_expense.set(true);
-                            },
-                            PlusIcon { size: ICON_HEADER }
-                        }
-                        Row {
-                            id: "expense-add-sheet-camera",
-                            label: tid!("scan-take-photo"),
-                            onclick: move |_| {
-                                add_menu.set(false);
-                                scan.start.call(ScanSource::Camera);
-                            },
-                            CameraIcon { size: ICON_HEADER }
-                        }
-                        Row {
-                            id: "expense-add-sheet-library",
-                            label: tid!("scan-choose-photo"),
-                            onclick: move |_| {
-                                add_menu.set(false);
-                                scan.start.call(ScanSource::Library);
-                            },
-                            PhotoIcon { size: ICON_HEADER }
                         }
                     }
                 }

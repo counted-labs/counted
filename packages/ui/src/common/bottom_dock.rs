@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use crate::tid;
 
 use crate::common::LocalStorageState;
-use crate::icons::{ChartFilledIcon, ChartIcon, HomeFilledIcon, HomeIcon, UserFilledIcon, UserIcon, ICON_ACTION};
+use crate::icons::{ChartIcon, HomeIcon, UserIcon, ICON_ACTION};
 use crate::route::{project_id_of, Route};
 use uuid::Uuid;
 
@@ -88,15 +88,15 @@ pub fn BottomDock() -> Element {
     // equals the dock's own radius (31px), so both arcs share a centre. The dock stays 62px tall,
     // which is what lets `.safe-bottom-fab` and every page's `pb-24`/`pb-36` stay as they are.
     //
-    // One markup, restyled per platform in native-feel.css (`.dock-tab`): the selected tab is
-    // tinted, carries `aria-current` and its filled glyph; iOS and the web put a neutral highlight
-    // behind it, Android an M3 indicator behind the icon alone. Tailwind wraps `hover:` in
+    // The active item is a gradient, so a `hover:bg-*` would be painted over by its
+    // `background-image` - brightness is the one thing the gradient can't occlude. `transition`
+    // rather than `transition-colors` so the filter animates too. Tailwind wraps `hover:` in
     // `@media (hover: hover)`, so touch devices are unaffected.
     let btn_class = |active: bool| -> &'static str {
         if active {
-            "dock-tab w-full h-12 flex flex-col items-center justify-center gap-0.5 rounded-full text-secondary-content"
+            "w-full h-12 flex flex-col items-center justify-center gap-0.5 rounded-full bg-gradient-brand text-primary-content hover:brightness-110 active:brightness-95 transition"
         } else {
-            "dock-tab w-full h-12 flex flex-col items-center justify-center gap-0.5 rounded-full text-base-content/70 hover:text-secondary-content active:bg-base-200 transition-colors"
+            "w-full h-12 flex flex-col items-center justify-center gap-0.5 rounded-full hover:text-secondary-content active:bg-base-200 active:text-secondary-content transition-colors"
         }
     };
     let label_class = "dock-label leading-none font-medium";
@@ -138,9 +138,7 @@ pub fn BottomDock() -> Element {
                     // just left - the project detail page above all, which the dock now shows on -
                     // and grow the stack on every tab cycle.
                     onclick: move |_| go(DockTab::Projects),
-                    span { class: "dock-icon",
-                        if lit == Some(DockTab::Projects) { HomeFilledIcon { size: ICON_ACTION } } else { HomeIcon { size: ICON_ACTION } }
-                    }
+                    HomeIcon { size: ICON_ACTION }
                     span { class: label_class, {tid!("nav-projects")} }
                 }
                 button {
@@ -150,9 +148,7 @@ pub fn BottomDock() -> Element {
                     aria_label: tid!("nav-charts"),
                     aria_current: aria_current(DockTab::Charts),
                     onclick: move |_| go(DockTab::Charts),
-                    span { class: "dock-icon",
-                        if lit == Some(DockTab::Charts) { ChartFilledIcon { size: ICON_ACTION } } else { ChartIcon { size: ICON_ACTION } }
-                    }
+                    ChartIcon { size: ICON_ACTION }
                     span { class: label_class, {tid!("nav-charts")} }
                 }
                 // Unconditional. This tab used to send anonymous users to /login instead, which left
@@ -164,9 +160,7 @@ pub fn BottomDock() -> Element {
                     aria_label: tid!("nav-settings"),
                     aria_current: aria_current(DockTab::Settings),
                     onclick: move |_| go(DockTab::Settings),
-                    span { class: "dock-icon",
-                        if lit == Some(DockTab::Settings) { UserFilledIcon { size: ICON_ACTION } } else { UserIcon { size: ICON_ACTION } }
-                    }
+                    UserIcon { size: ICON_ACTION }
                     span { class: label_class, {tid!("nav-settings")} }
                 }
             }

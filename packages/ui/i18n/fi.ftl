@@ -319,7 +319,6 @@ budget-invalid = Virheellinen summa: { $category }.
 budget-offline = Budjetit voi tallentaa vain verkossa. Yhdistä uudelleen ja yritä uudestaan.
 budget-alert-near = { $category }: { $percent } % kuukauden budjetista
 budget-alert-over = { $category }: kuukauden budjetti ylitetty
-personal-card-budget = { $month } · budjetti { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } tulos
@@ -851,7 +850,7 @@ participants-invited-pending = Kutsua ei ole vielä hyväksytty
 participants-unlinked = Ei yhdistetty tiliin
 add-project-create-invite = Luo ja kutsu { $count }
 edit-project-save-invite = Tallenna ja kutsu { $count }
-edit-project-you-are = Tällä laitteella olet { $name }
+edit-project-you-are = Tässä projektissa olet { $name }
 edit-project-no-identity = Et ole vielä valinnut, kuka olet
 edit-project-switch = Vaihda
 edit-project-choose = Valitse

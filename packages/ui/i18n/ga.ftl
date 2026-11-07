@@ -322,7 +322,6 @@ budget-invalid = Ní suim bhailí é do { $category }.
 budget-offline = Ní féidir buiséid a shábháil ach ar líne. Athcheangail agus bain triail eile as.
 budget-alert-near = { $category }: { $percent } % de bhuiséad na míosa
 budget-alert-over = { $category }: buiséad na míosa sáraithe
-personal-card-budget = { $month } · buiséad { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } toradh
@@ -878,7 +877,7 @@ participants-invited-pending = Níor glacadh leis an gcuireadh fós
 participants-unlinked = Níl sé nasctha le cuntas
 add-project-create-invite = Cruthaigh agus tabhair cuireadh do { $count }
 edit-project-save-invite = Sábháil agus tabhair cuireadh do { $count }
-edit-project-you-are = Ar an ngléas seo is tusa { $name }
+edit-project-you-are = Sa tionscadal seo is tusa { $name }
 edit-project-no-identity = Níor roghnaigh tú fós cé thú féin
 edit-project-switch = Athraigh
 edit-project-choose = Roghnaigh

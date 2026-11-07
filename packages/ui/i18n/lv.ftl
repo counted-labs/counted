@@ -320,7 +320,6 @@ budget-invalid = Nederīga summa: { $category }.
 budget-offline = Budžetus var saglabāt tikai tiešsaistē. Pievienojies un mēģini vēlreiz.
 budget-alert-near = { $category }: { $percent } % no mēneša budžeta
 budget-alert-over = { $category }: mēneša budžets pārsniegts
-personal-card-budget = { $month } · budžets { $amount }
 my-spending-search-summary =
     { $count ->
         [zero] { $count } rezultātu
@@ -860,7 +859,7 @@ participants-invited-pending = Ielūgums vēl nav pieņemts
 participants-unlinked = Nav saistīts ar kontu
 add-project-create-invite = Izveidot un uzaicināt: { $count }
 edit-project-save-invite = Saglabāt un uzaicināt: { $count }
-edit-project-you-are = Šajā ierīcē tu esi { $name }
+edit-project-you-are = Šajā projektā tu esi { $name }
 edit-project-no-identity = Tu vēl neesi izvēlējies, kas tu esi
 edit-project-switch = Mainīt
 edit-project-choose = Izvēlēties

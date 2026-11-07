@@ -321,7 +321,6 @@ budget-invalid = Neplatná suma pre { $category }.
 budget-offline = Rozpočty sa dajú uložiť len online. Pripoj sa a skús to znova.
 budget-alert-near = { $category }: { $percent } % mesačného rozpočtu
 budget-alert-over = { $category }: mesačný rozpočet prekročený
-personal-card-budget = { $month } · rozpočet { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } výsledok
@@ -869,7 +868,7 @@ participants-invited-pending = Pozvánka zatiaľ neprijatá
 participants-unlinked = Neprepojené s účtom
 add-project-create-invite = Vytvoriť a pozvať: { $count }
 edit-project-save-invite = Uložiť a pozvať: { $count }
-edit-project-you-are = Na tomto zariadení si { $name }
+edit-project-you-are = V tomto projekte si { $name }
 edit-project-no-identity = Ešte si nevybral(a), kto si
 edit-project-switch = Zmeniť
 edit-project-choose = Vybrať

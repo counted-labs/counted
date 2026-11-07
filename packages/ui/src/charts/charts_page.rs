@@ -347,7 +347,6 @@ pub fn ChartsPage() -> Element {
                 title: tid!("nav-charts"),
                 back_button_route: Route::ProjectsPage {},
                 back: false,
-                large: true,
                 MoreButton { id: "charts-actions", label: tid!("export"), open: show_export }
             }
             if show_export() {

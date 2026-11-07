@@ -321,7 +321,6 @@ budget-invalid = Neteisinga suma: { $category }.
 budget-offline = Biudžetus galima išsaugoti tik prisijungus. Prisijunk ir bandyk dar kartą.
 budget-alert-near = { $category }: { $percent } % mėnesio biudžeto
 budget-alert-over = { $category }: mėnesio biudžetas viršytas
-personal-card-budget = { $month } · biudžetas { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } rezultatas
@@ -869,7 +868,7 @@ participants-invited-pending = Kvietimas dar nepriimtas
 participants-unlinked = Nesusieta su paskyra
 add-project-create-invite = Sukurti ir pakviesti: { $count }
 edit-project-save-invite = Išsaugoti ir pakviesti: { $count }
-edit-project-you-are = Šiame įrenginyje tu esi { $name }
+edit-project-you-are = Šiame projekte tu esi { $name }
 edit-project-no-identity = Dar nepasirinkai, kas esi
 edit-project-switch = Keisti
 edit-project-choose = Pasirinkti

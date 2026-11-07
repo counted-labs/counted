@@ -321,7 +321,6 @@ budget-invalid = Neveljaven znesek za { $category }.
 budget-offline = Proračune je mogoče shraniti le s povezavo. Znova se poveži in poskusi še enkrat.
 budget-alert-near = { $category }: { $percent } % mesečnega proračuna
 budget-alert-over = { $category }: mesečni proračun presežen
-personal-card-budget = { $month } · proračun { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } zadetek
@@ -869,7 +868,7 @@ participants-invited-pending = Povabilo še ni sprejeto
 participants-unlinked = Ni povezano z računom
 add-project-create-invite = Ustvari in povabi: { $count }
 edit-project-save-invite = Shrani in povabi: { $count }
-edit-project-you-are = Na tej napravi si { $name }
+edit-project-you-are = V tem projektu si { $name }
 edit-project-no-identity = Še nisi izbral(a), kdo si
 edit-project-switch = Zamenjaj
 edit-project-choose = Izberi

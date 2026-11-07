@@ -296,7 +296,6 @@ budget-invalid = Kein gültiger Betrag für { $category }.
 budget-offline = Budgets lassen sich nur online speichern. Verbinde dich und versuche es erneut.
 budget-alert-near = { $category }: { $percent } % des Monatsbudgets
 budget-alert-over = { $category }: Monatsbudget überschritten
-personal-card-budget = { $month } · Budget { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } Ergebnis
@@ -879,7 +878,7 @@ participants-invited-pending = Einladung noch nicht angenommen
 participants-unlinked = Mit keinem Konto verknüpft
 add-project-create-invite = Erstellen und { $count } einladen
 edit-project-save-invite = Speichern und { $count } einladen
-edit-project-you-are = Auf diesem Gerät bist du { $name }
+edit-project-you-are = In diesem Projekt bist du { $name }
 edit-project-no-identity = Du hast noch nicht gewählt, wer du bist
 edit-project-switch = Wechseln
 edit-project-choose = Wählen

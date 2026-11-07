@@ -480,10 +480,6 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                 div { class: "px-4 pt-3 pb-3 border-b border-base-200 flex-shrink-0",
                     FormSheetBar {
                         close_id: "edit-project-close",
-                        confirm_id: "edit-project-confirm",
-                        confirm_label: tid!("save"),
-                        disabled: loading(),
-                        on_confirm: Some(on_submit),
                         on_close: move |_| request_close(),
                         h2 { id: "edit-project-modal-title", class: "flex-1 min-w-0 truncate font-bold text-lg font-display sheet-bar-title", {tid!("edit-project-title")} }
                     }
@@ -814,29 +810,24 @@ fn SavedRow(props: SavedRowProps) -> Element {
     };
     let name = props.name.clone();
     let on_actions = props.on_actions;
-    let mut press_task: Signal<Option<dioxus::core::Task>> = use_signal(|| None);
-    let mut cancel_press = move || {
-        if let Some(t) = press_task.write().take() {
-            t.cancel();
-        }
-    };
 
     rsx! {
         li {
             id: "{props.id}",
             class: "flex items-center gap-2.5 min-h-13",
-            ontouchstart: move |_| {
-                let Some(on_actions) = on_actions else { return };
-                let task = spawn(async move {
-                    crate::common::sleep(500).await;
-                    crate::common::haptic(crate::common::Haptic::Medium);
-                    on_actions.call(());
-                });
-                press_task.set(Some(task));
-            },
-            ontouchcancel: move |_| cancel_press(),
-            onpointercancel: move |_| cancel_press(),
-            ontouchend: move |_| cancel_press(),
+            "data-long-press": on_actions.map(|_| format!("{}-long-press", props.id)),
+            if let Some(on_actions) = on_actions {
+                button {
+                    id: "{props.id}-long-press",
+                    r#type: "button",
+                    hidden: true,
+                    tabindex: "-1",
+                    onclick: move |_| {
+                        crate::common::haptic(crate::common::Haptic::Medium);
+                        on_actions.call(());
+                    },
+                }
+            }
             Avatar { initials: initial(&props.name), size: SizeClass::W9, guest: !props.locked && props.invited.is_none() }
             span { class: "flex flex-col min-w-0 flex-1 gap-0.5",
                 span { class: "flex items-center gap-1.5 min-w-0",

@@ -319,7 +319,6 @@ budget-invalid = Shumë e pavlefshme për { $category }.
 budget-offline = Buxhetet ruhen vetëm në linjë. Rilidhu dhe provo përsëri.
 budget-alert-near = { $category }: { $percent } % e buxhetit të muajit
 budget-alert-over = { $category }: buxheti i muajit u tejkalua
-personal-card-budget = { $month } · buxhet { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } rezultat
@@ -851,7 +850,7 @@ participants-invited-pending = Ftesa ende e papranuar
 participants-unlinked = I palidhur me llogari
 add-project-create-invite = Krijo dhe fto: { $count }
 edit-project-save-invite = Ruaj dhe fto: { $count }
-edit-project-you-are = Në këtë pajisje ti je { $name }
+edit-project-you-are = Në këtë projekt ti je { $name }
 edit-project-no-identity = Ende nuk ke zgjedhur kush je
 edit-project-switch = Ndrysho
 edit-project-choose = Zgjidh

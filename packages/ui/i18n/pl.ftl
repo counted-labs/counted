@@ -321,7 +321,6 @@ budget-invalid = Nieprawidłowa kwota dla { $category }.
 budget-offline = Budżety można zapisać tylko online. Połącz się ponownie i spróbuj jeszcze raz.
 budget-alert-near = { $category }: { $percent } % budżetu miesiąca
 budget-alert-over = { $category }: budżet miesiąca przekroczony
-personal-card-budget = { $month } · budżet { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } wynik
@@ -869,7 +868,7 @@ participants-invited-pending = Zaproszenie jeszcze nie przyjęte
 participants-unlinked = Niepowiązany z kontem
 add-project-create-invite = Utwórz i zaproś: { $count }
 edit-project-save-invite = Zapisz i zaproś: { $count }
-edit-project-you-are = Na tym urządzeniu jesteś { $name }
+edit-project-you-are = W tym projekcie jesteś { $name }
 edit-project-no-identity = Nie wybrano jeszcze, kim jesteś
 edit-project-switch = Zmień
 edit-project-choose = Wybierz

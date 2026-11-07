@@ -321,7 +321,6 @@ budget-invalid = Ammont mhux validu għal { $category }.
 budget-offline = Il-baġits jiġu ssejvjati biss online. Erġa’ qabbad u pprova mill-ġdid.
 budget-alert-near = { $category }: { $percent } % tal-baġit tax-xahar
 budget-alert-over = { $category }: il-baġit tax-xahar inqabeż
-personal-card-budget = { $month } · baġit { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } riżultat
@@ -869,7 +868,7 @@ participants-invited-pending = L-istedina għadha mhix aċċettata
 participants-unlinked = Mhux marbut ma' kont
 add-project-create-invite = Oħloq u stieden { $count }
 edit-project-save-invite = Issejvja u stieden { $count }
-edit-project-you-are = F'dan it-tagħmir int { $name }
+edit-project-you-are = F'dan il-proġett int { $name }
 edit-project-no-identity = Għadek ma għażiltx min int
 edit-project-switch = Ibdel
 edit-project-choose = Agħżel

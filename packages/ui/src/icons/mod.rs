@@ -36,22 +36,6 @@ pub fn BackArrowIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
     }
 }
 
-/// Material's `arrow_back`, the Android back button's glyph (filled, as Material Symbols draw it).
-#[component]
-pub fn ArrowBackIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
-    rsx! {
-        svg {
-            xmlns: "http://www.w3.org/2000/svg",
-            "aria-hidden": "true",
-            width: rem(size),
-            height: rem(size),
-            view_box: "0 0 24 24",
-            fill: "currentColor",
-            path { d: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" }
-        }
-    }
-}
-
 #[component]
 pub fn ChevronRightIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
     rsx! {
@@ -129,27 +113,6 @@ pub fn UserIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" }
-            circle { cx: "12", cy: "7", r: "4" }
-        }
-    }
-}
-
-/// [`UserIcon`] filled, for the selected dock tab.
-#[component]
-pub fn UserFilledIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
-    rsx! {
-        svg {
-            xmlns: "http://www.w3.org/2000/svg",
-            "aria-hidden": "true",
-            width: rem(size),
-            height: rem(size),
-            view_box: "0 0 24 24",
-            fill: "currentColor",
-            stroke: "currentColor",
-            stroke_width: "1.75",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            path { d: "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2z" }
             circle { cx: "12", cy: "7", r: "4" }
         }
     }
@@ -356,26 +319,6 @@ pub fn HomeIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
     }
 }
 
-/// [`HomeIcon`] filled, for the selected dock tab: the same silhouette, the door cut out.
-#[component]
-pub fn HomeFilledIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
-    rsx! {
-        svg {
-            xmlns: "http://www.w3.org/2000/svg",
-            "aria-hidden": "true",
-            width: rem(size),
-            height: rem(size),
-            view_box: "0 0 24 24",
-            fill: "currentColor",
-            stroke: "currentColor",
-            stroke_width: "1.75",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            path { d: "M12 3 3 9.5h2V20a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V9.5h2z" }
-        }
-    }
-}
-
 #[component]
 pub fn LockIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
     rsx! {
@@ -414,27 +357,6 @@ pub fn ChartIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
             path { d: "M0 0h24v24H0z", fill: "none", stroke: "none" }
             path { d: "M12 3v9h9" }
             path { d: "M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" }
-        }
-    }
-}
-
-/// [`ChartIcon`] filled, for the selected dock tab: three quarters solid, the slice outlined.
-#[component]
-pub fn ChartFilledIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
-    rsx! {
-        svg {
-            xmlns: "http://www.w3.org/2000/svg",
-            "aria-hidden": "true",
-            width: rem(size),
-            height: rem(size),
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "1.75",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            path { d: "M12 3a9 9 0 1 0 9 9h-9z", fill: "currentColor" }
-            path { d: "M12 3a9 9 0 0 1 9 9h-9z" }
         }
     }
 }

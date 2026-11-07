@@ -319,7 +319,6 @@ budget-invalid = Vigane summa: { $category }.
 budget-offline = Eelarveid saab salvestada ainult võrgus. Ühenda uuesti ja proovi uuesti.
 budget-alert-near = { $category }: { $percent } % kuu eelarvest
 budget-alert-over = { $category }: kuu eelarve ületatud
-personal-card-budget = { $month } · eelarve { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } tulemus
@@ -851,7 +850,7 @@ participants-invited-pending = Kutset pole veel vastu võetud
 participants-unlinked = Pole kontoga seotud
 add-project-create-invite = Loo ja kutsu: { $count }
 edit-project-save-invite = Salvesta ja kutsu: { $count }
-edit-project-you-are = Selles seadmes oled sa { $name }
+edit-project-you-are = Selles projektis oled sa { $name }
 edit-project-no-identity = Sa pole veel valinud, kes sa oled
 edit-project-switch = Vaheta
 edit-project-choose = Vali

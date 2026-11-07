@@ -3,7 +3,6 @@ use api::account_projects::account_projects_controller::{
 };
 use api::auth::auth_controller::me;
 use api::users::users_controller::get_users_by_project_id;
-use dioxus::core::Task;
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use crate::tid;
@@ -18,9 +17,9 @@ use crate::common::{
     read_from_ls, set_cached_projects_list, share_link_for, share_text, sleep, to_push, update_ls,
     update_project_fresh, use_device_cache, write_queue, QUICK_ADD,
     write_to_ls,
-    AppHeader, ConfirmModal, Mascot, MascotPose,
+    ConfirmModal, Mascot, MascotPose, PageTitle,
     Flash, Haptic, LocalStorageState, OpKind, ProjectEdit, ProjectKey, ProjectTile, PullToRefresh,
-    NavAddButton, QueuedOp, SpeedDialAction, SpeedDialFab, LEAVE_CONFIRM_MESSAGE, LEAVE_CONFIRM_TITLE,
+    QueuedOp, SpeedDialAction, SpeedDialFab, LEAVE_CONFIRM_MESSAGE, LEAVE_CONFIRM_TITLE,
 };
 use crate::common::fx_cache::read_fx;
 use crate::crypto::decrypt_json;
@@ -28,9 +27,8 @@ use crate::conversion::{conversion_plan, rows_verdicts, Verdict};
 use crate::rotation_flow::{adopt_all, lost_projects, rotated_among, rotated_ids};
 use crate::decrypted::{project_status, status_edit};
 use crate::expenses::helpers::my_spending::{cached_ledgers, sync_all, synced_ledgers};
-use crate::expenses::project_actions_sheet::{MenuSheet, Row, GROUP_CLASS};
 use crate::expenses::{EditProjectModal, OPEN_REIMBURSEMENTS};
-use crate::icons::{ChevronRightIcon, ImportIcon, KeyIcon, LinkIcon, LockIcon, PlusIcon, UsersIcon, WalletIcon, ICON_HEADER};
+use crate::icons::{ChevronRightIcon, ImportIcon, KeyIcon, LinkIcon, LockIcon, PlusIcon, UsersIcon, WalletIcon};
 use crate::payment_methods::refill_project_copies;
 use crate::projects::home::{row_subtitle, BalanceCard, RowBalance};
 use crate::projects::home_balances::{debts, glance, home_currency, totals, Debt, ProjectGlance};
@@ -140,7 +138,6 @@ pub fn ProjectsPage() -> Element {
     let mut show_personal_create = use_signal(|| false);
     let friends = use_friends();
     let bell_open = use_signal(|| false);
-    let mut add_open = use_signal(|| false);
 
     // What the account and the list's sync each answered, for the conversion further down. It needs
     // both, and must not start before reconciliation has dropped the projects left elsewhere.
@@ -468,60 +465,19 @@ pub fn ProjectsPage() -> Element {
     let syncing_cached = projects.read().is_none() && cached_shown.read().is_some();
 
     rsx! {
+        PageTitle { text: format!("{} · counted", tid!("nav-projects")) }
         div { class: "container app-container bg-base-100 overflow-auto p-4 pb-24 max-w-md w-full mx-auto flex flex-col gap-4",
             PullToRefresh { on_refresh: move |_| projects.restart(), busy: pending(&projects) }
-            AppHeader { title: tid!("nav-projects"), back_button_route: Route::ProjectsPage {}, back: false, large: true,
-                if syncing_cached {
-                    span { id: "projects-syncing", class: "loading loading-spinner loading-sm text-base-content/50", role: "status", aria_label: tid!("loading") }
-                }
-                NotificationsBell { friends, open: bell_open }
-                NavAddButton { id: "projects-add-bar", label: tid!("projects-add"), open: add_open }
-            }
-            NotificationsSheet { friends, open: bell_open }
-            if add_open() {
-                MenuSheet { id: "projects-add-sheet", title: tid!("projects-add"), on_close: move |_| add_open.set(false),
-                    div { class: GROUP_CLASS,
-                        if personal().is_some() {
-                            Row {
-                                id: "projects-add-personal",
-                                label: tid!("projects-personal-expense"),
-                                onclick: move |_| {
-                                    add_open.set(false);
-                                    show_personal_expense.set(true);
-                                },
-                                WalletIcon { size: ICON_HEADER }
-                            }
-                        }
-                        Row {
-                            id: "projects-add-create",
-                            label: tid!("projects-create"),
-                            onclick: move |_| {
-                                add_open.set(false);
-                                show_add_project.set(true);
-                            },
-                            PlusIcon { size: ICON_HEADER }
-                        }
-                        Row {
-                            id: "projects-add-join",
-                            label: tid!("projects-join"),
-                            onclick: move |_| {
-                                add_open.set(false);
-                                show_join_project.set(true);
-                            },
-                            LinkIcon { size: ICON_HEADER }
-                        }
-                        Row {
-                            id: "projects-add-import",
-                            label: tid!("projects-import-tricount"),
-                            onclick: move |_| {
-                                add_open.set(false);
-                                show_import_tricount.set(true);
-                            },
-                            ImportIcon { size: ICON_HEADER }
-                        }
+            header { class: "nav-bar flex items-center justify-between min-h-14 pl-1",
+                div { class: "flex items-center gap-2",
+                    h1 { id: "projects-title", class: "font-display font-bold text-[1.625rem] tracking-tight", {tid!("nav-projects")} }
+                    if syncing_cached {
+                        span { id: "projects-syncing", class: "loading loading-spinner loading-sm text-base-content/50", role: "status", aria_label: tid!("loading") }
                     }
                 }
+                NotificationsBell { friends, open: bell_open }
             }
+            NotificationsSheet { friends, open: bell_open }
 
             if !ledgers.read().is_empty() {
                 BalanceCard {
@@ -717,9 +673,6 @@ struct ProjectCardProps {
     on_change: EventHandler<()>,
 }
 
-/// How long a finger has to stay down before the card's actions menu opens.
-const LONG_PRESS_MS: u32 = 500;
-
 #[component]
 fn ProjectCard(props: ProjectCardProps) -> Element {
     let nav = use_navigator();
@@ -753,13 +706,6 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
     // Long press anywhere opens the same sheet as the `...` trigger, so the whole card is the
     // target rather than a 32px button.
     let mut sheet_open = use_signal(|| false);
-    let mut press_task: Signal<Option<Task>> = use_signal(|| None);
-    let mut long_pressed = use_signal(|| false);
-    let mut cancel_press = move || {
-        if let Some(t) = press_task.write().take() {
-            t.cancel();
-        }
-    };
 
     let decrypted_project =
         stored_key.and_then(|k| decrypt_json::<ProjectPayload>(&k, &project.payload).ok());
@@ -852,33 +798,17 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
             id: "project-card-{project_id}",
             class: "relative flex items-center first:rounded-t-[20px] last:rounded-b-[20px] has-[>[role=button]:active]:bg-base-200",
             "data-synced": props.synced,
-            // No `ontouchmove`: on mobile every dispatched event costs a *synchronous* XHR to
-            // wry's custom protocol, so a ~60Hz listener blocks the main thread through every
-            // scroll. The two cancel events below fire once per gesture, when the UA claims it for
-            // panning - so scrolling off a card never opens the menu.
-            ontouchstart: move |_| {
-                long_pressed.set(false);
-                let task = spawn(async move {
-                    sleep(LONG_PRESS_MS).await;
-                    // Inside the task, not on touchstart: the press has to actually complete. This
-                    // is the only signal that the hold worked - the menu appears in the same frame.
+            "data-long-press": "long-press-project-{project_id}",
+            button {
+                id: "long-press-project-{project_id}",
+                r#type: "button",
+                hidden: true,
+                tabindex: "-1",
+                onclick: move |_| {
                     haptic(Haptic::Medium);
-                    long_pressed.set(true);
                     sheet_open.set(true);
-                });
-                press_task.set(Some(task));
-            },
-            ontouchcancel: move |_| cancel_press(),
-            onpointercancel: move |_| cancel_press(),
-            ontouchend: move |e| {
-                cancel_press();
-                // preventDefault on touchend suppresses the synthesised click; without it the
-                // click hits the sheet's backdrop and closes it instantly. Only touchend does
-                // this - pointerup would not.
-                if long_pressed() {
-                    e.prevent_default();
-                }
-            },
+                },
+            }
             div {
             class: if locked { "flex-1 min-w-0 flex items-center gap-3 ps-4 pe-3 py-3 cursor-pointer" } else { "flex-1 min-w-0 flex items-center gap-3 px-4 py-3 cursor-pointer" },
             role: "button",
@@ -886,11 +816,6 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
             // Locked opens the unlock modal instead: `ExpensesPage` would only reach
             // `MissingKeyScreen`, which is the same dead end one navigation further away.
             onclick: move |_| {
-                // Second line of defence for a click that slipped past prevent_default.
-                if long_pressed() {
-                    long_pressed.set(false);
-                    return;
-                }
                 if locked {
                     show_unlock_modal.set(true);
                 } else {

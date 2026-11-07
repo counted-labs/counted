@@ -87,7 +87,7 @@ mod project_status_menu;
 pub use project_status_menu::status_transitions;
 
 mod speed_dial_fab;
-pub use speed_dial_fab::{NavAddButton, SpeedDialAction, SpeedDialFab};
+pub use speed_dial_fab::{SpeedDialAction, SpeedDialFab};
 
 mod callout;
 pub use callout::*;

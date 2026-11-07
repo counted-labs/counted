@@ -319,7 +319,6 @@ budget-invalid = Ugyldigt beløb for { $category }.
 budget-offline = Budgetter kan kun gemmes online. Opret forbindelse igen, og prøv igen.
 budget-alert-near = { $category }: { $percent } % af månedens budget
 budget-alert-over = { $category }: månedens budget er overskredet
-personal-card-budget = { $month } · budget { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } resultat
@@ -851,7 +850,7 @@ participants-invited-pending = Invitationen er ikke accepteret endnu
 participants-unlinked = Ikke knyttet til en konto
 add-project-create-invite = Opret og inviter { $count }
 edit-project-save-invite = Gem og inviter { $count }
-edit-project-you-are = På denne enhed er du { $name }
+edit-project-you-are = I dette projekt er du { $name }
 edit-project-no-identity = Du har ikke valgt, hvem du er, endnu
 edit-project-switch = Skift
 edit-project-choose = Vælg

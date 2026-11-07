@@ -320,7 +320,6 @@ budget-invalid = Sumă nevalidă pentru { $category }.
 budget-offline = Bugetele se salvează doar online. Reconectează-te și încearcă din nou.
 budget-alert-near = { $category }: { $percent } % din bugetul lunii
 budget-alert-over = { $category }: bugetul lunii depășit
-personal-card-budget = { $month } · buget { $amount }
 my-spending-search-summary =
     { $count ->
         [one] { $count } rezultat
@@ -860,7 +859,7 @@ participants-invited-pending = Invitație încă neacceptată
 participants-unlinked = Nelegat de un cont
 add-project-create-invite = Creează și invită: { $count }
 edit-project-save-invite = Salvează și invită: { $count }
-edit-project-you-are = Pe acest dispozitiv ești { $name }
+edit-project-you-are = În acest proiect ești { $name }
 edit-project-no-identity = Încă nu ai ales cine ești
 edit-project-switch = Schimbă
 edit-project-choose = Alege
