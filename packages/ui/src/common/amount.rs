@@ -1,9 +1,10 @@
 use crate::i18n::current_lang;
 
-/// "1 128,60 EUR" in French, "1 128.60 EUR" in English. Display only: exports keep the plain
-/// `{:.2}` a spreadsheet reads back.
+/// "1 128,60 €" in French, "€1,128.60" in English, "1 128,60 USD" for a currency whose symbol
+/// stands for several. Display only: exports keep the plain `{:.2}` a spreadsheet reads back.
 pub fn amount(value: f64, currency: &str) -> String {
-    with_currency(number(value), currency)
+    let lang = current_lang();
+    with_currency(format_number(value, decimal_comma(&lang)), currency, &lang)
 }
 
 /// [`amount`] with a "+" on a positive value.
@@ -12,9 +13,10 @@ pub fn signed_amount(value: f64, currency: &str) -> String {
     if (value * 100.0).round() > 0.0 { format!("+{body}") } else { body }
 }
 
-/// [`amount`] without ",00" on a round value: a budget ceiling reads "1 200 EUR".
+/// [`amount`] without ",00" on a round value: a budget ceiling reads "1 200 €".
 pub fn round_amount(value: f64, currency: &str) -> String {
-    with_currency(drop_zero_cents(number(value)), currency)
+    let lang = current_lang();
+    with_currency(drop_zero_cents(format_number(value, decimal_comma(&lang))), currency, &lang)
 }
 
 fn drop_zero_cents(number: String) -> String {
@@ -28,9 +30,9 @@ pub fn number(value: f64) -> String {
     format_number(value, decimal_comma(&current_lang()))
 }
 
-/// Whole units, for charts: "1 728 EUR".
+/// Whole units, for charts: "1 728 €".
 pub fn whole_amount(value: f64, currency: &str) -> String {
-    with_currency(group_thousands(value.abs().round() as u64), currency)
+    with_currency(group_thousands(value.abs().round() as u64), currency, &current_lang())
 }
 
 pub fn comma_language() -> bool {
@@ -45,8 +47,55 @@ pub fn plain_number(value: f64, comma: bool) -> String {
     if comma { plain.replace('.', ",") } else { plain }
 }
 
-fn with_currency(number: String, currency: &str) -> String {
-    if currency.is_empty() { number } else { format!("{number}\u{a0}{currency}") }
+/// Only symbols that name one currency the world over. `$`, `¥`, `kr`, `Fr` and the like each
+/// stand for several, and a project can mix currencies, so those keep the ISO code.
+fn symbol(currency: &str) -> Option<&'static str> {
+    match currency {
+        "EUR" => Some("€"),
+        "GBP" => Some("£"),
+        "INR" => Some("₹"),
+        "ILS" => Some("₪"),
+        "KRW" => Some("₩"),
+        "UAH" => Some("₴"),
+        "TRY" => Some("₺"),
+        "VND" => Some("₫"),
+        "NGN" => Some("₦"),
+        _ => None,
+    }
+}
+
+enum Placement {
+    Before,
+    BeforeSpaced,
+    After,
+}
+
+/// CLDR's currency pattern per shipped language: en, ga, mt and tr write "€46.30", nl "€ 46,30",
+/// every other one "46,30 €". The sign always leads.
+fn placement(lang: &str) -> Placement {
+    match lang {
+        "en" | "ga" | "mt" | "tr" => Placement::Before,
+        "nl" => Placement::BeforeSpaced,
+        _ => Placement::After,
+    }
+}
+
+fn with_currency(number: String, currency: &str, lang: &str) -> String {
+    if currency.is_empty() {
+        return number;
+    }
+    let Some(symbol) = symbol(currency) else {
+        return format!("{number}\u{a0}{currency}");
+    };
+    let (sign, digits) = match number.strip_prefix('-') {
+        Some(digits) => ("-", digits),
+        None => ("", number.as_str()),
+    };
+    match placement(lang) {
+        Placement::Before => format!("{sign}{symbol}{digits}"),
+        Placement::BeforeSpaced => format!("{sign}{symbol}\u{a0}{digits}"),
+        Placement::After => format!("{number}\u{a0}{symbol}"),
+    }
 }
 
 fn decimal_comma(lang: &str) -> bool {
@@ -124,8 +173,46 @@ mod tests {
     }
 
     #[test]
-    fn the_currency_follows_a_no_break_space() {
-        assert_eq!(with_currency("46,30".into(), "EUR"), "46,30\u{a0}EUR");
-        assert_eq!(with_currency("46,30".into(), ""), "46,30");
+    fn the_symbol_follows_a_no_break_space_by_default() {
+        assert_eq!(with_currency("46,30".into(), "EUR", "fr"), "46,30\u{a0}€");
+        assert_eq!(with_currency("-46,30".into(), "EUR", "de"), "-46,30\u{a0}€");
+        assert_eq!(with_currency("1\u{a0}200".into(), "GBP", "pl"), "1\u{a0}200\u{a0}£");
+    }
+
+    #[test]
+    fn english_irish_maltese_and_turkish_put_the_symbol_first() {
+        for lang in ["en", "ga", "mt", "tr"] {
+            assert_eq!(with_currency("46.30".into(), "EUR", lang), "€46.30", "{lang}");
+            assert_eq!(with_currency("-46.30".into(), "EUR", lang), "-€46.30", "{lang}");
+        }
+    }
+
+    #[test]
+    fn dutch_puts_the_symbol_first_with_a_space() {
+        assert_eq!(with_currency("46,30".into(), "EUR", "nl"), "€\u{a0}46,30");
+        assert_eq!(with_currency("-46,30".into(), "EUR", "nl"), "-€\u{a0}46,30");
+    }
+
+    #[test]
+    fn every_shipped_language_has_a_placement() {
+        for lang in shared::UI_LANGS {
+            let placed = with_currency("1".into(), "EUR", lang);
+            assert!(placed.contains('€'), "{lang}: {placed}");
+        }
+    }
+
+    #[test]
+    fn a_shared_symbol_keeps_the_iso_code_after_the_number() {
+        for currency in ["USD", "CAD", "AUD", "JPY", "CNY", "SEK", "NOK", "DKK", "CHF"] {
+            assert_eq!(symbol(currency), None, "{currency}");
+            assert_eq!(with_currency("46.30".into(), currency, "en"), format!("46.30\u{a0}{currency}"));
+            assert_eq!(with_currency("46,30".into(), currency, "fr"), format!("46,30\u{a0}{currency}"));
+        }
+    }
+
+    #[test]
+    fn no_currency_is_the_bare_number() {
+        assert_eq!(with_currency("46,30".into(), "", "fr"), "46,30");
+        assert_eq!(with_currency("46.30".into(), "", "en"), "46.30");
     }
 }

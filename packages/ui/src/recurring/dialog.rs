@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
-use crate::common::{format_date_str, haptic, use_modal_focus, ConfirmModal, Haptic};
+pub use crate::common::DialogAction;
+use crate::common::{format_date_str, ConfirmDialog, ConfirmModal};
 use crate::tid;
 
 /// Deleting an expense. An occurrence of a live rule also offers to stop the rule, and says the
@@ -19,15 +20,18 @@ pub fn DeleteExpenseDialog(
                 title: tid!("expense-delete-title"),
                 message: tid!("expense-delete-message", name: name.clone()),
                 confirm_label: tid!("delete"),
+                action_sheet: true,
                 on_cancel: move |_| on_cancel.call(()),
                 on_confirm: move |_| on_delete.call(false),
             }
         };
     }
     rsx! {
-        ChoiceDialog {
+        ConfirmDialog {
+            id: "choice-dialog",
             title: tid!("expense-delete-title"),
             message: tid!("occurrence-delete-message", name: name.clone(), date: format_date_str(&date)),
+            action_sheet: true,
             actions: vec![
                 DialogAction {
                     id: "occurrence-delete-one",
@@ -47,16 +51,7 @@ pub fn DeleteExpenseDialog(
     }
 }
 
-#[derive(Clone, PartialEq)]
-pub struct DialogAction {
-    pub id: &'static str,
-    pub label: String,
-    /// daisyUI button classes, e.g. `btn-error` for the irreversible one.
-    pub class: &'static str,
-    pub on_click: EventHandler<()>,
-}
-
-/// A confirmation with several outcomes, stacked full width, Cancel last.
+/// A confirmation with several outcomes on a recurring rule: the app's one confirm.
 #[component]
 pub fn ChoiceDialog(
     title: String,
@@ -64,42 +59,7 @@ pub fn ChoiceDialog(
     actions: Vec<DialogAction>,
     on_cancel: EventHandler<()>,
 ) -> Element {
-    use_modal_focus("choice-dialog");
     rsx! {
-        div {
-            id: "choice-dialog",
-            class: "modal modal-open",
-            role: "dialog",
-            aria_modal: "true",
-            aria_labelledby: "choice-dialog-title",
-            aria_describedby: "choice-dialog-message",
-            tabindex: "-1",
-            div { class: "modal-box max-w-sm flex flex-col gap-3",
-                h2 { id: "choice-dialog-title", class: "font-bold text-lg font-display", "{title}" }
-                p { id: "choice-dialog-message", class: "text-sm text-base-content/70", "{message}" }
-                div { class: "flex flex-col gap-2 pt-1",
-                    for action in actions {
-                        button {
-                            id: action.id,
-                            r#type: "button",
-                            class: "btn w-full {action.class}",
-                            onclick: move |_| {
-                                haptic(Haptic::Light);
-                                action.on_click.call(())
-                            },
-                            "{action.label}"
-                        }
-                    }
-                    button {
-                        id: "choice-dialog-cancel",
-                        r#type: "button",
-                        class: "btn btn-ghost w-full",
-                        onclick: move |_| on_cancel.call(()),
-                        {tid!("cancel")}
-                    }
-                }
-            }
-            div { class: "modal-backdrop", onclick: move |_| on_cancel.call(()) }
-        }
+        ConfirmDialog { id: "choice-dialog", title, message, actions, on_cancel }
     }
 }

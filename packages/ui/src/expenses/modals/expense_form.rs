@@ -6,12 +6,12 @@ use super::super::helpers::expense_form_helpers::{
     debtors_label, effective_rate, parse_amount, participants_summary, payers_label, project_total,
     redistribute, UserEntry,
 };
+use super::super::helpers::expense_modal_helpers::FormError;
 use super::amount_input::{AmountInput, FocusedAmount};
 use super::amount_operator_bar::AmountOperatorBar;
 use super::participants_fieldset::ParticipantsFieldset;
 use crate::categories::ProjectCategories;
-use crate::common::{format_month_str, haptic, today_iso, yesterday_iso, CurrencyPicker, Haptic};
-use crate::icons::{CloseIcon, ICON_HEADER};
+use crate::common::{format_month_str, haptic, today_iso, yesterday_iso, CurrencyPicker, DiscardConfirm, FormSheetBar, Haptic};
 use crate::recurring::repeat_picker::RepeatRow;
 use crate::recurring::view::Repeat;
 
@@ -138,8 +138,55 @@ pub struct RepeatSlot {
     pub backfill: bool,
 }
 
+/// Everything the user can change, compared against its value on open: a form that differs asks
+/// before it is thrown away.
+#[derive(Clone, PartialEq)]
+struct Draft {
+    name: String,
+    date: String,
+    total: f64,
+    kind: ExpenseType,
+    category: Option<String>,
+    sides: [Vec<(bool, f64, f64)>; 2],
+    share_modes: [bool; 2],
+    currency: String,
+    source: f64,
+    rate: String,
+    repeat: Option<Repeat>,
+    apply_to_next: Option<bool>,
+}
+
+fn draft_of(props: &ExpenseFormProps) -> Draft {
+    let side = |s: Signal<Vec<UserEntry>>| s.read().iter().map(|e| (e.checked, e.amount, e.shares)).collect();
+    Draft {
+        name: props.expense_name.read().clone(),
+        date: props.date_str.read().clone(),
+        total: *props.total_amount.read(),
+        kind: props.expense_type.read().clone(),
+        category: props.category.read().clone(),
+        sides: [side(props.payers), side(props.debtors)],
+        share_modes: [*props.payers_share_mode.read(), *props.debtors_share_mode.read()],
+        currency: props.expense_currency.read().clone(),
+        source: *props.source_amount.read(),
+        rate: props.rate_input.read().clone(),
+        repeat: props.repeat.and_then(|r| *r.value.read()),
+        apply_to_next: props.apply_to_next.as_ref().map(|(s, _)| *s.read()),
+    }
+}
+
 #[component]
 pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
+    let opened = use_hook(|| draft_of(&props));
+    let dirty = draft_of(&props) != opened;
+    let mut discarding = use_signal(|| false);
+    let on_close = props.on_close;
+    let mut request_close = move || {
+        if dirty {
+            discarding.set(true);
+        } else {
+            on_close.call(());
+        }
+    };
     let mut expense_name = props.expense_name;
     let mut date_str = props.date_str;
     let mut total_amount = props.total_amount;
@@ -193,9 +240,6 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
         );
     };
 
-    let on_close_x = props.on_close;
-    let on_close_cancel = props.on_close;
-    let on_close_backdrop = props.on_close;
     crate::common::use_modal_focus("expense-form");
 
     // Debtors is the side that actually gets edited; payers is almost always right as seeded.
@@ -210,6 +254,11 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
 
     // Every `AmountInput` below publishes its draft here while focused; `AmountOperatorBar` reads it.
     use_context_provider::<FocusedAmount>(|| Signal::new(None));
+
+    // The two errors about one field go in a footnote under it; the alert above keeps the rest.
+    let name_error = error_msg().filter(|e| *e == FormError::NameRequired.message());
+    let amount_error = error_msg().filter(|e| *e == FormError::AmountNotPositive.message());
+    let form_error = error_msg().filter(|_| name_error.is_none() && amount_error.is_none());
 
     // A side that stops adding up forces itself open - collapsing must never hide the shortfall.
     let payers_expanded = payers_open() || !side_balances(&payers(), total_amount());
@@ -235,11 +284,19 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
             id: "expense-form",
             class: "modal modal-open modal-bottom sm:modal-middle",
             role: "dialog",
+            "data-sheet-dirty": if dirty { "true" },
             aria_modal: "true",
             aria_labelledby: "expense-form-title",
             tabindex: "-1",
             div { class: "modal-box max-w-md p-0 flex flex-col",
-                div { class: "flex items-center gap-2 px-4 pt-3 pb-2 flex-shrink-0",
+                div { class: "px-4 pt-3 pb-2 flex-shrink-0",
+                FormSheetBar {
+                    close_id: "expense-form-close",
+                    confirm_id: "expense-form-confirm",
+                    confirm_label: props.submit_label.clone(),
+                    form: Some("expense-form-fields"),
+                    disabled: loading(),
+                    on_close: move |_| request_close(),
                     h2 { id: "expense-form-title", class: "sr-only", "{props.title}" }
                     // The type is a mode switch - it renames both participant sections and decides
                     // whether the category field exists at all - so it leads, above everything it
@@ -263,7 +320,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                                         name: "expense-type",
                                         checked: type_value(&expense_type()) == value,
                                         oninput: move |_| {
-                                            haptic(Haptic::Light);
+                                            haptic(Haptic::Selection);
                                             expense_type.set(type_from_value(value));
                                         },
                                     }
@@ -272,21 +329,14 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                             }
                         }
                     } else {
-                        span { class: "flex-1 font-bold text-lg font-display truncate", "{props.title}" }
-                    }
-                    button {
-                        id: "expense-form-close",
-                        r#type: "button",
-                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                        aria_label: tid!("close"),
-                        onclick: move |_| on_close_x.call(()),
-                        CloseIcon { size: ICON_HEADER }
+                        span { class: "flex-1 font-bold text-lg font-display truncate sheet-bar-title", "{props.title}" }
                     }
                 }
+                }
 
-                form { class: "flex flex-col flex-1 overflow-hidden", onsubmit: props.on_submit,
+                form { id: "expense-form-fields", class: "flex flex-col flex-1 overflow-hidden", onsubmit: props.on_submit,
                 div { class: "flex-1 overflow-y-auto flex flex-col",
-                if let Some(err) = error_msg() {
+                if let Some(err) = form_error.clone() {
                     div { id: "expense-form-error", role: "alert", class: "alert alert-error text-sm mx-5 mb-2", "{err}" }
                 }
 
@@ -313,7 +363,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                     // the common case needs - the name, still being decided, follows it. No `input`
                     // box: the rule below is the field's whole edge, so the currency picker stops
                     // reading as a second field sharing a frame.
-                    label { class: "relative flex items-baseline justify-between gap-2 px-5 pt-5 pb-4 border-b border-base-200",
+                    label { class: "relative flex items-baseline justify-between gap-2 px-5 pt-5 pb-4 border-b border-base-200 field-edge",
                             AmountInput {
                                 id: "expense-amount",
                                 class: "min-w-0 text-4xl leading-tight font-bold tracking-tight font-display tabular-nums caret-primary",
@@ -321,7 +371,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                                 aria_label: tid!("field-amount"),
                                 aria_required: "true",
                                 aria_invalid: if error_msg().is_some() && source_amount() <= 0.0 { "true" } else { "false" },
-                                aria_describedby: if error_msg().is_some() { "expense-form-error" } else { "" },
+                                aria_describedby: if amount_error.is_some() { "expense-amount-error" } else if form_error.is_some() { "expense-form-error" } else { "" },
                                 enterkeyhint: "next",
                                 focus_on_mount: true,
                                 value: source_amount(),
@@ -346,10 +396,13 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                                 },
                             }
                         }
+                    if let Some(err) = amount_error.clone() {
+                        p { id: "expense-amount-error", role: "alert", class: "px-5 pt-1 text-xs text-error", "{err}" }
+                    }
 
                     div { class: "flex flex-col gap-1.5 px-5 pt-2.5 pb-3 border-b border-base-200",
                         label { class: "text-sm font-medium", r#for: "expense-name", {tid!("field-name")} }
-                        div { class: "flex items-center h-12 rounded-field bg-base-100 border border-base-content/50 focus-within:border-primary focus-within:ring-3 focus-within:ring-primary/20",
+                        div { class: "flex items-center h-12 rounded-field bg-base-100 border border-base-content/50 focus-within:border-primary focus-within:ring-3 focus-within:ring-primary/20 field-edge",
                         if expense_type() == ExpenseType::Expense {
                             // The chip shows the emoji alone; the transparent native select on top
                             // takes the tap and opens the full labelled list. A closed `<select>`
@@ -407,11 +460,14 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                             enterkeyhint: "next",
                             aria_required: "true",
                             aria_invalid: if error_msg().is_some() && expense_name().trim().is_empty() { "true" },
-                            aria_describedby: if error_msg().is_some() { "expense-form-error" },
+                            aria_describedby: if name_error.is_some() { "expense-name-error" } else if form_error.is_some() { "expense-form-error" } else { "" },
                             placeholder: tid!("expense-name-placeholder"),
                             value: "{expense_name}",
                             oninput: move |e| expense_name.set(e.value()),
                         }
+                        }
+                        if let Some(err) = name_error.clone() {
+                            p { id: "expense-name-error", role: "alert", class: "text-xs text-error", "{err}" }
                         }
                         if expense_type() == ExpenseType::Expense && props.manage_categories.is_some() {
                             button {
@@ -602,7 +658,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                         button {
                             r#type: "button",
                             class: "btn btn-ghost hidden sm:inline-flex",
-                            onclick: move |_| on_close_cancel.call(()),
+                            onclick: move |_| request_close(),
                             {tid!("cancel")}
                         }
                         button {
@@ -625,7 +681,7 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
 
             div {
                 class: "modal-backdrop",
-                onclick: move |_| on_close_backdrop.call(()),
+                onclick: move |_| request_close(),
             }
         }
         if let Some(project_id) = props.manage_categories.filter(|_| managing()) {
@@ -633,6 +689,15 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                 project_id,
                 initial: categories.clone(),
                 on_close: move |_| managing.set(false),
+            }
+        }
+        if discarding() {
+            DiscardConfirm {
+                on_keep: move |_| discarding.set(false),
+                on_discard: move |_| {
+                    discarding.set(false);
+                    on_close.call(());
+                },
             }
         }
     }
@@ -717,6 +782,111 @@ mod tests {
                 on_close: move |_| {},
             }
         }
+    }
+
+    type NameSlot = Rc<RefCell<Option<Signal<String>>>>;
+
+    #[derive(Props, Clone, PartialEq)]
+    struct GuardProps {
+        name: NameSlot,
+        closed: Rc<std::cell::Cell<bool>>,
+    }
+
+    #[component]
+    fn Guard(props: GuardProps) -> Element {
+        crate::i18n::use_test_i18n();
+        let name = use_signal(String::new);
+        *props.name.borrow_mut() = Some(name);
+        let closed = props.closed.clone();
+        rsx! {
+            ExpenseForm {
+                title: "t",
+                submit_label: "s",
+                loading_label: "l",
+                currency: "EUR".to_string(),
+                show_type_selector: false,
+                expense_name: name,
+                date_str: use_signal(String::new),
+                total_amount: use_signal(|| 0.0),
+                expense_type: use_signal(|| ExpenseType::Expense),
+                payers: use_signal(Vec::new),
+                debtors: use_signal(Vec::new),
+                category: use_signal(|| None),
+                payers_share_mode: use_signal(|| false),
+                debtors_share_mode: use_signal(|| false),
+                error_msg: use_signal(|| None),
+                loading: use_signal(|| false),
+                expense_currency: use_signal(|| "EUR".to_string()),
+                source_amount: use_signal(|| 0.0),
+                rate_input: use_signal(String::new),
+                auto_rate: None,
+                rate_day: None,
+                on_submit: move |_| {},
+                on_close: move |_| closed.set(true),
+            }
+        }
+    }
+
+    /// Clicks the `pick`th listener of the first render (the ✕, Cancel and the backdrop are among
+    /// them) on a fresh form, so no other click has changed it first: whether the form closed, and
+    /// whether it asked to discard. None once `pick` runs past them.
+    fn click_one(dirty: bool, pick: usize) -> Option<(bool, bool)> {
+        let name: NameSlot = Rc::new(RefCell::new(None));
+        let closed = Rc::new(std::cell::Cell::new(false));
+        let mut dom = VirtualDom::new_with_props(Guard, GuardProps { name: name.clone(), closed: closed.clone() });
+        let id = *listener_ids(&dom.rebuild_to_vec(), "click").get(pick)?;
+        if dirty {
+            let mut signal = name.borrow().expect("the harness publishes its name signal");
+            dom.in_runtime(|| signal.set("Pizza".to_string()));
+            dom.render_immediate_to_vec();
+        }
+        dom.runtime().handle_event("click", click(), id);
+        let asked = texts(&dom.render_immediate_to_vec()).iter().any(|t| t == "Discard changes?");
+        Some((closed.get(), asked))
+    }
+
+    #[test]
+    fn an_untouched_form_closes_at_once() {
+        let outcomes: Vec<_> = (0..).map_while(|i| click_one(false, i)).collect();
+        assert!(outcomes.iter().filter(|(closed, _)| *closed).count() >= 3, "✕, Cancel and the backdrop close: {outcomes:?}");
+        assert!(!outcomes.iter().any(|(_, asked)| *asked), "{outcomes:?}");
+    }
+
+    #[test]
+    fn a_changed_form_asks_before_closing() {
+        let outcomes: Vec<_> = (0..).map_while(|i| click_one(true, i)).collect();
+        assert!(!outcomes.iter().any(|(closed, _)| *closed), "no close path may throw a typed form away unasked: {outcomes:?}");
+        assert!(outcomes.iter().filter(|(_, asked)| *asked).count() >= 3, "✕, Cancel and the backdrop ask: {outcomes:?}");
+    }
+
+    /// Opens the discard confirm through the first listener that asks, then clicks the confirm's
+    /// `pick`th listener. None once `pick` runs past them.
+    fn answer_discard(pick: usize) -> Option<bool> {
+        let name: NameSlot = Rc::new(RefCell::new(None));
+        let closed = Rc::new(std::cell::Cell::new(false));
+        let mut dom = VirtualDom::new_with_props(Guard, GuardProps { name: name.clone(), closed: closed.clone() });
+        let ids = listener_ids(&dom.rebuild_to_vec(), "click");
+        let mut signal = name.borrow().expect("the harness publishes its name signal");
+        dom.in_runtime(|| signal.set("Pizza".to_string()));
+        dom.render_immediate_to_vec();
+        for id in ids {
+            dom.runtime().handle_event("click", click(), id);
+            let m = dom.render_immediate_to_vec();
+            if texts(&m).iter().any(|t| t == "Discard changes?") {
+                let confirm = *listener_ids(&m, "click").get(pick)?;
+                dom.runtime().handle_event("click", click(), confirm);
+                dom.render_immediate_to_vec();
+                return Some(closed.get());
+            }
+        }
+        panic!("nothing asked to discard");
+    }
+
+    #[test]
+    fn discard_closes_and_cancel_keeps_the_form() {
+        let outcomes: Vec<bool> = (0..).map_while(answer_discard).collect();
+        assert_eq!(outcomes.len(), 3, "Cancel, Discard and the backdrop: {outcomes:?}");
+        assert_eq!(outcomes.iter().filter(|c| **c).count(), 1, "only Discard closes: {outcomes:?}");
     }
 
     #[derive(Props, Clone, PartialEq)]

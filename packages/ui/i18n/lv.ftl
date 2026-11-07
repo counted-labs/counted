@@ -5,6 +5,9 @@
 
 loading = Ielādē…
 cancel = Atcelt
+discard-title = Atmest izmaiņas?
+discard-message = Tas, ko ievadīji, tiks zaudēts.
+discard = Atmest
 confirm = Apstiprināt
 retry = Mēģināt vēlreiz
 delete = Dzēst
@@ -443,6 +446,7 @@ reimbursements-empty-title = Viss norēķināts!
 reimbursements-empty-hint = Norēķinu ieteikumi parādās šeit, kad konti nav līdzsvarā
 reimbursement-owes = { $debtor } ir parādā { $creditor }
 reimbursement-record = Norēķināties
+settlement-recorded = Norēķins reģistrēts.
 reimbursement-pay-with = Maksāt
 reimbursement-pay-shared-by = Kopīgoja { $name } - pirms sūtīšanas pārbaudi saņēmēja vārdu, ko rāda tava lietotne.
 reimbursement-pay-title = Maksāt { $name }
@@ -478,7 +482,6 @@ move-note-group = Izdevums atstās { $project } visiem dalībniekiem, un grupas 
 move-banner = No { $from } uz { $to }
 move-submit = Pārvietot
 move-done = Izdevums pārvietots uz { $project }
-move-delete-failed = Izdevums pievienots otram projektam, bet joprojām ir { $project }: izdzēs to tur.
 history-expense-moved = Izdevums pārvietots uz citu projektu: { $name }
 personal-badge = Personīgi
 move-members =
@@ -862,6 +865,11 @@ edit-project-no-identity = Tu vēl neesi izvēlējies, kas tu esi
 edit-project-switch = Mainīt
 edit-project-choose = Izvēlēties
 invite-failed = Šos ielūgumus neizdevās nosūtīt: { $emails }
+invite-waiting = Šiem draugiem vienreiz jāatver Counted, pirms viņus var uzaicināt: { $emails }
+key-offer-title = Cita atslēga projektam { $name }
+key-offer-body = Šai ierīcei ir cita šī projekta atslēga, kas to šeit nekad nav atvērusi.
+key-offer-choices = Izmantot šo atslēgu: projekts atveras ar šīs saites vai ielūguma atslēgu. Atcelt: ierīce patur pašreizējo atslēgu, un nekas nemainās.
+key-offer-use = Izmantot šo atslēgu
 invite-again = Uzaicināt vēlreiz
 friend-picker-title = Pievienot draugus
 user-selection-invited-hint = { $email } tevi uzaicināja uz „{ $project }”.
@@ -990,6 +998,13 @@ home-remind-message = Neliels atgādinājums: projektā { $project } vēl ir nen
 home-row-owed = tev parādā
 home-row-owe = tu esi parādā
 home-row-settled = Nokārtots
+home-row-quits = Tev viss nokārtots
+home-row-pending =
+    { $count ->
+        [zero] { $count } gaidošu atmaksu
+        [one] { $count } gaidoša atmaksa
+       *[other] { $count } gaidošas atmaksas
+    }
 home-totals-partial = Bez projektiem bez valūtas kursa
 error-account-key-changed = Tava konta atslēga tika mainīta citā ierīcē. Pieslēdzies vēlreiz, lai turpinātu.
 settings-security = Drošība

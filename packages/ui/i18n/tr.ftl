@@ -5,6 +5,9 @@
 
 loading = Yükleniyor…
 cancel = İptal
+discard-title = Değişiklikler silinsin mi?
+discard-message = Girdiklerin kaybolacak.
+discard = Sil
 confirm = Onayla
 retry = Tekrar dene
 delete = Sil
@@ -441,6 +444,7 @@ reimbursements-empty-title = Hesaplar kapandı!
 reimbursements-empty-hint = Hesaplar denk olmadığında hesaplaşma önerileri burada görünür
 reimbursement-owes = { $debtor }, { $creditor } kişisine borçlu
 reimbursement-record = Hesaplaş
+settlement-recorded = Hesaplaşma kaydedildi.
 reimbursement-pay-with = Öde
 reimbursement-pay-shared-by = { $name } tarafından paylaşıldı - göndermeden önce uygulamanın gösterdiği alıcı adını kontrol et.
 reimbursement-pay-title = { $name } kişisine öde
@@ -476,7 +480,6 @@ move-note-group = Harcama tüm üyeler için { $project } projesinden çıkacak 
 move-banner = { $from } → { $to }
 move-submit = Taşı
 move-done = Harcama { $project } projesine taşındı
-move-delete-failed = Harcama diğer projeye eklendi ama hâlâ { $project } içinde: oradan sil.
 history-expense-moved = Harcama başka bir projeye taşındı: { $name }
 personal-badge = Kişisel
 move-members =
@@ -853,6 +856,11 @@ edit-project-no-identity = Henüz kim olduğunu seçmedin
 edit-project-switch = Değiştir
 edit-project-choose = Seç
 invite-failed = Bu davetler gönderilemedi: { $emails }
+invite-waiting = Bu arkadaşların davet edilebilmesi için Counted'ı bir kez açmaları gerekiyor: { $emails }
+key-offer-title = { $name } için başka bir anahtar
+key-offer-body = Bu cihazda bu proje için, onu burada hiç açmamış başka bir anahtar var.
+key-offer-choices = Bu anahtarı kullan: proje bu bağlantıdaki veya davetteki anahtarla açılır. İptal: cihaz mevcut anahtarını korur ve hiçbir şey değişmez.
+key-offer-use = Bu anahtarı kullan
 invite-again = Yeniden davet et
 friend-picker-title = Arkadaş ekle
 user-selection-invited-hint = { $email } seni “{ $project }” projesine davet etti.
@@ -981,6 +989,12 @@ home-remind-message = Küçük bir hatırlatma: { $project } içinde hâlâ öde
 home-row-owed = sana borçlu
 home-row-owe = borcun
 home-row-settled = Güncel
+home-row-quits = Senin hesabın kapalı
+home-row-pending =
+    { $count ->
+        [one] { $count } geri ödeme bekliyor
+       *[other] { $count } geri ödeme bekliyor
+    }
 home-totals-partial = Döviz kuru olmayan projeler hariç
 error-account-key-changed = Hesabının anahtarı başka bir cihazda değişti. Devam etmek için yeniden giriş yap.
 settings-security = Güvenlik

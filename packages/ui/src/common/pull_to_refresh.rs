@@ -31,7 +31,7 @@ pub fn PullToRefresh(on_refresh: Callback<()>, busy: bool) -> Element {
                 document::eval(&format!("window.{REFRESH_HOOK} = function () {{ dioxus.send('refresh'); }};"));
             while eval.recv::<String>().await.is_ok() {
                 refreshing.set(true);
-                haptic(Haptic::Medium);
+                haptic(if cfg!(target_os = "ios") { Haptic::Light } else { Haptic::Medium });
                 on_refresh.call(());
             }
         });
@@ -49,10 +49,8 @@ pub fn PullToRefresh(on_refresh: Callback<()>, busy: bool) -> Element {
         }
     }));
 
-    let plat = if cfg!(target_os = "ios") { "ios" } else { "android" };
-
     rsx! {
-        div { class: "ptr", "data-plat": plat, aria_hidden: "true",
+        div { class: "ptr", aria_hidden: "true",
             div { class: "ptr-indicator",
                 svg {
                     class: "ptr-arc",

@@ -25,13 +25,17 @@ pub struct QueuedOp {
     #[serde(default)]
     pub sealed_label: Option<EncryptedPair>,
     pub op: OpKind,
+    /// Replays only if that op lands: a move's delete names the add it follows, so an add the
+    /// server drops never leaves the expense in neither project.
+    #[serde(default)]
+    pub after: Option<Uuid>,
 }
 
 impl QueuedOp {
     /// Every op is queued from a page that holds its project's key, so the key is in the store.
     pub fn new(id: Uuid, label: &str, op: OpKind) -> Self {
         let sealed_label = project_key(op.project_id()).and_then(|k| encrypt_json(&k, &label).ok());
-        Self { id, label: String::new(), sealed_label, op }
+        Self { id, label: String::new(), sealed_label, op, after: None }
     }
 
     /// Empty when the key is gone from this device since the op was queued.
@@ -154,6 +158,23 @@ pub fn queued_expenses(queue: &VecDeque<QueuedOp>, project_id: Uuid, now: NaiveD
         .collect()
 }
 
+/// The rows of `project_id` whose queued edit has not landed yet: listed with the edit applied
+/// (the modal patches the store), flagged as pending until the replay answers.
+pub fn queued_edit_ids(queue: &VecDeque<QueuedOp>, project_id: Uuid) -> std::collections::HashSet<i32> {
+    queue
+        .iter()
+        .filter_map(|queued| match &queued.op {
+            OpKind::EditExpense(e) if e.project_id == project_id => Some(e.id),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Drops `dropped` with every op that waits on it, so they leave the queue in one write.
+pub fn drop_with_dependents(queue: &mut VecDeque<QueuedOp>, dropped: Uuid) {
+    queue.retain(|op| op.id != dropped && op.after != Some(dropped));
+}
+
 /// A project taken off this device takes its queued ops with it (D15): they would replay under a
 /// key it no longer lists.
 pub fn drop_project_ops(queue: &mut VecDeque<QueuedOp>, project_id: Uuid) {
@@ -187,6 +208,7 @@ mod tests {
             id,
             label: label.to_string(),
             sealed_label: None,
+            after: None,
             op: OpKind::AddExpense(shared::CreatableExpense {
                 project_id: Uuid::nil(),
                 author_id: Some(1),
@@ -233,6 +255,35 @@ mod tests {
     }
 
     #[test]
+    fn only_this_projects_queued_edits_flag_their_rows() {
+        let mut elsewhere = edit_expense_op();
+        if let OpKind::EditExpense(e) = &mut elsewhere.op {
+            e.project_id = Uuid::new_v4();
+            e.id = 9;
+        }
+        let queue: VecDeque<QueuedOp> = [add_expense_op("a"), edit_expense_op(), elsewhere, delete_expense_op()].into();
+        assert_eq!(queued_edit_ids(&queue, Uuid::nil()), [42].into());
+    }
+
+    /// A move is an add there then a delete here: the add dropped, the delete must go with it.
+    #[test]
+    fn a_dropped_add_takes_the_delete_that_waits_on_it() {
+        let add = add_expense_op("moved");
+        let delete = QueuedOp { after: Some(add.id), ..delete_expense_op() };
+        let unrelated = delete_expense_op();
+        let mut queue: VecDeque<QueuedOp> = [add.clone(), delete, unrelated.clone()].into();
+        drop_with_dependents(&mut queue, add.id);
+        assert_eq!(queue.iter().map(|op| op.id).collect::<Vec<_>>(), vec![unrelated.id]);
+    }
+
+    #[test]
+    fn a_queue_written_before_the_dependency_still_reads() {
+        let old = r#"{"id":"00000000-0000-0000-0000-000000000001","op":{"type":"delete_expense","id":3,"projectId":"00000000-0000-0000-0000-000000000002"}}"#;
+        let op: QueuedOp = serde_json::from_str(old).unwrap();
+        assert_eq!(op.after, None);
+    }
+
+    #[test]
     fn removing_a_project_from_the_list_drops_only_its_queued_ops() {
         let other = Uuid::new_v4();
         let mut elsewhere = add_expense_op("elsewhere");
@@ -249,6 +300,7 @@ mod tests {
             id: Uuid::new_v4(),
             label: "edit".into(),
             sealed_label: None,
+            after: None,
             op: OpKind::EditExpense(shared::EditableExpense {
                 id: 42,
                 project_id: Uuid::nil(),
@@ -266,6 +318,7 @@ mod tests {
             id: Uuid::new_v4(),
             label: "delete".into(),
             sealed_label: None,
+            after: None,
             op: OpKind::DeleteExpense(shared::DeleteExpenseRequest {
                 id: 7,
                 project_id: Uuid::nil(),
@@ -279,6 +332,7 @@ mod tests {
             id: Uuid::new_v4(),
             label: "project".into(),
             sealed_label: None,
+            after: None,
             op: OpKind::UpdateProject(shared::EditableProject {
                 id: Uuid::nil(),
                 payload: None,
@@ -484,6 +538,7 @@ mod tests {
                     id,
                     label: "uuid test".into(),
                     sealed_label: None,
+                    after: None,
                     op: OpKind::DeleteExpense(shared::DeleteExpenseRequest {
                         id: 1,
                         project_id: Uuid::nil(),
@@ -650,7 +705,7 @@ mod project_edit_tests {
     #[test]
     fn a_queued_intent_round_trips_as_an_op() {
         let edit = rename("Corse", Some("Sous la tente"));
-        let op = QueuedOp { id: Uuid::new_v4(), label: "Corse".into(), sealed_label: None, op: OpKind::EditProject(edit.clone()) };
+        let op = QueuedOp { id: Uuid::new_v4(), label: "Corse".into(), sealed_label: None, op: OpKind::EditProject(edit.clone()), after: None };
         let stored = serde_json::to_string(&op).unwrap();
         let back: QueuedOp = serde_json::from_str(&stored).unwrap();
         assert!(matches!(back.op, OpKind::EditProject(e) if e == edit));

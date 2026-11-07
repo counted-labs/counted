@@ -18,6 +18,8 @@ pub struct ProjectGlance {
     pub members: usize,
     /// Mine, positive when I am owed. `None` until I picked my participant there.
     pub balance: Option<f64>,
+    /// Repayments still open in the group, mine or between the others.
+    pub pending: usize,
     pub currency: String,
     pub last_activity: Option<NaiveDate>,
 }
@@ -63,6 +65,7 @@ pub fn glance(ledger: &GroupLedger) -> ProjectGlance {
     ProjectGlance {
         members: ledger.members,
         balance: my_balance(ledger),
+        pending: ledger.data.summary.reimbursement_suggestions.iter().filter(|s| s.amount >= CENT).count(),
         currency: ledger.data.currency.clone(),
         last_activity: ledger.data.expenses.iter().map(|r| r.date).max(),
     }
@@ -226,6 +229,13 @@ mod tests {
         assert_eq!(glance(&ledger(1, "EUR", Some(2), &[(1, 5.0), (2, -5.0)], &[])).balance, Some(-5.0));
         assert_eq!(glance(&ledger(1, "EUR", Some(3), &[(1, 5.0), (2, -5.0)], &[])).balance, Some(0.0));
         assert_eq!(glance(&ledger(1, "EUR", None, &[], &[])).balance, None);
+    }
+
+    #[test]
+    fn a_row_counts_the_repayments_still_open_between_the_others() {
+        let open = ledger(1, "EUR", Some(1), &[(1, 0.0), (2, -5.0), (3, 5.0)], &[(2, 3, 5.0), (2, 1, 0.001)]);
+        assert_eq!((glance(&open).balance, glance(&open).pending), (Some(0.0), 1));
+        assert_eq!(glance(&ledger(1, "EUR", Some(1), &[(1, 0.0)], &[])).pending, 0);
     }
 
     #[test]

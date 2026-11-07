@@ -379,7 +379,7 @@ pub fn MemberSheet(
             tabindex: "-1",
             div { class: "modal-box max-w-md flex flex-col gap-3",
                 div { class: "flex items-center gap-3",
-                    crate::participants::Avatar { name: name.clone(), guest }
+                    crate::common::Avatar { initials: crate::participants::participants_service::initial(&name), size: crate::common::SizeClass::W9, guest }
                     div { class: "flex flex-col min-w-0",
                         h2 { id: "member-sheet-title", class: "font-bold text-lg font-display truncate", "{name}" }
                         span { class: "text-sm text-base-content/70", "{subtitle}" }

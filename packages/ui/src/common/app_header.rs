@@ -10,8 +10,10 @@ pub struct AppHeaderProps {
     /// False on the dock's own pages, where the dock already is the way out.
     #[props(default = true)]
     back: bool,
-    /// Pins the header to the top of the page's scroll container.
-    #[props(default = false)]
+    /// Pins the header to the top of the page's scroll container, as a navigation bar is. Scrolled
+    /// it gets a `backdrop-filter`, which traps any `position: fixed` child in the bar:
+    /// render a sheet as a sibling of the header, never as one of its children.
+    #[props(default = true)]
     sticky: bool,
     #[props(default = false)]
     brand: bool,
@@ -22,72 +24,32 @@ pub struct AppHeaderProps {
     /// with the `tabs` permission keep.
     #[props(default = false)]
     private_title: bool,
+    /// A tab root. On iOS the title is also drawn large under the bar and hands over to the bar's
+    /// inline title as it scrolls under it (native-feel.css, boot.js); the copy is hidden elsewhere.
+    #[props(default = false)]
+    large: bool,
     children: Element,
 }
 
-/// Toggles `.is-scrolled` on the sticky header once its scroll container has moved, which is what
-/// makes the bar transparent at rest and translucent over content - the iOS navigation-bar
-/// behaviour. The classes it drives live in `packages/mobile/assets/main.css`.
-///
-/// Plain JS on a passive **capture-phase** listener, for two reasons: `scroll` does not bubble, so
-/// a listener on `main` only sees the `.app-container` scrolling underneath it during capture; and
-/// every event dispatched to Rust on a native mobile target costs a synchronous XHR over wry's
-/// bridge, so a Dioxus `onscroll` here would pay that once per frame of every scroll. Same
-/// technique and same reason as the `scrollTop` restore in `page_transition.rs`.
-///
-/// Mobile-only: the web build must never call `document::eval` (DOCUMENTATION.md §8), and
-/// `.nav-material` is defined only in the mobile stylesheet, so there is nothing to drive elsewhere.
-#[cfg(any(target_os = "android", target_os = "ios"))]
-fn use_scroll_material() {
-    use_effect(|| {
-        document::eval(
-            r#"
-            (function() {
-                if (window._countedNavMaterial) return;
-                const main = document.querySelector('main');
-                if (!main) return;
-                // Only once `main` was actually found - setting it above would burn the guard on a
-                // first run that attached nothing, and no later mount would retry.
-                window._countedNavMaterial = true;
-                main.addEventListener('scroll', function(e) {
-                    const t = e.target;
-                    if (!t || !t.querySelector) return;
-                    // Scoped to the container that scrolled, never document-wide: mid-transition
-                    // there are two page shells in `main` - the incoming one and the exiting
-                    // overlay - and on a push the overlay is inserted *before* the live shell, so
-                    // a document-wide lookup would style the dying header and leave the real one
-                    // flat. The sticky header is a child of the scroller, so this is exact.
-                    const bar = t.querySelector('.nav-material');
-                    if (bar) bar.classList.toggle('is-scrolled', t.scrollTop > 2);
-                }, { capture: true, passive: true });
-            })();
-        "#,
-        );
-    });
-}
-
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
-fn use_scroll_material() {}
-
 #[component]
 pub fn AppHeader(props: AppHeaderProps) -> Element {
-    use_scroll_material();
-
     rsx! {
         PageTitle { text: if props.private_title { "counted".to_string() } else { format!("{} · counted", props.title) } }
         // `bg-base-100` is load-bearing when sticky: the header is transparent otherwise and the
         // page would scroll through it. `z-20` sits above the page, below the dock (z-50) and the
         // offline banner (z-60).
         //
-        // `nav-material` overrides that fill on mobile only, where it is swapped for a blur that
-        // appears on scroll - the class is undefined on web and desktop, so those keep the solid
-        // bar and nothing changes for them.
+        // `nav-material` (native-feel.css) swaps that fill for a blur that appears on scroll, toggled
+        // by `.is-scrolled` from boot.js; the desktop shell links neither and keeps the solid bar.
+        // The bar's height, its title and the back glyph are per platform there too (`.nav-bar`).
         //
         // Not daisyUI's `navbar-start/center/end`: that is `50% / shrink-0 / 50%`, built for a
         // fixed-width logo, and a title longer than half the bar was pushed off-screen. The
         // `1fr auto 1fr` grid keeps a short title centred; `min-w-0` on the middle cell is what
         // lets a long one truncate instead of overflowing (e2e: web/tests/long-names.spec.ts).
-        header { class: if props.sticky { "grid grid-cols-[1fr_auto_1fr] items-center w-full min-h-16 py-2 sticky top-0 z-20 bg-base-100 nav-material" } else { "grid grid-cols-[1fr_auto_1fr] items-center w-full min-h-16 py-2" },
+        header {
+            "data-large": props.large.then_some("true"),
+            class: if props.sticky { "nav-bar grid grid-cols-[1fr_auto_1fr] items-center w-full min-h-16 py-2 sticky top-0 z-20 bg-base-100 nav-material" } else { "nav-bar grid grid-cols-[1fr_auto_1fr] items-center w-full min-h-16 py-2" },
             div { class: "flex items-center",
                 if props.back {
                 BackButtonArrow {
@@ -110,9 +72,9 @@ pub fn AppHeader(props: AppHeaderProps) -> Element {
                 }
                 }
             }
-            div { class: "flex flex-col items-center min-w-0 text-center",
+            div { class: "nav-title-cell flex flex-col items-center min-w-0 text-center",
                 div { class: "flex items-center gap-2 min-w-0 max-w-full",
-                    h1 { id: "page-title", class: if props.brand { "text-2xl font-extrabold font-display text-gradient-brand truncate max-w-full" } else { "text-xl font-bold font-display truncate max-w-full" }, "{props.title}" }
+                    h1 { id: "page-title", class: if props.brand { "text-2xl font-extrabold font-display text-gradient-brand truncate max-w-full" } else { "nav-title text-xl font-bold font-display truncate max-w-full" }, "{props.title}" }
                     if let Some(badge) = props.badge {
                         span { id: "page-title-badge", class: "badge badge-sm badge-soft badge-success shrink-0 font-semibold", "{badge}" }
                     }
@@ -121,7 +83,10 @@ pub fn AppHeader(props: AppHeaderProps) -> Element {
                     div { class: "text-sm mb-3 truncate max-w-full", "{sub_title}" }
                 }
             }
-            div { class: "flex items-center justify-self-end", {props.children} }
+            div { class: "flex items-center gap-1 justify-self-end", {props.children} }
+        }
+        if props.large {
+            div { class: "large-title", aria_hidden: "true", "{props.title}" }
         }
     }
 }

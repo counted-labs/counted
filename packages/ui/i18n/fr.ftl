@@ -6,6 +6,9 @@
 
 loading = Chargement…
 cancel = Annuler
+discard-title = Abandonner les modifications ?
+discard-message = Ce que vous avez saisi sera perdu.
+discard = Abandonner
 confirm = Confirmer
 retry = Réessayer
 delete = Supprimer
@@ -445,6 +448,7 @@ reimbursements-empty-title = Les comptes sont bons !
 reimbursements-empty-hint = Des suggestions de remboursement seront proposées ici si les comptes ne sont pas équilibrés
 reimbursement-owes = { $debtor } doit à { $creditor }
 reimbursement-record = Rembourser
+settlement-recorded = Remboursement enregistré.
 reimbursement-pay-with = Payer
 reimbursement-pay-shared-by = Partagé par { $name } - vérifiez le nom du destinataire affiché par votre application avant d'envoyer.
 reimbursement-pay-title = Payer { $name }
@@ -481,7 +485,6 @@ move-note-group = La dépense quittera { $project } pour tous ses membres, et l�
 move-banner = Depuis { $from } vers { $to }
 move-submit = Déplacer
 move-done = Dépense déplacée vers { $project }
-move-delete-failed = La dépense a été ajoutée à l’autre projet mais reste dans { $project } : supprimez-la là-bas.
 history-expense-moved = Dépense déplacée vers un autre projet : { $name }
 personal-badge = Perso
 move-members =
@@ -1039,6 +1042,11 @@ edit-project-no-identity = Vous n’avez pas encore indiqué qui vous êtes
 edit-project-switch = Changer
 edit-project-choose = Choisir
 invite-failed = Ces invitations n’ont pas pu être envoyées : { $emails }
+invite-waiting = Ces amis doivent ouvrir Counted une fois avant de pouvoir être invités : { $emails }
+key-offer-title = Une autre clé pour { $name }
+key-offer-body = Cet appareil détient une autre clé pour ce projet, qui ne l’a jamais ouvert ici.
+key-offer-choices = Utiliser cette clé : le projet s’ouvre avec la clé de ce lien ou de cette invitation. Annuler : cet appareil garde sa clé actuelle, et rien ne change.
+key-offer-use = Utiliser cette clé
 invite-again = Inviter à nouveau
 friend-picker-title = Ajouter des amis
 user-selection-invited-hint = { $email } vous a invité dans « { $project } ».
@@ -1167,6 +1175,12 @@ home-remind-message = Petit rappel : il reste des remboursements à régler sur 
 home-row-owed = on vous doit
 home-row-owe = vous devez
 home-row-settled = À l’équilibre
+home-row-quits = Vous êtes quitte
+home-row-pending =
+    { $count ->
+        [one] { $count } remboursement en attente
+       *[other] { $count } remboursements en attente
+    }
 home-totals-partial = Hors projets sans taux de change
 error-account-key-changed = La clé de votre compte a changé sur un autre appareil. Reconnectez-vous pour continuer.
 settings-security = Sécurité

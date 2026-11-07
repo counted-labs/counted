@@ -41,9 +41,6 @@ Kostenlos, ohne Werbung, ohne Tracker, ohne Limit für Ausgaben oder Teilnehmend
 • Web, Android und iOS: dasselbe Projekt überall, mit demselben Link
 • 32 Sprachen, darunter alle 24 Amtssprachen der EU
 
-🔔 Benachrichtigungen ohne Google
-Counted stellt Benachrichtigungen über UnifiedPush zu, ganz ohne Google-Dienste. Dafür installierst du einen Distributor wie ntfy oder Sunup. Ohne ihn funktioniert die App wie gewohnt, nur ohne Benachrichtigungen.
-
 🌱 Eine Mission
 Counted ist effizient und einfach gebaut: keine Werbung, keine Tracker. Die Berechnungen laufen auf deinem Gerät. Wir verpflichten uns, einen Teil unserer Einnahmen an Umweltprojekte zu geben.
 

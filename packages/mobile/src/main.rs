@@ -28,56 +28,23 @@ const LOGO: Asset = asset!("/assets/counted.png");
 const MAIN_CSS: Asset = asset!("/assets/main.css");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
 
-// Self-hosted (no Google CDN), via asset!() so they bundle with hashed URLs; @font-face below
-// is injected with those resolved URLs.
-const FONT_INTER_400: Asset = asset!("/assets/fonts/inter-400.woff2");
-const FONT_INTER_500: Asset = asset!("/assets/fonts/inter-500.woff2");
-const FONT_INTER_600: Asset = asset!("/assets/fonts/inter-600.woff2");
+// Plus Jakarta Sans for `font-display` titles only: the body is the system font
+// (tailwind.input.css). Self-hosted via asset!() so the files bundle with hashed URLs.
 const FONT_JAKARTA_600: Asset = asset!("/assets/fonts/jakarta-600.woff2");
 const FONT_JAKARTA_700: Asset = asset!("/assets/fonts/jakarta-700.woff2");
-const FONT_INTER_LATIN_EXT: Asset = asset!("/assets/fonts/inter-latin-ext.woff2");
-const FONT_INTER_GREEK: Asset = asset!("/assets/fonts/inter-greek.woff2");
-const FONT_INTER_CYRILLIC: Asset = asset!("/assets/fonts/inter-cyrillic.woff2");
 const FONT_JAKARTA_LATIN_EXT: Asset = asset!("/assets/fonts/jakarta-latin-ext.woff2");
 
 const LATIN_EXT: &str = "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF";
-const GREEK: &str = "U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF";
-const CYRILLIC: &str = "U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116";
 
+/// The Latin files carry no unicode-range, so the Latin Extended subset must come after them:
+/// faces with the same descriptors are tried last-declared first (CSS Fonts 4 §4.5). The subset
+/// is one variable file, declared once per weight.
 fn font_face_css() -> String {
-    let mut css = latin_font_face_css();
-    // The Latin files above carry no unicode-range, so these must come after them: faces with
-    // the same descriptors are tried last-declared first (CSS Fonts 4 §4.5), which sends only
-    // these ranges here and leaves every other character on the unchanged Latin files. Each
-    // subset is one variable file, declared once per weight the app uses.
-    let subsets = [
-        ("Inter", &[400, 500, 600][..], FONT_INTER_LATIN_EXT, LATIN_EXT),
-        ("Inter", &[400, 500, 600][..], FONT_INTER_GREEK, GREEK),
-        ("Inter", &[400, 500, 600][..], FONT_INTER_CYRILLIC, CYRILLIC),
-        ("Plus Jakarta Sans", &[600, 700][..], FONT_JAKARTA_LATIN_EXT, LATIN_EXT),
-    ];
-    for (family, weights, file, range) in subsets {
-        for weight in weights {
-            css.push_str(&format!(
-                "\n@font-face{{font-family:\"{family}\";font-style:normal;font-weight:{weight};font-display:swap;src:url(\"{file}\") format(\"woff2\");unicode-range:{range}}}"
-            ));
-        }
-    }
-    css
-}
-
-fn latin_font_face_css() -> String {
-    const TEMPLATE: &str = r#"@font-face{font-family:"Inter";font-style:normal;font-weight:400;font-display:swap;src:url("$I4") format("woff2")}
-@font-face{font-family:"Inter";font-style:normal;font-weight:500;font-display:swap;src:url("$I5") format("woff2")}
-@font-face{font-family:"Inter";font-style:normal;font-weight:600;font-display:swap;src:url("$I6") format("woff2")}
-@font-face{font-family:"Plus Jakarta Sans";font-style:normal;font-weight:600;font-display:swap;src:url("$J6") format("woff2")}
-@font-face{font-family:"Plus Jakarta Sans";font-style:normal;font-weight:700;font-display:swap;src:url("$J7") format("woff2")}"#;
-    TEMPLATE
-        .replace("$I4", &FONT_INTER_400.to_string())
-        .replace("$I5", &FONT_INTER_500.to_string())
-        .replace("$I6", &FONT_INTER_600.to_string())
-        .replace("$J6", &FONT_JAKARTA_600.to_string())
-        .replace("$J7", &FONT_JAKARTA_700.to_string())
+    let face = |weight: u16, file: Asset, range: &str| {
+        format!("@font-face{{font-family:\"Plus Jakarta Sans\";font-style:normal;font-weight:{weight};font-display:swap;src:url(\"{file}\") format(\"woff2\"){range}}}\n")
+    };
+    let ext = format!(";unicode-range:{LATIN_EXT}");
+    [face(600, FONT_JAKARTA_600, ""), face(700, FONT_JAKARTA_700, ""), face(600, FONT_JAKARTA_LATIN_EXT, &ext), face(700, FONT_JAKARTA_LATIN_EXT, &ext)].concat()
 }
 
 /// dioxus-desktop's release script calls preventDefault on `contextmenu` from a bubbling listener
@@ -86,15 +53,94 @@ fn latin_font_face_css() -> String {
 const KEEP_SELECTION_TOOLBAR: &str =
     "window.addEventListener('contextmenu', e => e.stopImmediatePropagation(), true);";
 
-/// `ui::common::apply_theme` calls `countedTheme`. Set from the head so the first paint already
-/// has the chosen theme; the listener repaints while the choice is System.
-const THEME_SCRIPT: &str = "(function(){var m=matchMedia('(prefers-color-scheme: dark)'),c;function p(){document.documentElement.dataset.theme=c==='dark'||(c==='system'&&m.matches)?'counted-dark':'counted';}window.countedTheme=function(t){c=t;p();};m.addEventListener('change',p);})();";
+/// `html[data-plat]` and, on iOS, `html[data-ios]` (the major version): the only switches the
+/// stylesheets branch on (docs/styling.md). Set from the head, like the theme, so the first paint
+/// already has them.
+fn platform_markers(ios_major: Option<isize>) -> String {
+    match ios_major {
+        Some(major) => format!(
+            "document.documentElement.dataset.plat='ios';document.documentElement.dataset.ios='{major}';"
+        ),
+        None => "document.documentElement.dataset.plat='android';".to_string(),
+    }
+}
+
+#[cfg(target_os = "ios")]
+fn ios_major() -> Option<isize> {
+    Some(objc2_foundation::NSProcessInfo::processInfo().operatingSystemVersion().majorVersion)
+}
+
+#[cfg(not(target_os = "ios"))]
+fn ios_major() -> Option<isize> {
+    None
+}
+
+/// dioxus-desktop's template viewport (`assets/prod.index.html`, 0.7.10) plus `viewport-fit=cover`, so
+/// `env(safe-area-inset-*)` is right on the first frame. A later viewport meta replaces the earlier one
+/// whole, hence the full restatement.
+const VIEWPORT: &str = r#"<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">"#;
+
+/// Dynamic Type, from the head so the first paint already has the scale. `-apple-system-body` is the
+/// only handle a WKWebView has on the user's Text Size setting; 17px is the "Large" default, so the
+/// ratio is the scale. Driven by `resize`, which iOS fires on a content-size-category change, so the
+/// same listener covers rotation. Measured on `<html>` while the body does not exist yet: the
+/// stylesheets above have loaded by then (they block the script), and the keyword is absolute.
+///
+/// Clamped at 2 (about AX2): the pages are vertical and absorb growth up there, and the header and
+/// the dock stop growing at 1.35 on their own (`--chrome-zoom` in main.css).
+///
+/// **The sentinel is load-bearing.** Where the `font` shorthand does not parse the keyword, the
+/// declaration is dropped and the span inherits instead - and what it inherits is
+/// `16px * var(--dt-scale)`, the value this very script wrote. That is a feedback loop: each resize
+/// divides the previous scale by 17/16 until it sticks at the 0.85 floor, shrinking the whole UI ~15%
+/// with nothing to point at. Setting `font-size` to a value nothing would ever compute *before* the
+/// shorthand detects it exactly: a parsed shorthand resets every font longhand, so 99px surviving
+/// means the keyword was ignored and there is nothing to measure.
+///
+/// The same span carries Bold Text: `-apple-system-body` resolves to a heavier weight while it is
+/// on, so a weight of 600 or more sets `data-bold-text` on `<html>` (main.css raises the weights
+/// under it). Read before the span is removed: a detached element's computed style is empty.
+///
+/// iOS only. Android's WebView already applies the system font-size setting itself, through
+/// `WebSettings.textZoom`, so there is nothing for this to add there.
+const DYNAMIC_TYPE_SCRIPT: &str = "(function(){function measure(){var p=document.createElement('span');p.style.position='absolute';p.style.visibility='hidden';p.style.fontSize='99px';p.style.font='-apple-system-body';var host=document.body||document.documentElement;host.appendChild(p);var cs=getComputedStyle(p);var px=parseFloat(cs.fontSize);var fw=cs.fontWeight;p.remove();if(!(px>0)||px===99)return;var html=document.documentElement;html.toggleAttribute('data-bold-text',fw==='bold'||parseInt(fw,10)>=600);var scale=String(Math.min(2,Math.max(0.85,px/17)));var root=html.style;if(root.getPropertyValue('--dt-scale')!==scale)root.setProperty('--dt-scale',scale);}window.addEventListener('resize',measure);measure();})();";
+
+/// The keypad already up when the add-expense sheet opens, iOS only (native-feel P4.4). WebKit shows
+/// the keyboard for a focus made inside a user gesture and never for one made by script later, and
+/// the sheet only exists a Rust round trip after the tap. So the add button's `touchend` focuses a
+/// hidden `inputmode=decimal` proxy at once, and the amount field takes the focus over from it at the
+/// end of the sheet's slide-in (`sheet-in`): focus moving between two fields keeps the keyboard up,
+/// and a field focused mid-slide would make WebKit pan to a box still below the screen. A tap that
+/// opened nothing gives the proxy up after 2 s. `modal_focus.rs` leaves the proxy's focus alone.
+/// Android raises the keyboard on a script focus already.
+const KEYBOARD_PROXY_SCRIPT: &str = "(function(){var proxy=null,start=null,handing=0;function make(){proxy=document.createElement('input');proxy.type='text';proxy.setAttribute('inputmode','decimal');proxy.setAttribute('aria-hidden','true');proxy.setAttribute('data-keyboard-proxy','');proxy.setAttribute('autocomplete','off');proxy.tabIndex=-1;proxy.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;border:0;padding:0;font-size:16px;pointer-events:none';document.body.appendChild(proxy);}function afterSlide(box,then){var ran=false;function run(){if(ran)return;ran=true;then();}var a=box.getAnimations?box.getAnimations().filter(function(x){return x.animationName==='sheet-in'&&x.playState==='running';}):[];if(!a.length)return run();a[0].finished.then(run,run);setTimeout(run,700);}document.addEventListener('touchstart',function(e){var t=e.touches[0];start=e.touches.length===1&&e.target instanceof Element&&e.target.closest('#add-expense-btn')?{x:t.clientX,y:t.clientY}:null;},{capture:true,passive:true});document.addEventListener('touchend',function(e){var s=start;start=null;if(!s||e.touches.length)return;var t=e.changedTouches[0];if(Math.abs(t.clientX-s.x)>10||Math.abs(t.clientY-s.y)>10)return;if(!proxy||!proxy.isConnected)make();proxy.value='';proxy.focus({preventScroll:true});handing=Date.now();setTimeout(function(){handing=0;if(document.activeElement===proxy)proxy.blur();},2000);},{capture:true,passive:true});window._countedObserve(function(){if(!handing||document.activeElement!==proxy)return;var field=document.getElementById('expense-amount');var box=field&&field.closest('.modal-box');if(!box)return;handing=0;afterSlide(box,function(){if(document.activeElement===proxy&&field.isConnected)field.focus({preventScroll:true});});});})();";
+
+/// What a status-bar tap does on iOS (native-feel P4.3): the page scrolls in its own `.app-container`,
+/// which UIKit's scroll-to-top cannot reach, so `ScrollToTop` (the webview scroll view's delegate)
+/// calls this and declines the native scroll.
+const SCROLL_TO_TOP_SCRIPT: &str = "window._countedScrollToTop=function(){var s=document.querySelector('main > .page-shell:not(.page-exiting) .app-container');if(s)s.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});};";
+
+/// Android predictive back inside the app (native-feel P4.2), driven by `MainActivity.kt`'s
+/// `OnBackPressedCallback`, which is enabled only while a back is armed: `p` in 0..1 from
+/// `handleOnBackStarted` / `handleOnBackProgressed` with the swipe edge (0 left, 1 right), -1 on
+/// `handleOnBackCancelled`, 2 when the back commits. The live shell takes M3's in-app shape: scaled
+/// down to 90%, shifted towards the side away from the swiped edge until 8px from the screen's
+/// edge, corners rounded (main.css). On commit it stays shrunk and `page_transition.rs` fades it out
+/// as it is; cancelled, it springs back. Nothing while a sheet is open (back closes the sheet) or
+/// under Reduce Motion.
+const PREDICTIVE_BACK_SCRIPT: &str = "(function(){var reduce=window.matchMedia('(prefers-reduced-motion: reduce)');function live(){return document.querySelector('main > .page-shell:not(.page-exiting)');}function reset(el){if(!el.hasAttribute('data-back-progress'))return;el.removeAttribute('data-back-progress');el.classList.add('back-settling');el.style.removeProperty('transform');setTimeout(function(){el.classList.remove('back-settling');},300);}window._countedBackProgress=function(p,edge){var el=live();if(!el)return;if(p<0)return reset(el);if(p>1){if(el.hasAttribute('data-back-progress'))setTimeout(function(){if(el.isConnected)reset(el);},1000);return;}if(reduce.matches||document.querySelector('.modal.modal-open'))return;var w=document.documentElement.clientWidth;var shift=(edge===1?-1:1)*p*Math.max(0,w*0.05-8);el.setAttribute('data-back-progress','');el.style.transform='translateX('+shift.toFixed(1)+'px) scale('+(1-0.1*p).toFixed(4)+')';};})();";
+
+/// One `MutationObserver` on the whole document for every mobile script (`navigation_sync`,
+/// `sheet_drag`, `page_transition` in `ui`), each registered with `window._countedObserve(fn)` and
+/// handed every batch of records, in the same microtask a private observer would get them. A throw in
+/// one does not starve the others.
+const OBSERVE_SCRIPT: &str = "(function(){var fns=[];window._countedObserve=function(f){fns.push(f);};new MutationObserver(function(r){for(var i=0;i<fns.length;i++){try{fns[i](r);}catch(e){console.error(e);}}}).observe(document.documentElement,{childList:true,subtree:true});})();";
 
 /// Stylesheets spliced into dioxus-desktop's index template before `</head>`, so they are
 /// render-blocking - `document::Link` only reaches the head after the first render, leaving the
 /// webview's first paint unstyled. This does not replace the template (docs/dioxus-overrides.md).
 ///
-/// Order is tailwind then main: main.css is unlayered and must win.
+/// Order is tailwind, the shared native-feel sheet, then main: main.css is unlayered and must win.
 ///
 /// Only the mobile config consumes it - not the host server binary that
 /// `dx bundle --platform android` also builds.
@@ -106,8 +152,14 @@ fn head_html(theme: ui::common::Theme) -> String {
         // in every session, and enough to make `boots without console errors` flake depending on
         // whether it lands before the spec attaches. `data:,` answers it without a request. No app
         // window ever shows an icon here, so there is nothing to supply instead.
-        r#"<link rel="icon" href="data:,"><link rel="stylesheet" href="{TAILWIND_CSS}"><link rel="stylesheet" href="{MAIN_CSS}"><style>{fonts}</style><script>{KEEP_SELECTION_TOOLBAR}{THEME_SCRIPT}countedTheme('{theme}');</script>"#,
+        r#"{VIEWPORT}<link rel="icon" href="data:,"><link rel="stylesheet" href="{TAILWIND_CSS}"><link rel="stylesheet" href="{native_feel}"><link rel="stylesheet" href="{MAIN_CSS}"><style>{fonts}</style><script>{KEEP_SELECTION_TOOLBAR}{OBSERVE_SCRIPT}{markers}{boot}countedTheme('{theme}');{dynamic_type}{ios_scripts}{predictive_back}</script>"#,
         fonts = font_face_css(),
+        native_feel = ui::common::NATIVE_FEEL_CSS,
+        markers = platform_markers(ios_major()),
+        boot = ui::common::BOOT_JS_SOURCE,
+        dynamic_type = if cfg!(target_os = "ios") { DYNAMIC_TYPE_SCRIPT } else { "" },
+        ios_scripts = if cfg!(target_os = "ios") { [KEYBOARD_PROXY_SCRIPT, SCROLL_TO_TOP_SCRIPT].concat() } else { String::new() },
+        predictive_back = if cfg!(target_os = "android") { PREDICTIVE_BACK_SCRIPT } else { "" },
         theme = theme.as_str()
     )
 }
@@ -137,7 +189,7 @@ fn ios_data_dir() -> Option<String> {
     }
 }
 
-/// Overrides `--sat`/`--sab`/`--sar` from `assets/main.css`. An inline property on the root
+/// Overrides `--sat`/`--sab`/`--sar` from `ui/assets/native-feel.css`. An inline property on the root
 /// element beats the `:root` rule, so this is the only hook Android needs - every `.safe-*` rule
 /// and `main { padding-top }` follows. Android reports physical pixels; CSS wants density-independent.
 #[cfg_attr(not(target_os = "android"), allow(dead_code))]
@@ -499,10 +551,6 @@ fn platform_read_clipboard() -> Option<String> {
     unsafe { autoreleasepool(|_| UIPasteboard::generalPasteboard().string().map(|s| s.to_string())) }
 }
 
-/// UIKit's own feedback vocabulary. A generator is built per call rather than cached: they are
-/// cheap, `prepare()` is what actually costs (it wakes the Taptic Engine), and holding one across
-/// calls would mean holding a `MainThreadOnly` object in a `Send + Sync` closure.
-///
 /// The window's interface style, which the status bar, the keyboard and the WebView's
 /// `prefers-color-scheme` all follow. Unspecified hands it back to the system.
 #[cfg(target_os = "ios")]
@@ -525,14 +573,14 @@ fn apply_native_theme(theme: ui::common::Theme) {
     }
 }
 
-/// The status bar icons, which `values(-night)/styles.xml` set from the system's mode. Through
-/// `MainActivity.setLightStatusBar`, which needs the UI thread.
+/// The status and navigation bar icons, which `values(-night)/styles.xml` set from the system's
+/// mode. Through `MainActivity.setLightSystemBars`, which needs the UI thread.
 #[cfg(target_os = "android")]
 fn apply_native_theme(theme: ui::common::Theme) {
     fn call(env: &mut jni::JNIEnv, light: bool) -> jni::errors::Result<()> {
         let ctx = ndk_context::android_context();
         let activity = unsafe { jni::objects::JObject::from_raw(ctx.context().cast()) };
-        env.call_method(&activity, "setLightStatusBar", "(Z)V", &[jni::objects::JValue::Bool(light.into())])?;
+        env.call_method(&activity, "setLightSystemBars", "(Z)V", &[jni::objects::JValue::Bool(light.into())])?;
         Ok(())
     }
 
@@ -550,6 +598,11 @@ fn apply_native_theme(theme: ui::common::Theme) {
     }
 }
 
+/// UIKit's own feedback vocabulary. A generator is built per call rather than cached, and fired
+/// at once: `prepare()` only pays off ahead of a later event, so right before firing it is a wasted
+/// wake of the Taptic Engine, and holding a generator across calls would mean holding a
+/// `MainThreadOnly` object in a `Send + Sync` closure.
+///
 /// `MainThreadMarker::new()` returning `None` is the guard - UIFeedbackGenerator is main-thread
 /// only, and a haptic is never worth a crash. `initWithStyle`/`init` are deprecated in favour of
 /// the `forView:` constructors, which need a `UIView` this layer has no handle on.
@@ -559,7 +612,7 @@ fn play_haptic(kind: ui::common::Haptic) {
     use objc2::{MainThreadMarker, MainThreadOnly};
     use objc2_ui_kit::{
         UIImpactFeedbackGenerator, UIImpactFeedbackStyle, UINotificationFeedbackGenerator,
-        UINotificationFeedbackType,
+        UINotificationFeedbackType, UISelectionFeedbackGenerator,
     };
     use ui::common::Haptic;
 
@@ -567,18 +620,15 @@ fn play_haptic(kind: ui::common::Haptic) {
         return;
     };
     match kind {
+        Haptic::Selection => UISelectionFeedbackGenerator::new(mtm).selectionChanged(),
         Haptic::Light | Haptic::Medium => {
             let style = if matches!(kind, Haptic::Light) {
                 UIImpactFeedbackStyle::Light
             } else {
                 UIImpactFeedbackStyle::Medium
             };
-            let g = UIImpactFeedbackGenerator::initWithStyle(
-                UIImpactFeedbackGenerator::alloc(mtm),
-                style,
-            );
-            g.prepare();
-            g.impactOccurred();
+            UIImpactFeedbackGenerator::initWithStyle(UIImpactFeedbackGenerator::alloc(mtm), style)
+                .impactOccurred();
         }
         Haptic::Success | Haptic::Warning | Haptic::Error => {
             let ty = match kind {
@@ -586,9 +636,8 @@ fn play_haptic(kind: ui::common::Haptic) {
                 Haptic::Warning => UINotificationFeedbackType::Warning,
                 _ => UINotificationFeedbackType::Error,
             };
-            let g = UINotificationFeedbackGenerator::init(UINotificationFeedbackGenerator::alloc(mtm));
-            g.prepare();
-            g.notificationOccurred(ty);
+            UINotificationFeedbackGenerator::init(UINotificationFeedbackGenerator::alloc(mtm))
+                .notificationOccurred(ty);
         }
     }
 }
@@ -596,22 +645,30 @@ fn play_haptic(kind: ui::common::Haptic) {
 /// `View.performHapticFeedback` on the decor view, not `Vibrator`: it needs no permission and it
 /// respects the user's "Touch feedback" system setting, which a raw vibration would override.
 ///
-/// The constants are `HapticFeedbackConstants`: CONTEXT_CLICK (6) for a light selection,
-/// LONG_PRESS (0) for a committed gesture, CONFIRM (16) / REJECT (17) for the outcome pair.
-/// CONFIRM/REJECT are API 30+; the call simply does nothing on older devices, which is the right
-/// failure mode for feedback.
+/// The constants are `HapticFeedbackConstants`: SEGMENT_TICK (27, API 34+) or CLOCK_TICK (4) below
+/// for a selection, LONG_PRESS (0) for a committed gesture, CONFIRM (16) / REJECT (17) for the
+/// outcome pair. The selection constant is picked by `SDK_INT` because an unknown one plays
+/// nothing. CONFIRM/REJECT are API 30+; the call simply does nothing on older devices, which is the
+/// right failure mode for feedback. `Light` plays nothing: Material controls do not buzz on a plain
+/// tap, which is all `Light` marks (D11 in docs/plans/native-feel.md).
 #[cfg(target_os = "android")]
 fn play_haptic(kind: ui::common::Haptic) {
     use ui::common::Haptic;
 
-    let constant = match kind {
-        Haptic::Light => 6,
-        Haptic::Medium => 0,
-        Haptic::Success => 16,
-        Haptic::Warning | Haptic::Error => 17,
-    };
+    if kind == Haptic::Light {
+        return;
+    }
 
-    fn call(env: &mut jni::JNIEnv, constant: i32) -> jni::errors::Result<()> {
+    fn call(env: &mut jni::JNIEnv, kind: Haptic) -> jni::errors::Result<()> {
+        let constant = match kind {
+            Haptic::Selection => {
+                let sdk = env.get_static_field("android/os/Build$VERSION", "SDK_INT", "I")?.i()?;
+                if sdk >= 34 { 27 } else { 4 }
+            }
+            Haptic::Light | Haptic::Medium => 0,
+            Haptic::Success => 16,
+            Haptic::Warning | Haptic::Error => 17,
+        };
         let ctx = ndk_context::android_context();
         let activity = unsafe { jni::objects::JObject::from_raw(ctx.context().cast()) };
         let window = env.call_method(&activity, "getWindow", "()Landroid/view/Window;", &[])?.l()?;
@@ -629,7 +686,7 @@ fn play_haptic(kind: ui::common::Haptic) {
     let Ok(mut env) = vm.attach_current_thread() else {
         return;
     };
-    if let Err(e) = call(&mut env, constant) {
+    if let Err(e) = call(&mut env, kind) {
         // Always clear: a pending exception poisons every later JNI call on this thread - the
         // inset reads above included.
         let _ = env.exception_clear();
@@ -737,10 +794,103 @@ fn present_share_sheet(item: objc2::rc::Retained<objc2::runtime::AnyObject>) -> 
             None,
         )
     };
-    if let Some(popover) = vc.popoverPresentationController() {
-        popover.setSourceView(root.view().as_deref());
-    }
+    centre_popover(&vc, &root);
     root.presentViewController_animated_completion(&vc, true, None);
+    true
+}
+
+/// iPad: a share sheet or an action sheet is a popover, which needs a source or UIKit aborts.
+/// Centred over the app with no arrow, since nothing on screen is its anchor. A no-op on iPhone.
+#[cfg(target_os = "ios")]
+fn centre_popover(vc: &objc2_ui_kit::UIViewController, root: &objc2_ui_kit::UIViewController) {
+    use objc2_ui_kit::UIPopoverArrowDirection;
+
+    if let Some(popover) = vc.popoverPresentationController() {
+        let view = root.view();
+        if let Some(view) = view.as_deref() {
+            let mut centre = view.bounds();
+            centre.origin.x += centre.size.width / 2.0;
+            centre.origin.y += centre.size.height / 2.0;
+            centre.size.width = 0.0;
+            centre.size.height = 0.0;
+            popover.setSourceRect(centre);
+        }
+        popover.setSourceView(view.as_deref());
+        popover.setPermittedArrowDirections(UIPopoverArrowDirection(0));
+    }
+}
+
+/// The app's confirm as a `UIAlertController` (`ui::common::ConfirmDialog`): an alert for a
+/// question, an action sheet for removing something, presented from the topmost controller (the
+/// root may already present the share sheet). Each action's block replies once with its index,
+/// Cancel with `None`; the shared `Option` makes the reply single-use. False when there is no
+/// window, and the HTML dialog renders instead.
+#[cfg(target_os = "ios")]
+#[allow(deprecated)]
+fn present_confirm(request: ui::common::ConfirmRequest, reply: ui::common::ConfirmReply) -> bool {
+    use block2::RcBlock;
+    use objc2::MainThreadMarker;
+    use objc2_foundation::NSString;
+    use objc2_ui_kit::{
+        UIAlertAction, UIAlertActionStyle, UIAlertController, UIAlertControllerStyle, UIApplication,
+    };
+    use std::cell::RefCell;
+    use std::ptr::NonNull;
+    use std::rc::Rc;
+
+    let Some(mtm) = MainThreadMarker::new() else {
+        return false;
+    };
+    let Some(mut top) = UIApplication::sharedApplication(mtm)
+        .keyWindow()
+        .and_then(|w| w.rootViewController())
+    else {
+        return false;
+    };
+    while let Some(presented) = top.presentedViewController() {
+        top = presented;
+    }
+
+    let style = if request.action_sheet {
+        UIAlertControllerStyle::ActionSheet
+    } else {
+        UIAlertControllerStyle::Alert
+    };
+    let alert = UIAlertController::alertControllerWithTitle_message_preferredStyle(
+        Some(&NSString::from_str(&request.title)),
+        Some(&NSString::from_str(&request.message)),
+        style,
+        mtm,
+    );
+
+    let reply = Rc::new(RefCell::new(Some(reply)));
+    let buttons = request
+        .actions
+        .iter()
+        .enumerate()
+        .map(|(i, (label, destructive))| {
+            let style = if *destructive { UIAlertActionStyle::Destructive } else { UIAlertActionStyle::Default };
+            (label.as_str(), style, Some(i))
+        })
+        .chain(std::iter::once((request.cancel.as_str(), UIAlertActionStyle::Cancel, None)));
+    for (label, style, choice) in buttons {
+        let reply = reply.clone();
+        let handler = RcBlock::new(move |_: NonNull<UIAlertAction>| {
+            if let Some(send) = reply.borrow_mut().take() {
+                send(choice);
+            }
+        });
+        let action = UIAlertAction::actionWithTitle_style_handler(
+            Some(&NSString::from_str(label)),
+            style,
+            Some(&*handler),
+            mtm,
+        );
+        alert.addAction(&action);
+    }
+
+    centre_popover(&alert, &top);
+    top.presentViewController_animated_completion(&alert, true, None);
     true
 }
 
@@ -1130,6 +1280,8 @@ fn main() {
     let theme = ui::common::stored_theme();
     #[cfg(any(target_os = "android", target_os = "ios"))]
     ui::common::set_native_theme(std::sync::Arc::new(apply_native_theme));
+    #[cfg(target_os = "ios")]
+    ui::common::set_native_confirm(std::sync::Arc::new(present_confirm));
 
     let builder = dioxus::LaunchBuilder::new();
     // `disable_context_menu` is false only in debug builds: false is dioxus-desktop's debug mode,
@@ -1187,88 +1339,19 @@ fn app() -> Element {
     // The window and its status bar exist only once mounted; the page took the theme from the head.
     #[cfg(any(target_os = "android", target_os = "ios"))]
     use_effect(|| apply_native_theme(ui::common::stored_theme()));
-    #[cfg(any(target_os = "android", target_os = "ios"))]
-    use_effect(|| {
-        document::eval(r#"
-            (function() {
-                var m = document.querySelector('meta[name="viewport"]');
-                if (m) {
-                    if (!m.content.includes('viewport-fit')) m.content += ', viewport-fit=cover';
-                } else {
-                    m = document.createElement('meta');
-                    m.name = 'viewport';
-                    m.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
-                    document.head.appendChild(m);
-                }
-            })();
-        "#);
-    });
-    // WKWebView's left-edge back gesture, off by default. docs/mobile-navigation.md used to call
-    // this a manual Xcode edit; there is no Xcode project - `dx bundle --platform ios` emits the
-    // .app directly - so it is set here on wry's own WKWebView instead, and survives every bundle.
-    //
-    // `NavigationSync` is what gives the gesture something to go back to: it keeps one spare
-    // window.history entry while a back press has anywhere to go, and the resulting popstate is
-    // already wired to the router.
-    //
-    // Sent as a raw selector, not through a typed method: wry 0.53 vendors its own iOS `WKWebView`
-    // binding (`src/wkwebview/ios/WKWebView.rs`) instead of using objc2-web-kit's, and that binding
-    // declares no `allowsBackForwardNavigationGestures`. The selector exists on the real class
-    // regardless, so this needs no extra dependency.
+    // WKWebView's own left-edge back gesture stays off (its default): it slid a snapshot of the
+    // same page, then the CSS pop played on top. The interactive swipe is the JS edge strip in
+    // `ui::common::page_transition` (docs/mobile-navigation.md, "iOS Swipe Back").
     #[cfg(target_os = "ios")]
     use_effect(|| {
         use dioxus::mobile::wry::WebViewExtIOS;
-        use objc2::msg_send;
         // Deferred to an effect rather than done at launch: the webview does not exist until the
         // window is built.
         let webview = dioxus::mobile::window().webview.webview();
-        unsafe {
-            let _: () = msg_send![&*webview, setAllowsBackForwardNavigationGestures: true];
-        }
+        set_launch_background(&*webview);
+        status_bar_tap::install(&*webview);
+        voiceover_escape::install(unsafe { objc2::rc::Retained::cast_unchecked(webview) });
         hide_form_accessory_bar();
-    });
-
-    // Dynamic Type. `-apple-system-body` is the only handle a WKWebView has on the user's Text Size
-    // setting; 17px is the "Large" default, so the ratio is the scale. Driven by `resize`, which
-    // iOS fires on a content-size-category change, so the same listener covers rotation.
-    //
-    // Clamped because the pages are `max-w-md` and vertical: they absorb growth, but the
-    // Accessibility sizes at the top of the range would break the dock and the header.
-    //
-    // **The sentinel is load-bearing.** Where the `font` shorthand does not parse the keyword, the
-    // declaration is dropped and the span inherits instead - and what it inherits is
-    // `16px * var(--dt-scale)`, the value this very effect wrote. That is a feedback loop: each
-    // resize divides the previous scale by 17/16 until it sticks at the 0.85 floor, shrinking the
-    // whole UI ~15% with nothing to point at. Setting `font-size` to a value nothing would ever
-    // compute *before* the shorthand detects it exactly: a parsed shorthand resets every font
-    // longhand, so 99px surviving means the keyword was ignored and there is nothing to measure.
-    //
-    // iOS only. Android's WebView already applies the system font-size setting itself, through
-    // `WebSettings.textZoom`, so there is nothing for this to add there.
-    #[cfg(target_os = "ios")]
-    use_effect(|| {
-        document::eval(
-            r#"
-            (function() {
-                const measure = () => {
-                    const p = document.createElement('span');
-                    p.style.position = 'absolute';
-                    p.style.visibility = 'hidden';
-                    p.style.fontSize = '99px';
-                    p.style.font = '-apple-system-body';
-                    document.body.appendChild(p);
-                    const px = parseFloat(getComputedStyle(p).fontSize);
-                    p.remove();
-                    if (!(px > 0) || px === 99) return;
-                    const scale = String(Math.min(1.6, Math.max(0.85, px / 17)));
-                    const root = document.documentElement.style;
-                    if (root.getPropertyValue('--dt-scale') !== scale) root.setProperty('--dt-scale', scale);
-                };
-                window.addEventListener('resize', measure);
-                measure();
-            })();
-        "#,
-        );
     });
 
     // Android's WebView maps only display cutouts into env(safe-area-inset-*), never the status or
@@ -1324,6 +1407,7 @@ fn app() -> Element {
         // strip the CSS from any other build of this package.
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: TAILWIND_CSS }
+        document::Link { rel: "stylesheet", href: ui::common::NATIVE_FEEL_CSS }
         document::Link { rel: "stylesheet", href: MAIN_CSS }
         document::Style { {font_face_css()} }
 
@@ -1336,6 +1420,172 @@ fn app() -> Element {
             class: "min-h-screen flex flex-col items-center",
             Router::<Route> {}
         }
+    }
+}
+
+/// `evaluateJavaScript:completionHandler:` from a UIKit callback, where no Dioxus runtime is current
+/// for `document::eval`. A raw selector, like `set_launch_background`'s: wry's own iOS `WKWebView`
+/// binding is not public.
+#[cfg(target_os = "ios")]
+fn evaluate_js(webview: &impl objc2::Message, js: &str) {
+    use objc2::msg_send;
+    use objc2::runtime::AnyObject;
+    use objc2_foundation::{NSError, NSString};
+
+    let done: Option<&block2::Block<dyn Fn(*mut AnyObject, *mut NSError)>> = None;
+    unsafe {
+        let _: () = msg_send![webview, evaluateJavaScript: &*NSString::from_str(js), completionHandler: done];
+    }
+}
+
+/// The status-bar tap (native-feel P4.3). UIKit scrolls a scroll view to the top on that tap, but
+/// the page never scrolls WKWebView's own scroll view: each page scrolls in its `.app-container`.
+/// So this object is that scroll view's delegate, and implements only `scrollViewShouldScrollToTop:`:
+/// it runs `window._countedScrollToTop()` (`SCROLL_TO_TOP_SCRIPT`), which scrolls the visible page
+/// smoothly to 0, and declines the native scroll. `WKScrollView` keeps WebKit's internal delegate
+/// and forwards to an external one set through the public `delegate` property, the external
+/// answer last, so ours is the one UIKit reads. UIKit may not ask a scroll view already at offset
+/// 0, which this one always is: the install line and the per-tap line in the device log tell.
+#[cfg(target_os = "ios")]
+mod status_bar_tap {
+    use objc2::rc::Retained;
+    use objc2::runtime::{NSObject, NSObjectProtocol, ProtocolObject};
+    use objc2::{define_class, msg_send, MainThreadMarker, MainThreadOnly};
+    use objc2_ui_kit::{UIScrollView, UIScrollViewDelegate};
+
+    define_class!(
+        #[unsafe(super(NSObject))]
+        #[thread_kind = MainThreadOnly]
+        #[name = "CountedScrollToTop"]
+        struct ScrollToTop;
+
+        unsafe impl NSObjectProtocol for ScrollToTop {}
+
+        unsafe impl UIScrollViewDelegate for ScrollToTop {
+            #[unsafe(method(scrollViewShouldScrollToTop:))]
+            fn should_scroll_to_top(&self, scroll_view: &UIScrollView) -> bool {
+                tracing::info!("status-bar tap: scrolling the page to the top");
+                if let Some(webview) = scroll_view.superview() {
+                    super::evaluate_js(&*webview, "window._countedScrollToTop&&window._countedScrollToTop()");
+                }
+                false
+            }
+        }
+    );
+
+    thread_local! {
+        // The scroll view holds its delegate weakly.
+        static DELEGATE: std::cell::OnceCell<Retained<ScrollToTop>> = const { std::cell::OnceCell::new() };
+    }
+
+    pub fn install(webview: &impl objc2::Message) {
+        let Some(mtm) = MainThreadMarker::new() else {
+            return;
+        };
+        if DELEGATE.with(|d| d.get().is_some()) {
+            return;
+        }
+        let scroll: Retained<UIScrollView> = unsafe { msg_send![webview, scrollView] };
+        let delegate: Retained<ScrollToTop> =
+            unsafe { msg_send![super(mtm.alloc::<ScrollToTop>().set_ivars(())), init] };
+        unsafe { scroll.setDelegate(Some(ProtocolObject::from_ref(&*delegate))) };
+        tracing::info!(
+            "status-bar tap delegate installed on the webview's scroll view (scrollsToTop: {})",
+            scroll.scrollsToTop()
+        );
+        DELEGATE.with(|d| {
+            let _ = d.set(delegate);
+        });
+    }
+}
+
+/// VoiceOver's escape, the two-finger Z, as a back (native-feel P4.8): the top sheet closes, else the
+/// page goes back, through `history.back()` and the same popstate listener as Android back
+/// (`navigation_sync.rs`). UIKit sends `accessibilityPerformEscape` to the focused element and then
+/// up the responder chain, which from the webview reaches tao's root view controller, so the method
+/// is added to that class (`TaoUIViewController`, registered by vendor/tao before the window shows).
+/// `class_addMethod` adds it to tao's class only, whose own list has none, never to `NSObject`,
+/// whose default answers NO. The answer must be synchronous: YES when `ui::common::back_armed()`
+/// says a back has something to do, so VoiceOver plays its escape sound rather than its error one.
+/// The webview is kept in a thread-local, as no Dioxus runtime is current in a UIKit callback.
+#[cfg(target_os = "ios")]
+mod voiceover_escape {
+    use objc2::rc::Retained;
+    use objc2::runtime::{AnyClass, AnyObject, Bool, Sel};
+    use objc2::{ffi, sel, Encode};
+
+    const BACK_JS: &str = "if(window._dioxusBackArmed&&!window._dioxusSyntheticBack)window.history.back();";
+
+    thread_local! {
+        static WEBVIEW: std::cell::OnceCell<Retained<AnyObject>> = const { std::cell::OnceCell::new() };
+    }
+
+    extern "C-unwind" fn escape(_: &AnyObject, _: Sel) -> Bool {
+        if !ui::common::back_armed() {
+            return Bool::NO;
+        }
+        let sent = WEBVIEW.with(|w| match w.get() {
+            Some(webview) => {
+                super::evaluate_js(&**webview, BACK_JS);
+                true
+            }
+            None => false,
+        });
+        Bool::new(sent)
+    }
+
+    pub fn install(webview: Retained<AnyObject>) {
+        if WEBVIEW.with(|w| w.set(webview)).is_err() {
+            return;
+        }
+        let Some(cls) = AnyClass::get(c"TaoUIViewController") else {
+            tracing::info!("TaoUIViewController not registered; VoiceOver escape not wired");
+            return;
+        };
+        let Ok(types) = std::ffi::CString::new(format!("{}@:", Bool::ENCODING)) else {
+            return;
+        };
+        let added = unsafe {
+            ffi::class_addMethod(
+                (cls as *const AnyClass).cast_mut(),
+                sel!(accessibilityPerformEscape),
+                std::mem::transmute::<
+                    extern "C-unwind" fn(&AnyObject, Sel) -> Bool,
+                    unsafe extern "C-unwind" fn(),
+                >(escape),
+                types.as_ptr(),
+            )
+        };
+        tracing::info!("VoiceOver escape added to TaoUIViewController: {}", added.as_bool());
+    }
+}
+
+/// The launch screen's colour (`LaunchBackground` in the asset catalog, packages/mobile/ios) under
+/// the page: on the window, the webview, its scroll view and the area past its content, which a
+/// keyboard pan or a rubber band uncovers. A named colour resolves against the window's
+/// `overrideUserInterfaceStyle`, so it follows every theme change with no per-change code, where
+/// wry's launch-time RGB stayed on the theme the app started in. Missing under `dx serve`, which
+/// compiles no catalog.
+#[cfg(target_os = "ios")]
+fn set_launch_background(webview: &impl objc2::Message) {
+    use objc2::msg_send;
+    use objc2::rc::Retained;
+    use objc2_foundation::NSString;
+    use objc2_ui_kit::{UIColor, UIScrollView, UIWindow};
+
+    let Some(color) = UIColor::colorNamed(&NSString::from_str("LaunchBackground")) else {
+        tracing::info!("no LaunchBackground colour in the asset catalog, keeping wry's background");
+        return;
+    };
+    unsafe {
+        let window: Option<Retained<UIWindow>> = msg_send![webview, window];
+        if let Some(window) = window {
+            window.setBackgroundColor(Some(&color));
+        }
+        let _: () = msg_send![webview, setBackgroundColor: &*color];
+        let _: () = msg_send![webview, setUnderPageBackgroundColor: &*color];
+        let scroll: Retained<UIScrollView> = msg_send![webview, scrollView];
+        scroll.setBackgroundColor(Some(&color));
     }
 }
 
@@ -1367,7 +1617,7 @@ fn app() -> Element {
 /// already declared it. The log line below is the tell: it reports whether an existing
 /// implementation was replaced.
 ///
-/// Called from the back-gesture effect rather than at launch, and for the same reason: the class
+/// Called from the launch-background effect rather than at launch, and for the same reason: the class
 /// is not registered with the runtime until WebKit has built a webview. A missing class is a
 /// silent skip - the same posture `haptic()` takes; the pill coming back is not worth a crash.
 ///
@@ -1406,7 +1656,16 @@ fn hide_form_accessory_bar() {
 
 #[cfg(test)]
 mod tests {
-    use super::{css_inset_vars, visible_insets};
+    use super::{css_inset_vars, platform_markers, visible_insets};
+
+    #[test]
+    fn ios_carries_its_major_version_and_android_only_the_platform() {
+        assert_eq!(
+            platform_markers(Some(17)),
+            "document.documentElement.dataset.plat='ios';document.documentElement.dataset.ios='17';"
+        );
+        assert_eq!(platform_markers(None), "document.documentElement.dataset.plat='android';");
+    }
 
     #[test]
     fn the_client_offers_the_post_quantum_hybrid_first() {

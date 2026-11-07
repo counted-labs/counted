@@ -5,6 +5,9 @@
 
 loading = Ładowanie…
 cancel = Anuluj
+discard-title = Odrzucić zmiany?
+discard-message = Wpisane dane zostaną utracone.
+discard = Odrzuć
 confirm = Potwierdź
 retry = Spróbuj ponownie
 delete = Usuń
@@ -445,6 +448,7 @@ reimbursements-empty-title = Wszystko rozliczone!
 reimbursements-empty-hint = Propozycje rozliczeń pojawią się tutaj, gdy rachunki się nie zbilansują
 reimbursement-owes = { $debtor } jest dłużny { $creditor }
 reimbursement-record = Rozlicz
+settlement-recorded = Rozliczenie zapisane.
 reimbursement-pay-with = Zapłać
 reimbursement-pay-shared-by = Udostępnione przez { $name } - przed wysłaniem sprawdź nazwę odbiorcy pokazywaną przez Twoją aplikację.
 reimbursement-pay-title = Zapłać { $name }
@@ -480,7 +484,6 @@ move-note-group = Wydatek opuści { $project } dla wszystkich członków, a bila
 move-banner = Z { $from } do { $to }
 move-submit = Przenieś
 move-done = Wydatek przeniesiono do { $project }
-move-delete-failed = Wydatek dodano do drugiego projektu, ale nadal jest w { $project }: usuń go tam.
 history-expense-moved = Wydatek przeniesiono do innego projektu: { $name }
 personal-badge = Osobisty
 move-members =
@@ -871,6 +874,11 @@ edit-project-no-identity = Nie wybrano jeszcze, kim jesteś
 edit-project-switch = Zmień
 edit-project-choose = Wybierz
 invite-failed = Nie udało się wysłać tych zaproszeń: { $emails }
+invite-waiting = Ci znajomi muszą raz otworzyć Counted, zanim będzie można ich zaprosić: { $emails }
+key-offer-title = Inny klucz do { $name }
+key-offer-body = To urządzenie ma inny klucz do tego projektu, który nigdy go tu nie otworzył.
+key-offer-choices = Użyj tego klucza: projekt otworzy się kluczem z tego linku lub zaproszenia. Anuluj: urządzenie zachowa obecny klucz i nic się nie zmieni.
+key-offer-use = Użyj tego klucza
 invite-again = Zaproś ponownie
 friend-picker-title = Dodaj znajomych
 user-selection-invited-hint = { $email } zaprasza Cię do „{ $project }”.
@@ -999,6 +1007,14 @@ home-remind-message = Małe przypomnienie: w { $project } zostały jeszcze zwrot
 home-row-owed = należy ci się
 home-row-owe = jesteś winien
 home-row-settled = Rozliczone
+home-row-quits = U ciebie rozliczone
+home-row-pending =
+    { $count ->
+        [one] { $count } oczekujący zwrot
+        [few] { $count } oczekujące zwroty
+        [many] { $count } oczekujących zwrotów
+       *[other] { $count } oczekującego zwrotu
+    }
 home-totals-partial = Bez projektów bez kursu wymiany
 error-account-key-changed = Klucz twojego konta zmienił się na innym urządzeniu. Zaloguj się ponownie, aby kontynuować.
 settings-security = Bezpieczeństwo

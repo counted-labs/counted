@@ -3,7 +3,7 @@ use api::users::users_controller::get_users_by_project_id;
 use chrono::{Datelike, NaiveDate};
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
-use shared::{BatchProject, Expense, ExpenseType, Payment, ProjectPayload, ProjectSync, NO_CACHED_VERSION};
+use shared::{BatchProject, Expense, ExpenseType, Payment, ProjectDto, ProjectPayload, ProjectSync, NO_CACHED_VERSION};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
@@ -21,10 +21,11 @@ use super::svg::label_every;
 use crate::categories::{ProjectCategories, ShownCategory};
 use crate::common::{
     format_date, initials, key_of, month_abbrev, pending, project_key, read_from_ls, user_color_class,
-    AppHeader, DropdownButton, DropdownItem, LocalStorageProject, PullToRefresh,
+    use_device_cache, AppHeader, LocalStorageProject, LocalStorageState, PullToRefresh,
 };
 use crate::crypto::decrypt_json;
-use crate::icons::{DownloadIcon, MoreIcon, ICON_INLINE};
+use crate::icons::{DownloadIcon, ICON_HEADER};
+use crate::expenses::project_actions_sheet::{MenuSheet, MoreButton, Row, GROUP_CLASS};
 use crate::decrypted::{
     decrypt_ledger, decrypt_user, DecryptedExpense, DecryptedPayment,
     DecryptedUser,
@@ -175,12 +176,44 @@ async fn load_projects() -> Vec<ProjectInfo> {
     };
     encrypted
         .into_iter()
-        .filter_map(|p| {
-            let local = ls.projects.iter().find(|lp| lp.project_id == p.id)?;
-            let payload = decrypt_json::<ProjectPayload>(&key_of(local)?, &p.payload).ok()?;
-            Some(ProjectInfo { id: p.id, name: payload.name, currency: payload.currency, my_user_id: local.user_id })
-        })
+        .filter_map(|p| project_info(ls.projects.iter().find(|lp| lp.project_id == p.id)?, &p))
         .collect()
+}
+
+fn project_info(local: &LocalStorageProject, dto: &ProjectDto) -> Option<ProjectInfo> {
+    let payload = decrypt_json::<ProjectPayload>(&key_of(local)?, &dto.payload).ok()?;
+    Some(ProjectInfo { id: dto.id, name: payload.name, currency: payload.currency, my_user_id: local.user_id })
+}
+
+/// What this device holds, drawn while the sync runs: only when every project with a key has a
+/// complete cache, since a missing or truncated one would chart a total that is short.
+fn cached_charts(ls: &LocalStorageState) -> Option<(Vec<ProjectInfo>, ChartData)> {
+    let mut infos = Vec::new();
+    let mut data = ChartData::default();
+    for p in ls.projects.iter().filter(|p| key_of(p).is_some() && !p.key_rotated) {
+        p.cached_data_version?;
+        let dto = p.cached_project.as_ref()?;
+        let rows = p.cached_expenses.clone().zip(p.cached_payments.clone())?;
+        infos.extend(project_info(p, dto));
+        add_project(&mut data, p, rows, Some(dto));
+    }
+    (!infos.is_empty()).then_some((infos, data))
+}
+
+fn add_project(data: &mut ChartData, p: &LocalStorageProject, (expenses, payments): (Vec<Expense>, Vec<Payment>), project: Option<&ProjectDto>) {
+    let Some(key) = key_of(p) else { return };
+    let (decrypted_expenses, decrypted): (_, Vec<DecryptedPayment>) = decrypt_ledger(&key, &expenses, &payments);
+    let payload = project.and_then(|d| decrypt_json::<ProjectPayload>(&key, &d.payload).ok());
+    data.categories.insert(p.project_id, payload.as_ref().map(ProjectCategories::from_payload).unwrap_or_default());
+    data.expenses.extend(decrypted_expenses);
+    match p.user_id {
+        Some(user_id) => {
+            data.my_share.extend(sum_by_expense(&decrypted, user_id, true));
+            data.my_paid.extend(sum_by_expense(&decrypted, user_id, false));
+        }
+        None => data.left_out += 1,
+    }
+    data.payments.extend(decrypted);
 }
 
 /// The version the cached rows were stored at, claimed only when both halves are still there.
@@ -210,28 +243,16 @@ async fn load_data(project_filter: Option<Uuid>) -> ChartData {
         return data;
     };
     for p in ls.projects.iter().filter(|p| project_filter.is_none_or(|id| id == p.project_id)) {
-        let Some(key) = key_of(p) else {
+        if key_of(p).is_none() {
             continue;
-        };
+        }
         let Some(sync) = syncs.iter().find(|s| s.project.as_ref().is_some_and(|d| d.id == p.project_id)) else {
             continue;
         };
-        let Some((expenses, payments)) = synced_rows(sync.clone(), p) else {
+        let Some(rows) = synced_rows(sync.clone(), p) else {
             continue;
         };
-        let (decrypted_expenses, decrypted): (_, Vec<DecryptedPayment>) =
-            decrypt_ledger(&key, &expenses, &payments);
-        let payload = sync.project.as_ref().and_then(|d| decrypt_json::<ProjectPayload>(&key, &d.payload).ok());
-        data.categories.insert(p.project_id, payload.as_ref().map(ProjectCategories::from_payload).unwrap_or_default());
-        data.expenses.extend(decrypted_expenses);
-        match p.user_id {
-            Some(user_id) => {
-                data.my_share.extend(sum_by_expense(&decrypted, user_id, true));
-                data.my_paid.extend(sum_by_expense(&decrypted, user_id, false));
-            }
-            None => data.left_out += 1,
-        }
-        data.payments.extend(decrypted);
+        add_project(&mut data, p, rows, sync.project.as_ref());
     }
     data
 }
@@ -265,10 +286,11 @@ pub fn ChartsPage() -> Element {
     let projects = use_resource(load_projects);
     let data = use_resource(move || load_data(selected_project()));
     let users = use_resource(move || load_users(selected_project()));
+    let cached = use_device_cache(|| cached_charts(&read_from_ls()));
 
     // Reset to all-time on every reload: a project change or the first load.
     use_effect(move || {
-        if let Some(d) = data.read().as_ref() {
+        if let Some(d) = data.read().as_ref().or(cached.read().as_ref().map(|c| &c.1)) {
             date_from.set(earliest_date(&d.expenses));
             date_to.set(Some(crate::common::local_today()));
             preset.set("all");
@@ -276,9 +298,10 @@ pub fn ChartsPage() -> Element {
         }
     });
 
+    let mut show_export = use_signal(|| false);
     let on_export = move |_: ()| {
-        let raw = data.read();
-        let Some(d) = raw.as_ref() else {
+        let (raw, seed) = (data.read(), cached.read());
+        let Some(d) = raw.as_ref().or(seed.as_ref().map(|c| &c.1)) else {
             return;
         };
         let users = users.read().as_ref().cloned().unwrap_or_default();
@@ -288,7 +311,7 @@ pub fn ChartsPage() -> Element {
     };
 
     let today = crate::common::local_today();
-    let projects_list = projects.read().as_ref().cloned().unwrap_or_default();
+    let projects_list = projects.read().clone().or_else(|| cached.read().as_ref().map(|c| c.0.clone())).unwrap_or_default();
     let all_mode = selected_project().is_none();
     let selected_info = selected_project().and_then(|id| projects_list.iter().find(|p| p.id == id).cloned());
     let currency_list = currencies(&projects_list);
@@ -324,22 +347,27 @@ pub fn ChartsPage() -> Element {
                 title: tid!("nav-charts"),
                 back_button_route: Route::ProjectsPage {},
                 back: false,
-                DropdownButton {
-                    label: tid!("export"),
-                    button_class: "btn btn-circle size-11 min-h-11 border-0 bg-base-300 glass-button relative z-50",
-                    menu_class: "menu bg-base-100 rounded-xl w-64 px-0 py-1.5 shadow-lg absolute right-0 top-full mt-2 z-50 [&_button]:min-h-11 [&_button]:gap-2.5 [&_button]:text-[15px] [&_button]:font-medium",
-                    trigger: rsx! { MoreIcon { size: 24 } },
-                    DropdownItem {
-                        variant: "ghost",
-                        label: tid!("export-csv"),
-                        icon: rsx! { DownloadIcon { size: ICON_INLINE } },
-                        onclick: on_export,
+                large: true,
+                MoreButton { id: "charts-actions", label: tid!("export"), open: show_export }
+            }
+            if show_export() {
+                MenuSheet { id: "charts-export-sheet", title: tid!("export"), on_close: move |_| show_export.set(false),
+                    div { class: GROUP_CLASS,
+                        Row {
+                            id: "charts-export-csv",
+                            label: tid!("export-csv"),
+                            onclick: move |_| {
+                                show_export.set(false);
+                                on_export(());
+                            },
+                            DownloadIcon { size: ICON_HEADER }
+                        }
                     }
                 }
             }
 
             {
-                let earliest = data.read().as_ref().and_then(|d| earliest_date(&d.expenses));
+                let earliest = data.read().as_ref().or(cached.read().as_ref().map(|c| &c.1)).and_then(|d| earliest_date(&d.expenses));
                 let from_val = date_from().map(|d| d.to_string()).unwrap_or_default();
                 let to_val = date_to().map(|d| d.to_string()).unwrap_or_default();
                 let min_date = earliest.map(|d| d.to_string()).unwrap_or_default();
@@ -422,7 +450,7 @@ pub fn ChartsPage() -> Element {
                 ScopeSwitch { scope: effective_scope, on_change: move |s| scope.set(s) }
             }
 
-            match &*data.read() {
+            match data.read().as_ref().or(cached.read().as_ref().map(|c| &c.1)) {
                 Some(d) => {
                     let group = in_projects(&filter_by_date_range(&d.expenses, date_from(), date_to()), &scoped_ids);
                     let group_total = total_spend(&group);
@@ -574,11 +602,7 @@ pub fn ChartsPage() -> Element {
                         }
                     }
                 }
-                None => rsx! {
-                    div { class: "flex justify-center py-8",
-                        span { class: "loading loading-spinner loading-md", role: "status", aria_label: tid!("loading") }
-                    }
-                },
+                None => rsx! { crate::common::ChartsSkeleton {} },
             }
         }
     }
@@ -672,6 +696,30 @@ mod tests {
         assert_eq!(known_version(&cached(None)), NO_CACHED_VERSION);
         let half = LocalStorageProject { cached_payments: None, ..cached(Some(7)) };
         assert_eq!(known_version(&half), NO_CACHED_VERSION);
+    }
+
+    fn held(version: Option<i64>) -> LocalStorageProject {
+        let key = test_key();
+        let id = Uuid::from_u128(3);
+        LocalStorageProject {
+            project_id: id,
+            user_id: Some(1),
+            encryption_key: Some(crate::crypto::key_to_fragment(&key)),
+            cached_project: Some(crate::common::test_fixtures::make_project(&key, id, "Trip", "EUR")),
+            ..cached(version)
+        }
+    }
+
+    #[test]
+    fn the_cache_is_charted_while_the_sync_runs_only_when_every_project_is_complete() {
+        let complete = LocalStorageState { projects: vec![held(Some(7))], ..Default::default() };
+        let (infos, data) = cached_charts(&complete).expect("a complete cache is drawn");
+        assert_eq!((infos[0].name.as_str(), infos[0].currency.as_str()), ("Trip", "EUR"));
+        assert_eq!(data.expenses.len(), 1);
+
+        let truncated = LocalStorageProject { project_id: Uuid::from_u128(4), ..held(None) };
+        let short = LocalStorageState { projects: vec![held(Some(7)), truncated], ..Default::default() };
+        assert!(cached_charts(&short).is_none(), "a truncated project would chart a short total");
     }
 
     #[test]

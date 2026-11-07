@@ -1,6 +1,7 @@
 # Checks, from outside, what counted.fr serves right now: its SHA256SUMS.txt must be a signed
-# release's, every file it lists must hash to it, the app pages may load only those files and dx's
-# own inline scripts, and the site pages may run no script at all. The rebuild workflow proves the
+# release's, every file it lists must hash to it, the app pages may load only those files, each
+# script pinned by its `integrity`, and dx's own inline scripts, and the site pages may run no
+# script at all. The rebuild workflow proves the
 # sources make the release; this proves the release is what browsers get.
 name: monitor
 

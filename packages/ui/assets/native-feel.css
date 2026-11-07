@@ -1,0 +1,999 @@
+/* Native-feel rules the web and mobile builds share (docs/styling.md, "Shared stylesheet").
+   Both link it after tailwind.css and before their own main.css: unlayered, so it beats every
+   utility, and main.css still wins at equal specificity. Platform rules key on `html[data-plat]`. */
+
+/* Safe areas. `env()` reads 0 until the viewport has `viewport-fit=cover` (mobile head_html, web
+   index.html). Android's WebView maps only display cutouts into it, so packages/mobile/src/main.rs
+   overwrites --sat/--sab/--sar inline on <html> from the real insets. */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
+
+/* Each helper restates the element's base offset plus the inset. The dock and FAB carry no
+   Tailwind `bottom-*` fallback, so the desktop main.css defines those two at zero insets. */
+.safe-bottom-dock {
+  bottom: calc(1.5rem + var(--sab));
+}
+
+/* Unchanged by the dock's labels: the icon dropped from 26px to 20px and the button's own padding
+   from `h-11` to `py-1.5`, so icon + gap + label comes back to the same 2.75rem the circle was.
+   Re-measure this if either changes. */
+.safe-bottom-fab {
+  bottom: calc(6rem + var(--sab));
+  transition: transform 250ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* The add button per platform (D3). The web keeps the centred FAB. iOS has no FAB: a trailing "+"
+   in the navigation bar (`NavAddButton`, mobile builds only) opens the same actions as a sheet.
+   Android: the FAB at the end edge above the dock, in M3's rounded square (16dp corners). The
+   trigger, or the add/scan shell, is the wrapper's last child; the actions above it keep their
+   circles. `translate` undoes the `-translate-x-1/2` centring; `transform` stays the snackbar's. */
+.nav-add {
+  display: none;
+}
+
+html[data-plat="ios"] .nav-add {
+  display: inline-flex;
+}
+
+html[data-plat="ios"] .safe-bottom-fab {
+  display: none;
+}
+
+html[data-plat="android"] .safe-bottom-fab {
+  left: auto;
+  right: calc(1rem + var(--sar));
+  translate: none;
+}
+
+html[data-plat="android"] .safe-bottom-fab > :last-child {
+  align-self: flex-end;
+}
+
+html[data-plat="android"] .safe-bottom-fab > :last-child,
+html[data-plat="android"] .safe-bottom-fab > :last-child .btn {
+  border-radius: 1rem;
+}
+
+/* `py-1.5` on the offline banner. */
+.safe-top-banner {
+  padding-top: calc(0.375rem + var(--sat));
+}
+
+/* `min-h-dvh` + `p-6` on the welcome page - the only full-page shell without .app-container. The
+   mobile main.css adds the top inset as padding instead (the app is edge to edge there). */
+.safe-page {
+  min-height: calc(100dvh - var(--sat));
+  padding-bottom: calc(1.5rem + var(--sab));
+}
+
+/* Toasts (toast.rs): one at a time, one markup, three looks. The web's is a neutral bubble above
+   the dock and the FAB (10.5rem: the dock at 1.5rem, 3.875rem tall, the FAB 3.5rem above it, a
+   1rem gap). It comes in and leaves by `translate` and `opacity`; `[data-leaving]` is the exit,
+   which toast.rs waits out (EXIT_MS) before the next one. */
+.app-toast {
+  position: fixed;
+  z-index: 60;
+  inset-inline: calc(1rem + var(--sal)) calc(1rem + var(--sar));
+  bottom: calc(10.5rem + var(--sab));
+  margin-inline: auto;
+  max-width: 28rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-box);
+  background-color: var(--color-neutral);
+  color: var(--color-neutral-content);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  box-shadow: 0 6px 24px oklch(0% 0 0 / 0.2);
+  cursor: pointer;
+  animation: toast-up 250ms cubic-bezier(0.2, 0, 0, 1);
+  transition: translate 200ms ease-in, opacity 200ms ease-in;
+}
+
+.app-toast[data-leaving] {
+  translate: 0 0.75rem;
+  opacity: 0;
+}
+
+.app-toast-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  font-weight: 700;
+}
+
+.app-toast[data-kind="success"] .app-toast-icon {
+  color: var(--color-success);
+}
+
+.app-toast[data-kind="error"] .app-toast-icon {
+  border-radius: 9999px;
+  background-color: var(--color-error);
+  color: var(--color-error-content);
+  font-size: 0.75rem;
+}
+
+@keyframes toast-up {
+  from {
+    translate: 0 0.75rem;
+    opacity: 0;
+  }
+}
+
+/* iOS: a banner under the status bar in the bar material, swiped up to dismiss (boot.js moves it
+   by `transform`, so the exit's `translate` carries on from where the finger left it). */
+html[data-plat="ios"] .app-toast {
+  top: calc(var(--sat) + 0.5rem);
+  bottom: auto;
+  border-radius: 1.25rem;
+  background-color: var(--color-base-100);
+  color: var(--color-base-content);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  box-shadow: 0 8px 32px oklch(0% 0 0 / 0.16), inset 0 0 0 1px oklch(50% 0 0 / 0.08);
+  touch-action: none;
+  animation-name: toast-down;
+  animation-duration: 400ms;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@supports (color: color-mix(in oklab, red 50%, transparent)) {
+  html[data-plat="ios"] .app-toast {
+    background-color: color-mix(in oklab, var(--color-base-100) 80%, transparent);
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html[data-plat="ios"] .app-toast {
+    background-color: var(--color-base-100);
+  }
+}
+
+html[data-plat="ios"] .app-toast[data-leaving] {
+  translate: 0 calc(-100% - var(--sat) - 1rem);
+  opacity: 1;
+}
+
+@keyframes toast-down {
+  from {
+    translate: 0 calc(-100% - var(--sat) - 1rem);
+  }
+}
+
+/* Android: an M3 snackbar, full width less 16dp, 4dp corners, the inverse surface, just above the
+   dock (its top at 5.375rem + the inset, then 0.5rem). The FAB moves up out of its way by a
+   one-line snackbar's height and its gap; a two-line one overlaps it. Only while one shows: a
+   resting transform would make the FAB the containing block of its fixed scrim. */
+html[data-plat="android"] .app-toast {
+  bottom: calc(5.875rem + var(--sab));
+  max-width: 40rem;
+  min-height: 3rem;
+  padding: 0.875rem 1rem;
+  border-radius: 4px;
+  box-shadow: 0 3px 8px oklch(0% 0 0 / 0.24);
+}
+
+html[data-plat="android"]:has(.app-toast:not([data-leaving])) .safe-bottom-fab {
+  transform: translateY(-3.5rem);
+}
+
+/* Touch. A long press on a label, an amount or a title selects nothing, as in a native app: no iOS
+   loupe, no Android floating toolbar (live on mobile, since main.rs keeps the context menu). Fields
+   opt back in; text meant to be copied carries `select-all` or `select-text`. `manipulation` drops
+   double-tap zoom, so a tap fires at once. A mouse keeps the browser's own selection. */
+@media (pointer: coarse) {
+  html {
+    touch-action: manipulation;
+  }
+  body {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  input,
+  textarea,
+  [contenteditable="true"] {
+    -webkit-touch-callout: default;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+/* Type ramp per platform. Components keep Tailwind's `text-*` names; each platform redefines the
+   sizes behind them, in rem so Dynamic Type (mobile main.css) still scales them. iOS: the UIKit
+   text styles at the Large default, each Tailwind step on its nearest style, in order. Android:
+   Tailwind's base, sm and xs already are M3's body large, medium and small (16/24, 14/20, 12/16)
+   and 2xl headline small; xl becomes title large, 3xl headline medium, 4xl display small. The web
+   keeps Tailwind's ramp. */
+html[data-plat="ios"] {
+  --ios-large-title: 2.125rem;
+  --ios-title1: 1.75rem;
+  --ios-title2: 1.375rem;
+  --ios-title3: 1.25rem;
+  --ios-body: 1.0625rem;
+  --ios-callout: 1rem;
+  --ios-subhead: 0.9375rem;
+  --ios-footnote: 0.8125rem;
+  --ios-caption1: 0.75rem;
+  --ios-caption2: 0.6875rem;
+
+  --text-xs: var(--ios-caption1);
+  --text-xs--line-height: calc(16 / 12);
+  --text-sm: var(--ios-subhead);
+  --text-sm--line-height: calc(20 / 15);
+  --text-base: var(--ios-body);
+  --text-base--line-height: calc(22 / 17);
+  --text-lg: var(--ios-title3);
+  --text-lg--line-height: calc(25 / 20);
+  --text-xl: var(--ios-title2);
+  --text-xl--line-height: calc(28 / 22);
+  --text-2xl: var(--ios-title1);
+  --text-2xl--line-height: calc(34 / 28);
+  --text-3xl: var(--ios-large-title);
+  --text-3xl--line-height: calc(41 / 34);
+}
+
+html[data-plat="ios"] body {
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
+}
+
+html[data-plat="android"] {
+  --text-xl: 1.375rem;
+  --text-xl--line-height: calc(28 / 22);
+  --text-3xl: 1.75rem;
+  --text-3xl--line-height: calc(36 / 28);
+  --text-4xl--line-height: calc(44 / 36);
+}
+
+/* Pressed state on a tappable row (recurring, sheet and picker rows). On at once, faded out on
+   release, as a UITableView cell does. Plain `:active`: the web gets it in Safari through boot.js's
+   passive touchstart. */
+.row-press {
+  transition: background-color 200ms ease-out;
+}
+
+.row-press:active {
+  background-color: var(--color-base-300);
+  transition: none;
+}
+
+/* The grouped list, an iOS inset-grouped table on every platform: `.list-header` above the group,
+   outside it, then `.list-group`, one card whose rows are split by inset hairlines. A row sets
+   `--separator-inset` to where its text starts (the leading tile's edge plus its gap); the line
+   under a row is drawn by the row below it, and a sheet a row renders beside itself is skipped
+   (`position: relative` would also unpin it). 0.5px is one device pixel at 2x; at 3x it would round
+   to two, hence 0.34px there. A navigating row ends on a `ChevronRightIcon` in `.list-chevron`. */
+:root {
+  --color-separator: var(--color-base-300);
+}
+
+@supports (color: color-mix(in oklab, red 50%, transparent)) {
+  :root {
+    --color-separator: color-mix(in oklab, var(--color-base-content) 16%, transparent);
+  }
+}
+
+.list-group {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-box);
+  background-color: var(--color-base-100);
+  overflow: hidden;
+}
+
+.list-group > :not(:first-child, .modal) {
+  position: relative;
+}
+
+.list-group > :not(:first-child, .modal)::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: 0;
+  left: var(--separator-inset, 1rem);
+  border-top: 0.5px solid var(--color-separator);
+  pointer-events: none;
+}
+
+@media (min-resolution: 3dppx) {
+  .list-group > :not(:first-child, .modal)::before {
+    border-top-width: 0.34px;
+  }
+}
+
+.list-header {
+  padding: 0 1rem 0.375rem;
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--color-base-content);
+}
+
+@supports (color: color-mix(in oklab, red 50%, transparent)) {
+  .list-header {
+    color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
+  }
+}
+
+.list-chevron {
+  flex-shrink: 0;
+  color: var(--color-base-content);
+  opacity: 0.35;
+}
+
+/* A ledger row is only laid out and painted near the viewport (Safari 18+, Chromium 85+). Per row,
+   not per day: a row is 4rem unless its name wraps, so the placeholder height is close and a
+   restored scroll offset lands where it was; `auto` keeps the real height once seen. Off while
+   the row's actions sheet is open inside it: the containment would make the row the sheet's
+   containing block and clip it. A browser without `:has()` drops the whole rule. */
+.ledger-day > .list-group > li:not(:has(.modal)) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 4rem;
+}
+
+/* The expense search (expense_search.rs), a UISearchBar's field: filled, no edge, no halo, focused
+   or not. The Cancel beside it is what shows focus. A step darker than the base-200 page. */
+.search-field.input,
+.search-field.input:focus-within {
+  --input-color: transparent;
+  background-color: var(--color-base-300);
+  box-shadow: none;
+}
+
+/* Dark sheets sit one step above the page, as iOS elevates a presented sheet: the box is base-200
+   over the base-100 cards, and everything inside moves up with it (the base-200 groups to
+   base-300, base-300 fills one step lighter). Literal values, so a sheet stacked inside another
+   does not climb twice. */
+[data-theme="counted-dark"] .modal-box {
+  --color-base-100: oklch(24.5% 0.012 165);
+  --color-base-200: oklch(30% 0.014 165);
+  --color-base-300: oklch(35% 0.016 165);
+}
+
+/* A checkmark row (repeat_picker.rs) is the label of a visually hidden radio, so the keyboard
+   focus ring has to be drawn on the row. */
+.choice-row:has(:focus-visible) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+/* Stacked sheets: only the top scrim paints, or three levels stack to about 78% black. The lower
+   box recedes. Only a box with no open sheet inside it scales: `scale` makes it the containing
+   block of every fixed descendant. */
+.modal-open:is(:has(~ .modal-open), :has(.modal-open)) {
+  background-color: transparent;
+}
+
+.modal-open:is(:has(~ .modal-open), :has(> .modal-open)) > .modal-box {
+  scale: 0.94;
+  transform-origin: 50% 100%;
+}
+
+/* A sheet opened from inside a form (currency, repeat) is rendered in that form's box, and the
+   box's resting `translate: 0 0` and `scale: 1` made it the containing block of the inner sheet:
+   a sheet the size of the box, clipped by it. `none` draws the same and lets the inner sheet cover
+   the viewport. */
+.modal-box:has(.modal-open) {
+  translate: none;
+  scale: none;
+}
+
+/* A field the form rejected gets a red edge; the message is the footnote under it. `.field-edge`
+   marks a hand-drawn field wrapper that is not a daisyUI `.input`. While focused the field keeps
+   the brand edge (main.css). */
+.input[aria-invalid="true"],
+.input:has([aria-invalid="true"]),
+.textarea[aria-invalid="true"],
+.select[aria-invalid="true"] {
+  --input-color: var(--color-error);
+}
+
+.field-edge:has([aria-invalid="true"]) {
+  border-color: var(--color-error);
+}
+
+/* Touch targets: `btn-sm` (32px, the operator keys among them) and `btn-xs` (24px) keep their look
+   and get an invisible hit area to 44pt on iOS, 48dp on Android and the web. Not a taller `.btn`,
+   which would turn the square icon buttons into ovals. `position: relative` sits in daisyUI's own
+   layer, so an `absolute` or `fixed` utility on the button still wins. Inputs (the filter chips)
+   are left out: they keep daisyUI's `::after`. */
+:root {
+  --hit-target: 48px;
+}
+
+html[data-plat="ios"] {
+  --hit-target: 44px;
+}
+
+@layer components {
+  :is(.btn-sm, .btn-xs):not(input) {
+    position: relative;
+  }
+}
+
+@media (pointer: coarse) {
+  :is(.btn-sm, .btn-xs):not(input)::after {
+    content: "";
+    position: absolute;
+    inset: min(0px, calc((var(--size) - var(--hit-target)) / 2));
+  }
+}
+
+/* Translucent chrome, the material iOS uses for bars over content. Applied to the sticky page
+   header and to the dock's pill. `saturate` before `blur` is what keeps colour behind it from
+   going grey. The @supports fallback matters: an older Android WebView with no backdrop-filter
+   would otherwise leave the bar transparent and the page would scroll through it. */
+.chrome-material {
+  background-color: var(--color-base-100);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+
+/* `color-mix` is iOS 16.2+. Behind @supports rather than after a plain fallback: a declaration
+   holding `var()` always parses, so on 16.0-16.1 it would win the cascade and then fail at
+   computed-value time, leaving the bar transparent. Same for the two below. */
+@supports (color: color-mix(in oklab, red 50%, transparent)) {
+  .chrome-material {
+    background-color: color-mix(in oklab, var(--color-base-100) 72%, transparent);
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .chrome-material {
+    background-color: var(--color-base-100);
+  }
+}
+
+/* The header is transparent while the page is at the top and gains its material + hairline once
+   scrolled, which is how an iOS navigation bar behaves. `.is-scrolled` is toggled by the passive
+   capture-phase scroll listener in boot.js, on the web and mobile alike.
+   The material is repeated here rather than composed from `.chrome-material`: both are unlayered,
+   so a header carrying the two classes would resolve by file order, not by state, and the bar
+   would never be transparent. */
+.nav-material {
+  background-color: transparent;
+  transition: background-color 200ms ease, border-color 200ms ease;
+  border-bottom: 1px solid transparent;
+}
+
+.nav-material.is-scrolled {
+  background-color: var(--color-base-100);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-bottom-color: var(--color-base-300);
+}
+
+@supports (color: color-mix(in oklab, red 50%, transparent)) {
+  .nav-material.is-scrolled {
+    background-color: color-mix(in oklab, var(--color-base-100) 72%, transparent);
+    border-bottom-color: color-mix(in oklab, var(--color-base-300) 80%, transparent);
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .nav-material.is-scrolled {
+    background-color: var(--color-base-100);
+  }
+}
+
+/* A `backdrop-filter` makes the bar the containing block of its `position: fixed` descendants, so
+   a `fixed inset-0` scrim inside it covered the bar only and a tap outside reached the page.
+   Opaque while one is there. Sheets are rendered as siblings of the header instead
+   (project_header.rs, payment_page.rs, charts_page.rs). */
+.nav-material.is-scrolled:has(.fixed, .modal) {
+  background-color: var(--color-base-100);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Android: M3 bars do not blur, and `blur(20px)` repainted on every scroll frame costs an Adreno
+   506. The scrolled bar is an opaque tonal surface a step above the base-200 page, no hairline;
+   the dock pill is the white of a card and keeps its shadow. */
+html[data-plat="android"] .nav-material.is-scrolled,
+html[data-plat="android"] .chrome-material {
+  background-color: var(--color-base-100);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+html[data-plat="android"] .nav-material.is-scrolled {
+  background-color: var(--color-base-300);
+  border-bottom-color: transparent;
+}
+
+/* The segmented control (project_tabs.rs), a UISegmentedControl: one thumb under the selected
+   segment, moved by `transform` from `--segment-index`, instead of daisyUI's fill jumping from one
+   tab to the next. The 0.25rem is daisyUI's `tabs-box` padding; the segments are equal grid
+   columns, so one thumb width is one step. */
+.segmented {
+  position: relative;
+  isolation: isolate;
+}
+
+.segmented > .tab {
+  position: relative;
+  z-index: 1;
+}
+
+.segmented > .tab-active,
+.segmented > [aria-selected="true"] {
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.segmented-thumb {
+  position: absolute;
+  z-index: 0;
+  top: 0.25rem;
+  left: 0.25rem;
+  width: calc((100% - 0.5rem) / var(--segment-count, 1));
+  height: calc(100% - 0.5rem);
+  border-radius: var(--radius-field);
+  background-color: var(--color-base-100);
+  box-shadow: 0 1px 2px oklch(0% 0 0 / 0.08), 0 3px 8px oklch(0% 0 0 / 0.08);
+  transform: translateX(calc(var(--segment-index, 0) * 100%));
+  transition: transform 250ms cubic-bezier(0.32, 0.72, 0, 1);
+  pointer-events: none;
+}
+
+html[data-plat="android"] .segmented-thumb {
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* The dock (bottom_dock.rs): one pill on every platform, restyled here. The selected tab is tinted
+   (`text-secondary-content`, AA on the pill), carries `aria-current` and its filled glyph. iOS 26
+   and the web: a neutral highlight behind the whole tab, as UITabBar's lens; iOS 16-18 the tint
+   alone. Android: an M3 active indicator, a secondary-container pill behind the icon only. */
+.dock-label {
+  font-size: 0.625rem;
+}
+
+.dock-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dock-tab[aria-current] {
+  background-color: var(--color-base-200);
+}
+
+html[data-plat="ios"]:is([data-ios="16"], [data-ios="17"], [data-ios="18"]) .dock-tab[aria-current] {
+  background-color: transparent;
+}
+
+html[data-plat="android"] .dock-tab[aria-current] {
+  background-color: transparent;
+}
+
+html[data-plat="android"] .dock-icon {
+  width: 3.5rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  transition: background-color 200ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+html[data-plat="android"] .dock-tab[aria-current] .dock-icon {
+  background-color: var(--color-secondary);
+}
+
+html[data-plat="android"] .dock-tab[aria-current] .dock-label {
+  color: var(--color-base-content);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+/* Headers per platform (app_header.rs): one markup, a three-cell `.nav-bar` grid with `.nav-title`
+   in the middle and, on a tab root, a `.large-title` copy after the bar. Both back glyphs ship;
+   one shows. The web keeps the neutral bar: a centred bold title in 64px and the chevron. */
+.back-glyph-chevron {
+  display: contents;
+}
+
+.back-glyph-arrow,
+.large-title {
+  display: none;
+}
+
+/* iOS: a 44pt bar, the title in 17pt semibold. On a tab root the 34pt large title sits under the
+   bar; boot.js writes `--large-title-out` (how far it has slid under the bar) on both, so it fades
+   out as the inline title fades in, and sets `.is-collapsed` once it is all the way under: only
+   then does the bar take its material, as UIKit's scroll-edge appearance does. */
+html[data-plat="ios"] .nav-bar {
+  --bar-min: 2.75rem;
+  --bar-pad: 0.25rem;
+  min-height: var(--bar-min);
+  padding-block: var(--bar-pad);
+}
+
+html[data-plat="ios"] .nav-title {
+  font-family: inherit;
+  font-size: var(--ios-body);
+  line-height: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+html[data-plat="ios"] .large-title {
+  display: block;
+  margin-top: -0.75rem;
+  font-size: var(--ios-large-title);
+  line-height: calc(41 / 34);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  opacity: calc(1 - var(--large-title-out, 0));
+}
+
+html[data-plat="ios"] .nav-bar[data-large] .nav-title-cell {
+  opacity: var(--large-title-out, 0);
+}
+
+html[data-plat="ios"] .nav-material[data-large]:not(.is-collapsed) {
+  background-color: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-bottom-color: transparent;
+}
+
+/* iOS 26: the bar has no background of its own. Content scrolling under it goes soft through a
+   scroll-edge blur that fades out downwards, behind the bar's controls. */
+html[data-plat="ios"]:not([data-ios="16"], [data-ios="17"], [data-ios="18"]) .nav-material.is-scrolled {
+  background-color: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-bottom-color: transparent;
+}
+
+html[data-plat="ios"]:not([data-ios="16"], [data-ios="17"], [data-ios="18"]) .nav-material::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 -1.5rem;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+  background-color: transparent;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent);
+}
+
+@supports (color: color-mix(in oklab, red 50%, transparent)) {
+  html[data-plat="ios"]:not([data-ios="16"], [data-ios="17"], [data-ios="18"]) .nav-material::before {
+    background-color: color-mix(in oklab, var(--color-base-200) 60%, transparent);
+  }
+}
+
+html[data-plat="ios"]:not([data-ios="16"], [data-ios="17"], [data-ios="18"]) .nav-material.is-scrolled::before {
+  opacity: 1;
+}
+
+html[data-plat="ios"] .nav-material[data-large]:not(.is-collapsed)::before {
+  opacity: 0;
+}
+
+/* iOS 16-18: bar buttons are tinted glyphs with no plate. */
+html[data-plat="ios"]:is([data-ios="16"], [data-ios="17"], [data-ios="18"]) .nav-bar .glass-button {
+  background-color: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+  color: var(--color-primary);
+}
+
+/* Android: the M3 small top app bar, 64dp, the title left in title large (22sp regular), and an
+   `arrow_back` icon button with no plate in place of the glass chevron. */
+html[data-plat="android"] .nav-bar {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 0.25rem;
+}
+
+html[data-plat="android"] .nav-title-cell {
+  align-items: flex-start;
+  text-align: start;
+}
+
+html[data-plat="android"] .nav-title {
+  font-family: inherit;
+  font-size: 1.375rem;
+  line-height: 1.75rem;
+  font-weight: 400;
+}
+
+html[data-plat="android"] .nav-back {
+  width: 3rem;
+  height: 3rem;
+  min-height: 3rem;
+  margin-inline-start: -0.75rem;
+  background-color: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+html[data-plat="android"] .back-glyph-chevron {
+  display: none;
+}
+
+html[data-plat="android"] .back-glyph-arrow {
+  display: contents;
+}
+
+/* The round header buttons (back, ⋯): the same material at button scale, with the lit top edge
+   iOS 26 draws on its glass controls. Unlayered, so it wins over the `bg-base-300` the button
+   carries for the desktop shell, which does not link this file. */
+.glass-button {
+  background-color: var(--color-base-300);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.12), inset 0 0 0 1px oklch(100% 0 0 / 0.05);
+}
+
+@supports (color: color-mix(in oklab, red 50%, transparent)) {
+  .glass-button {
+    background-color: color-mix(in oklab, var(--color-base-300) 60%, transparent);
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-button {
+    background-color: var(--color-base-300);
+  }
+}
+
+/* Reduce Transparency. Both materials go opaque and drop the blur - the same end state as the
+   @supports fallbacks above, so a device that lacks backdrop-filter and a user who asked for less
+   transparency land in the same place.
+
+   A preference, not a capability, which is why this is separate from @supports. WebKit only added
+   the query in Safari 17 and `[bundle.ios] deployment_target` is 16.0, so iOS 16 keeps the blur;
+   Chromium has honoured it since 118, so the Android WebView gets it for free.
+
+   Adding another `backdrop-filter` rule without extending this block fails the stylesheet guard in
+   packages/ui/src/common/stylesheet_guard.rs. */
+@media (prefers-reduced-transparency: reduce) {
+  .chrome-material,
+  .nav-material.is-scrolled {
+    background-color: var(--color-base-100);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .glass-button {
+    background-color: var(--color-base-300);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  html[data-plat="ios"] .app-toast {
+    background-color: var(--color-base-100);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  html[data-plat="ios"]:not([data-ios="16"], [data-ios="17"], [data-ios="18"]) .nav-material::before {
+    background-color: var(--color-base-200);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Increase Contrast (iOS), high-contrast text and the desktop browsers' own setting. Bars go
+   opaque as under Reduce Transparency, separators darken to a third of the ink, and muted text
+   (`text-base-content/NN`) is the full ink. Safari 14.1+, Chromium 96+. */
+@media (prefers-contrast: more) {
+  .chrome-material,
+  .nav-material.is-scrolled {
+    background-color: var(--color-base-100);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .glass-button {
+    background-color: var(--color-base-300);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  html[data-plat="android"] .nav-material.is-scrolled {
+    background-color: var(--color-base-300);
+  }
+  html[data-plat="ios"]:not([data-ios="16"], [data-ios="17"], [data-ios="18"]) .nav-material::before {
+    background-color: var(--color-base-200);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  @supports (color: color-mix(in oklab, red 50%, transparent)) {
+    .border-base-200,
+    .border-base-300,
+    .nav-material.is-scrolled {
+      border-color: color-mix(in oklab, var(--color-base-content) 35%, transparent);
+    }
+  }
+  [class*="text-base-content/"] {
+    color: var(--color-base-content);
+  }
+  .list-header {
+    color: var(--color-base-content);
+  }
+  .list-chevron {
+    opacity: 1;
+  }
+  @supports (color: color-mix(in oklab, red 50%, transparent)) {
+    :root {
+      --color-separator: color-mix(in oklab, var(--color-base-content) 35%, transparent);
+    }
+  }
+}
+
+/* The confirm (confirm_modal.rs). iOS presents a UIAlertController and only falls back to this.
+   Android draws it as the M3 basic dialog: 28dp corners on a tonal surface, 24dp padding, text
+   buttons at the end, stacked ones end-aligned. The web keeps daisyUI's card and buttons. */
+html[data-plat="android"] .confirm-dialog > .modal-box {
+  border-radius: 28px;
+  background-color: var(--color-base-200);
+  box-shadow: none;
+}
+
+html[data-plat="android"] .confirm-dialog h2 {
+  font-family: inherit;
+  font-weight: 400;
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+
+html[data-plat="android"] .confirm-actions {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+html[data-plat="android"] .confirm-actions-stacked {
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+html[data-plat="android"] .confirm-actions .btn {
+  width: auto;
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  padding-inline: 0.75rem;
+  color: var(--btn-color, var(--color-primary));
+  font-weight: 500;
+}
+
+html[data-plat="android"] .confirm-actions .confirm-cancel {
+  color: var(--color-primary);
+}
+
+/* The form sheet bar (form_sheet_bar.rs): close leading, confirm trailing. Each button holds an
+   icon and its text; the text is visually hidden while the icon shows, so it stays the accessible
+   name. iOS 26 and the web: an xmark and a tinted checkmark. iOS 16-18: "Cancel" and a bold
+   confirm as text buttons. Android: the xmark and a text confirm, the M3 full-screen dialog bar. */
+.sheet-bar-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+html[data-plat="ios"] .sheet-bar-title {
+  text-align: center;
+}
+
+html[data-plat="ios"]:is([data-ios="16"], [data-ios="17"], [data-ios="18"]) .sheet-bar :is(.sheet-bar-close, .sheet-bar-confirm),
+html[data-plat="android"] .sheet-bar .sheet-bar-confirm {
+  width: auto;
+  padding-inline: 0.5rem;
+  border-radius: var(--radius-field);
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--color-primary);
+  font-size: 1.0625rem;
+  font-weight: 400;
+}
+
+html[data-plat="ios"]:is([data-ios="16"], [data-ios="17"], [data-ios="18"]) .sheet-bar .sheet-bar-confirm {
+  font-weight: 600;
+}
+
+html[data-plat="android"] .sheet-bar .sheet-bar-confirm {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+html[data-plat="ios"]:is([data-ios="16"], [data-ios="17"], [data-ios="18"]) .sheet-bar :is(.sheet-bar-close, .sheet-bar-confirm):disabled,
+html[data-plat="android"] .sheet-bar .sheet-bar-confirm:disabled {
+  color: var(--color-base-content);
+  opacity: 0.3;
+}
+
+html[data-plat="ios"]:is([data-ios="16"], [data-ios="17"], [data-ios="18"]) .sheet-bar :is(.sheet-bar-close, .sheet-bar-confirm) .sheet-bar-icon,
+html[data-plat="android"] .sheet-bar .sheet-bar-confirm .sheet-bar-icon {
+  display: none;
+}
+
+html[data-plat="ios"]:is([data-ios="16"], [data-ios="17"], [data-ios="18"]) .sheet-bar :is(.sheet-bar-close, .sheet-bar-confirm) .sheet-bar-text,
+html[data-plat="android"] .sheet-bar .sheet-bar-confirm .sheet-bar-text {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip-path: none;
+}
+
+/* Sheets on a phone. DaisyUI's `modal-bottom` already pins the box to the bottom edge and rounds
+   only its top corners (`--modal-tl/tr`), but it is not full width: daisyUI's own `width: 100%;
+   max-width: none` sits inside `:where()`, so the `max-w-sm` / `max-w-md` utility each box carries
+   beat it and the sheet was a narrow card parked at the bottom. Unlayered, so restating them beats
+   the utility. Only `.modal-bottom`: `ConfirmModal` stays centred, a UIAlert rather than a sheet.
+   Under `max-width: 639.98px`, Tailwind's `sm`: every shell is `modal-bottom sm:modal-middle`, so
+   above it the modal is centred with its four corners again. The grabber and the drag are native
+   only (mobile main.css). */
+@media (max-width: 639.98px) {
+  .modal-bottom .modal-box {
+    /* The home indicator at rest. While the keyboard is up, packages/ui/src/common/keyboard.rs
+       (mobile) writes `max(calc(var(--sab) - <scroll>), <keyboard>)` inline: the keyboard or the
+       indicator, whichever is taller, never their sum. Padding rather than a transform, which the
+       drag owns. The body inside is `flex-1 overflow-y-auto`, so it absorbs the loss by scrolling. */
+    padding-bottom: var(--sab);
+    width: 100%;
+    max-width: none;
+  }
+
+  /* Every sheet is inserted already `modal-open`, so daisyUI's `translate` transition never runs
+     and the only `@starting-style` (the .modal's opacity) is iOS 17.5+. An animation runs on
+     element creation everywhere. `translate`, never `transform`: sheet_drag.rs owns `transform`,
+     and an animation on it would freeze a drag. No fill: the end state is the resting
+     `translate: 0 0`. keyboard.rs reads `sheet-in` by name to hold its glide and any scripted
+     focus until the slide ends. Crossing 640px replays it, which only a rotation does. */
+  .modal-bottom.modal-open > .modal-box {
+    animation: sheet-in 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .modal-bottom.modal-open {
+    animation: sheet-scrim-in 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /* M3 emphasized decelerate. */
+  html[data-plat="android"] .modal-bottom.modal-open > .modal-box,
+  html[data-plat="android"] .modal-bottom.modal-open {
+    animation-duration: 0.4s;
+    animation-timing-function: cubic-bezier(0.05, 0.7, 0.1, 1);
+  }
+}
+
+@keyframes sheet-in {
+  from { translate: 0 100%; }
+}
+
+@keyframes sheet-scrim-in {
+  from { background-color: transparent; }
+}
+
+@keyframes sheet-fade-in {
+  from { opacity: 0; }
+}
+
+/* Reduce Motion: a fade instead of the slide. `!important` and more specific than the global `*`
+   rule in each main.css, which would otherwise cut it to 0.01ms. */
+@media (max-width: 639.98px) and (prefers-reduced-motion: reduce) {
+  .modal-bottom.modal-open > .modal-box {
+    animation: sheet-fade-in 0.2s ease-out !important;
+  }
+  .modal-bottom.modal-open {
+    animation: sheet-scrim-in 0.2s ease-out !important;
+  }
+}

@@ -5,6 +5,9 @@
 
 loading = Įkeliama…
 cancel = Atšaukti
+discard-title = Atmesti pakeitimus?
+discard-message = Tai, ką įvedei, bus prarasta.
+discard = Atmesti
 confirm = Patvirtinti
 retry = Bandyti dar kartą
 delete = Ištrinti
@@ -445,6 +448,7 @@ reimbursements-empty-title = Viskas atsiskaityta!
 reimbursements-empty-hint = Atsiskaitymo pasiūlymai rodomi čia, kai sąskaitos nesubalansuotos
 reimbursement-owes = { $debtor } skolingas { $creditor }
 reimbursement-record = Atsiskaityti
+settlement-recorded = Atsiskaitymas įrašytas.
 reimbursement-pay-with = Mokėti
 reimbursement-pay-shared-by = Pasidalijo { $name } - prieš siųsdamas patikrink gavėjo vardą, kurį rodo tavo programėlė.
 reimbursement-pay-title = Mokėti { $name }
@@ -480,7 +484,6 @@ move-note-group = Išlaida paliks { $project } visiems nariams, o grupės balans
 move-banner = Iš { $from } į { $to }
 move-submit = Perkelti
 move-done = Išlaida perkelta į { $project }
-move-delete-failed = Išlaida pridėta prie kito projekto, bet vis dar yra { $project }: ištrink ją ten.
 history-expense-moved = Išlaida perkelta į kitą projektą: { $name }
 personal-badge = Asmeninė
 move-members =
@@ -871,6 +874,11 @@ edit-project-no-identity = Dar nepasirinkai, kas esi
 edit-project-switch = Keisti
 edit-project-choose = Pasirinkti
 invite-failed = Šių kvietimų nepavyko išsiųsti: { $emails }
+invite-waiting = Šie draugai turi vieną kartą atidaryti Counted, kad juos būtų galima pakviesti: { $emails }
+key-offer-title = Kitas raktas projektui { $name }
+key-offer-body = Šis įrenginys turi kitą šio projekto raktą, kuris čia jo niekada neatidarė.
+key-offer-choices = Naudoti šį raktą: projektas atidaromas šios nuorodos ar kvietimo raktu. Atšaukti: įrenginys pasilieka dabartinį raktą ir niekas nesikeičia.
+key-offer-use = Naudoti šį raktą
 invite-again = Pakviesti dar kartą
 friend-picker-title = Pridėti draugų
 user-selection-invited-hint = { $email } pakvietė tave į „{ $project }“.
@@ -999,6 +1007,14 @@ home-remind-message = Mažas priminimas: projekte { $project } dar liko neatsisk
 home-row-owed = tau skolingi
 home-row-owe = tu skolingas
 home-row-settled = Atsiskaityta
+home-row-quits = Tavo dalis atsiskaityta
+home-row-pending =
+    { $count ->
+        [one] { $count } laukiantis grąžinimas
+        [few] { $count } laukiantys grąžinimai
+        [many] { $count } laukiančio grąžinimo
+       *[other] { $count } laukiančių grąžinimų
+    }
 home-totals-partial = Be projektų be valiutos kurso
 error-account-key-changed = Tavo paskyros raktas pasikeitė kitame įrenginyje. Prisijunk iš naujo, kad tęstum.
 settings-security = Saugumas

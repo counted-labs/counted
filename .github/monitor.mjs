@@ -7,6 +7,7 @@ const DX_BOOTSTRAP =
 	'window.hydrate_queue=[];window.dx_hydrate=(id,data,debug_types,debug_locations)=>{let decoded=atob(data),bytes=Uint8Array.from(decoded,(c)=>c.charCodeAt(0));if(window.hydration_callback)window.hydration_callback(id,bytes,debug_types,debug_locations);else window.hydrate_queue.push([id,bytes,debug_types,debug_locations])};';
 const HYDRATION_DATA = /^window\.initial_dioxus_hydration_data="[A-Za-z0-9+/=]*";$/;
 const HYDRATION_BLOCK = /^\s*type="text\/plain"\s+id="dioxus-hydration-data"\s*$/;
+const INTEGRITY_POLICY = "blocked-destinations=(script)";
 
 const sums = new Map(
 	readFileSync(process.argv[2], "utf8")
@@ -26,7 +27,7 @@ async function get(path, status = 200) {
 	await new Promise((resolve) => setTimeout(resolve, 150));
 	const response = await fetch(ORIGIN + path, { headers: { "accept-encoding": "identity" }, redirect: "manual" });
 	if (response.status !== status) throw new Error(`${path}: HTTP ${response.status}, expected ${status}`);
-	return Buffer.from(await response.arrayBuffer());
+	return Object.assign(Buffer.from(await response.arrayBuffer()), { headers: response.headers });
 }
 
 async function getOrFail(path, status) {
@@ -38,9 +39,12 @@ async function getOrFail(path, status) {
 	}
 }
 
+const sri = new Map();
 for (const [path, expected] of sums) {
 	const body = await getOrFail(`/${path}`);
-	if (body && createHash("sha256").update(body).digest("hex") !== expected) fail(`/${path}: served bytes differ from the signed sums`);
+	if (!body) continue;
+	if (createHash("sha256").update(body).digest("hex") !== expected) fail(`/${path}: served bytes differ from the signed sums`);
+	else sri.set(path, `sha384-${createHash("sha384").update(body).digest("base64")}`);
 }
 console.log(`${sums.size} served files checked against the signed sums`);
 
@@ -53,9 +57,14 @@ function checkMarkup(page, html, allowScript) {
 	if (/javascript:/i.test(html)) fail(`${page}: javascript: URL`);
 }
 
+const pinned = (attributes, url) => attributes.match(/\sintegrity="([^"]*)"/)?.[1] === sri.get(url.replace(/^\/(\.\/)?/, ""));
+
 function appScript(attributes, content) {
 	const src = attributes.match(/\ssrc="([^"]*)"/)?.[1];
-	if (src !== undefined) return content === "" && sums.has(src.replace(/^\/(\.\/)?/, "")) ? null : "script outside the signed sums";
+	if (src !== undefined) {
+		if (content !== "" || !sums.has(src.replace(/^\/(\.\/)?/, ""))) return "script outside the signed sums";
+		return pinned(attributes, src) ? null : "script without the integrity of its signed bytes";
+	}
 	if (HYDRATION_BLOCK.test(attributes)) return /^[A-Za-z0-9+/=]*$/.test(content) ? null : "hydration data that is not base64";
 	if (attributes.trim() !== "") return "unknown script type";
 	return content === DX_BOOTSTRAP || HYDRATION_DATA.test(content) ? null : "unknown inline script";
@@ -76,6 +85,10 @@ for (const page of APP_PAGES) {
 	if (!body) continue;
 	const html = body.toString("utf8");
 	checkMarkup(page, html, appScript);
+	if (body.headers.get("integrity-policy") !== INTEGRITY_POLICY) fail(`${page}: Integrity-Policy is not ${INTEGRITY_POLICY}`);
+	for (const [tag] of html.matchAll(/<link\b[^>]*\sas="script"[^>]*>/g)) {
+		if (!pinned(tag, tag.match(/\shref="([^"]*)"/)?.[1] ?? "")) fail(`${page}: script preload without the integrity of its signed bytes: ${tag}`);
+	}
 	for (const [, url] of html.matchAll(/\s(?:src|href)="(\/(?:\.\/)?assets\/[^"]*)"/g)) {
 		if (!sums.has(url.replace(/^\/(\.\/)?/, ""))) fail(`${page}: ${url} is outside the signed sums`);
 	}

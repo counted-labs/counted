@@ -6,7 +6,7 @@ use uuid::Uuid;
 
 use crate::common::{
     format_date, format_date_str, initials, pending, read_from_ls, user_color_class, AppHeader,
-    Avatar, DropdownButton, DropdownItem, Flash, ProjectKey, PullToRefresh, QueuedOp,
+    Avatar, Flash, ProjectKey, PullToRefresh, QueuedOp,
 };
 use crate::decrypted::DecryptedPayment;
 use crate::expenses::helpers::delete_expense_action::{
@@ -17,7 +17,9 @@ use crate::expenses::hooks::use_project_store::ProjectStore;
 use crate::expenses::tabs::expenses_tab::ExpenseMutation;
 use crate::expenses::move_expense::{can_move, destinations, typed_amount, MoveDraft, MoveExpenseSheet};
 use crate::expenses::EditExpenseModal;
-use crate::icons::{MoreIcon, PencilIcon, RepeatIcon, RightArrowIcon, TransferIcon, TrashIcon, ICON_HEADER, ICON_INLINE};
+use crate::icons::{RepeatIcon, RightArrowIcon, TransferIcon, ICON_HEADER, ICON_INLINE};
+use crate::expenses::project_actions_sheet::MoreButton;
+use super::expense_actions_sheet::ExpenseActionsSheet;
 use crate::recurring::actions::stop_rule;
 use crate::recurring::dialog::DeleteExpenseDialog;
 use crate::recurring::store::live_rule_of;
@@ -106,6 +108,7 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
     let mut show_edit = use_signal(|| false);
     let mut show_delete_confirm = use_signal(|| false);
     let mut show_move = use_signal(|| false);
+    let mut show_actions = use_signal(|| false);
 
     let stored_user_id = read_from_ls()
         .projects
@@ -115,7 +118,6 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
 
     let store = use_context::<ProjectStore>();
     let key_ctx = use_context::<ProjectKey>().0;
-    let is_online = use_context::<Signal<bool>>();
     let pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
     let flash = use_context::<Signal<Option<Flash>>>();
     let on_expenses_changed = store.on_expenses_changed;
@@ -136,7 +138,7 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
         .flatten();
 
     rsx! {
-        div { class: "container app-container bg-base-100 overflow-auto p-4 max-w-md w-full mx-auto flex flex-col gap-4",
+        div { class: "container app-container bg-base-100 overflow-auto p-4 max-w-md w-full mx-auto flex flex-col gap-4 pb-24",
             PullToRefresh {
                 on_refresh: move |_| {
                     let mut sync = store.sync;
@@ -216,40 +218,19 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                     back_button_route: Route::ExpensesPage { project_id },
                                     sub_title: format_date_str(&expense.date),
                                     if can_edit || can_delete || movable {
-                                        DropdownButton {
-                                            id: "expense-actions",
-                                            label: tid!("expense-actions"),
-                                            button_class: "btn btn-circle size-11 min-h-11 border-0 bg-base-300 glass-button relative z-50",
-                                            menu_class: "menu bg-base-100 rounded-xl w-64 px-0 py-1.5 shadow-lg absolute right-0 top-full mt-2 z-50 [&_button]:min-h-11 [&_button]:gap-2.5 [&_button]:text-[15px] [&_button]:font-medium",
-                                            trigger: rsx! { MoreIcon { size: 24 } },
-                                            if can_edit {
-                                                DropdownItem {
-                                                    id: "edit-expense-item",
-                                                    variant: "primary",
-                                                    label: tid!("edit"),
-                                                    icon: rsx! { PencilIcon { size: ICON_INLINE } },
-                                                    onclick: move |_| show_edit.set(true),
-                                                }
-                                            }
-                                            if movable {
-                                                DropdownItem {
-                                                    id: "move-expense-item",
-                                                    variant: "ghost",
-                                                    label: tid!("move-expense"),
-                                                    icon: rsx! { RightArrowIcon { size: ICON_INLINE } },
-                                                    onclick: move |_| show_move.set(true),
-                                                }
-                                            }
-                                            if can_delete {
-                                                DropdownItem {
-                                                    id: "delete-expense-item",
-                                                    variant: "error",
-                                                    label: tid!("delete"),
-                                                    icon: rsx! { TrashIcon { size: ICON_INLINE } },
-                                                    onclick: move |_| show_delete_confirm.set(true),
-                                                }
-                                            }
-                                        }
+                                        MoreButton { id: "expense-actions", label: tid!("expense-actions"), open: show_actions }
+                                    }
+                                }
+                                if show_actions() {
+                                    ExpenseActionsSheet {
+                                        title: exp_name.clone(),
+                                        can_edit,
+                                        movable,
+                                        can_delete,
+                                        on_close: move |_| show_actions.set(false),
+                                        on_edit: move |_| show_edit.set(true),
+                                        on_move: move |_| show_move.set(true),
+                                        on_delete: move |_| show_delete_confirm.set(true),
                                     }
                                 }
 
@@ -401,10 +382,7 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                         on_close: move |_| show_edit.set(false),
                                         on_edited: move |edited| {
                                             show_edit.set(false);
-                                            on_expenses_changed.call(match edited {
-                                                Some(e) => ExpenseMutation::Edited(e),
-                                                None => ExpenseMutation::Queued,
-                                            });
+                                            on_expenses_changed.call(ExpenseMutation::Edited(edited));
                                         },
                                         expense,
                                         payments,
@@ -484,9 +462,7 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                             run_delete_expense(
                                                 req,
                                                 name,
-                                                is_online(),
                                                 pending_ops,
-                                                flash,
                                                 move || {
                                                     // Patch the store before leaving, or the list
                                                     // one route up still shows the deleted row.
@@ -506,15 +482,7 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                     Some((msg, _)) => rsx! {
                         div { role: "alert", class: "alert alert-error", "{msg}" }
                     },
-                    None => rsx! {
-                        div { class: "flex justify-center py-8",
-                            span {
-                                class: "loading loading-spinner loading-md",
-                                role: "status",
-                                aria_label: tid!("loading"),
-                            }
-                        }
-                    },
+                    None => rsx! { crate::common::ExpenseDetailSkeleton {} },
                 },
             }
         }

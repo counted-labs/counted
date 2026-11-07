@@ -7,6 +7,9 @@ use crate::tid;
 /// The open search field. `autofocus` only when the user just opened it: coming back from an
 /// expense remounts it, and focusing then would raise the keyboard unasked. `closes`: no toggle
 /// beside it, so its clear button is always there and also closes the field.
+///
+/// A UISearchBar's shape: a filled field with a grey magnifier, and while it has focus a Cancel
+/// beside it that empties and blurs it (and closes it where nothing else can).
 #[component]
 pub fn ExpenseSearchField(
     query: Signal<ExpenseQuery>,
@@ -15,44 +18,72 @@ pub fn ExpenseSearchField(
     #[props(default)] closes: bool,
 ) -> Element {
     let text = query.read().text.clone();
-    rsx! {
-        label { class: "input w-full h-11 rounded-full bg-base-100 border-primary ring-3 ring-primary/15 pe-1.5",
-            SearchIcon { size: 18 }
-            input {
-                id: "expense-search",
-                class: "grow min-w-0 [&::-webkit-search-cancel-button]:hidden",
-                r#type: "search",
-                enterkeyhint: "search",
-                autocomplete: "off",
-                aria_label: tid!("expenses-search"),
-                value: "{text}",
-                onmounted: move |e| async move {
-                    if autofocus {
-                        let _ = e.data().set_focus(true).await;
-                    }
-                },
-                oninput: move |e| {
-                    query.write().text = e.value();
-                    on_change.call(());
-                },
+    let mut focused = use_signal(|| false);
+    let mut field: Signal<Option<std::rc::Rc<MountedData>>> = use_signal(|| None);
+    let mut clear = move |close: bool| {
+        {
+            let mut q = query.write();
+            q.text.clear();
+            if close {
+                q.searching = false;
             }
-            if closes || !text.is_empty() {
-                button {
-                    id: "expense-search-clear",
-                    r#type: "button",
-                    class: "btn btn-circle btn-sm size-9 border-0 bg-base-200",
-                    aria_label: tid!("expenses-search-clear"),
-                    onclick: move |_| {
-                        {
-                            let mut q = query.write();
-                            q.text.clear();
-                            if closes {
-                                q.searching = false;
-                            }
+        }
+        on_change.call(());
+    };
+    rsx! {
+        div { class: "flex items-center gap-1",
+            label { class: "search-field input flex-1 min-w-0 h-10 pe-1",
+                span { class: "text-base-content/60", aria_hidden: "true", SearchIcon { size: 18 } }
+                input {
+                    id: "expense-search",
+                    class: "grow min-w-0 [&::-webkit-search-cancel-button]:hidden",
+                    r#type: "search",
+                    enterkeyhint: "search",
+                    autocomplete: "off",
+                    aria_label: tid!("expenses-search"),
+                    value: "{text}",
+                    onmounted: move |e| async move {
+                        field.set(Some(e.data()));
+                        if autofocus {
+                            let _ = e.data().set_focus(true).await;
                         }
+                    },
+                    onfocus: move |_| focused.set(true),
+                    onblur: move |_| focused.set(false),
+                    oninput: move |e| {
+                        query.write().text = e.value();
                         on_change.call(());
                     },
-                    CloseIcon { size: 14 }
+                }
+                if closes || !text.is_empty() {
+                    button {
+                        id: "expense-search-clear",
+                        r#type: "button",
+                        class: "btn btn-ghost btn-circle btn-sm text-base-content/60",
+                        aria_label: tid!("expenses-search-clear"),
+                        onmousedown: move |e| e.prevent_default(),
+                        onclick: move |_| clear(closes),
+                        CloseIcon { size: 14 }
+                    }
+                }
+            }
+            if focused() {
+                button {
+                    id: "expense-search-cancel",
+                    r#type: "button",
+                    class: "btn btn-ghost btn-sm shrink-0 px-2 text-primary text-base font-normal",
+                    // Both buttons keep the field focused through the press: a blur would take Cancel away
+                    // and shift the clear button out from under the click.
+                    onmousedown: move |e| e.prevent_default(),
+                    onclick: move |_| {
+                        clear(closes);
+                        if let Some(field) = field() {
+                            spawn(async move {
+                                let _ = field.set_focus(false).await;
+                            });
+                        }
+                    },
+                    {tid!("cancel")}
                 }
             }
         }

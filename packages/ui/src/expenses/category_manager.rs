@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::categories::custom::{apply_edit, new_custom_id, CategoryEdit, CategoryError, Summary, MAX_CUSTOM, MAX_NAME_CHARS, OTHER};
 use crate::categories::{category_label, parent_emoji, ProjectCategories, CHART_CATEGORIES};
-use crate::common::{error_message, haptic, read_from_ls, update_project_fresh, EmojiGrid, Haptic, ProjectKey};
+use crate::common::{error_message, haptic, read_from_ls, update_project_fresh, ConfirmDialog, DialogAction, EmojiGrid, Haptic, ProjectKey};
 use crate::crypto::{decrypt_json, encrypt_padded_json};
 use crate::expenses::helpers::project_data::ProjectData;
 use crate::expenses::hooks::use_project_store::ProjectStore;
@@ -227,6 +227,12 @@ pub fn CategoryManager(
                         CloseIcon { size: ICON_HEADER }
                     }
                 }
+                if let Some(message) = error().filter(|_| editing().is_none()) {
+                    div { role: "alert", class: "alert alert-error text-sm", "{message}" }
+                }
+                if saving() && editing().is_none() {
+                    span { class: "loading loading-spinner loading-sm self-center", aria_label: tid!("saving") }
+                }
                 h3 { class: "text-xs font-bold uppercase tracking-wide text-base-content/70", {tid!("categories-yours")} }
                 if custom_count > 0 {
                     ul { class: "bg-base-200 rounded-box overflow-hidden divide-y divide-base-300",
@@ -336,15 +342,26 @@ pub fn CategoryManager(
                 let shown = cats.resolve(Some(&id), "");
                 let parent = cats.shown_builtin(shown.parent);
                 let label = shown.label();
+                let parent = format!("{} {}", parent.emoji, parent.label());
+                let body = match count_of(&id) {
+                    Some(n) => tid!("categories-delete-body", count: n as i64, parent: parent),
+                    None => tid!("categories-delete-body-unknown", parent: parent),
+                };
                 rsx! {
-                    CategoryDeleteSheet {
-                        name: label.clone(),
-                        emoji: shown.emoji.clone(),
-                        parent: format!("{} {}", parent.emoji, parent.label()),
-                        count: count_of(&id),
-                        saving: saving(),
-                        error: error(),
-                        on_confirm: move |_| save(CategoryEdit::Delete { id: id.clone() }, label.clone()),
+                    ConfirmDialog {
+                        id: "category-delete",
+                        title: tid!("categories-delete-title", name: label.clone()),
+                        message: format!("{body}\n\n{}", tid!("categories-delete-warning")),
+                        action_sheet: true,
+                        actions: vec![DialogAction {
+                            id: "category-delete-confirm",
+                            label: tid!("delete"),
+                            class: "btn-error",
+                            on_click: EventHandler::new(move |_| {
+                                deleting.set(None);
+                                save(CategoryEdit::Delete { id: id.clone() }, label.clone());
+                            }),
+                        }],
                         on_cancel: move |_| deleting.set(None),
                     }
                 }
@@ -375,7 +392,7 @@ fn CategoryRow(
             button {
                 id: "{id}",
                 r#type: "button",
-                class: if muted { "w-full flex items-center gap-3 px-3 py-2.5 min-h-13 text-left opacity-70" } else { "w-full flex items-center gap-3 px-3 py-2.5 min-h-13 text-left hover:bg-base-300" },
+                class: if muted { "w-full flex items-center gap-3 px-3 py-2.5 min-h-13 text-left row-press opacity-70" } else { "w-full flex items-center gap-3 px-3 py-2.5 min-h-13 text-left hover:bg-base-300 row-press" },
                 aria_haspopup: "dialog",
                 ontouchstart: move |_| {
                     long_pressed.set(false);
@@ -594,75 +611,6 @@ fn CategoryEditSheet(
                 }
             }
             div { class: "modal-backdrop", onclick: move |_| on_close.call(()) }
-        }
-    }
-}
-
-#[component]
-fn CategoryDeleteSheet(
-    name: String,
-    emoji: String,
-    parent: String,
-    count: Option<usize>,
-    saving: bool,
-    error: Option<String>,
-    on_confirm: EventHandler<()>,
-    on_cancel: EventHandler<()>,
-) -> Element {
-    crate::common::use_modal_focus("category-delete-sheet");
-    rsx! {
-        div {
-            id: "category-delete-sheet",
-            class: "modal modal-open modal-bottom sm:modal-middle",
-            role: "dialog",
-            aria_modal: "true",
-            aria_labelledby: "category-delete-title",
-            aria_describedby: "category-delete-body",
-            tabindex: "-1",
-            div { class: "modal-box max-w-md p-0",
-                div { class: "flex flex-col gap-3 px-6 pt-5 pb-6",
-                div { class: "flex items-center gap-3",
-                    span { class: "size-11 shrink-0 rounded-xl bg-base-200 flex items-center justify-center text-2xl", aria_hidden: "true", "{emoji}" }
-                    h2 { id: "category-delete-title", class: "font-bold text-lg font-display min-w-0 break-words", dir: "auto",
-                        {tid!("categories-delete-title", name: name.clone())}
-                    }
-                }
-                p { id: "category-delete-body", class: "text-sm",
-                    match count {
-                        Some(n) => rsx! { {tid!("categories-delete-body", count: n as i64, parent: parent.clone())} },
-                        None => rsx! { {tid!("categories-delete-body-unknown", parent: parent.clone())} },
-                    }
-                }
-                div { role: "note", class: "alert alert-warning alert-soft text-sm text-base-content!", {tid!("categories-delete-warning")} }
-                if let Some(message) = error {
-                    div { role: "alert", class: "alert alert-error text-sm", "{message}" }
-                }
-                div { class: "flex gap-2.5",
-                    button {
-                        id: "category-delete-cancel",
-                        r#type: "button",
-                        class: "btn flex-1 rounded-full",
-                        onclick: move |_| on_cancel.call(()),
-                        {tid!("cancel")}
-                    }
-                    button {
-                        id: "category-delete-confirm",
-                        r#type: "button",
-                        class: "btn btn-error flex-1 rounded-full",
-                        disabled: saving,
-                        onclick: move |_| {
-                            haptic(Haptic::Warning);
-                            on_confirm.call(());
-                        },
-                        if saving {
-                            span { class: "loading loading-spinner loading-sm" }
-                        }
-                        {tid!("delete")}
-                    }
-                }
-                }
-            }
-            div { class: "modal-backdrop", onclick: move |_| on_cancel.call(()) }
         }
     }
 }

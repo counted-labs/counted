@@ -1,9 +1,10 @@
 use crate::common::{
-    is_mobile, replay_queue, use_keyboard, use_overscroll, use_route_focus, use_sheet_drag, BottomDock, DeepLinkListener, Flash,
-    LocalStorageState, NavigationSync, PageTransition, QueuedOp, SyncFailure, Toast,
+    is_mobile, replay_queue, use_keyboard, use_overscroll, use_route_focus, use_sheet_drag, BottomDock, DeepLinkListener, Flash, KeyOfferSheet,
+    Landed, LocalStorageState, NavigationSync, PageTransition, QueuedOp, SyncFailure, ToastHost,
 };
 use crate::demo::DemoBar;
 use crate::expenses::hooks::use_project_store::use_project_store;
+use crate::expenses::tabs::expenses_tab::ExpenseMutation;
 use crate::i18n::current_lang;
 use crate::route::Route;
 use crate::welcome::WelcomePage;
@@ -13,12 +14,23 @@ use std::collections::VecDeque;
 
 #[component]
 pub fn AppLayout() -> Element {
-    let mut flash = use_context::<Signal<Option<Flash>>>();
     let ls = use_context::<Signal<LocalStorageState>>();
     let is_online = use_context::<Signal<bool>>();
     let pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
     let resource_version = use_context::<Signal<u64>>();
     let mut conflict_msg: Signal<Option<SyncFailure>> = use_signal(|| None);
+    let mut flash = use_context::<Signal<Option<Flash>>>();
+    use_effect(move || {
+        if let Some(failure) = conflict_msg() {
+            conflict_msg.set(None);
+            flash.set(Some(Flash::err(match failure {
+                SyncFailure::ConflictEdit(name) => tid!("sync-conflict-edit", name: name),
+                SyncFailure::ConflictDelete(name) => tid!("sync-conflict-delete", name: name),
+                SyncFailure::ConflictOther(name) => tid!("sync-conflict-other", name: name),
+                SyncFailure::Error(reason) => tid!("sync-error", reason: reason),
+            })));
+        }
+    });
     let replaying = use_signal(|| false);
     let mut replay_blocked = use_signal(|| false);
 
@@ -69,6 +81,24 @@ pub fn AppLayout() -> Element {
         replay_blocked.set(false);
     });
 
+    // A new write retries a blocked queue too: the web never sees a connectivity change, and every
+    // add, edit and delete goes through the queue.
+    let queued_len = use_hook(|| std::rc::Rc::new(std::cell::Cell::new(pending_ops.peek().len())));
+    use_effect(move || {
+        let len = pending_ops.read().len();
+        if len > queued_len.replace(len) && *replay_blocked.peek() {
+            replay_blocked.set(false);
+        }
+    });
+
+    let on_landed = use_callback(move |landed: Landed| {
+        store.on_expenses_changed.call(match landed {
+            Landed::Added(c) => ExpenseMutation::Added(c),
+            Landed::Edited(c) => ExpenseMutation::Edited(c),
+            Landed::Deleted(id) => ExpenseMutation::Deleted(id),
+        });
+    });
+
     // Drain the queue when online with pending ops and not already replaying.
     use_effect(move || {
         if is_online() && !pending_ops.read().is_empty() && !replaying() && !replay_blocked() {
@@ -77,11 +107,13 @@ pub fn AppLayout() -> Element {
             let mut resource_version = resource_version;
             replaying.set(true);
             spawn(async move {
-                let completed = replay_queue(pending_ops, conflict_msg).await;
-                if !completed {
+                let end = replay_queue(pending_ops, conflict_msg, on_landed).await;
+                if !end.drained {
                     replay_blocked.set(true);
-                } else {
-                    // Bump version so child page resources re-execute and pick up replayed data.
+                }
+                // Expense ops patched the store as they landed; anything else re-runs the pages'
+                // resources.
+                if end.refetch {
                     resource_version.set(resource_version() + 1);
                 }
                 replaying.set(false);
@@ -117,29 +149,7 @@ pub fn AppLayout() -> Element {
             // Self-gating: BottomDock renders nothing on the routes that have no dock.
             BottomDock {}
         }
-        if let Some(f) = flash() {
-            Toast {
-                msg: f.msg,
-                success: f.success,
-                onclose: move |_| flash.set(None),
-            }
-        }
-        div { class: "sr-only", role: "status", aria_live: "polite", aria_atomic: "true",
-            if let Some(f) = flash().filter(|f| f.success) {
-                "{f.msg}"
-            }
-        }
-        if let Some(failure) = conflict_msg() {
-            Toast {
-                msg: match failure {
-                    SyncFailure::ConflictEdit(name) => tid!("sync-conflict-edit", name: name),
-                    SyncFailure::ConflictDelete(name) => tid!("sync-conflict-delete", name: name),
-                    SyncFailure::ConflictOther(name) => tid!("sync-conflict-other", name: name),
-                    SyncFailure::Error(reason) => tid!("sync-error", reason: reason),
-                },
-                success: false,
-                onclose: move |_| conflict_msg.set(None),
-            }
-        }
+        KeyOfferSheet {}
+        ToastHost {}
     }
 }

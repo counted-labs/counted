@@ -1,4 +1,3 @@
-use api::expenses::expenses_controller::edit_expense;
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use crate::tid;
@@ -12,7 +11,7 @@ use uuid::Uuid;
 use api::recurring::recurring_controller::edit_recurring_expense;
 
 use crate::common::{
-    error_message, format_date, fx_cache, write_queue, Flash, OpKind, ProjectKey, QueuedOp,
+    format_date, fx_cache, write_queue, Flash, OpKind, ProjectKey, QueuedOp,
 };
 use crate::expenses::hooks::use_project_store::ProjectStore;
 use crate::recurring::model::{RecurringPayload, Template};
@@ -33,8 +32,8 @@ use crate::decrypted::{decrypt_expense_payments, pickable_users, user_names};
 #[derive(Props, Clone, PartialEq)]
 pub struct EditExpenseModalProps {
     pub on_close: EventHandler<()>,
-    /// `None` when the op was queued offline - there is no server row to report yet.
-    pub on_edited: EventHandler<Option<ExpenseWithPayments>>,
+    /// The row as the queued edit will leave it, for the store to show before the replay lands.
+    pub on_edited: EventHandler<ExpenseWithPayments>,
     pub expense: Expense,
     pub payments: Vec<Payment>,
     pub users: Vec<User>,
@@ -130,7 +129,7 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
     });
 
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
-    let mut loading = use_signal(|| false);
+    let loading = use_signal(|| false);
     let is_online = use_context::<Signal<bool>>();
     let mut pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
 
@@ -166,6 +165,7 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
     let stored_user_id = props.stored_user_id;
     let on_edited = props.on_edited;
     let on_close_submit = props.on_close;
+    let props_expense = props.expense.clone();
     let currency_for_submit = props.currency.clone();
 
     let on_submit = move |e: FormEvent| {
@@ -242,43 +242,28 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
             edit_request(&key, project_id, &rule, &next, history(&key, actor_id, summary, HistoryAction::Updated)).ok()
         });
 
-        if !is_online() {
-            pending_ops.write().push_back(QueuedOp::new(Uuid::new_v4(), &name_val, OpKind::EditExpense(payload)));
-            write_queue(&pending_ops.read());
-            if rule_update.is_some() {
-                flash.set(Some(Flash::err(tid!("apply-rule-failed"))));
-            }
-            on_edited.call(None);
-            on_close_submit.call(());
-            return;
-        }
-
-        loading.set(true);
-        error_msg.set(None);
-
-        let on_edited = on_edited;
-        let on_close_submit = on_close_submit;
-        spawn(async move {
-            crate::common::project_token::scope(payload.project_id);
-            match edit_expense(Json(payload)).await {
-                Ok(edited) => {
-                    if let Some(req) = rule_update {
-                        crate::common::project_token::scope(req.project_id);
-                        if edit_recurring_expense(Json(req)).await.is_err() {
-                            flash.set(Some(Flash::err(tid!("apply-rule-failed"))));
-                        }
-                        let mut sync = store.sync;
-                        sync.restart();
+        // Online or not, the edit goes through the queue and the sheet closes now, the row showing
+        // the edit as pending until the replay answers with the server's row.
+        let local = local_edit(&props_expense, &payload);
+        pending_ops.write().push_back(QueuedOp::new(Uuid::new_v4(), &name_val, OpKind::EditExpense(payload)));
+        write_queue(&pending_ops.read());
+        match rule_update {
+            Some(_) if !is_online() => flash.set(Some(Flash::err(tid!("apply-rule-failed")))),
+            Some(req) => {
+                // Forever: the sheet closes below, which would cancel a task scoped to it.
+                dioxus::core::spawn_forever(async move {
+                    crate::common::project_token::scope(req.project_id);
+                    if edit_recurring_expense(Json(req)).await.is_err() {
+                        flash.set(Some(Flash::err(tid!("apply-rule-failed"))));
                     }
-                    on_edited.call(Some(edited));
-                    on_close_submit.call(());
-                }
-                Err(e) => {
-                    error_msg.set(Some(error_message(&e)));
-                    loading.set(false);
-                }
+                    let mut sync = store.sync;
+                    sync.restart();
+                });
             }
-        });
+            None => {}
+        }
+        on_edited.call(local);
+        on_close_submit.call(());
     };
 
     rsx! {
@@ -314,6 +299,15 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
 }
 
 // ---- pure helpers ----
+
+/// What the server writes for `edit`: the payload replaced, the author column cleared and no
+/// payment rows, the shares riding in the payload (`expenses_repository::edit_expense`).
+fn local_edit(stored: &Expense, edit: &EditableExpense) -> ExpenseWithPayments {
+    ExpenseWithPayments {
+        expense: Expense { payload: edit.payload.clone(), author_id: None, ..stored.clone() },
+        payments: Vec::new(),
+    }
+}
 
 // Ten arguments, and they stay ten: there is one production caller and one test, so a
 // parameter struct would exist solely to satisfy the lint. Keeping them flat is what makes the
@@ -424,6 +418,19 @@ mod tests {
             None,
         )
         .unwrap()
+    }
+
+    /// The row shown before the replay lands is the one the server will hand back, so the patch
+    /// that follows changes nothing on screen.
+    #[test]
+    fn the_local_edit_is_the_row_the_server_writes() {
+        let stored = crate::common::test_fixtures::make_expense(&test_key(), 7, "Taxi", 12.0, ExpenseType::Expense, "2025-02-01");
+        let edit = build(7, "Pizza", 30.0, &[(1, 30.0)], &[(2, 30.0)]);
+        let local = local_edit(&stored, &edit);
+        assert_eq!(local.expense.payload, edit.payload);
+        assert_eq!((local.expense.id, local.expense.project_id, local.expense.created_at), (7, stored.project_id, stored.created_at));
+        assert_eq!(local.expense.author_id, None, "an edit in the payload format clears the column");
+        assert!(local.payments.is_empty(), "and drops the payment rows");
     }
 
     #[test]

@@ -26,7 +26,10 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import androidx.activity.BackEventCompat
+import androidx.activity.OnBackPressedCallback
 import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -68,11 +71,13 @@ class MainActivity : WryActivity() {
         startActivity(Intent.createChooser(send, null))
     }
 
-    // apply_native_theme in packages/mobile/src/main.rs: the icons follow the chosen theme, not the
-    // system mode values-night/ picked them from.
-    fun setLightStatusBar(light: Boolean) {
+    // apply_native_theme in packages/mobile/src/main.rs: the status and navigation bar icons follow
+    // the chosen theme, not the system mode values-night/ picked them from.
+    fun setLightSystemBars(light: Boolean) {
         runOnUiThread {
-            WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = light
+            val bars = WindowCompat.getInsetsController(window, window.decorView)
+            bars.isAppearanceLightStatusBars = light
+            bars.isAppearanceLightNavigationBars = light
         }
     }
 
@@ -91,6 +96,50 @@ class MainActivity : WryActivity() {
         }
     }
 
+    // Back goes through the AndroidX dispatcher, not WryActivity.onKeyDown: at targetSdk 36 predictive
+    // back is on and the system sends no KEYCODE_BACK at all. The callback is enabled exactly while
+    // the page has armed a history entry (`_dioxusBackArmed`, NavigationSync in
+    // packages/ui/src/common/navigation_sync.rs, reported through `CountedBack.setArmed`), so at the
+    // root no callback is enabled and the system plays its back-to-home preview and finishes.
+    override val handleBackNavigation: Boolean = false
+
+    // The progress callbacks (API 34+, predictive back on) drive the page's in-app shape through
+    // `_countedBackProgress` (PREDICTIVE_BACK_SCRIPT in packages/mobile/src/main.rs): 0..1 with the
+    // swipe edge while the finger moves, -1 when cancelled, 2 on commit. Below API 34, and with
+    // 3-button navigation, only handleOnBackPressed runs and the page plays its usual back.
+    private val back = object : OnBackPressedCallback(false) {
+        override fun handleOnBackStarted(backEvent: BackEventCompat) = backProgress(0f, backEvent.swipeEdge)
+
+        override fun handleOnBackProgressed(backEvent: BackEventCompat) =
+            backProgress(backEvent.progress, backEvent.swipeEdge)
+
+        override fun handleOnBackCancelled() = backProgress(-1f, BackEventCompat.EDGE_LEFT)
+
+        override fun handleOnBackPressed() {
+            val webView = backWebView
+            if (webView != null && webView.canGoBack()) {
+                backProgress(2f, BackEventCompat.EDGE_LEFT)
+                webView.goBack()
+            } else {
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
+            }
+        }
+    }
+    private var backWebView: WebView? = null
+
+    private fun backProgress(progress: Float, edge: Int) {
+        val p = "%.4f".format(Locale.ROOT, progress)
+        backWebView?.evaluateJavascript("window._countedBackProgress&&window._countedBackProgress($p,$edge)", null)
+    }
+
+    inner class BackBridge {
+        @JavascriptInterface
+        fun setArmed(armed: Boolean) {
+            runOnUiThread { back.isEnabled = armed }
+        }
+    }
+
     // The page learns the keyboard's height from one visualViewport resize at the start of the
     // keyboard's slide; this hands it the slide's duration and curve so the open sheet moves with it
     // (`motion` in packages/ui/src/common/keyboard.rs). On the decor view: the WebView has no parent
@@ -98,6 +147,10 @@ class MainActivity : WryActivity() {
     // `durationMillis` ignores the animator scale; 0 ms (animations off) tells the page to snap.
     override fun onWebViewCreate(webView: WebView) {
         super.onWebViewCreate(webView)
+        backWebView = webView
+        // Before wry's first load, so the page's first document already sees it.
+        webView.addJavascriptInterface(BackBridge(), "CountedBack")
+        onBackPressedDispatcher.addCallback(this, back)
         if (Build.VERSION.SDK_INT < 30) return
         val ime = WindowInsetsCompat.Type.ime()
         ViewCompat.setWindowInsetsAnimationCallback(

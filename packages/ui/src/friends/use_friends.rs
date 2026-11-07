@@ -22,6 +22,13 @@ pub struct Friends {
     ls_ctx: Signal<LocalStorageState>,
 }
 
+/// One handle per `use_friends` call: two are the same when they hold the same signals.
+impl PartialEq for Friends {
+    fn eq(&self, other: &Self) -> bool {
+        self.version == other.version
+    }
+}
+
 pub fn use_friends() -> Friends {
     let auth_ctx = use_context::<Signal<Option<Account>>>();
     let account_key = use_context::<Signal<Option<[u8; 32]>>>();
@@ -128,7 +135,7 @@ impl Friends {
     /// "The code matches": the friend read out the code shown, so its new key is pinned.
     pub fn trust_new_key(mut self, row: FriendRow) {
         let Some(key) = row.new_key else { return };
-        crate::common::update_ls_if_changed(self.ls_ctx, |state| friends_service::trust_key(&mut state.friend_keys, row.account_id, &key));
+        crate::common::update_ls_if_changed(self.ls_ctx, |state| friends_service::trust_key(state, row.account_id, &key, row.new_kem_key.as_deref()));
         self.flash.set(Some(Flash::ok(tid!("friends-code-trusted"))));
         self.reload();
     }

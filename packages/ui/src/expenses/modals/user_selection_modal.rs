@@ -13,7 +13,7 @@ use crate::common::{
 use crate::crypto::{claim_label, claim_token};
 use crate::decrypted::{decrypt_user, DecryptedUser};
 use crate::icons::{CloseIcon, LockIcon, ICON_ACTION, ICON_HEADER};
-use crate::participants::Avatar;
+use crate::common::{initials, user_color_class, Avatar, SizeClass};
 use crate::payment_methods::refill_project_copies;
 
 #[derive(PartialEq, Props, Clone)]
@@ -186,7 +186,9 @@ pub fn UserSelectionModal(props: UserSelectionModalProps) -> Element {
     rsx! {
         div {
             id: "user-selection-modal",
+            "data-sheet-detents": "true",
             class: "modal modal-open modal-bottom sm:modal-middle",
+            "data-sheet-locked": if on_close.is_none() { "true" },
             role: "dialog",
             aria_modal: "true",
             aria_labelledby: "user-selection-title",
@@ -241,7 +243,7 @@ pub fn UserSelectionModal(props: UserSelectionModalProps) -> Element {
                                         title: claimed_title,
                                         aria_disabled: "true",
                                         LockIcon { size: ICON_ACTION }
-                                        Avatar { name: user_name.clone(), guest: false }
+                                        Avatar { initials: initials(&user_name), color_class: user_color_class(user_id).to_string(), size: SizeClass::W9 }
                                         span { class: "flex flex-col min-w-0 flex-1",
                                             span { class: "font-semibold truncate", "{user_name}" }
                                             span { class: "text-sm text-base-content/70 truncate", "{claimed_by}" }
@@ -261,7 +263,7 @@ pub fn UserSelectionModal(props: UserSelectionModalProps) -> Element {
                                                 error_key.set(None);
                                             },
                                         }
-                                        Avatar { name: user_name.clone(), guest: false }
+                                        Avatar { initials: initials(&user_name), color_class: user_color_class(user_id).to_string(), size: SizeClass::W9 }
                                         span { class: "flex flex-col min-w-0 flex-1",
                                             span { class: "font-semibold truncate", "{user_name}" }
                                             if is_suggested {
@@ -299,8 +301,11 @@ pub fn UserSelectionModal(props: UserSelectionModalProps) -> Element {
                     }
                 }
             }
-            if let Some(close) = on_close {
-                div { class: "modal-backdrop", onclick: move |_| close.call(()) }
+            // Inert when it cannot be dismissed: Android back clicks it and stays on the project
+            // instead of falling through to the page under it (navigation_sync.rs).
+            match on_close {
+                Some(close) => rsx! { div { class: "modal-backdrop", onclick: move |_| close.call(()) } },
+                None => rsx! { div { class: "modal-backdrop" } },
             }
         }
     }

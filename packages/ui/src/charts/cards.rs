@@ -57,18 +57,18 @@ pub fn StatTiles(
                 Scope::Me => rsx! {
                     div { class: "flex-1 min-w-0 py-3 px-4 flex flex-col gap-0.5",
                         span { class: "text-xs text-base-content/70", {tid!("charts-my-share")} }
-                        span { class: "text-2xl font-extrabold font-display text-gradient-brand leading-tight", {money(my_share, &currency)} }
+                        span { class: "text-2xl font-extrabold font-display text-gradient-brand leading-tight tabular-nums", {money(my_share, &currency)} }
                         span { class: "text-xs text-base-content/70",
                             {tid!("charts-share-of-total", pct: percent(my_share, group_total), total: money(group_total, &currency))}
                         }
                     }
                     div { class: "flex-1 min-w-0 py-3 px-4 flex flex-col gap-0.5",
                         span { class: "text-xs text-base-content/70", {tid!("charts-i-paid")} }
-                        span { class: "text-2xl font-extrabold font-display text-primary leading-tight", {money(my_paid, &currency)} }
+                        span { class: "text-2xl font-extrabold font-display text-primary leading-tight tabular-nums", {money(my_paid, &currency)} }
                         if diff.round() > 0.0 {
-                            span { class: "text-xs font-semibold text-success", {tid!("charts-paid-more", amount: money(diff, &currency))} }
+                            span { class: "text-xs font-semibold text-owed tabular-nums", {tid!("charts-paid-more", amount: money(diff, &currency))} }
                         } else if diff.round() < 0.0 {
-                            span { class: "text-xs font-semibold text-error", {tid!("charts-paid-less", amount: money(-diff, &currency))} }
+                            span { class: "text-xs font-semibold text-owe tabular-nums", {tid!("charts-paid-less", amount: money(-diff, &currency))} }
                         } else {
                             span { class: "text-xs text-base-content/70", {tid!("charts-paid-even")} }
                         }
@@ -332,7 +332,7 @@ pub fn RunningTotalCard(
     rsx! {
         ChartCard { title: tid!("charts-running-title"), description: tid!("charts-running-desc", date: since),
             div { class: "flex justify-between items-baseline gap-2 text-xs",
-                span { class: "text-[22px] font-extrabold font-display text-gradient-brand leading-tight", {money(total, &currency)} }
+                span { class: "text-[1.375rem] font-extrabold font-display text-gradient-brand leading-tight", {money(total, &currency)} }
                 span { class: "text-base-content/70 tabular-nums text-right", "{per_bucket}" }
             }
             LineChart {
@@ -388,7 +388,7 @@ pub fn PaidVsShareCard(people: Vec<PersonView>, currency: String) -> Element {
                                     span { class: "h-1.5 rounded-r-[3px] bg-base-content/30", style: "width: {p.share / max * 100.0:.1}%;" }
                                 }
                                 span { class: "text-right text-xs leading-tight whitespace-nowrap",
-                                    b { class: if net.round() >= 0.0 { "block text-sm text-success" } else { "block text-sm text-error" },
+                                    b { class: if net.round() >= 0.0 { "block text-sm text-owed tabular-nums" } else { "block text-sm text-owe tabular-nums" },
                                         {signed_money(net, &currency)}
                                     }
                                     span { class: "text-base-content/70",
@@ -436,7 +436,7 @@ pub fn ProjectTotalsCard(groups: Vec<CurrencyTotals>) -> Element {
                         div { class: if i == 0 { "flex flex-col gap-2" } else { "flex flex-col gap-2 border-t border-base-300 pt-2.5" },
                             span { class: "text-xs font-semibold text-base-content/70", "{group.currency}" }
                             for (name , total) in group.rows.iter() {
-                                div { class: "grid grid-cols-[6.5rem_1fr] items-center gap-2 text-[11px]",
+                                div { class: "grid grid-cols-[6.5rem_1fr] items-center gap-2 text-[0.6875rem]",
                                     span { class: "truncate font-medium", "{name}" }
                                     span { class: "flex items-center gap-1.5 min-w-0",
                                         span { class: "h-4 rounded-r bg-primary shrink-0", style: "width: max(2px, {total / max * 72.0:.1}%);" }

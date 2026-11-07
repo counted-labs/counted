@@ -1,0 +1,2 @@
+"NSCameraUsageDescription" = "Bir fişi okuyup harcamayı önceden doldurmak için. Fotoğraf telefonunda analiz edilir, asla gönderilmez ve saklanmaz.";
+"NSPhotoLibraryUsageDescription" = "Daha önce fotoğrafını çektiğin bir fişi okumak için. Görüntü telefonunda analiz edilir, asla gönderilmez ve saklanmaz.";

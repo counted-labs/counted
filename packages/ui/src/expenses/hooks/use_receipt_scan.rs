@@ -3,7 +3,7 @@
 use dioxus::prelude::*;
 
 use crate::common::{
-    capture_and_scan, haptic, scan_error_key, scanner_available, Haptic, ScanError, ScanSource,
+    capture_and_scan, haptic, scan_error_key, scanner_available, Flash, Haptic, ScanError, ScanSource,
 };
 use crate::expenses::helpers::scan_prefill::{prefill_from_scan, ScanPrefill};
 
@@ -11,8 +11,6 @@ use crate::expenses::helpers::scan_prefill::{prefill_from_scan, ScanPrefill};
 pub struct ReceiptScan {
     /// What the camera produced, cleared when the modal closes.
     pub prefill: Signal<Option<ScanPrefill>>,
-    /// A message key, or `None`. Rendered through the existing `Toast`.
-    pub error: Signal<Option<&'static str>>,
     busy: Signal<bool>,
     pub start: Callback<ScanSource>,
 }
@@ -32,7 +30,7 @@ impl ReceiptScan {
 /// `open_modal` is raised on success, so a scan lands the user directly in the prefilled form.
 pub fn use_receipt_scan(mut open_modal: Signal<bool>) -> ReceiptScan {
     let mut prefill: Signal<Option<ScanPrefill>> = use_signal(|| None);
-    let mut error: Signal<Option<&'static str>> = use_signal(|| None);
+    let mut flash = use_context::<Signal<Option<Flash>>>();
     let mut busy = use_signal(|| false);
 
     let start = use_callback(move |source: ScanSource| {
@@ -42,7 +40,6 @@ pub fn use_receipt_scan(mut open_modal: Signal<bool>) -> ReceiptScan {
             return;
         }
         busy.set(true);
-        error.set(None);
         haptic(Haptic::Light);
 
         spawn(async move {
@@ -58,15 +55,12 @@ pub fn use_receipt_scan(mut open_modal: Signal<bool>) -> ReceiptScan {
                 // `Unsupported` cannot be reached from a button that only renders when a scanner
                 // is installed.
                 Err(ScanError::Cancelled) | Err(ScanError::Unsupported) => {}
-                Err(e) => {
-                    error.set(Some(scan_error_key(e)));
-                    haptic(Haptic::Error);
-                }
+                Err(e) => flash.set(Some(Flash::err(crate::tid!(scan_error_key(e))))),
             }
         });
     });
 
-    ReceiptScan { prefill, error, busy, start }
+    ReceiptScan { prefill, busy, start }
 }
 
 #[cfg(test)]

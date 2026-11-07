@@ -29,6 +29,20 @@ fn plist_string(plist: &str, key: &str) -> Option<String> {
     Some(rest[open..open + close].trim().to_string())
 }
 
+/// The `<string>` items of the `<array>` following a `<key>`.
+fn plist_array(plist: &str, key: &str) -> Vec<String> {
+    let at = plist.find(&format!("<key>{key}</key>")).unwrap_or_else(|| panic!("no {key}"));
+    let rest = &plist[at..];
+    let open = rest.find("<array>").expect("an array") + "<array>".len();
+    let close = rest[open..].find("</array>").expect("closing tag");
+    rest[open..open + close]
+        .split("<string>")
+        .skip(1)
+        .filter_map(|s| s.split("</string>").next())
+        .map(|s| s.trim().to_string())
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -44,12 +58,36 @@ mod tests {
         assert!(
             !plist.contains("<key>UILaunchStoryboardName</key>"),
             "UILaunchStoryboardName is back. dx generates no storyboard, so iOS paints black on \
-             every cold start; use <key>UILaunchScreen</key><dict/> instead."
+             every cold start; use the <key>UILaunchScreen</key> dict instead."
         );
         assert!(
             plist.contains("<key>UILaunchScreen</key>"),
             "no UILaunchScreen key: iOS has nothing to paint before the first frame."
         );
+    }
+
+    /// The launch screen paints the asset catalog's `LaunchBackground`, which must be the colour wry
+    /// paints next (`with_background_color` in packages/mobile/src/main.rs), light and dark, or a
+    /// cold start shows a seam between the two.
+    #[test]
+    fn the_launch_colour_is_named_and_matches_the_webview_background() {
+        let plist = read(PLIST);
+        let at = plist.find("<key>UILaunchScreen</key>").expect("UILaunchScreen");
+        assert_eq!(plist_string(&plist[at..], "UIColorName").as_deref(), Some("LaunchBackground"));
+
+        let colorset = read("../mobile/ios/LaunchBackground.colorset/Contents.json");
+        let channels: Vec<u8> = colorset
+            .split("\"0x")
+            .skip(1)
+            .map(|s| u8::from_str_radix(&s[..2], 16).expect("hex channel"))
+            .collect();
+        assert_eq!(channels.len(), 6, "light then dark, red green blue: {channels:?}");
+        assert!(colorset.contains("\"value\" : \"dark\""), "the second colour is the dark appearance");
+        let main = read("../mobile/src/main.rs");
+        for rgb in channels.chunks(3) {
+            let tuple = format!("({}, {}, {}, 255)", rgb[0], rgb[1], rgb[2]);
+            assert!(main.contains(&tuple), "main.rs paints no {tuple}: the launch colour and wry's differ");
+        }
     }
 
     /// `CFBundleExecutable` names the binary inside `Mobile.app`, which dx derives from the cargo
@@ -97,6 +135,43 @@ mod tests {
         let reason = plist_string(&read(PLIST), "NSCameraUsageDescription")
             .expect("NSCameraUsageDescription: iOS terminates the app without it");
         assert!(reason.len() > 20, "the OS shows this string verbatim: {reason:?}");
+    }
+
+    /// Every shipped locale translates both permission prompts, and French says exactly what the
+    /// plist's fallback says. A missing table shows the French prompt; a missing key, the same.
+    #[test]
+    fn every_locale_translates_the_permission_prompts() {
+        let plist = read(PLIST);
+        let strings = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../mobile/ios/strings");
+        let mut locales = 0;
+        for entry in std::fs::read_dir(&strings).expect("ios/strings") {
+            let dir = entry.expect("entry").path();
+            let table = std::fs::read_to_string(dir.join("InfoPlist.strings"))
+                .unwrap_or_else(|_| panic!("{} has no InfoPlist.strings", dir.display()));
+            for key in ["NSCameraUsageDescription", "NSPhotoLibraryUsageDescription"] {
+                let line = table
+                    .lines()
+                    .find(|l| l.starts_with(&format!("\"{key}\" = \"")))
+                    .unwrap_or_else(|| panic!("{} lacks {key}", dir.display()));
+                let value = line.split(" = \"").nth(1).and_then(|v| v.strip_suffix("\";")).expect("a value");
+                assert!(value.len() > 20 && !value.contains('"'), "{} {key}: {value:?}", dir.display());
+                if dir.ends_with("fr.lproj") {
+                    assert_eq!(Some(value.to_string()), plist_string(&plist, key), "fr {key} differs from Info.plist");
+                }
+            }
+            locales += 1;
+        }
+        let ftl = std::fs::read_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("i18n")).expect("i18n").count();
+        assert_eq!(locales, ftl, "one .lproj per app language");
+    }
+
+    /// The layout is one portrait column with no left/right safe-area insets, so the iPhone is
+    /// locked to portrait; the iPad keeps all four, which multitasking requires.
+    #[test]
+    fn the_iphone_is_portrait_only_and_the_ipad_rotates() {
+        let plist = read(PLIST);
+        assert_eq!(plist_array(&plist, "UISupportedInterfaceOrientations"), ["UIInterfaceOrientationPortrait"]);
+        assert_eq!(plist_array(&plist, "UISupportedInterfaceOrientations~ipad").len(), 4);
     }
 
     /// The other branch of the same sheet: "Choose Photo" reads the library.

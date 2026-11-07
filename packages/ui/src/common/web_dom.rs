@@ -35,15 +35,26 @@ fn system_dark_query() -> Option<web_sys::MediaQueryList> {
     web_sys::window()?.match_media("(prefers-color-scheme: dark)").ok().flatten()
 }
 
+/// A finger, not a mouse: a field focused by script there raises the on-screen keyboard.
+pub fn coarse_pointer() -> bool {
+    web_sys::window()
+        .and_then(|w| w.match_media("(pointer: coarse)").ok().flatten())
+        .is_some_and(|q| q.matches())
+}
+
 fn paint_theme(theme: crate::common::Theme) {
-    let system_dark = system_dark_query().is_some_and(|q| q.matches());
-    if let Some(el) = document().and_then(|d| d.document_element()) {
-        let _ = el.set_attribute("data-theme", crate::common::data_theme(theme.is_dark(system_dark)));
+    let dark = theme.is_dark(system_dark_query().is_some_and(|q| q.matches()));
+    let Some(doc) = document() else { return };
+    if let Some(el) = doc.document_element() {
+        let _ = el.set_attribute("data-theme", crate::common::data_theme(dark));
+    }
+    if let Ok(Some(meta)) = doc.query_selector("meta[name=\"theme-color\"]") {
+        let _ = meta.set_attribute("content", crate::common::theme_color(dark));
     }
 }
 
-/// `<html data-theme>`, plus a `prefers-color-scheme` listener installed on the first call and
-/// leaked, which repaints while the choice is System.
+/// `<html data-theme>` and the `theme-color` meta, plus a `prefers-color-scheme` listener installed
+/// on the first call and leaked, which repaints while the choice is System.
 pub fn set_theme(theme: crate::common::Theme) {
     let first = THEME.with(|t| t.replace(Some(theme))).is_none();
     paint_theme(theme);

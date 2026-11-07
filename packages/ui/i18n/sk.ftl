@@ -5,6 +5,9 @@
 
 loading = Načítava sa…
 cancel = Zrušiť
+discard-title = Zahodiť zmeny?
+discard-message = Zadané údaje sa stratia.
+discard = Zahodiť
 confirm = Potvrdiť
 retry = Skúsiť znova
 delete = Odstrániť
@@ -445,6 +448,7 @@ reimbursements-empty-title = Všetko vyrovnané!
 reimbursements-empty-hint = Návrhy na vyrovnanie sa tu objavia, keď účty nesedia
 reimbursement-owes = { $debtor } dlhuje { $creditor }
 reimbursement-record = Vyrovnať
+settlement-recorded = Vyrovnanie zaznamenané.
 reimbursement-pay-with = Zaplatiť
 reimbursement-pay-shared-by = Zdieľa { $name } - pred odoslaním skontroluj meno príjemcu, ktoré zobrazuje tvoja aplikácia.
 reimbursement-pay-title = Zaplatiť { $name }
@@ -480,7 +484,6 @@ move-note-group = Výdavok opustí { $project } pre všetkých členov a bilanci
 move-banner = Z { $from } do { $to }
 move-submit = Presunúť
 move-done = Výdavok presunutý do { $project }
-move-delete-failed = Výdavok bol pridaný do druhého projektu, ale je stále v { $project }: vymaž ho tam.
 history-expense-moved = Výdavok presunutý do iného projektu: { $name }
 personal-badge = Osobné
 move-members =
@@ -871,6 +874,11 @@ edit-project-no-identity = Ešte si nevybral(a), kto si
 edit-project-switch = Zmeniť
 edit-project-choose = Vybrať
 invite-failed = Tieto pozvánky sa nepodarilo odoslať: { $emails }
+invite-waiting = Títo priatelia musia raz otvoriť Counted, kým ich bude možné pozvať: { $emails }
+key-offer-title = Iný kľúč pre { $name }
+key-offer-body = Toto zariadenie má k tomuto projektu iný kľúč, ktorý ho tu nikdy neotvoril.
+key-offer-choices = Použiť tento kľúč: projekt sa otvorí kľúčom z tohto odkazu alebo pozvánky. Zrušiť: zariadenie si ponechá svoj súčasný kľúč a nič sa nezmení.
+key-offer-use = Použiť tento kľúč
 invite-again = Pozvať znova
 friend-picker-title = Pridať priateľov
 user-selection-invited-hint = { $email } ťa pozval(a) do „{ $project }“.
@@ -999,6 +1007,14 @@ home-remind-message = Malá pripomienka: v { $project } ešte zostávajú vyrovn
 home-row-owed = dlhujú ti
 home-row-owe = dlhuješ
 home-row-settled = Vyrovnané
+home-row-quits = U teba vyrovnané
+home-row-pending =
+    { $count ->
+        [one] { $count } čakajúca platba
+        [few] { $count } čakajúce platby
+        [many] { $count } čakajúcej platby
+       *[other] { $count } čakajúcich platieb
+    }
 home-totals-partial = Bez projektov bez výmenného kurzu
 error-account-key-changed = Kľúč tvojho účtu sa zmenil na inom zariadení. Prihlás sa znova a pokračuj.
 settings-security = Zabezpečenie

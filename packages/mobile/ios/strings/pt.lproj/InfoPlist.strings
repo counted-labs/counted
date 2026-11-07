@@ -1,0 +1,2 @@
+"NSCameraUsageDescription" = "Para ler um recibo e preencher a despesa. A fotografia é analisada no teu telemóvel, nunca é enviada nem guardada.";
+"NSPhotoLibraryUsageDescription" = "Para ler um recibo já fotografado. A imagem é analisada no teu telemóvel, nunca é enviada nem guardada.";

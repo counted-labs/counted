@@ -5,6 +5,9 @@
 
 loading = Qed jitgħabba…
 cancel = Ikkanċella
+discard-title = Tarmi l-bidliet?
+discard-message = Dak li daħħalt jintilef.
+discard = Armi
 confirm = Ikkonferma
 retry = Erġa' pprova
 delete = Ħassar
@@ -445,6 +448,7 @@ reimbursements-empty-title = Kollox saldat!
 reimbursements-empty-hint = Suġġerimenti ta' saldu jidhru hawn meta l-kontijiet ma jibbilanċjawx
 reimbursement-owes = { $debtor } għandu jagħti lil { $creditor }
 reimbursement-record = Salda
+settlement-recorded = Ħlas irreġistrat.
 reimbursement-pay-with = Ħallas
 reimbursement-pay-shared-by = Maqsum minn { $name } - iċċekkja l-isem tar-riċevitur li turi l-app tiegħek qabel tibgħat.
 reimbursement-pay-title = Ħallas lil { $name }
@@ -480,7 +484,6 @@ move-note-group = In-nefqa toħroġ minn { $project } għall-membri kollha, u l-
 move-banner = Minn { $from } għal { $to }
 move-submit = Mexxi
 move-done = In-nefqa tmexxiet għal { $project }
-move-delete-failed = In-nefqa ġiet miżjuda mal-proġett l-ieħor iżda għadha f’{ $project }: ħassarha hemm.
 history-expense-moved = In-nefqa tmexxiet għal proġett ieħor: { $name }
 personal-badge = Personali
 move-members =
@@ -871,6 +874,11 @@ edit-project-no-identity = Għadek ma għażiltx min int
 edit-project-switch = Ibdel
 edit-project-choose = Agħżel
 invite-failed = Dawn l-istediniet ma setgħux jintbagħtu: { $emails }
+invite-waiting = Dawn il-ħbieb iridu jiftħu Counted darba qabel ma jkunu jistgħu jiġu mistiedna: { $emails }
+key-offer-title = Ċavetta oħra għal { $name }
+key-offer-body = Dan l-apparat għandu ċavetta oħra għal dan il-proġett, li qatt ma fetħitu hawn.
+key-offer-choices = Uża din iċ-ċavetta: il-proġett jinfetaħ biċ-ċavetta minn din il-link jew stedina. Ikkanċella: l-apparat iżomm iċ-ċavetta attwali tiegħu u xejn ma jinbidel.
+key-offer-use = Uża din iċ-ċavetta
 invite-again = Erġa' stieden
 friend-picker-title = Żid ħbieb
 user-selection-invited-hint = { $email } stiednek f'“{ $project }”.
@@ -999,6 +1007,14 @@ home-remind-message = Tfakkira żgħira: għad hemm rimborżi x’jitħallsu f�
 home-row-owed = għandek tieħu
 home-row-owe = għandek tagħti
 home-row-settled = Imħallas
+home-row-quits = Lest min-naħa tiegħek
+home-row-pending =
+    { $count ->
+        [one] { $count } ħlas pendenti
+        [few] { $count } ħlasijiet pendenti
+        [many] { $count } ħlas pendenti
+       *[other] { $count } ħlas pendenti
+    }
 home-totals-partial = Mingħajr proġetti mingħajr rata tal-kambju
 error-account-key-changed = Iċ-ċavetta tal-kont tiegħek inbidlet fuq apparat ieħor. Erġa' idħol biex tkompli.
 settings-security = Sigurtà

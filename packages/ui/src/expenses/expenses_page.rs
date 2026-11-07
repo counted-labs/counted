@@ -1,15 +1,15 @@
 use dioxus::prelude::*;
 use crate::tid;
-use shared::{ExpenseType, ExpenseWithPayments, ProjectDto, ProjectStatus, ReimbursementSuggestion, User};
+use shared::{ExpenseType, ProjectDto, ProjectStatus, ReimbursementSuggestion, User};
 use std::collections::VecDeque;
 use uuid::Uuid;
 
 use super::helpers::export;
 use crate::common::persist::is_demo;
 use crate::common::{
-    copy_text, is_mobile, leave_project_and_forget, pending, read_from_ls, InviteRetry,
+    copy_text, is_mobile, key_offer_shown, leave_project_and_forget, pending, read_from_ls, InviteRetry,
     remove_project, scheme_link_for, share_link_for, share_text, update_ls, update_project_fresh, write_queue, write_to_ls, AppHeader, AvatarGroup, ConfirmModal, Flash,
-    LocalStorageState, ProjectKey, PullToRefresh, QueuedOp, SizeClass, Toast, LEAVE_CONFIRM_MESSAGE,
+    LocalStorageState, ProjectKey, PullToRefresh, QueuedOp, SizeClass, LEAVE_CONFIRM_MESSAGE,
     LEAVE_CONFIRM_TITLE,
 };
 use crate::common::offline_queue::drop_project_ops;
@@ -36,10 +36,9 @@ use crate::expenses::project_states::{
     ExpensesSkeleton, MissingKeyScreen, NoLocalDataScreen, Spinner,
 };
 use crate::expenses::project_stats::ProjectStats;
-use crate::expenses::tabs::expenses_tab::ExpenseMutation;
 use crate::expenses::tabs::project_tabs::{tab_id, ProjectTabs, Tab, TABPANEL_ID};
 use crate::expenses::{
-    AddExpenseModal, BalanceTab, EditProjectModal, ExpensesTab, ReimbursementsTab,
+    AddExpenseModal, BalanceTab, EditProjectModal, ExpensesTab, QueuedAdd, ReimbursementsTab,
     UserSelectionModal,
 };
 use crate::route::Route;
@@ -62,12 +61,20 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
     let mut ls_ctx = use_context::<Signal<LocalStorageState>>();
     let mut flash = use_context::<Signal<Option<Flash>>>();
     let auth_ctx = use_context::<Signal<Option<shared::Account>>>();
-    let mut copy_error: Signal<Option<String>> = use_signal(|| None);
-    let mut active_tab = use_signal(|| Tab::Expenses);
+    let mut stored_tab = use_context::<ProjectStore>().tab;
+    let active_tab = move || stored_tab().filter(|(id, _)| *id == project_id).map_or(Tab::Expenses, |(_, t)| t);
+    let mut select_tab = move |t: Tab| stored_tab.set(Some((project_id, t)));
+    // The iOS bar's "+": the add actions live on the expenses tab, so it is brought up first.
+    let add_request = use_signal(|| false);
+    use_effect(move || {
+        if add_request() {
+            select_tab(Tab::Expenses);
+        }
+    });
     use_effect(move || {
         if *OPEN_REIMBURSEMENTS.peek() == Some(project_id) {
             *OPEN_REIMBURSEMENTS.write() = None;
-            active_tab.set(Tab::Reimbursements);
+            select_tab(Tab::Reimbursements);
         }
     });
     let mut show_transfer_modal = use_signal(|| false);
@@ -238,7 +245,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
             if copy_text(&url).await {
                 flash.set(Some(Flash::ok(tid!("link-copied"))));
             } else {
-                copy_error.set(Some(tid!("copy-link-failed")));
+                flash.set(Some(Flash::err(tid!("copy-link-failed"))));
             }
         });
     }));
@@ -247,6 +254,8 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
 
     rsx! {
         div { class: "container app-container bg-base-100 overflow-auto p-4 pb-36 max-w-md w-full mx-auto flex flex-col gap-4",
+            // Each tab keeps its own scroll offset (page_transition.rs).
+            "data-scroll-key": tab_id(active_tab()),
             PullToRefresh {
                 on_refresh: move |_| {
                     sync.restart();
@@ -282,6 +291,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                 on_counted: counted.is_some().then(|| EventHandler::new(move |on: bool| set_counted(project_id, on))),
                 on_counted_groups: personal.then(|| EventHandler::new(move |_| show_counted_groups.set(true))),
                 security,
+                add_open: add_request,
             }
 
             // The rotated screen's "Open a link": a new key that passes §8.4 replaces the held one.
@@ -333,17 +343,24 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
             if let Some(retry) = invite_retry().filter(|r| r.project_id == project_id) {
                 div { role: "alert", id: "invite-retry", class: "alert alert-warning alert-soft text-sm items-start",
                     div { class: "flex flex-col gap-2 flex-1",
-                        span { {tid!("invite-failed", emails: invitee_emails(&retry.invitees))} }
-                        button {
-                            id: "invite-retry-again",
-                            r#type: "button",
-                            class: "btn btn-sm self-start",
-                            onclick: move |_| {
-                                retry_invitees.set(retry.invitees.clone());
-                                invite_retry.set(None);
-                                show_invite_modal.set(true);
-                            },
-                            {tid!("invite-again")}
+                        if !retry.unsent.failed.is_empty() {
+                            span { {tid!("invite-failed", emails: invitee_emails(&retry.unsent.failed))} }
+                        }
+                        if !retry.unsent.waiting.is_empty() {
+                            span { id: "invite-waiting", {tid!("invite-waiting", emails: invitee_emails(&retry.unsent.waiting))} }
+                        }
+                        if !retry.unsent.failed.is_empty() {
+                            button {
+                                id: "invite-retry-again",
+                                r#type: "button",
+                                class: "btn btn-sm self-start",
+                                onclick: move |_| {
+                                    retry_invitees.set(retry.unsent.failed.clone());
+                                    invite_retry.set(None);
+                                    show_invite_modal.set(true);
+                                },
+                                {tid!("invite-again")}
+                            }
                         }
                     }
                     button {
@@ -421,7 +438,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                                     {tid!("demo-start-own")}
                                 }
                             }
-                        } else if uid.is_none() {
+                        } else if uid.is_none() && key_offer_shown().is_none() {
                             UserSelectionModal { users: pickable.clone(), project_id }
                         } else if show_switch() {
                             UserSelectionModal {
@@ -476,7 +493,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                         if !personal {
                             ProjectTabs {
                                 active: active_tab(),
-                                on_select: move |t| active_tab.set(t),
+                                on_select: select_tab,
                             }
                         }
 
@@ -495,6 +512,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                                     on_expenses_changed: move |m| on_expenses_changed.call(m),
                                     ledgers,
                                     ledgers_loading,
+                                    add_request,
                                 }
                             },
                             Tab::Balance => rsx! {
@@ -536,13 +554,10 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                                         show_transfer_modal.set(false);
                                         transfer.set(None);
                                     },
-                                    on_created: move |created: Option<ExpenseWithPayments>| {
+                                    on_created: move |_: Option<QueuedAdd>| {
                                         show_transfer_modal.set(false);
                                         transfer.set(None);
-                                        on_expenses_changed.call(match created {
-                                            Some(c) => ExpenseMutation::Added(c),
-                                            None => ExpenseMutation::Queued,
-                                        });
+                                        flash.set(Some(Flash::ok(tid!("settlement-recorded"))));
                                     },
                                     project_id,
                                     users: pickable_users(Some(&key), &user_list, &[payer_id, debtor_id]),
@@ -613,13 +628,6 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                             ExpensesSkeleton {}
                         }
                     }
-                }
-            }
-
-            if let Some(msg) = copy_error() {
-                Toast {
-                    msg,
-                    onclose: move |_| copy_error.set(None),
                 }
             }
 

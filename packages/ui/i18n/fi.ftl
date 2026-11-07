@@ -5,6 +5,9 @@
 
 loading = Ladataan…
 cancel = Peruuta
+discard-title = Hylätäänkö muutokset?
+discard-message = Syöttämäsi tiedot menetetään.
+discard = Hylkää
 confirm = Vahvista
 retry = Yritä uudelleen
 delete = Poista
@@ -441,6 +444,7 @@ reimbursements-empty-title = Kaikki tasattu!
 reimbursements-empty-hint = Tasausehdotukset näkyvät tässä, kun tilit eivät täsmää
 reimbursement-owes = { $debtor } on velkaa { $creditor }
 reimbursement-record = Tasaa
+settlement-recorded = Tasaus kirjattu.
 reimbursement-pay-with = Maksa
 reimbursement-pay-shared-by = Jakanut { $name } - tarkista sovelluksesi näyttämä vastaanottajan nimi ennen lähettämistä.
 reimbursement-pay-title = Maksa { $name }
@@ -476,7 +480,6 @@ move-note-group = Kulu poistuu projektista { $project } kaikilta jäseniltä, ja
 move-banner = { $from } → { $to }
 move-submit = Siirrä
 move-done = Kulu siirretty projektiin { $project }
-move-delete-failed = Kulu lisättiin toiseen projektiin, mutta se on yhä projektissa { $project }: poista se sieltä.
 history-expense-moved = Kulu siirretty toiseen projektiin: { $name }
 personal-badge = Oma
 move-members =
@@ -853,6 +856,11 @@ edit-project-no-identity = Et ole vielä valinnut, kuka olet
 edit-project-switch = Vaihda
 edit-project-choose = Valitse
 invite-failed = Näitä kutsuja ei voitu lähettää: { $emails }
+invite-waiting = Näiden ystävien täytyy avata Counted kerran, ennen kuin heidät voi kutsua: { $emails }
+key-offer-title = Eri avain projektille { $name }
+key-offer-body = Tällä laitteella on tähän projektiin toinen avain, joka ei ole koskaan avannut sitä täällä.
+key-offer-choices = Käytä tätä avainta: projekti avautuu tämän linkin tai kutsun avaimella. Peruuta: laite pitää nykyisen avaimensa, eikä mikään muutu.
+key-offer-use = Käytä tätä avainta
 invite-again = Kutsu uudelleen
 friend-picker-title = Lisää kavereita
 user-selection-invited-hint = { $email } kutsui sinut projektiin ”{ $project }”.
@@ -981,6 +989,12 @@ home-remind-message = Pieni muistutus: projektissa { $project } on vielä maksam
 home-row-owed = sinulle velkaa
 home-row-owe = olet velkaa
 home-row-settled = Selvitetty
+home-row-quits = Olet sujut
+home-row-pending =
+    { $count ->
+        [one] { $count } takaisinmaksu avoinna
+       *[other] { $count } takaisinmaksua avoinna
+    }
 home-totals-partial = Ilman projekteja, joilla ei ole vaihtokurssia
 error-account-key-changed = Tilisi avain vaihtui toisella laitteella. Kirjaudu uudelleen jatkaaksesi.
 settings-security = Turvallisuus

@@ -13,7 +13,7 @@ use crate::route::Route;
 pub fn LegalNoticePage() -> Element {
     rsx! {
         document::Link { rel: "canonical", href: format!("{APP_BASE_URL}{}", Route::LegalNoticePage {}) }
-        div { class: "container app-container bg-base-100 overflow-auto p-4 max-w-md mx-auto flex flex-col gap-4",
+        div { class: "container app-container bg-base-100 overflow-auto p-4 pb-24 max-w-md mx-auto flex flex-col gap-4",
             AppHeader {
                 title: tid!("nav-legal"),
                 back_button_route: Route::ProjectsPage {},

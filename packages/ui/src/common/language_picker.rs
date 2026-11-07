@@ -8,7 +8,7 @@ use crate::preferences::push_language;
 /// Language selector - a bare labelled `<select>`, with no card or menu chrome of its own, so the
 /// settings page can put it inside a `fieldset` without fighting a second container.
 ///
-/// A plain `<select>`, not a `DropdownButton`: the list is long enough that the OS picker is the
+/// A plain `<select>`, not a sheet of rows: the list is long enough that the OS picker is the
 /// better control on a phone, and it sidesteps the iOS `:focus-within` dropdown problem entirely.
 /// Each option is labelled in its own language - someone looking for German scans for "Deutsch".
 /// The daisyUI class goes on the wrapping `<label>`, which is what joins the caption to the control.

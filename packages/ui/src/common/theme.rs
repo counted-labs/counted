@@ -15,6 +15,22 @@ use crate::common::{haptic, Haptic};
 
 const THEME_KEY: &str = "counted_theme";
 
+/// `assets/boot.js`, the one blocking script: `data-theme` (and the web's `theme-color` meta) from
+/// the stored choice before first paint, `window.countedTheme` with the System listener, the
+/// passive `touchstart` that gives Safari its `:active`, and the capture-phase `scroll` listener
+/// that toggles `.nav-material.is-scrolled` (no Dioxus `onscroll`: a bridge call per frame on
+/// mobile). The web loads it same-origin with `document::Script` (CSP `'self'`); mobile inlines
+/// the same source in its head script, where the theme comes from Rust and `countedTheme` is called
+/// right after. It reads the store `write_json` writes here, so the tests pin that format.
+/// Unminified, so the served bytes are the source's and `BOOT_JS_INTEGRITY` can pin them: nginx's
+/// `Integrity-Policy` refuses a script without `integrity`, and a no-cors one even with it, so the
+/// web tag also carries `crossorigin` (docs/dioxus-overrides.md §17).
+pub const BOOT_JS: Asset = asset!("/assets/boot.js", AssetOptions::js().with_minify(false));
+pub const BOOT_JS_INTEGRITY: &str = "sha384-zVxYHLdNxiCgt0m9q8+BtL19oRxh4K3Dmb7v0zy2EcHMYcPbM0MCjq6KwBhtvzr/";
+/// `assets/native-feel.css`, linked by web and mobile between tailwind.css and their main.css.
+pub const NATIVE_FEEL_CSS: Asset = asset!("/assets/native-feel.css");
+pub const BOOT_JS_SOURCE: &str = include_str!("../../assets/boot.js");
+
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum Theme {
@@ -60,6 +76,16 @@ pub fn data_theme(dark: bool) -> &'static str {
     }
 }
 
+/// The `theme-color` meta of the web build (Safari's toolbar, Android's status bar): `base-200`
+/// in sRGB, the page's ground, the same as Android's `windowBackground`.
+pub fn theme_color(dark: bool) -> &'static str {
+    if dark {
+        "#1B221F"
+    } else {
+        "#F4F8F6"
+    }
+}
+
 /// A store of its own rather than a field of `LocalStorageState`: a value a newer build wrote fails
 /// to parse here alone and reads as Light, instead of failing the blob that holds the keys.
 pub fn stored_theme() -> Theme {
@@ -76,8 +102,8 @@ pub fn set_native_theme(apply: NativeTheme) {
     let _ = NATIVE.set(apply);
 }
 
-/// Sets `<html data-theme>` and the native chrome. On mobile the head script defines
-/// `countedTheme`, which owns the `prefers-color-scheme` listener.
+/// Sets `<html data-theme>` and the native chrome. On mobile `countedTheme` (boot.js, in the head
+/// script) owns the `prefers-color-scheme` listener.
 pub fn apply_theme(theme: Theme) {
     #[cfg(target_arch = "wasm32")]
     crate::common::web_dom::set_theme(theme);
@@ -97,7 +123,7 @@ pub fn use_theme_choice() -> Signal<Theme> {
 }
 
 pub fn choose_theme(mut choice: Signal<Theme>, theme: Theme) {
-    haptic(Haptic::Light);
+    haptic(Haptic::Selection);
     choice.set(theme);
     write_json(THEME_KEY, "theme", &theme);
     apply_theme(theme);
@@ -112,6 +138,35 @@ mod tests {
         assert_eq!(Theme::default(), Theme::Light);
         assert_eq!(serde_json::from_str::<Theme>("\"system\"").unwrap(), Theme::System);
         assert_eq!(serde_json::to_string(&Theme::Dark).unwrap(), "\"dark\"");
+    }
+
+    #[test]
+    fn boot_js_reads_the_store_this_module_writes() {
+        assert!(BOOT_JS_SOURCE.contains(&format!("JSON.parse(localStorage.getItem('{THEME_KEY}'))")));
+        for theme in [Theme::Dark, Theme::System] {
+            assert_eq!(serde_json::to_string(&theme).unwrap(), format!("\"{}\"", theme.as_str()));
+            assert!(BOOT_JS_SOURCE.contains(&format!("t === '{}'", theme.as_str())), "{theme:?}");
+        }
+        assert!(BOOT_JS_SOURCE.contains(&format!("'{}' : '{}'", data_theme(true), data_theme(false))));
+    }
+
+    #[test]
+    fn boot_js_integrity_pins_its_bytes() {
+        use base64::Engine;
+        use sha2::Digest;
+        let digest = sha2::Sha384::digest(BOOT_JS_SOURCE.as_bytes());
+        let pin = format!("sha384-{}", base64::engine::general_purpose::STANDARD.encode(digest));
+        assert_eq!(pin, BOOT_JS_INTEGRITY, "boot.js changed: update BOOT_JS_INTEGRITY");
+    }
+
+    #[test]
+    fn every_theme_color_source_agrees() {
+        assert!(BOOT_JS_SOURCE.contains(&format!("'{}' : '{}'", theme_color(true), theme_color(false))));
+        let light = format!("\"{}\"", theme_color(false));
+        assert!(include_str!("../../../web/index.html").contains(&format!("name=\"theme-color\" content={light}")));
+        let manifest = include_str!("../../../web/assets/pwa/manifest.webmanifest");
+        assert!(manifest.contains(&format!("\"theme_color\": {light}")));
+        assert!(manifest.contains(&format!("\"background_color\": {light}")));
     }
 
     #[test]

@@ -80,7 +80,7 @@ pub fn ProjectHistoryPage(project_id: Uuid) -> Element {
     rsx! {
         // The container is the scroller, as on every other page: the pull-to-refresh gesture finds
         // its scroller with `closest('.app-container')` and would miss an inner one.
-        div { class: "container app-container bg-base-100 overflow-auto p-4 max-w-md w-full mx-auto flex flex-col gap-4",
+        div { class: "container app-container bg-base-100 overflow-auto p-4 pb-24 max-w-md w-full mx-auto flex flex-col gap-4",
             PullToRefresh {
                 on_refresh: move |_| {
                     history.restart();

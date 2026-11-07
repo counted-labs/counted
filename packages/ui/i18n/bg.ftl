@@ -5,6 +5,9 @@
 
 loading = Зареждане…
 cancel = Отказ
+discard-title = Да се отхвърлят ли промените?
+discard-message = Въведеното ще се загуби.
+discard = Отхвърли
 confirm = Потвърди
 retry = Опитай отново
 delete = Изтрий
@@ -441,6 +444,7 @@ reimbursements-empty-title = Всичко е уредено!
 reimbursements-empty-hint = Предложения за уреждане се появяват тук, когато сметките не са балансирани
 reimbursement-owes = { $debtor } дължи на { $creditor }
 reimbursement-record = Уреди
+settlement-recorded = Изравняването е записано.
 reimbursement-pay-with = Плати
 reimbursement-pay-shared-by = Споделено от { $name } - преди да изпратиш, провери името на получателя, което показва приложението ти.
 reimbursement-pay-title = Плати на { $name }
@@ -476,7 +480,6 @@ move-note-group = Разходът ще напусне { $project } за вси�
 move-banner = От { $from } в { $to }
 move-submit = Премести
 move-done = Разходът е преместен в { $project }
-move-delete-failed = Разходът е добавен в другия проект, но е все още в { $project }: изтрий го там.
 history-expense-moved = Разходът е преместен в друг проект: { $name }
 personal-badge = Лично
 move-members =
@@ -853,6 +856,11 @@ edit-project-no-identity = Още не си избрал(а) кой си
 edit-project-switch = Смени
 edit-project-choose = Избери
 invite-failed = Тези покани не можаха да бъдат изпратени: { $emails }
+invite-waiting = Тези приятели трябва да отворят Counted веднъж, преди да могат да бъдат поканени: { $emails }
+key-offer-title = Друг ключ за { $name }
+key-offer-body = Това устройство има друг ключ за този проект, който никога не го е отварял тук.
+key-offer-choices = Използвай този ключ: проектът се отваря с ключа от тази връзка или покана. Отказ: устройството запазва сегашния си ключ и нищо не се променя.
+key-offer-use = Използвай този ключ
 invite-again = Покани отново
 friend-picker-title = Добави приятели
 user-selection-invited-hint = { $email } те покани в „{ $project }“.
@@ -981,6 +989,12 @@ home-remind-message = Малко напомняне: в { $project } още им
 home-row-owed = дължат ти
 home-row-owe = дължиш
 home-row-settled = Уредено
+home-row-quits = При теб е уредено
+home-row-pending =
+    { $count ->
+        [one] { $count } чакащо плащане
+       *[other] { $count } чакащи плащания
+    }
 home-totals-partial = Без проекти без обменен курс
 error-account-key-changed = Ключът на акаунта ти беше сменен на друго устройство. Влез отново, за да продължиш.
 settings-security = Сигурност

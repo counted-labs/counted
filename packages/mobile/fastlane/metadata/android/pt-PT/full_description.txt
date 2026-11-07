@@ -41,9 +41,6 @@ Grátis, sem publicidade, sem rastreadores, sem limite de despesas ou participan
 • Web, Android e iOS: o mesmo projeto em todo o lado, com o mesmo link
 • 32 línguas, incluindo as 24 línguas oficiais da UE
 
-🔔 Notificações sem Google
-O Counted entrega as notificações através do UnifiedPush, sem nenhum serviço Google. Para as receberes, instala um distribuidor como o ntfy ou o Sunup. Sem ele, a app funciona normalmente, só que sem notificações.
-
 🌱 Uma missão
 O Counted foi feito para ser eficiente e simples: sem publicidade, sem rastreadores. Os cálculos correm no teu dispositivo. Comprometemo-nos a doar uma parte das nossas receitas a causas ambientais.
 

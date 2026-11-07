@@ -9,16 +9,17 @@ use uuid::Uuid;
 
 use crate::common::{
     error_message, haptic, identity_locked, project_initial, update_ls, update_project_fresh, write_queue,
-    EmojiGrid, Flash, Haptic, InviteRetry, LocalStorageState, OpKind, ProjectEdit, ProjectKey, ProjectTile,
-    QueuedOp,
+    Avatar, DiscardConfirm, EmojiGrid, Flash, FormSheetBar, Haptic, InviteRetry, LocalStorageState, OpKind, ProjectEdit, ProjectKey, ProjectTile,
+    QueuedOp, SizeClass,
 };
 use std::collections::HashSet;
 use crate::crypto::{decrypt_json, encrypt_json, encrypt_padded_json};
 use crate::decrypted::{decrypt_user, DecryptedUser};
-use crate::friends::friends_service::{invite_each, my_private_key, Invitee};
-use crate::icons::{CloseIcon, LockIcon, MoreIcon, UserPlusIcon, ICON_HEADER, ICON_INLINE};
+use crate::friends::friends_service::{invite_each, sender, Invitee};
+use crate::icons::{CloseIcon, LockIcon, MoreIcon, UserPlusIcon, ICON_INLINE};
 use crate::participants::participants_service::{invite_count, same_name, DraftParticipant};
-use crate::participants::{use_friend_list, Avatar, ParticipantsEditor};
+use crate::participants::{use_friend_list, ParticipantsEditor};
+use crate::participants::participants_service::initial;
 use crate::expenses::hooks::use_project_store::ProjectStore;
 use crate::expenses::group_security::{
     grant_admin, me_admin, member_actions, revoke_admin, step_down_admin, MemberAction, MemberSheet,
@@ -126,14 +127,26 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
         });
     };
 
-    let on_close_x = props.on_close;
-    let on_close_cancel = props.on_close;
-    let on_close_backdrop = props.on_close;
+    let on_close = props.on_close;
+    let named = |users: Signal<Vec<DecryptedUser>>| -> Vec<(i32, String)> {
+        users.read().iter().map(|u| (u.id, u.name.clone())).collect()
+    };
+    let typed = (name(), description(), emoji(), named(existing_users), named(removed_users), drafts());
+    let opened = use_hook(|| typed.clone());
+    let dirty = typed != opened;
+    let mut discarding = use_signal(|| false);
+    let mut request_close = move || {
+        if dirty {
+            discarding.set(true);
+        } else {
+            on_close.call(());
+        }
+    };
     let on_saved = props.on_saved;
     let on_switch = props.on_switch;
     let on_remove_member = props.on_remove_member;
 
-    let on_submit = move |_| {
+    let on_submit = EventHandler::new(move |_: ()| {
         let key = match key_snap {
             Some(k) => k,
             None => {
@@ -324,13 +337,10 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                 })
                 .collect();
             if !invitees.is_empty() {
-                let my_private = account
-                    .as_ref()
-                    .zip(account_key)
-                    .and_then(|(a, ak)| my_private_key(a, &ak, ls_ctx.peek().raw_wraps_ok(a.id)));
-                let failed = invite_each(project_id, &invitees, my_private, &key).await;
-                if !failed.is_empty() {
-                    invite_retry.set(Some(InviteRetry { project_id, invitees: failed }));
+                let from = account.as_ref().zip(account_key).and_then(|(a, ak)| sender(a, &ak, &ls_ctx.peek()));
+                let unsent = invite_each(ls_ctx, project_id, &invitees, from, &key).await;
+                if !unsent.is_empty() {
+                    invite_retry.set(Some(InviteRetry { project_id, unsent }));
                 }
             }
 
@@ -361,7 +371,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
 
             on_saved.call(());
         });
-    };
+    });
 
     let stored_user_id = move || {
         ls_ctx.read().projects.iter().find(|p| p.project_id == project_id).and_then(|p| p.user_id)
@@ -454,24 +464,28 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
         let actions = member_actions(i_am_admin, is_me, user.claimed, user.admin);
         Some((user_id, user.name, subtitle, !user.claimed, actions))
     });
+    let name_required = tid!("expense-name-required");
+    let name_error = error_msg().filter(|e| *e == name_required);
 
     rsx! {
         div {
             id: "edit-project-modal",
             class: "modal modal-open modal-bottom sm:modal-middle",
             role: "dialog",
+            "data-sheet-dirty": if dirty { "true" },
             aria_modal: "true",
             aria_labelledby: "edit-project-modal-title",
             tabindex: "-1",
             div { class: "modal-box max-w-md p-0 flex flex-col",
-                div { class: "flex items-center justify-between px-6 pt-5 pb-4 border-b border-base-200 flex-shrink-0",
-                    h2 { id: "edit-project-modal-title", class: "font-bold text-lg font-display", {tid!("edit-project-title")} }
-                    button {
-                        r#type: "button",
-                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                        aria_label: tid!("close"),
-                        onclick: move |_| on_close_x.call(()),
-                        CloseIcon { size: ICON_HEADER }
+                div { class: "px-4 pt-3 pb-3 border-b border-base-200 flex-shrink-0",
+                    FormSheetBar {
+                        close_id: "edit-project-close",
+                        confirm_id: "edit-project-confirm",
+                        confirm_label: tid!("save"),
+                        disabled: loading(),
+                        on_confirm: Some(on_submit),
+                        on_close: move |_| request_close(),
+                        h2 { id: "edit-project-modal-title", class: "flex-1 min-w-0 truncate font-bold text-lg font-display sheet-bar-title", {tid!("edit-project-title")} }
                     }
                 }
                 div { class: "flex-1 overflow-y-auto px-6 py-4",
@@ -502,9 +516,12 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                                     r#type: "text",
                                     enterkeyhint: "next",
                                     aria_invalid: if error_msg().is_some() && name().trim().is_empty() { "true" },
-                                    aria_describedby: if error_msg().is_some() { "edit-project-error" },
+                                    aria_describedby: if name_error.is_some() { "edit-project-name-error" } else if error_msg().is_some() { "edit-project-error" } else { "" },
                                     value: "{name}",
                                     oninput: move |e| name.set(e.value()),
+                                }
+                                if let Some(err) = name_error.clone() {
+                                    p { id: "edit-project-name-error", role: "alert", class: "text-xs text-error mt-1", "{err}" }
                                 }
                             }
                         }
@@ -571,9 +588,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                         div { class: "flex items-center gap-2 min-h-13 border border-base-200 rounded-box pl-3 pr-1 py-1.5",
                             match me.clone() {
                                 Some(u) => rsx! {
-                                    span { class: "w-9 h-9 rounded-full bg-secondary text-secondary-content flex items-center justify-center text-sm font-semibold flex-shrink-0", aria_hidden: "true",
-                                        {crate::participants::participants_service::initial(&u.name)}
-                                    }
+                                    Avatar { initials: initial(&u.name), size: SizeClass::W9 }
                                     span { class: "flex flex-col min-w-0 flex-1 gap-0.5",
                                         span { class: "flex flex-wrap items-center gap-x-1 gap-y-0.5 min-w-0",
                                             span { class: "font-semibold truncate max-w-full", "{u.name}" }
@@ -594,7 +609,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                                                 }
                                             }
                                         }
-                                        span { class: "text-[13px] text-base-content/70 leading-snug", {tid!("edit-project-you-are", name: u.name.clone())} }
+                                        span { class: "text-[0.8125rem] text-base-content/70 leading-snug", {tid!("edit-project-you-are", name: u.name.clone())} }
                                     }
                                     if let Some(on_switch) = on_switch {
                                         button {
@@ -671,7 +686,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                                                 key: "{user_id}",
                                                 id: "edit-project-removed-{user_id}",
                                                 class: "flex items-center gap-2.5 min-h-13",
-                                                Avatar { name: user.name.clone(), guest: true }
+                                                Avatar { initials: initial(&user.name), size: SizeClass::W9, guest: true }
                                                 span { class: "flex-1 min-w-0 truncate text-base-content/70", "{user.name}" }
                                                 button {
                                                     r#type: "button",
@@ -705,7 +720,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                         }
                     }
 
-                    if let Some(msg) = error_msg() {
+                    if let Some(msg) = error_msg().filter(|_| name_error.is_none()) {
                         div { id: "edit-project-error", role: "alert", class: "alert alert-error text-sm", "{msg}" }
                     }
                 } // end flex flex-col gap-5
@@ -714,7 +729,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                         button {
                             r#type: "button",
                             class: "btn btn-ghost",
-                            onclick: move |_| on_close_cancel.call(()),
+                            onclick: move |_| request_close(),
                             {tid!("cancel")}
                         }
                         button {
@@ -722,7 +737,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                             r#type: "button",
                             class: "btn btn-primary",
                             disabled: loading(),
-                            onclick: on_submit,
+                            onclick: move |_| on_submit.call(()),
                             if loading() {
                                 span { class: "loading loading-spinner loading-sm", role: "status", aria_label: tid!("loading") }
                             }
@@ -736,7 +751,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                 }
             div {
                 class: "modal-backdrop",
-                onclick: move |_| on_close_backdrop.call(()),
+                onclick: move |_| request_close(),
             }
         }
         if let Some((user_id, member_name, subtitle, guest, actions)) = sheet {
@@ -756,6 +771,15 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                 initial: categories_now(),
                 on_close: move |_| managing_categories.set(false),
                 on_changed: move |next| categories_now.set(next),
+            }
+        }
+        if discarding() {
+            DiscardConfirm {
+                on_keep: move |_| discarding.set(false),
+                on_discard: move |_| {
+                    discarding.set(false);
+                    on_close.call(());
+                },
             }
         }
     }
@@ -813,7 +837,7 @@ fn SavedRow(props: SavedRowProps) -> Element {
             ontouchcancel: move |_| cancel_press(),
             onpointercancel: move |_| cancel_press(),
             ontouchend: move |_| cancel_press(),
-            Avatar { name: props.name.clone(), guest: !props.locked && props.invited.is_none() }
+            Avatar { initials: initial(&props.name), size: SizeClass::W9, guest: !props.locked && props.invited.is_none() }
             span { class: "flex flex-col min-w-0 flex-1 gap-0.5",
                 span { class: "flex items-center gap-1.5 min-w-0",
                     span { class: "font-semibold truncate", "{props.name}" }
@@ -827,19 +851,19 @@ fn SavedRow(props: SavedRowProps) -> Element {
                 if props.locked {
                     // Inline rather than a hover tooltip - no hover on touch. `title` is the desktop
                     // affordance only.
-                    span { class: "text-[13px] text-base-content/70 leading-snug flex items-start gap-1 min-w-0", title: "{claimed_by}",
+                    span { class: "text-[0.8125rem] text-base-content/70 leading-snug flex items-start gap-1 min-w-0", title: "{claimed_by}",
                         span { class: "shrink-0 mt-0.5", LockIcon { size: 13 } }
                         span { class: "min-w-0 break-words", "{claimed_by}" }
                     }
                 } else if let Some(invited) = props.invited.clone() {
-                    span { class: "text-[13px] text-base-content/70 truncate",
+                    span { class: "text-[0.8125rem] text-base-content/70 truncate",
                         match invited {
                             Some(email) => rsx! { {tid!("participants-invited-sub", email: email)} },
                             None => rsx! { {tid!("participants-invited-pending")} },
                         }
                     }
                 } else {
-                    span { class: "text-[13px] text-base-content/70 truncate", {tid!("participants-unlinked")} }
+                    span { class: "text-[0.8125rem] text-base-content/70 truncate", {tid!("participants-unlinked")} }
                 }
             }
             div { class: "flex items-center shrink-0",

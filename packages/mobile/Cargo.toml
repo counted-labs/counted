@@ -45,11 +45,11 @@ jni = { version = "0.21", default-features = false, features = ["invocation"] }
 objc2 = "0.6"
 objc2-ui-kit = { version = "0.3", features = [
 	"UIPasteboard",
-	# All three: the two concrete generators are gated on their own features *and* on the base
-	# class's, which is where prepare() lives.
+	# All four: the concrete generators are gated on their own features *and* on the base class's.
 	"UIFeedbackGenerator",
 	"UIImpactFeedbackGenerator",
 	"UINotificationFeedbackGenerator",
+	"UISelectionFeedbackGenerator",
 	# Share sheet: the initializer is gated on UIActivity, keyWindow on UIView + UIWindow,
 	# popoverPresentationController on both popover features.
 	"UIActivityViewController",
@@ -60,10 +60,21 @@ objc2-ui-kit = { version = "0.3", features = [
 	"UIViewController",
 	"UIPopoverPresentationController",
 	"UIPresentationController",
+	# The named launch colour on the window, the webview and its scroll view.
+	"UIColor",
+	"UIScrollView",
+	# The status-bar tap: UIScrollViewDelegate's scrollViewShouldScrollToTop: and UIView's
+	# superview are gated on it (wry turns it on too; named so this does not lean on that).
+	"UIResponder",
+	# The iPad popover centred with no arrow: setSourceRect and bounds take a CGRect.
+	"UIPopoverSupport",
+	"objc2-core-foundation",
 	# Launch background: the system appearance, read off the main screen before any window exists.
 	"UIScreen",
 	"UITraitCollection",
 	"UIInterface",
+	# The confirm: UIAlertController and its actions, whose handler is a block.
+	"UIAlertController",
 	# openURL:options:completionHandler:, the only openURL iOS 18 still honours, is gated on it.
 	"block2",
 ] }
@@ -75,6 +86,8 @@ objc2-foundation = { version = "0.3", features = [
 	"NSString",
 	"NSValue",
 	"NSPathUtilities",
+	# html[data-ios]: the OS major version for the head script.
+	"NSProcessInfo",
 	"NSData",
 	"NSDictionary",
 ] }

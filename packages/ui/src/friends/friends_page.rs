@@ -4,8 +4,9 @@ use shared::Account;
 
 use super::friends_service::{notify_address, FriendRow};
 use super::use_friends::use_friends;
-use crate::common::{AppHeader, AuthResolved, ConfirmModal, PullToRefresh};
-use crate::icons::{SendIcon, TrashIcon, ICON_INLINE};
+use crate::common::{haptic, AppHeader, AuthResolved, ConfirmModal, Haptic, PullToRefresh, RowActionsSheet};
+use crate::expenses::project_actions_sheet::Row;
+use crate::icons::{SendIcon, ShieldIcon, TrashIcon, ICON_HEADER, ICON_INLINE};
 use crate::route::Route;
 
 #[component]
@@ -15,6 +16,7 @@ pub fn FriendsPage() -> Element {
     let auth_resolved = use_context::<Signal<AuthResolved>>();
     let mut friends = use_friends();
     let mut removing = use_signal(|| None::<FriendRow>);
+    let mut actions_for = use_signal(|| None::<FriendRow>);
 
     rsx! {
         div { class: "container app-container bg-base-100 p-4 pb-24 max-w-md mx-auto flex flex-col gap-4 overflow-auto",
@@ -156,8 +158,10 @@ pub fn FriendsPage() -> Element {
                                         for f in lists.friends.iter() {
                                             {
                                                 let row = f.clone();
+                                                let pressed = f.clone();
+                                                let long_press = format!("long-press-friend-{}", f.id);
                                                 rsx! {
-                                                    li { class: "list-row items-center",
+                                                    li { class: "list-row items-center", "data-long-press": long_press.clone(),
                                                         div { class: "list-col-grow flex flex-col min-w-0",
                                                             span { class: "font-medium truncate", "{f.email}" }
                                                             match &f.fingerprint {
@@ -198,6 +202,18 @@ pub fn FriendsPage() -> Element {
                                                             disabled: (friends.busy)(),
                                                             onclick: move |_| removing.set(Some(row.clone())),
                                                             TrashIcon { size: ICON_INLINE }
+                                                        }
+                                                        // Last: daisyUI sizes `.list-row`'s columns by the position of
+                                                        // `.list-col-grow` among the children.
+                                                        button {
+                                                            id: long_press.clone(),
+                                                            r#type: "button",
+                                                            hidden: true,
+                                                            tabindex: "-1",
+                                                            onclick: move |_| {
+                                                                haptic(Haptic::Medium);
+                                                                actions_for.set(Some(pressed.clone()));
+                                                            },
                                                         }
                                                     }
                                                 }
@@ -253,11 +269,44 @@ pub fn FriendsPage() -> Element {
                 }
             }
 
+            if let Some(row) = actions_for() {
+                {
+                    let trusted = row.clone();
+                    let can_trust = row.key_changed && row.new_fingerprint().is_some();
+                    rsx! {
+                        RowActionsSheet { title: row.email.clone(), on_close: move |_| actions_for.set(None),
+                            if can_trust {
+                                Row {
+                                    id: "row-action-trust",
+                                    label: tid!("friends-code-matches"),
+                                    onclick: move |_| {
+                                        actions_for.set(None);
+                                        friends.trust_new_key(trusted.clone());
+                                    },
+                                    ShieldIcon { size: ICON_HEADER }
+                                }
+                            }
+                            Row {
+                                id: "row-action-remove",
+                                label: tid!("friends-remove"),
+                                danger: true,
+                                onclick: move |_| {
+                                    actions_for.set(None);
+                                    removing.set(Some(row.clone()));
+                                },
+                                TrashIcon { size: ICON_HEADER }
+                            }
+                        }
+                    }
+                }
+            }
+
             if let Some(row) = removing() {
                 ConfirmModal {
                     title: tid!("friends-remove-confirm-title"),
                     message: tid!("friends-remove-confirm-message", email: row.email.clone()),
                     confirm_label: tid!("friends-remove"),
+                    action_sheet: true,
                     on_cancel: move |_| removing.set(None),
                     on_confirm: move |_| {
                         removing.set(None);

@@ -71,6 +71,13 @@ input[type="date"] {
   }
 }
 
+/* The handoff: use_client_ready() adds this, then unmounts the splash 200ms later. */
+#counted-splash.splash-leaving {
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+  pointer-events: none;
+}
+
 .card {
   padding: 1rem;
 }
@@ -106,6 +113,22 @@ input[type="date"] {
   max-height: calc(100vh - 1rem);
 }
 
+/* The per-platform header pieces (app_header.rs) live in the native-feel sheet, which this shell
+   does not link: the neutral bar shows the chevron and no large title. */
+.back-glyph-chevron {
+  display: contents;
+}
+
+.back-glyph-arrow,
+.large-title,
+.segmented-thumb {
+  display: none;
+}
+
+.dock-label {
+  font-size: 0.625rem;
+}
+
 /* Bottom dock / FAB offsets. Mobile's main.css re-declares these with the
    safe-area insets added; on desktop the insets are always zero. */
 .safe-bottom-dock {
@@ -114,6 +137,24 @@ input[type="date"] {
 
 .safe-bottom-fab {
   bottom: 6rem;
+}
+
+/* The toast's look is in the shared native-feel.css, which desktop does not link: the web's
+   bubble, plain. */
+.app-toast {
+  position: fixed;
+  z-index: 60;
+  inset-inline: 1rem;
+  bottom: 10.5rem;
+  margin-inline: auto;
+  max-width: 28rem;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-box);
+  background-color: var(--color-neutral);
+  color: var(--color-neutral-content);
+  font-size: 0.875rem;
 }
 
 /* Honour the OS "reduce motion" setting. Unlayered, so it beats Tailwind transition

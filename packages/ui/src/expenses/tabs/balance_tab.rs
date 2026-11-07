@@ -23,16 +23,16 @@ pub fn BalanceTab(props: BalanceTabProps) -> Element {
     let settled_names = groups.settled.iter().map(name_of).collect::<Vec<_>>().join(", ");
 
     let group = |label: String, total: f64, rows: &[BalanceRow], positive: bool| {
-        let tone = if positive { "text-success" } else { "text-error" };
+        let tone = if positive { "text-owed" } else { "text-owe" };
         let bar = if positive { "bg-success" } else { "bg-error" };
         let total = crate::common::amount(total, &props.currency);
         rsx! {
             section { class: "flex flex-col gap-2",
-                h2 { class: "flex items-baseline justify-between px-1 text-xs font-semibold uppercase tracking-wide text-base-content/70",
+                h2 { class: "list-header flex items-baseline justify-between",
                     span { "{label}" }
                     span { class: "normal-case tracking-normal tabular-nums {tone}", "{total}" }
                 }
-                ul { class: "bg-base-100 rounded-box shadow-soft overflow-hidden divide-y divide-base-200",
+                ul { class: "list-group", style: "--separator-inset: 3.75rem",
                     for row in rows.iter() {
                         {
                             let name = name_of(&row.user);
@@ -86,7 +86,7 @@ pub fn BalanceTab(props: BalanceTabProps) -> Element {
             }
             if !groups.settled.is_empty() {
                 section { class: "flex flex-col gap-2",
-                    h2 { class: "px-1 text-xs font-semibold uppercase tracking-wide text-base-content/70",
+                    h2 { class: "list-header",
                         {tid!("balance-settled")}
                     }
                     div { class: "flex items-center gap-3 px-4 py-2.5 bg-base-100 rounded-box shadow-soft",

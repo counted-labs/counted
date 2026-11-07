@@ -6,6 +6,7 @@ use super::participants_service::{
     added_friend_ids, apply_pick, email_local_part, initial, picks, quick_add, rename,
     suggestions, DraftParticipant, NameError, Pick,
 };
+use crate::common::{Avatar, SizeClass};
 use crate::friends::FriendPickerModal;
 use crate::icons::{CheckIcon, CloseIcon, PencilIcon, SendIcon, UserPlusIcon, UsersIcon, ICON_INLINE};
 use crate::route::Route;
@@ -174,6 +175,8 @@ pub fn ParticipantsEditor(props: ParticipantsEditorProps) -> Element {
                     enterkeyhint: "done",
                     autocapitalize: "words",
                     autocomplete: "off",
+                    autocorrect: "off",
+                    spellcheck: "false",
                     value: "{query}",
                     oninput: move |e| {
                         query.set(e.value());
@@ -242,7 +245,7 @@ pub fn ParticipantsEditor(props: ParticipantsEditorProps) -> Element {
                                     disabled: !s.ready,
                                     class: if selected { "w-full flex items-center gap-3 px-2.5 py-2 rounded-field text-left bg-primary/10" } else { "w-full flex items-center gap-3 px-2.5 py-2 rounded-field text-left disabled:opacity-60" },
                                     onclick: move |_| add_option(Pick::Friend(friend.clone())),
-                                    Avatar { name: s.friend.email.clone(), guest: false }
+                                    Avatar { initials: initial(&s.friend.email), size: SizeClass::W9 }
                                     span { class: "flex flex-col min-w-0 flex-1",
                                         span { class: "font-semibold truncate",
                                             "{s.before}"
@@ -276,7 +279,7 @@ pub fn ParticipantsEditor(props: ParticipantsEditorProps) -> Element {
                                 aria_selected: if selected { "true" } else { "false" },
                                 class: if selected { "w-full flex items-center gap-3 px-2.5 py-2 rounded-field text-left bg-primary/10" } else { "w-full flex items-center gap-3 px-2.5 py-2 rounded-field text-left" },
                                 onclick: move |_| add_guest(Pick::Guest(query())),
-                                Avatar { name: "+".to_string(), guest: true }
+                                Avatar { initials: "+", size: SizeClass::W9, guest: true }
                                 span { class: "flex flex-col min-w-0 flex-1",
                                     span { class: "font-semibold truncate", {tid!("participants-suggest-guest", text: text)} }
                                     span { class: "text-sm text-base-content/70 truncate", {tid!("participants-suggest-guest-sub")} }
@@ -303,7 +306,7 @@ pub fn ParticipantsEditor(props: ParticipantsEditorProps) -> Element {
                             r#type: "button",
                             class: "btn btn-sm btn-outline border-base-300 rounded-full pl-1 gap-2 font-semibold",
                             onclick: move |_| add_chip(Pick::Friend(f.clone())),
-                            Avatar { name: f.email.clone(), guest: false, small: true }
+                            Avatar { initials: initial(&f.email), size: SizeClass::W7 }
                             "{email_local_part(&f.email)}"
                         }
                         }
@@ -345,31 +348,6 @@ pub fn ParticipantsEditor(props: ParticipantsEditorProps) -> Element {
 }
 
 #[derive(PartialEq, Props, Clone)]
-pub struct AvatarProps {
-    pub name: String,
-    pub guest: bool,
-    #[props(default)]
-    pub small: bool,
-}
-
-#[component]
-pub fn Avatar(props: AvatarProps) -> Element {
-    let size = if props.small { "w-7 h-7 text-xs" } else { "w-9 h-9 text-sm" };
-    let look = if props.guest {
-        "border-[1.5px] border-dashed border-base-300 bg-base-200 text-base-content/70"
-    } else {
-        "bg-primary/15 text-primary"
-    };
-    rsx! {
-        span {
-            aria_hidden: "true",
-            class: "{size} {look} rounded-full flex items-center justify-center font-semibold flex-shrink-0",
-            "{initial(&props.name)}"
-        }
-    }
-}
-
-#[derive(PartialEq, Props, Clone)]
 struct DraftRowProps {
     id: String,
     name: String,
@@ -384,7 +362,7 @@ fn DraftRow(props: DraftRowProps) -> Element {
     let name = props.name.clone();
     rsx! {
         li { id: "{props.id}", class: "flex items-center gap-2.5 min-h-13",
-            Avatar { name: props.name.clone(), guest: props.friend_email.is_none() }
+            Avatar { initials: initial(&props.name), size: SizeClass::W9, guest: props.friend_email.is_none() }
             span { class: "flex flex-col min-w-0 flex-1 gap-0.5",
                 span { class: "flex items-center gap-1.5 min-w-0",
                     span { class: if props.mark_new { "font-semibold truncate italic" } else { "font-semibold truncate" }, "{props.name}" }
@@ -445,7 +423,7 @@ fn RenameRow(props: RenameRowProps) -> Element {
                 p { class: "text-xs text-base-content/70 pl-11", {tid!("participants-rename-hint", email: email)} }
             }
             div { class: "flex items-center gap-2",
-                Avatar { name: props.value.clone(), guest: props.friend_email.is_none() }
+                Avatar { initials: initial(&props.value), size: SizeClass::W9, guest: props.friend_email.is_none() }
                 label { class: "input input-primary flex-1 h-10",
                     input {
                         id: "{props.id}",
@@ -453,6 +431,8 @@ fn RenameRow(props: RenameRowProps) -> Element {
                         aria_label: tid!("participants-rename-label"),
                         autocapitalize: "words",
                         autocomplete: "off",
+                        autocorrect: "off",
+                        spellcheck: "false",
                         enterkeyhint: "done",
                         autofocus: true,
                         value: "{props.value}",

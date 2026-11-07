@@ -5,6 +5,9 @@
 
 loading = Á lódáil…
 cancel = Cealaigh
+discard-title = Na hathruithe a chaitheamh uait?
+discard-message = Caillfear a bhfuil curtha isteach agat.
+discard = Caith uait
 confirm = Deimhnigh
 retry = Bain triail eile as
 delete = Scrios
@@ -447,6 +450,7 @@ reimbursements-empty-title = Gach rud socraithe!
 reimbursements-empty-hint = Feictear moltaí socraithe anseo nuair nach mbíonn na cuntais cothrom
 reimbursement-owes = Tá fiacha ag { $debtor } ar { $creditor }
 reimbursement-record = Socraigh
+settlement-recorded = Socrú taifeadta.
 reimbursement-pay-with = Íoc
 reimbursement-pay-shared-by = Comhroinnte ag { $name } - seiceáil ainm an fhaighteora a thaispeánann d'aip sula seolann tú.
 reimbursement-pay-title = Íoc { $name }
@@ -482,7 +486,6 @@ move-note-group = Fágfaidh an costas { $project } dá bhaill go léir, agus dé
 move-banner = Ó { $from } go { $to }
 move-submit = Bog
 move-done = Bogadh an costas go { $project }
-move-delete-failed = Cuireadh an costas leis an tionscadal eile ach tá sé fós in { $project }: scrios ansin é.
 history-expense-moved = Bogadh an costas go tionscadal eile: { $name }
 personal-badge = Pearsanta
 move-members =
@@ -880,6 +883,11 @@ edit-project-no-identity = Níor roghnaigh tú fós cé thú féin
 edit-project-switch = Athraigh
 edit-project-choose = Roghnaigh
 invite-failed = Níorbh fhéidir na cuirí seo a sheoladh: { $emails }
+invite-waiting = Caithfidh na cairde seo Counted a oscailt uair amháin sular féidir cuireadh a thabhairt dóibh: { $emails }
+key-offer-title = Eochair eile do { $name }
+key-offer-body = Tá eochair eile ag an ngléas seo don tionscadal seo, ceann nár oscail riamh anseo é.
+key-offer-choices = Úsáid an eochair seo: osclaítear an tionscadal leis an eochair ón nasc nó ón gcuireadh seo. Cealaigh: coinníonn an gléas a eochair reatha, agus ní athraíonn aon rud.
+key-offer-use = Úsáid an eochair seo
 invite-again = Tabhair cuireadh arís
 friend-picker-title = Cuir cairde leis
 user-selection-invited-hint = Thug { $email } cuireadh duit chuig “{ $project }”.
@@ -1008,6 +1016,15 @@ home-remind-message = Meabhrúchán beag: tá aisíocaíochtaí fós le socrú i
 home-row-owed = ag dul duit
 home-row-owe = ort
 home-row-settled = Socraithe
+home-row-quits = Tá tú réidh
+home-row-pending =
+    { $count ->
+        [one] { $count } aisíocaíocht ar feitheamh
+        [two] { $count } aisíocaíocht ar feitheamh
+        [few] { $count } aisíocaíocht ar feitheamh
+        [many] { $count } aisíocaíocht ar feitheamh
+       *[other] { $count } aisíocaíocht ar feitheamh
+    }
 home-totals-partial = Gan tionscadail gan ráta malairte
 error-account-key-changed = Athraíodh eochair do chuntais ar ghléas eile. Sínigh isteach arís chun leanúint ar aghaidh.
 settings-security = Slándáil

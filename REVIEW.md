@@ -21,12 +21,12 @@ from this repository byte for byte ([README.md](README.md)).
 
 1. **The open questions of section 15.8**, on the format v2 draft: a per-project manifest instead of
    per-row revisions, an HKDF-based invitation construction in place of `crypto_box`, key
-   commitment, binding project and account ids, and keeping an unproven held key. v2 is not built,
-   so a better design costs nothing yet. One of those questions is a choice we made on purpose:
-   invitation boxes are still classical X25519 (section 14.3) while rotation boxes are hybrid. The
-   hybrid invitation we would build is written out in 15.8, with the sender's static share in the
-   combiner and a typed plaintext. We would rather have that construction reviewed before it is
-   built than after, so it is not in the code yet.
+   commitment, and binding project and account ids (keeping an unproven held key is answered and
+   built: it is replaced only when the user confirms, section 6). v2 is not built,
+   so a better design costs nothing yet. The hybrid invitation of 15.8 is now built (section 9.1,
+   `seal_auth`/`open_auth` in `packages/ui/src/hybrid.rs`), written from the 3.2.10 floor: the
+   rotation box with the sender's static X25519 share in the combiner and a typed plaintext. We
+   most want to know whether that sender binding is right.
 2. **Key adoption and invitations** (sections 6, 9.1, 9.2): when a device replaces a project key,
    and what an active server can still make it adopt.
 3. **Key rotation and the hybrid box** (sections 8.5, 8.6): the switch rule built on

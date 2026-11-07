@@ -5,6 +5,9 @@
 
 loading = Učitavanje…
 cancel = Otkaži
+discard-title = Odbaciti izmjene?
+discard-message = Uneseno će biti izgubljeno.
+discard = Odbaci
 confirm = Potvrdi
 retry = Pokušaj ponovo
 delete = Obriši
@@ -443,6 +446,7 @@ reimbursements-empty-title = Sve je izmireno!
 reimbursements-empty-hint = Prijedlozi za izmirenje pojavljuju se ovdje kad računi nisu u ravnoteži
 reimbursement-owes = { $debtor } duguje { $creditor }
 reimbursement-record = Izmiri
+settlement-recorded = Poravnanje zabilježeno.
 reimbursement-pay-with = Plati
 reimbursement-pay-shared-by = Podijelio { $name } - provjeri ime primaoca koje prikazuje tvoja aplikacija prije slanja.
 reimbursement-pay-title = Plati { $name }
@@ -478,7 +482,6 @@ move-note-group = Trošak će napustiti { $project } za sve članove, a saldo gr
 move-banner = Iz { $from } u { $to }
 move-submit = Premjesti
 move-done = Trošak premješten u { $project }
-move-delete-failed = Trošak je dodan u drugi projekat, ali je još u { $project }: obriši ga tamo.
 history-expense-moved = Trošak premješten u drugi projekat: { $name }
 personal-badge = Lično
 move-members =
@@ -862,6 +865,11 @@ edit-project-no-identity = Još nisi odabrao/la ko si
 edit-project-switch = Promijeni
 edit-project-choose = Odaberi
 invite-failed = Ove pozivnice nije bilo moguće poslati: { $emails }
+invite-waiting = Ovi prijatelji moraju jednom otvoriti Counted prije nego što mogu biti pozvani: { $emails }
+key-offer-title = Drugi ključ za { $name }
+key-offer-body = Ovaj uređaj ima drugi ključ za ovaj projekat, koji ga ovdje nikad nije otvorio.
+key-offer-choices = Koristi ovaj ključ: projekat se otvara ključem iz ovog linka ili pozivnice. Otkaži: uređaj zadržava svoj trenutni ključ i ništa se ne mijenja.
+key-offer-use = Koristi ovaj ključ
 invite-again = Pozovi ponovo
 friend-picker-title = Dodaj prijatelje
 user-selection-invited-hint = { $email } te pozvao/la u „{ $project }”.
@@ -990,6 +998,13 @@ home-remind-message = Mali podsjetnik: u { $project } još ima neizmirenih povra
 home-row-owed = duguju ti
 home-row-owe = duguješ
 home-row-settled = Izmireno
+home-row-quits = Kod tebe izmireno
+home-row-pending =
+    { $count ->
+        [one] { $count } uplata na čekanju
+        [few] { $count } uplate na čekanju
+       *[other] { $count } uplata na čekanju
+    }
 home-totals-partial = Bez projekata bez kursa
 error-account-key-changed = Ključ tvog računa promijenjen je na drugom uređaju. Ponovo se prijavi da nastaviš.
 settings-security = Sigurnost

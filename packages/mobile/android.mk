@@ -59,17 +59,6 @@ define patch_no_backup
 		|| { echo "ERROR: dataExtractionRules patch did not apply - dx's manifest template changed"; exit 1; }
 endef
 
-# targetSdk 36 turns predictive back on by default, and the system then stops dispatching
-# KEYCODE_BACK to the activity. wry's WryActivity handles back in `onKeyDown` (it calls
-# WebView.goBack(), which is what our `_dioxusBackArmed` bridge listens for), so with the callback
-# enabled every back press would close the app instead of navigating. See docs/mobile-navigation.md.
-define patch_predictive_back
-	sed -i 's|<application |<application android:enableOnBackInvokedCallback="false" |' \
-		$(1)/app/app/src/main/AndroidManifest.xml
-	@grep -q 'android:enableOnBackInvokedCallback="false"' $(1)/app/app/src/main/AndroidManifest.xml \
-		|| { echo "ERROR: predictive-back opt-out did not apply - dx's manifest template changed"; exit 1; }
-endef
-
 # The FileProvider the receipt-scan camera needs. $(1) is the .../android directory.
 #
 # wry 0.53.5's RustWebChromeClient.onShowFileChooser already implements capture properly: with
@@ -216,7 +205,6 @@ define patch_deep_links
 	cp packages/mobile/android-kotlin/MainActivity.kt \
 		$(1)/app/app/src/main/kotlin/dev/dioxus/main/MainActivity.kt
 	$(call patch_no_backup,$(1))
-	$(call patch_predictive_back,$(1))
 	$(call patch_file_provider,$(1))
 	$(call patch_push,$(1))
 	$(call patch_shortcuts,$(1))
@@ -226,6 +214,12 @@ define patch_deep_links
 		|| { echo "ERROR: no deep-link intent-filter - check [deep_links] in packages/mobile/Dioxus.toml"; exit 1; }
 	@grep -q 'onNewIntent' $(1)/app/app/src/main/kotlin/dev/dioxus/main/MainActivity.kt \
 		|| { echo "ERROR: MainActivity.kt override not copied"; exit 1; }
+	@# targetSdk 36 turns predictive back on and sends no KEYCODE_BACK, so WryActivity.onKeyDown never
+	@# sees a press: MainActivity's OnBackPressedCallback is the only back handler. See docs/android.md.
+	@grep -q 'OnBackPressedCallback' $(1)/app/app/src/main/kotlin/dev/dioxus/main/MainActivity.kt \
+		|| { echo "ERROR: MainActivity.kt has no OnBackPressedCallback - back would close the app"; exit 1; }
+	@! grep -q 'enableOnBackInvokedCallback="false"' $(1)/app/app/src/main/AndroidManifest.xml \
+		|| { echo "ERROR: the predictive-back opt-out is back in the manifest"; exit 1; }
 endef
 
 # Pins every artifact a release build resolves - plugins, libraries, the Gradle distribution - to

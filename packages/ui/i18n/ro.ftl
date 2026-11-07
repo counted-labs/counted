@@ -5,6 +5,9 @@
 
 loading = Se încarcă…
 cancel = Anulează
+discard-title = Renunți la modificări?
+discard-message = Ce ai introdus se va pierde.
+discard = Renunță
 confirm = Confirmă
 retry = Încearcă din nou
 delete = Șterge
@@ -443,6 +446,7 @@ reimbursements-empty-title = Totul e regularizat!
 reimbursements-empty-hint = Sugestiile de regularizare apar aici când socotelile nu sunt echilibrate
 reimbursement-owes = { $debtor } îi datorează lui { $creditor }
 reimbursement-record = Regularizează
+settlement-recorded = Regularizare înregistrată.
 reimbursement-pay-with = Plătește
 reimbursement-pay-shared-by = Partajat de { $name } - verifică numele destinatarului afișat de aplicația ta înainte de a trimite.
 reimbursement-pay-title = Plătește lui { $name }
@@ -478,7 +482,6 @@ move-note-group = Cheltuiala va părăsi { $project } pentru toți membrii, iar 
 move-banner = Din { $from } în { $to }
 move-submit = Mută
 move-done = Cheltuială mutată în { $project }
-move-delete-failed = Cheltuiala a fost adăugată în celălalt proiect, dar este încă în { $project }: șterge-o acolo.
 history-expense-moved = Cheltuială mutată în alt proiect: { $name }
 personal-badge = Personal
 move-members =
@@ -862,6 +865,11 @@ edit-project-no-identity = Încă nu ai ales cine ești
 edit-project-switch = Schimbă
 edit-project-choose = Alege
 invite-failed = Aceste invitații nu au putut fi trimise: { $emails }
+invite-waiting = Acești prieteni trebuie să deschidă Counted o dată înainte de a putea fi invitați: { $emails }
+key-offer-title = O altă cheie pentru { $name }
+key-offer-body = Acest dispozitiv are o altă cheie pentru acest proiect, care nu l-a deschis niciodată aici.
+key-offer-choices = Folosește această cheie: proiectul se deschide cu cheia din acest link sau din această invitație. Anulează: dispozitivul își păstrează cheia actuală și nu se schimbă nimic.
+key-offer-use = Folosește această cheie
 invite-again = Invită din nou
 friend-picker-title = Adaugă prieteni
 user-selection-invited-hint = { $email } te-a invitat în „{ $project }”.
@@ -990,6 +998,13 @@ home-remind-message = Mic memento: mai sunt rambursări de făcut în { $project
 home-row-owed = ți se datorează
 home-row-owe = datorezi
 home-row-settled = La zi
+home-row-quits = Ești la zi
+home-row-pending =
+    { $count ->
+        [one] { $count } rambursare în așteptare
+        [few] { $count } rambursări în așteptare
+       *[other] { $count } de rambursări în așteptare
+    }
 home-totals-partial = Fără proiectele fără curs de schimb
 error-account-key-changed = Cheia contului tău s-a schimbat pe alt dispozitiv. Conectează-te din nou ca să continui.
 settings-security = Securitate

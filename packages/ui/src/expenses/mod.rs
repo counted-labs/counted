@@ -17,7 +17,7 @@ mod project_stats;
 mod rotation_sheets;
 pub(crate) mod tabs;
 
-pub use expense_row::ExpenseRow;
+pub use expense_row::{ExpenseRow, ExpenseSwipe};
 pub use expenses_page::{ExpensesPage, OPEN_REIMBURSEMENTS};
-pub use modals::{AddExpenseModal, EditExpenseModal, EditProjectModal, UserSelectionModal};
+pub use modals::{AddExpenseModal, EditExpenseModal, EditProjectModal, QueuedAdd, UserSelectionModal};
 pub use tabs::{BalanceTab, ExpensesTab, ReimbursementsTab};

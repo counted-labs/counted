@@ -233,6 +233,7 @@ fn NewRecoveryKeySheet(key_text: String, email: String, on_close: EventHandler<(
         div {
             id: "new-recovery-key-sheet",
             class: "modal modal-open modal-bottom sm:modal-middle",
+            "data-sheet-locked": "true",
             role: "dialog",
             aria_modal: "true",
             aria_labelledby: "new-recovery-key-title",
@@ -245,6 +246,9 @@ fn NewRecoveryKeySheet(key_text: String, email: String, on_close: EventHandler<(
                     button { id: "new-recovery-key-done", r#type: "button", class: "btn btn-primary", onclick: move |_| on_close.call(()), {tid!("recovery-key-next")} }
                 }
             }
+            // Inert: Android back, Escape and a drag click it and the key stays on screen. Without
+            // it back fell through to the page under the sheet (navigation_sync.rs).
+            div { class: "modal-backdrop" }
         }
     }
 }

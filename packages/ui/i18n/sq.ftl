@@ -5,6 +5,9 @@
 
 loading = Duke u ngarkuar…
 cancel = Anulo
+discard-title = T'i hedhësh poshtë ndryshimet?
+discard-message = Ato që fute do të humbasin.
+discard = Hidhi poshtë
 confirm = Konfirmo
 retry = Provo sërish
 delete = Fshi
@@ -441,6 +444,7 @@ reimbursements-empty-title = Gjithçka e shlyer!
 reimbursements-empty-hint = Sugjerimet për shlyerje shfaqen këtu kur llogaritë nuk balancohen
 reimbursement-owes = { $debtor } i ka borxh { $creditor }
 reimbursement-record = Shlyej
+settlement-recorded = Shlyerja u regjistrua.
 reimbursement-pay-with = Paguaj
 reimbursement-pay-shared-by = Ndarë nga { $name } - kontrollo emrin e marrësit që shfaq aplikacioni yt para se të dërgosh.
 reimbursement-pay-title = Paguaj { $name }
@@ -476,7 +480,6 @@ move-note-group = Shpenzimi do të largohet nga { $project } për të gjithë an
 move-banner = Nga { $from } te { $to }
 move-submit = Zhvendos
 move-done = Shpenzimi u zhvendos te { $project }
-move-delete-failed = Shpenzimi u shtua te projekti tjetër, por është ende te { $project }: fshije atje.
 history-expense-moved = Shpenzimi u zhvendos te një projekt tjetër: { $name }
 personal-badge = Personal
 move-members =
@@ -853,6 +856,11 @@ edit-project-no-identity = Ende nuk ke zgjedhur kush je
 edit-project-switch = Ndrysho
 edit-project-choose = Zgjidh
 invite-failed = Këto ftesa nuk u dërguan dot: { $emails }
+invite-waiting = Këta miq duhet ta hapin Counted një herë para se të mund të ftohen: { $emails }
+key-offer-title = Një çelës tjetër për { $name }
+key-offer-body = Kjo pajisje ka një çelës tjetër për këtë projekt, që nuk e ka hapur kurrë këtu.
+key-offer-choices = Përdor këtë çelës: projekti hapet me çelësin nga kjo lidhje ose ftesë. Anulo: pajisja mban çelësin e saj aktual dhe asgjë nuk ndryshon.
+key-offer-use = Përdor këtë çelës
 invite-again = Fto sërish
 friend-picker-title = Shto miq
 user-selection-invited-hint = { $email } të ftoi në „{ $project }”.
@@ -981,6 +989,12 @@ home-remind-message = Kujtesë e vogël: ka ende rimbursime për t’u shlyer te
 home-row-owed = të detyrohen
 home-row-owe = detyrohesh
 home-row-settled = E shlyer
+home-row-quits = Ti je në rregull
+home-row-pending =
+    { $count ->
+        [one] { $count } rimbursim në pritje
+       *[other] { $count } rimbursime në pritje
+    }
 home-totals-partial = Pa projektet pa kurs këmbimi
 error-account-key-changed = Çelësi i llogarisë sate ndryshoi në një pajisje tjetër. Hyr përsëri për të vazhduar.
 settings-security = Siguria

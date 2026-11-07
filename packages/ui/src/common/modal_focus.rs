@@ -3,6 +3,9 @@
 //! into it), Escape anywhere clicks the dialog's own `.modal-backdrop` - the same dismissal as
 //! Android Back in `navigation_sync.rs`, so a dialog without a backdrop stays open - and focus
 //! returns to the opener on close. Live regions are never made inert, so a toast is still read.
+//! The iOS keyboard proxy (`data-keyboard-proxy`, `KEYBOARD_PROXY_SCRIPT` in the mobile crate) is
+//! neither made inert nor robbed of the focus: it holds the keypad up until the amount field takes
+//! over, which the web build never needs.
 //!
 //! Two twins kept in step by hand, as in `enter_next.rs`: the JS below for the native WebViews,
 //! `web_dom::{enter_modal, leave_modal}` for the browser build, which must never eval.
@@ -29,15 +32,17 @@ if (!window._countedModals) {
     enter(id) {
       const dialog = document.getElementById(id);
       if (!dialog) return false;
+      const proxied = !!document.activeElement && document.activeElement.hasAttribute('data-keyboard-proxy');
       if (!open.some(m => m.id === id)) {
         const inerted = [];
         for (let el = dialog; el !== document.body && el.parentElement; el = el.parentElement) {
           for (const sibling of el.parentElement.children) {
-            if (sibling !== el && !sibling.inert && !isLive(sibling)) { sibling.inert = true; inerted.push(sibling); }
+            if (sibling !== el && !sibling.inert && !isLive(sibling) && !sibling.hasAttribute('data-keyboard-proxy')) { sibling.inert = true; inerted.push(sibling); }
           }
         }
-        open.push({ id, opener: document.activeElement, inerted });
+        open.push({ id, opener: proxied ? null : document.activeElement, inerted });
       }
+      if (proxied) return true;
       if (!dialog.contains(document.activeElement)) dialog.focus();
       return dialog.contains(document.activeElement);
     },

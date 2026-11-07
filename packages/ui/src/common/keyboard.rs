@@ -50,6 +50,12 @@ pub fn use_keyboard() {}
 /// signal at all (iOS, Android 10 and older) the sheet snaps, as before.
 /// See docs/plans/keyboard-motion.md.
 ///
+/// A sheet still sliding in (`sheet-in` in `main.css`) is styled without a glide: the slide's
+/// `translate: 0 100%` is a share of the box's own height, so the rect the glide measures moves
+/// with the padding it adds. A field focused by script inside it is blurred and focused again at
+/// the slide's end, so the keyboard rises over a sheet at rest; a focus within 500 ms of a touch
+/// is the user's and is kept.
+///
 /// Dismissal is `.onDrag` plus tap-outside, only while `up()`: a field focused outside a gesture
 /// has the focus but, on iOS, no keyboard. A touch that starts outside the focused field and moves
 /// 8px mostly vertically, or a tap on something not interactive, moves the focus off it - to its
@@ -71,9 +77,40 @@ const KEYBOARD_JS: &str = r#"
   var probe = document.createElement('div');
   probe.style.cssText = 'position:fixed;top:0;bottom:0;left:0;width:0;visibility:hidden;pointer-events:none';
   document.body.appendChild(probe);
-  var kb = 0, vvo = 0, touching = false, g = null, spec = null, glides = [], signalled = false, waiting = null;
+  var kb = 0, vvo = 0, touching = false, lastTouch = 0, g = null, spec = null, glides = [], signalled = false, waiting = null;
 
   function up() { return kb > 0 || vvo > 0; }
+
+  function entering(box) {
+    return !!box.getAnimations && box.getAnimations().some(function (a) {
+      return a.animationName === 'sheet-in' && a.playState === 'running';
+    });
+  }
+
+  function afterSlide(box, then) {
+    var ran = false;
+    function run(e) {
+      if (ran || (e && e.target !== box)) return;
+      ran = true;
+      box.removeEventListener('animationend', run);
+      box.removeEventListener('animationcancel', run);
+      then();
+    }
+    box.addEventListener('animationend', run);
+    box.addEventListener('animationcancel', run);
+    setTimeout(run, 700);
+  }
+
+  function holdFocus(e) {
+    var field = e.target, box = field.closest ? field.closest('.modal-box') : null;
+    if (!box || Date.now() - lastTouch < 500 || !window._countedTextLike || !window._countedTextLike(field) || !entering(box)) return false;
+    field.blur();
+    afterSlide(box, function () {
+      var a = document.activeElement;
+      if (field.isConnected && (!a || a === document.body || a === box.closest('[role=dialog]'))) field.focus({ preventScroll: true });
+    });
+    return true;
+  }
 
   function motion(ms, curve) {
     signalled = true;
@@ -113,7 +150,7 @@ const KEYBOARD_JS: &str = r#"
 
   function glide(box, k0, s) {
     var modal = box.parentElement;
-    if (!modal || !modal.classList.contains('modal-open') || !modal.classList.contains('modal-bottom') || !narrow.matches) {
+    if (!modal || !modal.classList.contains('modal-open') || !modal.classList.contains('modal-bottom') || !narrow.matches || entering(box)) {
       style(box);
       return;
     }
@@ -251,7 +288,9 @@ const KEYBOARD_JS: &str = r#"
   vv.addEventListener('resize', update);
   vv.addEventListener('scroll', update);
   narrow.addEventListener('change', restyle);
-  document.addEventListener('focusin', function () { requestAnimationFrame(reveal); }, true);
+  document.addEventListener('focusin', function (e) {
+    if (!holdFocus(e)) requestAnimationFrame(reveal);
+  }, true);
 
   document.addEventListener('touchstart', function (e) {
     touching = true;
@@ -275,6 +314,7 @@ const KEYBOARD_JS: &str = r#"
 
   function end(e) {
     touching = e.touches.length > 0;
+    lastTouch = Date.now();
     var s = g;
     g = null;
     if (e.type !== 'touchend' || !s || s.moved || s.target.closest(INTERACTIVE)) return;

@@ -2,20 +2,18 @@
 //! prefilled, writes the expense there; only then is it deleted here. Two writes, in that order,
 //! so a failure in between leaves the expense in both projects and never in neither.
 
-use api::expenses::expenses_controller::delete_expense;
-use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use shared::{ExpensePayload, ExpenseType, ProjectDto, ProjectPayload, ProjectStatus};
 use std::collections::VecDeque;
 use uuid::Uuid;
 
 use crate::common::{
-    key_of, Flash, LocalStorageState, ProjectTile, QueuedOp,
+    key_of, write_queue, Flash, LocalStorageState, OpKind, ProjectTile, QueuedOp,
 };
 use crate::categories::ProjectCategories;
 use crate::crypto::decrypt_json;
 use crate::decrypted::{pickable_users, project_status};
-use crate::expenses::helpers::delete_expense_action::{delete_expense_request, run_delete_expense};
+use crate::expenses::helpers::delete_expense_action::delete_expense_request;
 use crate::icons::{ChevronRightIcon, CloseIcon, WalletIcon};
 use crate::tid;
 
@@ -156,7 +154,7 @@ pub fn MoveExpenseSheet(
                                 let detail = destination_detail(&d, &from_currency);
                                 let tile = if d.personal {
                                     rsx! {
-                                        span { class: "size-[42px] shrink-0 rounded-[13px] bg-primary/10 text-primary flex items-center justify-center",
+                                        span { class: "size-[2.625rem] shrink-0 rounded-[13px] bg-primary/10 text-primary flex items-center justify-center",
                                             WalletIcon {}
                                         }
                                     }
@@ -178,7 +176,7 @@ pub fn MoveExpenseSheet(
                                             button {
                                                 id: "move-to-{id}",
                                                 r#type: "button",
-                                                class: "w-full flex items-center gap-3 py-2.5 px-1 text-left rounded-xl hover:bg-base-200",
+                                                class: "w-full flex items-center gap-3 py-2.5 px-1 text-left rounded-xl hover:bg-base-200 row-press",
                                                 onclick: move |_| on_pick.call(id),
                                                 {tile}
                                                 span { class: "flex-1 min-w-0 flex flex-col",
@@ -226,12 +224,13 @@ fn destination_detail(d: &Destination, from_currency: &str) -> String {
     }
 }
 
-/// Once the destination has the expense: delete it here, with this project's key and identity.
-/// Offline the delete queues behind the add, so the replay keeps the order.
+/// Once the destination has queued the expense (`add_op`): delete it here, with this project's key
+/// and identity. The delete queues behind the add and waits on it, so the replay keeps the order and
+/// an add the server drops takes the delete with it.
 pub fn finish_move(
     draft: &MoveDraft,
-    is_online: bool,
-    pending_ops: Signal<VecDeque<QueuedOp>>,
+    add_op: Uuid,
+    mut pending_ops: Signal<VecDeque<QueuedOp>>,
     mut flash: Signal<Option<Flash>>,
 ) {
     let req = delete_expense_request(
@@ -241,22 +240,13 @@ pub fn finish_move(
         tid!("history-expense-moved", name: draft.payload.name.clone()),
         draft.from_user_id.unwrap_or(0),
     );
-    let done = tid!("move-done", project: draft.to_name.clone());
-    // Added there, still here: say where it is, so the user can delete the leftover by hand.
-    let stuck = tid!("move-delete-failed", project: draft.from_name.clone());
-    if !is_online {
-        run_delete_expense(req, draft.payload.name.clone(), false, pending_ops, flash, move || {
-            flash.set(Some(Flash::ok(done)));
-        });
-        return;
-    }
-    spawn(async move {
-        crate::common::project_token::scope(req.project_id);
-        match delete_expense(Json(req)).await {
-            Ok(()) => flash.set(Some(Flash::ok(done))),
-            Err(_) => flash.set(Some(Flash::err(stuck))),
-        }
-    });
+    let delete = QueuedOp {
+        after: Some(add_op),
+        ..QueuedOp::new(Uuid::new_v4(), &draft.payload.name, OpKind::DeleteExpense(req))
+    };
+    pending_ops.write().push_back(delete);
+    write_queue(&pending_ops.read());
+    flash.set(Some(Flash::ok(tid!("move-done", project: draft.to_name.clone()))));
 }
 
 #[cfg(test)]

@@ -308,6 +308,9 @@ pub fn PaymentMethodsCard() -> Element {
                                                 id: "payment-method-value-{i}",
                                                 class: "input w-full",
                                                 r#type: "text",
+                                                autocapitalize: "off",
+                                                autocorrect: "off",
+                                                spellcheck: "false",
                                                 placeholder: tid!("payment-method-value-placeholder"),
                                                 value: "{method.value}",
                                                 oninput: move |e| {
@@ -323,6 +326,7 @@ pub fn PaymentMethodsCard() -> Element {
                                                 input {
                                                     id: "payment-method-share-{i}",
                                                     r#type: "checkbox",
+                                                    role: "switch",
                                                     class: "toggle toggle-primary",
                                                     checked: method.shared,
                                                     onchange: move |e| {

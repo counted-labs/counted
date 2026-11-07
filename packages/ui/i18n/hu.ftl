@@ -5,6 +5,9 @@
 
 loading = Betöltés…
 cancel = Mégse
+discard-title = Elveted a módosításokat?
+discard-message = Amit beírtál, elvész.
+discard = Elvetés
 confirm = Megerősítés
 retry = Újra
 delete = Törlés
@@ -441,6 +444,7 @@ reimbursements-empty-title = Minden el van számolva!
 reimbursements-empty-hint = Az elszámolási javaslatok itt jelennek meg, ha az egyenlegek nem egyeznek
 reimbursement-owes = { $debtor } tartozik { $creditor } részére
 reimbursement-record = Elszámolás
+settlement-recorded = Elszámolás rögzítve.
 reimbursement-pay-with = Fizetés
 reimbursement-pay-shared-by = { $name } osztotta meg - küldés előtt ellenőrizd az appod által mutatott címzett nevét.
 reimbursement-pay-title = Fizetés { $name } részére
@@ -476,7 +480,6 @@ move-note-group = A kiadás kikerül a(z) { $project } projektből minden tag sz
 move-banner = { $from } → { $to }
 move-submit = Áthelyezés
 move-done = Kiadás áthelyezve ide: { $project }
-move-delete-failed = A kiadás bekerült a másik projektbe, de még itt is szerepel: { $project }. Töröld ott.
 history-expense-moved = Kiadás áthelyezve egy másik projektbe: { $name }
 personal-badge = Saját
 move-members =
@@ -853,6 +856,11 @@ edit-project-no-identity = Még nem választottad ki, ki vagy
 edit-project-switch = Váltás
 edit-project-choose = Kiválasztás
 invite-failed = Ezeket a meghívókat nem sikerült elküldeni: { $emails }
+invite-waiting = Ezeknek a barátoknak egyszer meg kell nyitniuk a Countedot, mielőtt meghívhatók: { $emails }
+key-offer-title = Másik kulcs ehhez: { $name }
+key-offer-body = Ezen az eszközön egy másik kulcs van ehhez a projekthez, amely itt még soha nem nyitotta meg.
+key-offer-choices = Kulcs használata: a projekt ennek a linknek vagy meghívónak a kulcsával nyílik meg. Mégse: az eszköz megtartja a jelenlegi kulcsát, és semmi sem változik.
+key-offer-use = Kulcs használata
 invite-again = Újra meghívás
 friend-picker-title = Barátok hozzáadása
 user-selection-invited-hint = { $email } meghívott ide: „{ $project }”.
@@ -981,6 +989,12 @@ home-remind-message = Kis emlékeztető: a(z) { $project } projektben még vanna
 home-row-owed = tartoznak neked
 home-row-owe = tartozol
 home-row-settled = Rendezve
+home-row-quits = Nálad rendezve
+home-row-pending =
+    { $count ->
+        [one] { $count } visszafizetés függőben
+       *[other] { $count } visszafizetés függőben
+    }
 home-totals-partial = Árfolyam nélküli projektek nélkül
 error-account-key-changed = A fiókod kulcsa megváltozott egy másik eszközön. Jelentkezz be újra a folytatáshoz.
 settings-security = Biztonság

@@ -41,9 +41,6 @@ Free, with no ads, no trackers and no cap on expenses or participants. Everythin
 • Web, Android and iOS: the same project everywhere, with the same link
 • 32 languages, including all 24 official EU languages
 
-🔔 Notifications without Google
-Counted delivers notifications through UnifiedPush, with no Google service. To get them, install a distributor such as ntfy or Sunup. Without one, the app works as usual, just without notifications.
-
 🌱 A mission
 Counted is built to be efficient and simple: no ads, no trackers. The maths runs on your device. We commit to giving a share of our revenue to environmental causes.
 

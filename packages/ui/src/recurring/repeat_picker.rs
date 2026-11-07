@@ -6,7 +6,7 @@ use super::model::{Ends, Freq};
 use super::schedule::last_date;
 use super::view::{backfill_count, Repeat};
 use crate::common::format_date;
-use crate::icons::{CloseIcon, RepeatIcon, RightArrowIcon, ICON_HEADER, ICON_INLINE};
+use crate::icons::{CheckIcon, CloseIcon, RepeatIcon, RightArrowIcon, ICON_HEADER, ICON_INLINE};
 use crate::tid;
 
 fn parse(date: &str) -> Option<NaiveDate> {
@@ -51,7 +51,7 @@ pub fn RepeatRow(
         button {
             id: "repeat-row",
             r#type: "button",
-            class: "flex items-center gap-3 px-5 py-2 border-b border-base-200 text-left w-full hover:bg-base-200/50",
+            class: "flex items-center gap-3 px-5 py-2 border-b border-base-200 text-left w-full hover:bg-base-200/50 row-press",
             onclick: move |_| open.set(true),
             span {
                 class: if current.is_some() { "shrink-0 w-8 h-8 rounded-full bg-primary/15 text-primary flex items-center justify-center" } else { "shrink-0 w-8 h-8 rounded-full bg-base-200 text-base-content/70 flex items-center justify-center" },
@@ -159,7 +159,7 @@ pub fn RepeatPicker(
                     }
                 }
                 div { class: "flex-1 overflow-y-auto flex flex-col pb-2",
-                    ul { class: "flex flex-col px-3",
+                    ul { class: "flex flex-col px-3", role: "radiogroup", aria_labelledby: "repeat-title",
                         RepeatOption {
                             id: "repeat-opt-none",
                             selected: choice() == Choice::None,
@@ -277,6 +277,7 @@ pub fn RepeatPicker(
                             input {
                                 id: "repeat-variable",
                                 r#type: "checkbox",
+                                role: "switch",
                                 class: "toggle toggle-primary mt-1",
                                 checked: variable(),
                                 onchange: move |e| variable.set(e.checked()),
@@ -307,26 +308,29 @@ fn RepeatOption(
     #[props(default)] hint: Option<String>,
     onselect: EventHandler<()>,
 ) -> Element {
+    // A UITableView checkmark row on every platform (D12): the native radio stays in the tree for
+    // the screen reader and the keyboard, visually hidden, and the whole 44pt row is its label.
     rsx! {
         li {
-            button {
+            label {
                 id,
-                r#type: "button",
-                role: "radio",
-                aria_checked: "{selected}",
-                class: if selected { "flex items-center gap-3 w-full text-left px-2 py-1.5 rounded-field bg-base-200 font-semibold" } else { "flex items-center gap-3 w-full text-left px-2 py-1.5 rounded-field" },
-                onclick: move |_| onselect.call(()),
-                span {
-                    class: if selected { "shrink-0 w-5 h-5 rounded-full border-2 border-primary flex items-center justify-center" } else { "shrink-0 w-5 h-5 rounded-full border-2 border-base-300" },
-                    "aria-hidden": "true",
-                    if selected {
-                        span { class: "w-2.5 h-2.5 rounded-full bg-primary" }
-                    }
+                class: "choice-row flex items-center gap-3 w-full min-h-11 px-2 py-1.5 rounded-field cursor-pointer row-press",
+                input {
+                    r#type: "radio",
+                    name: "repeat-option",
+                    class: "sr-only",
+                    checked: selected,
+                    onchange: move |_| onselect.call(()),
                 }
                 span { class: "flex-1 min-w-0",
                     span { class: "block text-sm", "{label}" }
                     if let Some(h) = hint {
-                        span { class: "block text-xs font-normal text-base-content/70", "{h}" }
+                        span { class: "block text-xs text-base-content/70", "{h}" }
+                    }
+                }
+                span { class: "shrink-0 w-5 h-5 text-primary", aria_hidden: "true",
+                    if selected {
+                        CheckIcon { size: 20 }
                     }
                 }
             }

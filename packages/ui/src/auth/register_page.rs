@@ -144,6 +144,9 @@ fn RegisterForm() -> Element {
                         required: true,
                         placeholder: tid!("field-name-placeholder"),
                         autocomplete: "name",
+                        autocapitalize: "words",
+                        autocorrect: "off",
+                        spellcheck: "false",
                         value: "{display_name}",
                         oninput: move |e| display_name.set(e.value()),
                     }

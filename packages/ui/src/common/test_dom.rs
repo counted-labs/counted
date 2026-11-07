@@ -3,7 +3,7 @@
 use dioxus::dioxus_core::{AttributeValue, ElementId, Event, Mutation, Mutations};
 use dioxus_html::{
     set_event_converter, PlatformEventData, SerializedFocusData, SerializedFormData,
-    SerializedHtmlEventConverter, SerializedMouseData, SerializedPointerData, SerializedTouchData,
+    SerializedHtmlEventConverter, SerializedMouseData, SerializedPointerData,
 };
 use std::any::Any;
 use std::rc::Rc;
@@ -80,25 +80,6 @@ pub fn focus() -> Event<dyn Any> {
     CONVERTER.call_once(|| set_event_converter(Box::new(SerializedHtmlEventConverter)));
     let data = PlatformEventData::new(Box::new(SerializedFocusData::default()));
     Event::new(Rc::new(data) as Rc<dyn Any>, true)
-}
-
-/// A touch event, built through serde for the same reason `pointer` is: private fields, no
-/// constructor, but a `Deserialize` derive. The touch lists are empty - the handlers that guard
-/// against a long press read no point data, only which element the event reached.
-pub fn touch() -> Event<dyn Any> {
-    static CONVERTER: Once = Once::new();
-    CONVERTER.call_once(|| set_event_converter(Box::new(SerializedHtmlEventConverter)));
-    let data: SerializedTouchData = serde_json::from_value(serde_json::json!({
-        "alt_key": false,
-        "ctrl_key": false,
-        "meta_key": false,
-        "shift_key": false,
-        "touches": [],
-        "changed_touches": [],
-        "target_touches": [],
-    }))
-    .expect("SerializedTouchData shape changed");
-    Event::new(Rc::new(PlatformEventData::new(Box::new(data))) as Rc<dyn Any>, true)
 }
 
 /// A pointer at `(x, y)` in client coordinates. `kind` is the `pointerType` - `"touch"` for a

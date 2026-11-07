@@ -3,15 +3,13 @@
 
 use api::users::users_controller::get_users_by_project_id;
 use dioxus::prelude::*;
-use shared::{ExpenseWithPayments, ProjectDto, ProjectPayload, ProjectStatus, User};
+use shared::{ProjectDto, ProjectPayload, ProjectStatus, User};
 use uuid::Uuid;
 
 use crate::common::{key_of, read_from_ls, Flash, LocalStorageState};
 use crate::crypto::decrypt_json;
 use crate::decrypted::project_status;
-use crate::expenses::hooks::use_project_store::ProjectStore;
-use crate::expenses::tabs::expenses_tab::ExpenseMutation;
-use crate::expenses::AddExpenseModal;
+use crate::expenses::{AddExpenseModal, QueuedAdd};
 use crate::tid;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -49,7 +47,6 @@ fn me(users: &[User], stored: Option<i32>) -> Option<i32> {
 
 #[component]
 pub fn PersonalExpenseSheet(project: PersonalProject, on_close: EventHandler<()>) -> Element {
-    let store = use_context::<ProjectStore>();
     let mut flash = use_context::<Signal<Option<Flash>>>();
     let project_id = project.project_id;
     // Offline, the cached participants still let the expense queue.
@@ -70,11 +67,7 @@ pub fn PersonalExpenseSheet(project: PersonalProject, on_close: EventHandler<()>
     rsx! {
         AddExpenseModal {
             on_close,
-            on_created: move |created: Option<ExpenseWithPayments>| {
-                store.on_expenses_changed.call(match created {
-                    Some(c) => ExpenseMutation::Added(c),
-                    None => ExpenseMutation::Queued,
-                });
+            on_created: move |_: Option<QueuedAdd>| {
                 flash.set(Some(Flash::ok(tid!("personal-expense-banner"))));
                 on_close.call(());
             },

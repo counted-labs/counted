@@ -2,12 +2,13 @@ use api::expenses::expenses_controller::{add_expense, delete_expense, edit_expen
 use api::projects::projects_controller::update_project_by_id;
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
+use shared::ExpenseWithPayments;
 use std::collections::VecDeque;
 
 use super::error_utils::{error_message, is_rate_limited, RATE_LIMIT_RETRY_MS, REQUEST_PACE_MS};
 use super::sleep;
 use super::local_storage::project_key;
-use super::offline_queue::{write_queue, OpKind, QueuedOp};
+use super::offline_queue::{drop_with_dependents, write_queue, OpKind, QueuedOp};
 use super::project_write::update_project_fresh;
 
 /// Why a replay could not finish, as data rather than a sentence.
@@ -25,22 +26,42 @@ pub enum SyncFailure {
     Error(String),
 }
 
+/// What the server wrote for an expense op, handed to `on_landed` before the op leaves the queue,
+/// so the row listed under a pending id is replaced in the same render instead of vanishing until
+/// a refetch.
+#[derive(Clone, PartialEq)]
+pub enum Landed {
+    Added(ExpenseWithPayments),
+    Edited(ExpenseWithPayments),
+    Deleted(i32),
+}
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct ReplayEnd {
+    /// False when an error stopped the drain; the op that hit it is still at the front.
+    pub drained: bool,
+    /// A project op landed or an op was dropped: only a refetch settles what the page shows.
+    pub refetch: bool,
+}
+
 // Drains the queue FIFO, executing each op against the server.
-// Returns true if the queue was fully drained, false if stopped due to a non-conflict error.
 // 404-like conflicts are discarded with a toast; other errors halt and preserve the op.
 pub async fn replay_queue(
     mut pending_ops: Signal<VecDeque<QueuedOp>>,
     mut conflict_msg: Signal<Option<SyncFailure>>,
-) -> bool {
+    on_landed: Callback<Landed>,
+) -> ReplayEnd {
     let mut first = true;
+    let mut refetch = false;
     loop {
         let Some(queued) = pending_ops.read().front().cloned() else {
-            return true;
+            return ReplayEnd { drained: true, refetch };
         };
         if is_legacy_overwrite(&queued.op) {
             conflict_msg.set(Some(SyncFailure::ConflictOther(queued.label())));
-            pending_ops.write().pop_front();
+            drop_with_dependents(&mut pending_ops.write(), queued.id);
             write_queue(&pending_ops.read());
+            refetch = true;
             continue;
         }
         if !first {
@@ -58,8 +79,12 @@ pub async fn replay_queue(
         };
 
         match result {
-            Ok(()) => {
-                pending_ops.write().pop_front();
+            Ok(landed) => {
+                match landed {
+                    Some(landed) => on_landed.call(landed),
+                    None => refetch = true,
+                }
+                pending_ops.write().retain(|op| op.id != queued.id);
                 write_queue(&pending_ops.read());
             }
             Err(ref e) if is_conflict(e) => {
@@ -69,41 +94,43 @@ pub async fn replay_queue(
                     OpKind::DeleteExpense(_) => SyncFailure::ConflictDelete(label),
                     _ => SyncFailure::ConflictOther(label),
                 }));
-                pending_ops.write().pop_front();
+                drop_with_dependents(&mut pending_ops.write(), queued.id);
                 write_queue(&pending_ops.read());
+                refetch = true;
             }
             Err(e) => {
                 conflict_msg.set(Some(SyncFailure::Error(error_message(&e))));
-                return false;
+                return ReplayEnd { drained: false, refetch };
             }
         }
     }
 }
 
-async fn replay(op: &OpKind) -> Result<(), ServerFnError> {
+async fn replay(op: &OpKind) -> Result<Option<Landed>, ServerFnError> {
     match op.clone() {
         OpKind::AddExpense(p) => {
             crate::common::project_token::scope(p.project_id);
-            add_expense(Json(p)).await.map(|_| ())
+            add_expense(Json(p)).await.map(|c| Some(Landed::Added(c)))
         }
         OpKind::EditExpense(p) => {
             crate::common::project_token::scope(p.project_id);
-            edit_expense(Json(p)).await.map(|_| ())
+            edit_expense(Json(p)).await.map(|c| Some(Landed::Edited(c)))
         }
         OpKind::DeleteExpense(p) => {
             crate::common::project_token::scope(p.project_id);
-            delete_expense(Json(p)).await.map(|_| ())
+            let id = p.id;
+            delete_expense(Json(p)).await.map(|_| Some(Landed::Deleted(id)))
         }
         OpKind::UpdateProject(p) => {
             crate::common::project_token::scope(p.id);
-            update_project_by_id(Json(p)).await.map(|_| ())
+            update_project_by_id(Json(p)).await.map(|_| None)
         }
         // Rebuilt on the payload the server holds now, so a field written meanwhile - by
         // another device or a newer build - survives the replay.
         OpKind::EditProject(edit) => match project_key(edit.project_id) {
             Some(key) => update_project_fresh(edit.project_id, |stored| edit.apply(&key, stored))
                 .await
-                .map(|_| ()),
+                .map(|_| None),
             None => Err(ServerFnError::ServerError {
                 message: shared::PROJECT_NOT_FOUND.to_string(),
                 code: 404,

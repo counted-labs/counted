@@ -1,0 +1,2 @@
+"NSCameraUsageDescription" = "Hogy beolvassuk a nyugtát és előre kitöltsük a kiadást. A fotót a telefonod elemzi, sosem küldjük el, és nem tároljuk.";
+"NSPhotoLibraryUsageDescription" = "Hogy beolvassunk egy már lefényképezett nyugtát. A képet a telefonod elemzi, sosem küldjük el, és nem tároljuk.";

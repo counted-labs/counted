@@ -1,7 +1,12 @@
 use dioxus::prelude::*;
 
 // Icon sizes, named after where they are used. Every icon takes an optional
-// `size` prop that defaults to `ICON_ACTION`.
+// `size` prop that defaults to `ICON_ACTION`, in px at the default text size: it is drawn in
+// rem so it grows with Dynamic Type, as the text beside it does.
+
+fn rem(px: u32) -> String {
+    format!("{}rem", px as f32 / 16.0)
+}
 
 /// Bottom navigation dock - large touch targets.
 pub const ICON_NAV: u32 = 26;
@@ -18,15 +23,31 @@ pub fn BackArrowIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             polyline { points: "15 18 9 12 15 6" }
+        }
+    }
+}
+
+/// Material's `arrow_back`, the Android back button's glyph (filled, as Material Symbols draw it).
+#[component]
+pub fn ArrowBackIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: rem(size),
+            height: rem(size),
+            view_box: "0 0 24 24",
+            fill: "currentColor",
+            path { d: "M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" }
         }
     }
 }
@@ -37,12 +58,12 @@ pub fn ChevronRightIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             polyline { points: "9 18 15 12 9 6" }
@@ -56,12 +77,12 @@ pub fn RightArrowIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "1.5",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             polyline { points: "12 18 18 12 6 12 18 12 12 6" }
@@ -75,12 +96,12 @@ pub fn TrashIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { stroke: "none", d: "M0 0h24v24H0z", fill: "none" }
@@ -99,15 +120,36 @@ pub fn UserIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" }
+            circle { cx: "12", cy: "7", r: "4" }
+        }
+    }
+}
+
+/// [`UserIcon`] filled, for the selected dock tab.
+#[component]
+pub fn UserFilledIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: rem(size),
+            height: rem(size),
+            view_box: "0 0 24 24",
+            fill: "currentColor",
+            stroke: "currentColor",
+            stroke_width: "1.75",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2z" }
             circle { cx: "12", cy: "7", r: "4" }
         }
     }
@@ -119,12 +161,12 @@ pub fn SettingsIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" }
@@ -139,12 +181,12 @@ pub fn BurgerIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M3 12h18M3 6h18M3 18h18" }
@@ -158,8 +200,8 @@ pub fn DollarIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             path {
@@ -178,12 +220,12 @@ pub fn PlusIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2.5",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M12 5v14M5 12h14" }
@@ -199,12 +241,12 @@ pub fn CloseIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2.5",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M18 6 6 18M6 6l12 12" }
@@ -218,12 +260,12 @@ pub fn SearchIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             circle { cx: "11", cy: "11", r: "7" }
@@ -238,12 +280,12 @@ pub fn WalletIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "1.8",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M3 7a2 2 0 0 1 2-2h13v4" }
@@ -259,12 +301,12 @@ pub fn PencilIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" }
@@ -278,12 +320,12 @@ pub fn HistoryIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" }
@@ -299,17 +341,37 @@ pub fn HomeIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M3 9.5 12 3l9 6.5" }
             path { d: "M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10" }
             path { d: "M9 21v-6h6v6" }
+        }
+    }
+}
+
+/// [`HomeIcon`] filled, for the selected dock tab: the same silhouette, the door cut out.
+#[component]
+pub fn HomeFilledIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: rem(size),
+            height: rem(size),
+            view_box: "0 0 24 24",
+            fill: "currentColor",
+            stroke: "currentColor",
+            stroke_width: "1.75",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M12 3 3 9.5h2V20a1 1 0 0 0 1 1h3v-6h6v6h3a1 1 0 0 0 1-1V9.5h2z" }
         }
     }
 }
@@ -320,12 +382,12 @@ pub fn LockIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             rect { x: "3", y: "11", width: "18", height: "11", rx: "2" }
@@ -341,17 +403,38 @@ pub fn ChartIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
             class: "icon icon-tabler icons-tabler-outline icon-tabler-chart-pie-2",
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M0 0h24v24H0z", fill: "none", stroke: "none" }
             path { d: "M12 3v9h9" }
             path { d: "M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" }
+        }
+    }
+}
+
+/// [`ChartIcon`] filled, for the selected dock tab: three quarters solid, the slice outlined.
+#[component]
+pub fn ChartFilledIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: rem(size),
+            height: rem(size),
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.75",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M12 3a9 9 0 1 0 9 9h-9z", fill: "currentColor" }
+            path { d: "M12 3a9 9 0 0 1 9 9h-9z" }
         }
     }
 }
@@ -362,12 +445,12 @@ pub fn LinkIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" }
@@ -382,12 +465,12 @@ pub fn ShareIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             circle { cx: "18", cy: "5", r: "3" }
@@ -405,12 +488,12 @@ pub fn ImportIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M12 3v12" }
@@ -427,12 +510,12 @@ pub fn CameraIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2.5",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { stroke: "none", d: "M0 0h24v24H0z", fill: "none" }
@@ -449,12 +532,12 @@ pub fn PhotoIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2.5",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { stroke: "none", d: "M0 0h24v24H0z", fill: "none" }
@@ -472,12 +555,12 @@ pub fn BellIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" }
@@ -492,12 +575,12 @@ pub fn CheckIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2.5",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "m5 12 5 5 9-10" }
@@ -511,12 +594,12 @@ pub fn SendIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M21 3 10 14" }
@@ -531,12 +614,12 @@ pub fn UsersIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             circle { cx: "9", cy: "8", r: "3.5" }
@@ -553,12 +636,12 @@ pub fn UserPlusIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             circle { cx: "10", cy: "8", r: "4" }
@@ -574,12 +657,12 @@ pub fn RepeatIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "m17 2 4 4-4 4" }
@@ -596,12 +679,12 @@ pub fn TransferIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M4 8h14" }
@@ -618,12 +701,12 @@ pub fn MoreIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             circle { cx: "5", cy: "12", r: "1" }
@@ -639,12 +722,12 @@ pub fn ArchiveIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             rect { x: "2", y: "3", width: "20", height: "5", rx: "1" }
@@ -660,12 +743,12 @@ pub fn DownloadIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }
@@ -681,12 +764,12 @@ pub fn LogOutIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" }
@@ -702,12 +785,12 @@ pub fn SmartphoneIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             rect { x: "5", y: "2", width: "14", height: "20", rx: "2" }
@@ -722,12 +805,12 @@ pub fn UndoIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M9 14 4 9l5-5" }
@@ -742,12 +825,12 @@ pub fn KeyIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             circle { cx: "8", cy: "15", r: "4" }
@@ -762,12 +845,12 @@ pub fn UserMinusIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             circle { cx: "9", cy: "8", r: "4" }
@@ -783,12 +866,12 @@ pub fn ShieldIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M12 3 4 6v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V6z" }
@@ -802,12 +885,12 @@ pub fn SunIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             circle { cx: "12", cy: "12", r: "4" }
@@ -822,12 +905,12 @@ pub fn MoonIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" }
@@ -841,12 +924,12 @@ pub fn DeviceIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             rect { x: "6", y: "2", width: "12", height: "20", rx: "3" }
@@ -861,12 +944,12 @@ pub fn EyeOffIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
         svg {
             xmlns: "http://www.w3.org/2000/svg",
             "aria-hidden": "true",
-            width: "{size}",
-            height: "{size}",
+            width: rem(size),
+            height: rem(size),
             view_box: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            stroke_width: "2",
+            stroke_width: "1.75",
             stroke_linecap: "round",
             stroke_linejoin: "round",
             path { d: "M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" }
@@ -874,5 +957,17 @@ pub fn EyeOffIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
             path { d: "M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" }
             path { d: "m2 2 20 20" }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_size_in_px_is_drawn_in_rem() {
+        assert_eq!(rem(ICON_ACTION), "1.25rem");
+        assert_eq!(rem(ICON_HEADER), "1.375rem");
+        assert_eq!(rem(ICON_INLINE), "1rem");
     }
 }

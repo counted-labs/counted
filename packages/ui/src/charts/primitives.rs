@@ -41,7 +41,7 @@ pub fn Swatch(color: String) -> Element {
 #[component]
 pub fn Note(text: String) -> Element {
     rsx! {
-        p { class: "text-[11px] text-base-content/50", "{text}" }
+        p { class: "text-[0.6875rem] text-base-content/50", "{text}" }
     }
 }
 

@@ -1,16 +1,17 @@
-use api::expenses::expenses_controller::add_expense;
 use api::recurring::recurring_controller::add_recurring_expense;
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use crate::tid;
 use shared::{
-    CreatableExpense, ExpensePayload, ExpenseType, ExpenseWithPayments, HistoryAction, HistoryContext,
+    CreatableExpense, Expense, ExpensePayload, ExpenseType, HistoryAction, HistoryContext,
     HistoryEntity, HistoryPayload, User,
 };
 use std::collections::VecDeque;
 use uuid::Uuid;
 
-use crate::common::{error_message, fx_cache, today_iso, write_queue, OpKind, ProjectKey, QueuedOp};
+use crate::common::{
+    error_message, fx_cache, queued_expenses, today_iso, write_queue, OpKind, ProjectKey, QueuedOp,
+};
 
 use super::expense_form::{ExpenseForm, RepeatSlot};
 use crate::expenses::hooks::use_project_store::ProjectStore;
@@ -27,11 +28,18 @@ use super::super::hooks::use_fx_rates::use_fx_rates;
 use crate::crypto::encrypt_padded_json;
 use crate::decrypted::user_names;
 
+/// An add as queued: listed under a pending id until the replay brings the server's row.
+#[derive(Clone, PartialEq)]
+pub struct QueuedAdd {
+    pub op_id: Uuid,
+    pub row: Expense,
+}
+
 #[derive(Props, Clone, PartialEq)]
 pub struct AddExpenseModalProps {
     pub on_close: EventHandler<()>,
-    /// `None` when the op was queued offline - there is no server row to report yet.
-    pub on_created: EventHandler<Option<ExpenseWithPayments>>,
+    /// `None` for a recurring rule, which is written at once rather than queued.
+    pub on_created: EventHandler<Option<QueuedAdd>>,
     pub project_id: Uuid,
     pub users: Vec<User>,
     pub stored_user_id: Option<i32>,
@@ -119,7 +127,8 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
     let is_online = use_context::<Signal<bool>>();
     let mut pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
     let repeat: Signal<Option<Repeat>> = use_signal(|| None);
-    let today = use_context::<ProjectStore>()
+    let store = use_context::<ProjectStore>();
+    let today = store
         .recurring_for(props.project_id)
         .map(|r| r.today())
         .unwrap_or_else(crate::common::local_today);
@@ -224,6 +233,10 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
                 crate::common::project_token::scope(req.project_id);
                 match add_recurring_expense(Json(req)).await {
                     Ok(_) => {
+                        // The rule is the server's to list: the sync brings it, and the materializer
+                        // writes its due occurrences from there.
+                        let mut sync = store.sync;
+                        sync.restart();
                         on_created.call(None);
                         on_close_submit.call(());
                     }
@@ -254,35 +267,16 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
             }
         };
 
-        if !is_online() {
-            // The op's id rides inside the payload so every replay of it names the same write.
-            let op_id = Uuid::new_v4();
-            payload.client_op_id = Some(op_id);
-            pending_ops.write().push_back(QueuedOp::new(op_id, &name_val, OpKind::AddExpense(payload)));
-            write_queue(&pending_ops.read());
-            on_created.call(None);
-            on_close_submit.call(());
-            return;
-        }
-
-        loading.set(true);
-        error_msg.set(None);
-
-        let on_created = on_created;
-        let on_close_submit = on_close_submit;
-        spawn(async move {
-            crate::common::project_token::scope(payload.project_id);
-            match add_expense(Json(payload)).await {
-                Ok(created) => {
-                    on_created.call(Some(created));
-                    on_close_submit.call(());
-                }
-                Err(e) => {
-                    error_msg.set(Some(error_message(&e)));
-                    loading.set(false);
-                }
-            }
-        });
+        // Online or not, the add goes through the queue and the sheet closes now: the row is listed
+        // as pending until the replay lands it. The op's id rides inside the payload so every
+        // replay of it names the same write.
+        let op_id = Uuid::new_v4();
+        payload.client_op_id = Some(op_id);
+        pending_ops.write().push_back(QueuedOp::new(op_id, &name_val, OpKind::AddExpense(payload)));
+        write_queue(&pending_ops.read());
+        let row = queued_expenses(&pending_ops.read(), project_id, chrono::Utc::now().naive_utc()).pop();
+        on_created.call(row.map(|row| QueuedAdd { op_id, row }));
+        on_close_submit.call(());
     };
 
     let title =

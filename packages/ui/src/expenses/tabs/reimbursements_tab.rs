@@ -4,7 +4,8 @@ use shared::{PaymentMethod, ProjectStatus, ReimbursementSuggestion, User};
 
 use crate::{
     common::{
-        copy_text, initials, user_color_class, Avatar, Flash, Mascot, MascotPose, ProjectKey,
+        copy_text, haptic, initials, user_color_class, Avatar, Flash, Haptic, Mascot, MascotPose,
+        ProjectKey,
     },
     decrypted::{decrypt_user, DecryptedUser},
     icons::RightArrowIcon,
@@ -62,8 +63,8 @@ pub fn ReimbursementsTab(props: ReimbursementsTabProps) -> Element {
         let payer_name = name_or_unknown(&payer);
         let debtor_initials = initials(&debtor_name);
         let payer_initials = initials(&payer_name);
-        let debtor_color = debtor.as_ref().map(|u| user_color_class(u.id)).unwrap_or("bg-neutral");
-        let payer_color = payer.as_ref().map(|u| user_color_class(u.id)).unwrap_or("bg-neutral");
+        let debtor_color = debtor.as_ref().map(|u| user_color_class(u.id)).unwrap_or("bg-neutral text-neutral-content");
+        let payer_color = payer.as_ref().map(|u| user_color_class(u.id)).unwrap_or("bg-neutral text-neutral-content");
         let amount = crate::common::amount(suggestion.amount, &props.currency);
         let record_label = format!(
             "{}, {}, {amount}",
@@ -92,7 +93,7 @@ pub fn ReimbursementsTab(props: ReimbursementsTabProps) -> Element {
 
                 div { class: "flex-1 min-w-0",
                     p { class: "text-sm font-medium break-words", {tid!("reimbursement-owes", debtor: debtor_name.clone(), creditor: payer_name.clone())} }
-                    p { class: "text-xs font-semibold text-base-content/70 uppercase", "{amount}" }
+                    p { class: "text-xs font-semibold text-base-content/70 uppercase tabular-nums", "{amount}" }
                 }
                 if editable && highlighted && !payer_methods.is_empty() {
                     PayButton {
@@ -173,7 +174,10 @@ fn PayButton(props: PayButtonProps) -> Element {
             r#type: "button",
             class: "btn btn-sm btn-soft btn-primary",
             aria_label: tid!("reimbursement-pay-title", name: props.creditor_name.clone()),
-            onclick: move |_| open.set(true),
+            onclick: move |_| {
+                haptic(Haptic::Light);
+                open.set(true);
+            },
             {tid!("reimbursement-pay-with")}
         }
         if open() {

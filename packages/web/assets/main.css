@@ -35,8 +35,18 @@ input[type="date"] {
    `.filter .btn` rides along: DaisyUI's own `.btn` box-shadow is transparent under this theme's
    `--depth: 0`, so the filter chips in `expenses_tab.rs` - the only remaining `.filter` on any
    page - would otherwise be the one flat surface in their toolbar row. This file is unlayered,
-   so it outranks DaisyUI's `@layer components` without !important. */
-.shadow-soft,
+   so it outranks DaisyUI's `@layer components` without !important.
+
+   Grouped surfaces: the page is base-200 and a card stands on its white fill alone, as an iOS
+   inset-grouped list does, so a card's `.shadow-soft` is flat. Only what floats over the content
+   (the dock, the FAB and its actions) or is a button on its own (the filter chips) keeps it. */
+.shadow-soft {
+  box-shadow: none;
+}
+
+.safe-bottom-dock .shadow-soft,
+.safe-bottom-fab .shadow-soft,
+.btn.shadow-soft,
 .filter .btn {
   box-shadow:
     0 1px 2px oklch(30% 0.02 60 / 0.06),
@@ -106,6 +116,13 @@ input[type="date"] {
   }
 }
 
+/* The handoff: use_client_ready() adds this, then unmounts the splash 200ms later. */
+#counted-splash.splash-leaving {
+  opacity: 0;
+  transition: opacity 0.2s ease-out;
+  pointer-events: none;
+}
+
 .card {
   padding: 1rem;
 }
@@ -137,6 +154,7 @@ input[type="date"] {
 .app-container {
   height: calc(100dvh - 1rem);
   border-radius: 1.5rem;
+  background-color: var(--color-base-200);
 }
 
 /* The /demo bar (demo_page.rs, h-10) sits above the page in the flow. */
@@ -160,14 +178,20 @@ body:has(#demo-bar) .app-container {
   max-height: calc(100dvh - 1rem);
 }
 
-/* Bottom dock / FAB offsets. Mobile's main.css re-declares these with the
-   safe-area insets added; on web the insets are always zero. */
-.safe-bottom-dock {
-  bottom: 1.5rem;
+/* The page sits inside the safe area sideways (`viewport-fit=cover` in index.html lets it reach a
+   landscape notch). Bottom and top are left to the `.safe-*` helpers in native-feel.css. */
+main {
+  padding-left: var(--sal);
+  padding-right: var(--sar);
 }
 
-.safe-bottom-fab {
-  bottom: 6rem;
+/* A home-screen web app: no scroll chaining to the document. `contain`, not `none`, which would
+   also take iOS's own rubber band away. */
+@media (display-mode: standalone) {
+  html,
+  body {
+    overscroll-behavior-y: contain;
+  }
 }
 
 /* Honour the OS "reduce motion" setting. Unlayered, so it beats Tailwind transition
@@ -187,15 +211,17 @@ body:has(#demo-bar) .app-container {
    ground, so the page sinks below base-100 and a card stands on its fill alone, the way iOS
    grouped lists do - no outline. The page shells paint `bg-base-100` as a utility, which this
    unlayered rule outranks. The drop shadow stays for whatever floats over other content. A sheet
-   is base-100 over a scrim that darkens the page by only a few percent: measured #121815 on
-   #0B0E0D, an edge the eye loses, so it keeps a hairline. */
+   is lifted a step (native-feel.css) and keeps a hairline: the scrim darkens the page by only a
+   few percent, an edge the eye loses. */
 [data-theme="counted-dark"] .page-shell,
 [data-theme="counted-dark"] .app-container {
   background-color: oklch(15% 0.008 165);
 }
-[data-theme="counted-dark"] .shadow-soft,
+[data-theme="counted-dark"] .safe-bottom-dock .shadow-soft,
+[data-theme="counted-dark"] .safe-bottom-fab .shadow-soft,
+[data-theme="counted-dark"] .btn.shadow-soft,
 [data-theme="counted-dark"] .filter .btn,
-[data-theme="counted-dark"] .ptr[data-plat="android"] .ptr-indicator {
+html[data-theme="counted-dark"][data-plat="android"] .ptr .ptr-indicator {
   box-shadow: 0 8px 18px -6px oklch(0% 0 0 / 0.5);
 }
 [data-theme="counted-dark"] .modal-box {

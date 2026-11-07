@@ -4,5 +4,5 @@ mod participants_editor;
 pub mod participants_service;
 mod use_friend_list;
 
-pub use participants_editor::{Avatar, ParticipantsEditor};
+pub use participants_editor::ParticipantsEditor;
 pub use use_friend_list::{use_friend_list, use_my_display_name, FriendList};

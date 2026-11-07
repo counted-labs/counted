@@ -1,6 +1,8 @@
 use dioxus::prelude::*;
 use shared::{Currency, CURRENCIES};
 
+use crate::common::{haptic, use_modal_focus, Haptic};
+use crate::icons::{CheckIcon, CloseIcon, ICON_ACTION};
 use crate::tid;
 
 /// Codes starting with the query lead, so Enter on "us" picks USD rather than AUD.
@@ -13,11 +15,17 @@ pub fn matching_currencies(query: &str) -> Vec<&'static Currency> {
     by_code.into_iter().chain(by_name).collect()
 }
 
+/// A finger raises the keyboard on a scripted focus, which would cover half the list.
+fn focus_search_on_open() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    return !crate::common::web_dom::coarse_pointer();
+    #[cfg(not(target_arch = "wasm32"))]
+    false
+}
+
 /// A native `<select>` sizes itself to its widest option and cannot be searched on a phone, so
-/// the trigger shows the code alone and the names live in the searchable list.
-///
-/// The list hangs from the right edge of the caller's nearest `relative` ancestor, not from the
-/// trigger: beside a short amount the trigger sits at the far left and the list would leave the modal.
+/// the trigger shows the code alone and the names live in a searchable bottom sheet, stacked on
+/// the form it sits in.
 ///
 /// The clicks inside are `prevent_default`ed: the expense form wraps this in the amount's
 /// `<label>`, whose activation would otherwise yank focus back to the amount.
@@ -30,51 +38,80 @@ pub fn CurrencyPicker(
     onchange: EventHandler<String>,
 ) -> Element {
     let mut open = use_signal(|| false);
-    let mut query = use_signal(String::new);
-    let matches = matching_currencies(&query());
-    let first = matches.first().map(|c| c.code);
-    let mut pick = move |code: &str| {
-        onchange.call(code.to_string());
-        open.set(false);
-        query.set(String::new());
-    };
 
     rsx! {
-        div {
-            class: "shrink-0",
-            onkeydown: move |e| {
-                if e.key() == Key::Escape && open() {
-                    e.prevent_default();
-                    e.stop_propagation();
-                    open.set(false);
-                }
-            },
-            if open() {
-                div {
-                    class: "fixed inset-0 z-40",
-                    onclick: move |e| {
-                        e.prevent_default();
-                        e.stop_propagation();
-                        open.set(false);
-                    },
-                }
-            }
+        div { class: "shrink-0",
             button {
                 id: "{id}",
                 r#type: "button",
                 class: "{button_class}",
                 aria_label: "{label}",
-                aria_haspopup: "listbox",
+                aria_haspopup: "dialog",
                 aria_expanded: open(),
                 value: "{value}",
-                onclick: move |_| open.toggle(),
+                onclick: move |_| {
+                    haptic(Haptic::Light);
+                    open.set(true);
+                },
                 "{value}"
                 span { aria_hidden: "true", class: "text-xs opacity-60", "▾" }
             }
             if open() {
-                div {
-                    class: "absolute right-0 top-full mt-1 z-50 w-64 bg-base-100 rounded-box shadow-lg border border-base-200 p-2 flex flex-col gap-1",
-                    onclick: move |e| e.prevent_default(),
+                CurrencySheet {
+                    id: id.clone(),
+                    value: value.clone(),
+                    title: label.clone(),
+                    on_pick: move |code: String| {
+                        open.set(false);
+                        onchange.call(code);
+                    },
+                    on_close: move |_| open.set(false),
+                }
+            }
+        }
+    }
+}
+
+/// One sheet id for every picker: only one is ever open.
+#[component]
+fn CurrencySheet(
+    id: String,
+    value: String,
+    title: String,
+    on_pick: EventHandler<String>,
+    on_close: EventHandler<()>,
+) -> Element {
+    use_modal_focus("currency-sheet");
+    let mut query = use_signal(String::new);
+    let matches = matching_currencies(&query());
+    let first = matches.first().map(|c| c.code);
+    let pick = move |code: &str| {
+        haptic(Haptic::Selection);
+        on_pick.call(code.to_string());
+    };
+
+    rsx! {
+        div {
+            id: "currency-sheet",
+            "data-sheet-detents": "true",
+            class: "modal modal-open modal-bottom sm:modal-middle",
+            role: "dialog",
+            aria_modal: "true",
+            aria_labelledby: "currency-sheet-title",
+            tabindex: "-1",
+            onclick: move |e| e.prevent_default(),
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                div { class: "flex items-center gap-2 px-5 pt-4 pb-2",
+                    h2 { id: "currency-sheet-title", class: "flex-1 min-w-0 truncate font-bold text-lg font-display", "{title}" }
+                    button {
+                        r#type: "button",
+                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
+                        aria_label: tid!("close"),
+                        onclick: move |_| on_close.call(()),
+                        CloseIcon {}
+                    }
+                }
+                div { class: "px-5 pb-2",
                     input {
                         id: "{id}-search",
                         r#type: "search",
@@ -84,7 +121,9 @@ pub fn CurrencyPicker(
                         aria_label: tid!("currency-search"),
                         value: "{query}",
                         onmounted: move |e| async move {
-                            let _ = e.data().set_focus(true).await;
+                            if focus_search_on_open() {
+                                let _ = e.data().set_focus(true).await;
+                            }
                         },
                         oninput: move |e| query.set(e.value()),
                         onkeydown: move |e| {
@@ -96,25 +135,30 @@ pub fn CurrencyPicker(
                             }
                         },
                     }
-                    ul { class: "max-h-60 overflow-y-auto", role: "listbox",
-                        for c in matches {
-                            li { key: "{c.code}",
-                                button {
-                                    id: "{id}-{c.code}",
-                                    r#type: "button",
-                                    role: "option",
-                                    aria_selected: c.code == value,
-                                    class: "w-full flex gap-2 items-baseline text-left px-2 py-1.5 rounded-field text-sm hover:bg-base-200",
-                                    class: if c.code == value { "bg-base-200" },
-                                    onclick: move |_| pick(c.code),
-                                    span { class: "font-semibold tabular-nums", "{c.code}" }
-                                    span { class: "truncate text-base-content/60", "{c.name}" }
+                }
+                ul { class: "flex-1 overflow-y-auto px-3 pb-3", role: "listbox", aria_label: "{title}",
+                    for c in matches {
+                        li { key: "{c.code}",
+                            button {
+                                id: "{id}-{c.code}",
+                                r#type: "button",
+                                role: "option",
+                                aria_selected: c.code == value,
+                                class: "w-full flex gap-3 items-center text-left px-3 min-h-11 rounded-field row-press",
+                                onclick: move |_| pick(c.code),
+                                span { class: "w-11 shrink-0 font-semibold tabular-nums", "{c.code}" }
+                                span { class: "flex-1 min-w-0 truncate text-base-content/70", "{c.name}" }
+                                if c.code == value {
+                                    span { class: "shrink-0 text-primary", aria_hidden: "true",
+                                        CheckIcon { size: ICON_ACTION }
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+            div { class: "modal-backdrop", onclick: move |_| on_close.call(()) }
         }
     }
 }

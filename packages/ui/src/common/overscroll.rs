@@ -47,18 +47,27 @@ fn overscroll_js() -> String {
 }
 
 /// Passive capture-phase listeners on `main`: capture because the scroller is a descendant and the
-/// touch may be stopped at its target (`DropdownButton` does), passive because nothing here prevents
+/// touch may be stopped at its target (the speed dial does), passive because nothing here prevents
 /// a default - at an edge the box cannot scroll further anyway.
 ///
 /// State written to the DOM, all of it removed at rest:
 /// - `.app-container[data-overscroll]` + `--overscroll` - `pulling` while the finger is down,
-///   `settling` for the spring back. `main.css` moves the container's children off it - by `top`,
-///   not a transform, for a child holding a fixed element, or the FAB and the dropdown scrims lose
-///   their viewport anchor (`page_transition.rs`).
+///   `settling` for the spring back, `holding` while an iOS refresh keeps the content down.
+/// - `[data-band]` on what moves: every child of the scroller, except that a `.fixed` element is
+///   skipped and one holding a fixed element is descended into (two levels) rather than moved, so
+///   the FAB and the scrims keep their viewport anchor (a transform makes an ancestor their
+///   containing block, `page_transition.rs`). Only transforms move: nothing animates `top`.
+/// - Android instead: `--overscroll-scale` on the container and `--oy` on each moved element, the
+///   M3 stretch (`scaleY` from the pulled edge, nothing translated). A refreshable page does not
+///   stretch on a pull down: the content stays still under the refresh disc, as in M3.
 /// - `.ptr[data-state]` + `--ptr-pull` - `pulling` → `armed` → `refreshing` → `done`.
 ///
+/// iOS refreshes the moment the pull arms, with the finger still down, as `UIRefreshControl` does,
+/// and on release the content settles to 48px instead of 0 and holds there (UIKit's
+/// `contentInset`) until the refresh is done. Android refreshes on release, as M3's does.
+///
 /// iOS keeps its native rubber band wherever the box is scrollable (`nativeBounce`): the JS bounce
-/// on top of it would move the content twice.
+/// on top of it would move the content twice. Only the hold is the script's there.
 #[cfg_attr(not(any(target_os = "android", target_os = "ios")), allow(dead_code))]
 const OVERSCROLL_JS: &str = r#"
 (function () {
@@ -70,6 +79,7 @@ const OVERSCROLL_JS: &str = r#"
   var PLAT = '$PLAT';
   var DAMPING = $DAMPING;
   var ARM_PX = $ARM_PX;
+  var HOLD_PX = 48;
   var EDGE_GUARD = 24;
   var MIN_SPIN_MS = 500;
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -81,16 +91,64 @@ const OVERSCROLL_JS: &str = r#"
     return dy < 0 ? -off : off;
   }
 
-  function settle(scroller) {
+  function movers(scroller) {
+    var out = [];
+    (function walk(el, depth) {
+      for (var c = el.firstElementChild; c; c = c.nextElementSibling) {
+        if (c.classList.contains('fixed')) continue;
+        if (PLAT === 'android' && c.classList.contains('ptr')) continue;
+        if (c.querySelector('.fixed')) { if (depth < 2) walk(c, depth + 1); continue; }
+        out.push(c);
+      }
+    })(scroller, 0);
+    return out;
+  }
+
+  function mark(scroller) {
+    if (scroller._countedBand) return;
+    scroller._countedBand = movers(scroller);
+    scroller._countedBand.forEach(function (el) { el.setAttribute('data-band', ''); });
+  }
+
+  function unmark(scroller) {
+    (scroller._countedBand || []).forEach(function (el) {
+      el.removeAttribute('data-band');
+      el.style.removeProperty('--oy');
+    });
+    scroller._countedBand = null;
+  }
+
+  // Android stretches from the pulled edge. Each moved element scales about that edge (`--oy`, the
+  // edge in its own coordinates), so together they stretch as one block. Read once per direction.
+  function anchor(scroller, down) {
+    var box = scroller.getBoundingClientRect();
+    var edge = down ? box.top : box.bottom;
+    scroller._countedBand.forEach(function (el) {
+      el.style.setProperty('--oy', (edge - el.getBoundingClientRect().top) + 'px');
+    });
+  }
+
+  function stretch(scroller, dy) {
+    return (1 + Math.abs(damp(dy)) / Math.max(scroller.clientHeight, 1) * 0.5).toFixed(4);
+  }
+
+  function settle(scroller, hold) {
+    var token = scroller._countedSettle = {};
+    mark(scroller);
     scroller.dataset.overscroll = 'settling';
-    scroller.style.setProperty('--overscroll', '0px');
+    scroller.style.setProperty('--overscroll', (hold || 0) + 'px');
+    scroller.style.setProperty('--overscroll-scale', '1');
     var done = false;
     function finish(e) {
       if (done || (e && e.propertyName !== 'transform')) return;
       done = true;
       scroller.removeEventListener('transitionend', finish);
+      if (scroller._countedSettle !== token) return;
+      if (hold) { scroller.dataset.overscroll = 'holding'; return; }
       delete scroller.dataset.overscroll;
       scroller.style.removeProperty('--overscroll');
+      scroller.style.removeProperty('--overscroll-scale');
+      unmark(scroller);
     }
     scroller.addEventListener('transitionend', finish);
     setTimeout(finish, 350);
@@ -102,24 +160,35 @@ const OVERSCROLL_JS: &str = r#"
     ptr.style.removeProperty('--ptr-pull');
   }
 
+  function refresh(ptr) {
+    ptr.dataset.state = 'refreshing';
+    ptr.dataset.since = String(Date.now());
+    ptr.style.setProperty('--ptr-pull', '1');
+    if (window.$REFRESH_HOOK) window.$REFRESH_HOOK();
+  }
+
   main.addEventListener('touchstart', function (e) {
     g = null;
     if (e.touches.length !== 1 || !(e.target instanceof Element)) return;
     var t = e.touches[0];
     if (t.clientX < EDGE_GUARD || e.target.closest('.modal')) return;
     var scroller = e.target.closest('.app-container');
-    if (!scroller) return;
+    if (!scroller || scroller.dataset.overscroll === 'holding') return;
     var ptr = scroller.querySelector(':scope > .ptr');
+    var refreshable = !!ptr;
     if (ptr && ptr.dataset.state === 'refreshing') ptr = null;
     g = {
       scroller: scroller,
       ptr: ptr,
+      refreshable: refreshable,
+      down: null,
       startY: t.clientY,
       atTop: scroller.scrollTop <= 0,
       atBottom: scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1,
       nativeBounce: PLAT === 'ios' && scroller.scrollHeight > scroller.clientHeight + 1,
       bouncing: false,
-      armed: false
+      armed: false,
+      fired: false
     };
   }, { capture: true, passive: true });
 
@@ -137,21 +206,40 @@ const OVERSCROLL_JS: &str = r#"
     var pullingDown = dy > 0 && g.atTop;
     var pullingUp = dy < 0 && g.atBottom;
 
-    if (!g.nativeBounce && !reduce.matches && (pullingDown || pullingUp)) {
+    // M3 keeps the content still while the refresh disc comes down.
+    var android = PLAT === 'android';
+    var stillForDisc = android && pullingDown && g.refreshable;
+
+    if (!g.nativeBounce && !reduce.matches && !stillForDisc && (pullingDown || pullingUp)) {
       g.bouncing = true;
+      mark(g.scroller);
       g.scroller.dataset.overscroll = 'pulling';
-      g.scroller.style.setProperty('--overscroll', damp(dy) + 'px');
+      if (android) {
+        if (g.down !== pullingDown) {
+          g.down = pullingDown;
+          g.scroller.style.setProperty('--overscroll-scale', '1');
+          anchor(g.scroller, pullingDown);
+        }
+        g.scroller.style.setProperty('--overscroll-scale', stretch(g.scroller, dy));
+      } else {
+        g.scroller.style.setProperty('--overscroll', damp(dy) + 'px');
+      }
     } else if (g.bouncing) {
       g.bouncing = false;
+      g.down = null;
       settle(g.scroller);
     }
 
-    if (g.ptr) {
+    if (g.ptr && !g.fired) {
       if (pullingDown) {
         var progress = Math.min(damp(dy) / ARM_PX, 1.25);
         g.armed = progress >= 1;
         g.ptr.style.setProperty('--ptr-pull', progress.toFixed(3));
         g.ptr.dataset.state = g.armed ? 'armed' : 'pulling';
+        if (g.armed && !android) {
+          g.fired = true;
+          refresh(g.ptr);
+        }
       } else if (g.ptr.dataset.state) {
         g.armed = false;
         clearPtr(g.ptr);
@@ -163,16 +251,12 @@ const OVERSCROLL_JS: &str = r#"
     if (!g) return;
     var s = g;
     g = null;
-    if (s.bouncing) settle(s.scroller);
-    if (!s.ptr) return;
-    if (s.armed) {
-      s.ptr.dataset.state = 'refreshing';
-      s.ptr.dataset.since = String(Date.now());
-      s.ptr.style.setProperty('--ptr-pull', '1');
-      if (window.$REFRESH_HOOK) window.$REFRESH_HOOK();
-    } else {
-      clearPtr(s.ptr);
-    }
+    var holding = s.fired && s.ptr.dataset.state === 'refreshing';
+    if (holding) settle(s.scroller, HOLD_PX);
+    else if (s.bouncing) settle(s.scroller);
+    if (!s.ptr || s.fired) return;
+    if (s.armed) refresh(s.ptr);
+    else clearPtr(s.ptr);
   }
   main.addEventListener('touchend', end, { capture: true, passive: true });
   main.addEventListener('touchcancel', end, { capture: true, passive: true });
@@ -185,6 +269,11 @@ const OVERSCROLL_JS: &str = r#"
     setTimeout(function () {
       if (ptr.dataset.state !== 'refreshing') return;
       ptr.dataset.state = 'done';
+      var scroller = ptr.parentElement;
+      if (scroller && (scroller.dataset.overscroll === 'holding' || scroller.dataset.overscroll === 'settling')
+          && !(g && g.scroller === scroller)) {
+        settle(scroller);
+      }
       var finished = false;
       function finish() {
         if (finished) return;

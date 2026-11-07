@@ -5,6 +5,9 @@
 
 loading = Wird geladen…
 cancel = Abbrechen
+discard-title = Änderungen verwerfen?
+discard-message = Deine Eingaben gehen verloren.
+discard = Verwerfen
 retry = Erneut versuchen
 delete = Löschen
 back = Zurück
@@ -421,7 +424,6 @@ move-note-group = Die Ausgabe verlässt { $project } für alle Mitglieder, und d
 move-banner = Von { $from } nach { $to }
 move-submit = Verschieben
 move-done = Ausgabe nach { $project } verschoben
-move-delete-failed = Die Ausgabe wurde zum anderen Projekt hinzugefügt, ist aber noch in { $project }: lösche sie dort.
 history-expense-moved = Ausgabe in ein anderes Projekt verschoben: { $name }
 personal-badge = Privat
 move-members =
@@ -701,6 +703,7 @@ split-amounts = Beträge
 
 reimbursements-empty-title = Alles beglichen!
 reimbursement-record = Begleichen
+settlement-recorded = Ausgleich gespeichert.
 reimbursement-pay-with = Bezahlen
 reimbursement-pay-shared-by = Geteilt von { $name } - prüfe vor dem Senden den Empfängernamen, den deine App anzeigt.
 reimbursement-pay-title = { $name } bezahlen
@@ -881,6 +884,11 @@ edit-project-no-identity = Du hast noch nicht gewählt, wer du bist
 edit-project-switch = Wechseln
 edit-project-choose = Wählen
 invite-failed = Diese Einladungen konnten nicht gesendet werden: { $emails }
+invite-waiting = Diese Freunde müssen Counted einmal öffnen, bevor sie eingeladen werden können: { $emails }
+key-offer-title = Ein anderer Schlüssel für { $name }
+key-offer-body = Dieses Gerät hat einen anderen Schlüssel für dieses Projekt, der es hier noch nie geöffnet hat.
+key-offer-choices = Diesen Schlüssel verwenden: Das Projekt öffnet sich mit dem Schlüssel aus diesem Link oder dieser Einladung. Abbrechen: Das Gerät behält seinen aktuellen Schlüssel, nichts ändert sich.
+key-offer-use = Diesen Schlüssel verwenden
 invite-again = Erneut einladen
 friend-picker-title = Freunde hinzufügen
 user-selection-invited-hint = { $email } hat dich zu „{ $project }“ eingeladen.
@@ -1009,6 +1017,12 @@ home-remind-message = Kleine Erinnerung: In { $project } sind noch Rückzahlunge
 home-row-owed = dir geschuldet
 home-row-owe = du schuldest
 home-row-settled = Ausgeglichen
+home-row-quits = Du bist quitt
+home-row-pending =
+    { $count ->
+        [one] { $count } Rückzahlung offen
+       *[other] { $count } Rückzahlungen offen
+    }
 home-totals-partial = Ohne Projekte ohne Wechselkurs
 error-account-key-changed = Der Schlüssel deines Kontos wurde auf einem anderen Gerät geändert. Melde dich erneut an, um weiterzumachen.
 settings-security = Sicherheit

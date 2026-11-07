@@ -57,8 +57,8 @@ pub fn MonthSummary(month: Signal<NaiveDate>, totals: MonthTotals, currency: Str
             }
         }
         section { id: "month-summary", class: "rounded-[20px] bg-base-100 shadow-soft p-4 flex flex-col",
-            span { class: "text-[13px] text-base-content/70", {tid!("my-spending-spent")} }
-            span { id: "month-spent", class: "font-display font-bold text-[28px] tabular-nums mt-0.5 mb-2.5", {crate::common::amount(spent, &currency)} }
+            span { class: "text-[0.8125rem] text-base-content/70", {tid!("my-spending-spent")} }
+            span { id: "month-spent", class: "font-display font-bold text-[1.75rem] tabular-nums mt-0.5 mb-2.5", {crate::common::amount(spent, &currency)} }
             span { class: "flex h-2.5 rounded-full overflow-hidden gap-0.5 bg-base-200",
                 if totals.personal > 0.0 {
                     span { class: "bg-primary", style: "width: {personal_pct}%;" }
@@ -80,7 +80,7 @@ pub fn MonthSummary(month: Signal<NaiveDate>, totals: MonthTotals, currency: Str
                 }
             }
             if totals.income > 0.0 {
-                div { class: "flex justify-between items-baseline gap-2 mt-3 pt-2.5 border-t border-base-200 text-[13px] text-base-content/80",
+                div { class: "flex justify-between items-baseline gap-2 mt-3 pt-2.5 border-t border-base-200 text-[0.8125rem] text-base-content/80",
                     span {
                         {tid!("my-spending-income")}
                         " "

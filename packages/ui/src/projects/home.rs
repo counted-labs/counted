@@ -28,14 +28,14 @@ pub fn BalanceCard(
         section { id: "home-balances", class: "shrink-0 rounded-[20px] bg-base-100 shadow-soft overflow-hidden",
             div { class: "grid grid-cols-2",
                 div { class: "flex flex-col items-center gap-0.5 text-center px-3 pt-4 pb-3.5",
-                    span { class: "text-[13px] text-base-content/70", {tid!("home-owed-to-you")} }
-                    span { id: "home-owed-to-you", class: "font-display font-bold text-[22px] tabular-nums {OWED}",
+                    span { class: "text-[0.8125rem] text-base-content/70", {tid!("home-owed-to-you")} }
+                    span { id: "home-owed-to-you", class: "font-display font-bold text-[1.375rem] tabular-nums {OWED}",
                         "{approx}{amount(totals.owed_to_me, &currency)}"
                     }
                 }
                 div { class: "flex flex-col items-center gap-0.5 text-center px-3 pt-4 pb-3.5 border-l border-base-200",
-                    span { class: "text-[13px] text-base-content/70", {tid!("home-you-owe")} }
-                    span { id: "home-you-owe", class: "font-display font-bold text-[22px] tabular-nums {OWE}",
+                    span { class: "text-[0.8125rem] text-base-content/70", {tid!("home-you-owe")} }
+                    span { id: "home-you-owe", class: "font-display font-bold text-[1.375rem] tabular-nums {OWE}",
                         "{approx}{amount(totals.i_owe, &currency)}"
                     }
                 }
@@ -52,7 +52,7 @@ pub fn BalanceCard(
             }
             if debts.is_empty() {
                 if totals.settled() {
-                    p { id: "home-all-settled", class: "border-t border-base-200 h-11 flex items-center justify-center gap-1.5 text-[13px] font-semibold text-secondary-content",
+                    p { id: "home-all-settled", class: "border-t border-base-200 h-11 flex items-center justify-center gap-1.5 text-[0.8125rem] font-semibold text-secondary-content",
                         CheckIcon { size: 16 }
                         {tid!("home-all-settled")}
                     }
@@ -61,7 +61,7 @@ pub fn BalanceCard(
                 button {
                     id: "home-details-toggle",
                     r#type: "button",
-                    class: "w-full h-11 border-t border-base-200 flex items-center justify-center gap-1.5 text-[13px] font-semibold text-secondary-content",
+                    class: "w-full h-11 border-t border-base-200 flex items-center justify-center gap-1.5 text-[0.8125rem] font-semibold text-secondary-content",
                     aria_expanded: open(),
                     aria_controls: "home-debts",
                     onclick: move |_| open.toggle(),
@@ -128,9 +128,21 @@ pub fn row_subtitle(glance: &ProjectGlance, today: NaiveDate) -> String {
     parts.join(" · ")
 }
 
-/// The right side of a group's row: my balance and what it means, or "À l’équilibre".
+/// The right side of a group's row: my balance and what it means, "Vous êtes quitte" while the
+/// others still owe each other, or "À l’équilibre".
 #[component]
-pub fn RowBalance(balance: f64, currency: String) -> Element {
+pub fn RowBalance(balance: f64, pending: usize, currency: String) -> Element {
+    if balance.abs() < 0.005 && pending > 0 {
+        return rsx! {
+            span { class: "shrink-0 flex flex-col items-end gap-px",
+                span { class: "flex items-center gap-1 text-sm text-base-content/70",
+                    CheckIcon { size: 16 }
+                    {tid!("home-row-quits")}
+                }
+                span { class: "text-[0.6875rem] text-base-content/70", {tid!("home-row-pending", count: pending as i64)} }
+            }
+        };
+    }
     if balance.abs() < 0.005 {
         return rsx! {
             span { class: "shrink-0 flex items-center gap-1 text-sm text-base-content/70",
@@ -142,8 +154,8 @@ pub fn RowBalance(balance: f64, currency: String) -> Element {
     let (tone, label) = if balance > 0.0 { (OWED, tid!("home-row-owed")) } else { (OWE, tid!("home-row-owe")) };
     rsx! {
         span { class: "shrink-0 flex flex-col items-end gap-px",
-            span { class: "font-bold text-[15px] tabular-nums {tone}", {signed_amount(balance, &currency)} }
-            span { class: "text-[11px] text-base-content/70", "{label}" }
+            span { class: "font-bold text-[0.9375rem] tabular-nums {tone}", {signed_amount(balance, &currency)} }
+            span { class: "text-[0.6875rem] text-base-content/70", "{label}" }
         }
     }
 }

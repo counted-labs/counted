@@ -67,12 +67,13 @@
 		as worse than no key at all. Upstream still has the bug; this repo ships its own plist, so it is
 		fixed here.
 
-		An empty dict is valid from iOS 13 and paints systemBackground (white). That is not the
-		#F4F8F6 the other three cold-start layers use (DOCUMENTATION.md §5.2.1) - the exact colour needs
-		UIColorName plus an asset catalog dx does not generate. White against #F4F8F6 is imperceptible;
-		black against either is the bug this closes.
+		UIColorName names ios/LaunchBackground.colorset, which codemagic.yaml compiles into Assets.car
+		with the app icons: base-200 in light (#F4F8F6) and dark (#1B221F), the colour of every later
+		cold-start layer (DOCUMENTATION.md §5.2.1). The launch screen follows the system appearance,
+		not the in-app theme. A build without the catalog (dx serve) falls back to systemBackground.
+		No UIImageName: the catalog holds no splash logo, only the app icon.
 
-		info_plist_guard.rs fails the build if UILaunchStoryboardName comes back.
+		info_plist_guard.rs fails the build if UILaunchStoryboardName comes back or the colour goes.
 	-->
 	<!--
 		Receipt scanning. The Scan button opens a `<input type="file" capture="environment">`, and
@@ -80,8 +81,9 @@
 		NSCameraUsageDescription is absent when that happens, so this key is not optional. The
 		photo-library key covers the "Choose Photo" branch of the same sheet.
 
-		The OS renders both strings verbatim, in the bundle's development region (fr_FR).
-		info_plist_guard.rs fails the build if either goes missing.
+		The OS renders both strings verbatim, from ios/strings/<lang>.lproj/InfoPlist.strings in the
+		user's language, else these French values (the development region, fr_FR).
+		info_plist_guard.rs fails the build if either goes missing or a locale lacks a translation.
 	-->
 	<key>NSCameraUsageDescription</key>
 	<string>Pour lire un ticket de caisse et pré-remplir la dépense. La photo est analysée sur votre téléphone, n'est jamais envoyée et n'est pas conservée.</string>
@@ -89,7 +91,10 @@
 	<string>Pour lire un ticket de caisse déjà photographié. L'image est analysée sur votre téléphone, n'est jamais envoyée et n'est pas conservée.</string>
 
 	<key>UILaunchScreen</key>
-	<dict/>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UISupportsTrueScreenSizeOnMac</key>
@@ -109,11 +114,13 @@
 		<string>iPhoneOS</string>
 		<string>iPadOS</string>
 	</array>
+	<!--
+		iPhone portrait only: the layout is one portrait column with no left/right safe-area insets.
+		The iPad keeps all four (multitasking needs them). info_plist_guard.rs pins both lists.
+	-->
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>

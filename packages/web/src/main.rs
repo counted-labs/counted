@@ -6,6 +6,9 @@ use ui::route::Route;
 const ICON: Asset = asset!("/assets/counted.png");
 const MAIN_CSS: Asset = asset!("/assets/main.css");
 const TAILWIND_CSS: Asset = asset!("/assets/tailwind.css");
+// A folder, so the manifest names its icons by relative URL. Folders are never hashed: the files
+// are served revalidated, not `immutable`.
+const PWA: Asset = asset!("/assets/pwa", AssetOptions::folder());
 
 // Self-hosted fonts (no Google CDN). Referenced via asset!() so they are bundled
 // with hashed URLs; @font-face is injected below with those resolved URLs.
@@ -139,8 +142,12 @@ fn app() -> Element {
     rsx! {
         // Global app resources
         PageTitle { text: "counted" }
+        document::Script { src: ui::common::BOOT_JS, integrity: ui::common::BOOT_JS_INTEGRITY, crossorigin: "anonymous" }
         LocaleHead {}
         document::Link { rel: "icon", r#type: "image/png", href: ICON }
+        document::Link { rel: "manifest", href: "{PWA}/manifest.webmanifest" }
+        document::Link { rel: "apple-touch-icon", href: "{PWA}/apple-touch-icon.png" }
+        document::Link { rel: "stylesheet", href: ui::common::NATIVE_FEEL_CSS }
         document::Link { rel: "stylesheet", href: MAIN_CSS }
         document::Link { rel: "stylesheet", href: TAILWIND_CSS }
         document::Style { {font_face_css()} }
@@ -152,7 +159,7 @@ fn app() -> Element {
         }
 
         main {
-            class: "min-h-screen bg-base-200 flex flex-col items-center",
+            class: "min-h-dvh bg-base-200 flex flex-col items-center",
             Router::<Route> {}
         }
     }

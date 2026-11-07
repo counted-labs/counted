@@ -197,6 +197,7 @@ mod tests {
             account_id: Uuid::new_v4(),
             email: email.into(),
             public_key: ready.then(|| vec![1; 32]),
+            kem_public_key: None,
         }
     }
 

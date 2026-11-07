@@ -4,7 +4,7 @@ use shared::{Account, Friend};
 use uuid::Uuid;
 
 use super::friend_checklist::FriendChecklist;
-use super::friends_service::{get_pinned_friends, invite_each, invitee_emails, my_private_key, Invitee};
+use super::friends_service::{get_pinned_friends, invite_each, invitee_emails, sender, Invitee, Unsent};
 use crate::common::{error_message, Flash, LocalStorageState};
 use crate::route::Route;
 
@@ -36,13 +36,13 @@ pub fn InviteFriendsModal(props: InviteFriendsModalProps) -> Element {
 
     let friends = use_resource(move || async move { get_pinned_friends(ls_ctx).await.map(|(v, _)| v.friends) });
 
-    let my_private = auth_ctx().zip(account_key()).and_then(|(a, k)| my_private_key(&a, &k, ls_ctx.peek().raw_wraps_ok(a.id)));
+    let from = auth_ctx().zip(account_key()).and_then(|(a, k)| sender(&a, &k, &ls_ctx.peek()));
     let project_id = props.project_id;
     let project_key = props.project_key;
     let on_close = props.on_close;
 
     let on_invite = move |_| {
-        if my_private.is_none() {
+        if from.is_none() {
             error.set(Some(tid!("friends-no-account-key")));
             return;
         }
@@ -69,12 +69,12 @@ pub fn InviteFriendsModal(props: InviteFriendsModalProps) -> Element {
         spawn(async move {
             busy.set(true);
             error.set(None);
-            let failed = invite_each(project_id, &chosen, my_private, &project_key).await;
-            if failed.is_empty() {
+            let unsent = invite_each(ls_ctx, project_id, &chosen, from, &project_key).await;
+            if unsent.is_empty() {
                 flash.set(Some(Flash::ok(tid!("invite-sent", count: chosen.len()))));
                 on_close.call(());
             } else {
-                error.set(Some(tid!("invite-failed", emails: invitee_emails(&failed))));
+                error.set(Some(unsent_message(&unsent)));
             }
             busy.set(false);
         });
@@ -196,4 +196,10 @@ pub fn FriendPickerModal(props: FriendPickerModalProps) -> Element {
             div { class: "modal-backdrop", onclick: move |_| on_close.call(()) }
         }
     }
+}
+
+fn unsent_message(unsent: &Unsent) -> String {
+    let failed = (!unsent.failed.is_empty()).then(|| tid!("invite-failed", emails: invitee_emails(&unsent.failed)));
+    let waiting = (!unsent.waiting.is_empty()).then(|| tid!("invite-waiting", emails: invitee_emails(&unsent.waiting)));
+    failed.into_iter().chain(waiting).collect::<Vec<_>>().join(" ")
 }

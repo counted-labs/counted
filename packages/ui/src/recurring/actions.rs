@@ -103,7 +103,8 @@ pub fn stop_rule(
         project_id,
         history: history(&key, actor, summary, HistoryAction::Deleted),
     };
-    spawn(async move {
+    // Forever: the page that asked closes or navigates at once, which would cancel a scoped task.
+    dioxus::core::spawn_forever(async move {
         crate::common::project_token::scope(req.project_id);
         if let Err(e) = delete_recurring_expense(Json(req)).await {
             flash.set(Some(Flash::err(error_message(&e))));

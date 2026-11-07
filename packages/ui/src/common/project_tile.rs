@@ -1,13 +1,7 @@
 use dioxus::prelude::*;
 use uuid::Uuid;
 
-const TINTS: [&str; 5] = [
-    "bg-tile-green text-tile-green-content",
-    "bg-tile-blue text-tile-blue-content",
-    "bg-tile-amber text-tile-amber-content",
-    "bg-tile-violet text-tile-violet-content",
-    "bg-tile-red text-tile-red-content",
-];
+use super::avatar::TINTS;
 
 fn tint(id: Uuid) -> &'static str {
     TINTS[(id.as_u128() % TINTS.len() as u128) as usize]
@@ -28,9 +22,9 @@ pub fn tile_text(name: &str, emoji: Option<&str>) -> (String, bool) {
 
 pub fn tile_class(text_is_emoji: bool) -> &'static str {
     if text_is_emoji {
-        "size-[42px] shrink-0 rounded-[13px] text-[22px] leading-none flex items-center justify-center"
+        "size-[2.625rem] shrink-0 rounded-[13px] text-[1.375rem] leading-none flex items-center justify-center"
     } else {
-        "size-[42px] shrink-0 rounded-[13px] font-display font-bold text-[17px] flex items-center justify-center"
+        "size-[2.625rem] shrink-0 rounded-[13px] font-display font-bold text-[1.0625rem] flex items-center justify-center"
     }
 }
 

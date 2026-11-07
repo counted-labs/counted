@@ -11,15 +11,14 @@ use shared::{
 
 use crate::common::creator_proof::{keep_creator_secret, new_creator_proof};
 use crate::common::{
-    error_message, haptic, project_initial, tile_class, tile_text, update_ls, CurrencyPicker, EmojiGrid, Haptic,
+    error_message, haptic, project_initial, tile_class, tile_text, update_ls, CurrencyPicker, DiscardConfirm, EmojiGrid, FormSheetBar, Haptic,
     upsert_project, upsert_project_key, InviteRetry, LocalStorageState,
 };
 use crate::crypto::{
     claim_token, claim_verifier, decrypt_json, encrypt_padded_json, generate_key, key_to_fragment,
     wrap_key, WrapUse,
 };
-use crate::friends::friends_service::{invite_each, my_private_key, Invitee};
-use crate::icons::{CloseIcon, ICON_HEADER};
+use crate::friends::friends_service::{invite_each, sender, Invitee};
 use crate::participants::participants_service::{
     can_create, invite_count, same_name, taken_names, DraftParticipant,
 };
@@ -226,10 +225,10 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                     })
                     .collect();
                 if !invitees.is_empty() {
-                    let my_private = account_key.and_then(|ak| my_private_key(account, &ak, ls_ctx.peek().raw_wraps_ok(account.id)));
-                    let failed = invite_each(project_id, &invitees, my_private, &key).await;
-                    if !failed.is_empty() {
-                        invite_retry.set(Some(InviteRetry { project_id, invitees: failed }));
+                    let from = account_key.and_then(|ak| sender(account, &ak, &ls_ctx.peek()));
+                    let unsent = invite_each(ls_ctx, project_id, &invitees, from, &key).await;
+                    if !unsent.is_empty() {
+                        invite_retry.set(Some(InviteRetry { project_id, unsent }));
                     }
                 }
             }
@@ -241,34 +240,49 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
     };
 
     let on_close = props.on_close;
+    let typed = (project_name(), description(), emoji(), currency(), me_touched(), drafts());
+    let opened = use_hook(|| typed.clone());
+    let dirty = typed != opened;
+    let mut discarding = use_signal(|| false);
+    let mut request_close = move || {
+        if dirty {
+            discarding.set(true);
+        } else {
+            on_close.call(());
+        }
+    };
     let taken = taken_names(&me_name(), &[], &[]);
     let invites = invite_count(&drafts.read());
     let ready = can_create(&me_name(), &drafts.read());
     let (tile, tile_is_emoji) = tile_text(&project_name(), emoji().as_deref());
+    let name_required = tid!("add-project-name-required");
+    let name_error = error_msg().filter(|e| *e == name_required);
 
     rsx! {
         div {
             id: "add-project-modal",
             class: "modal modal-open modal-bottom sm:modal-middle",
             role: "dialog",
+            "data-sheet-dirty": if dirty { "true" },
             aria_modal: "true",
             aria_labelledby: "add-project-modal-title",
             tabindex: "-1",
             div { class: "modal-box max-w-sm p-0 flex flex-col",
-                div { class: "flex items-center justify-between px-6 pt-5 pb-4 border-b border-base-200 flex-shrink-0",
-                    h2 { id: "add-project-modal-title", class: "font-bold text-lg font-display", {tid!("add-project-title")} }
-                    button {
-                        r#type: "button",
-                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                        aria_label: tid!("close"),
-                        onclick: move |_| on_close.call(()),
-                        CloseIcon { size: ICON_HEADER }
+                div { class: "px-4 pt-3 pb-3 border-b border-base-200 flex-shrink-0",
+                    FormSheetBar {
+                        close_id: "add-project-close",
+                        confirm_id: "add-project-confirm",
+                        confirm_label: tid!("create"),
+                        form: Some("add-project-fields"),
+                        disabled: loading() || !ready,
+                        on_close: move |_| request_close(),
+                        h2 { id: "add-project-modal-title", class: "flex-1 min-w-0 truncate font-bold text-lg font-display sheet-bar-title", {tid!("add-project-title")} }
                     }
                 }
 
-                form { class: "flex flex-col flex-1 overflow-hidden", onsubmit: on_submit,
+                form { id: "add-project-fields", class: "flex flex-col flex-1 overflow-hidden", onsubmit: on_submit,
                 div { class: "flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-5",
-                if let Some(err) = error_msg() {
+                if let Some(err) = error_msg().filter(|e| *e != name_required) {
                     div { id: "add-project-error", role: "alert", class: "alert alert-error text-sm", "{err}" }
                 }
 
@@ -299,10 +313,13 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                                     enterkeyhint: "next",
                                     aria_required: "true",
                                     aria_invalid: if error_msg().is_some() && project_name().trim().is_empty() { "true" },
-                                    aria_describedby: if error_msg().is_some() { "add-project-error" },
+                                    aria_describedby: if name_error.is_some() { "add-project-name-error" } else if error_msg().is_some() { "add-project-error" } else { "" },
                                     placeholder: tid!("add-project-name-placeholder"),
                                     value: "{project_name}",
                                     oninput: move |e| project_name.set(e.value()),
+                                }
+                                if let Some(err) = name_error.clone() {
+                                    p { id: "add-project-name-error", role: "alert", class: "text-xs text-error mt-1", "{err}" }
                                 }
                             }
                         }
@@ -356,6 +373,8 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                                 aria_required: "true",
                                 autocapitalize: "words",
                                 autocomplete: "off",
+                                autocorrect: "off",
+                                spellcheck: "false",
                                 placeholder: tid!("add-project-participant-placeholder"),
                                 value: "{me_name}",
                                 oninput: move |e| {
@@ -392,7 +411,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                         button {
                             r#type: "button",
                             class: "btn",
-                            onclick: move |_| props.on_close.call(()),
+                            onclick: move |_| request_close(),
                             {tid!("cancel")}
                         }
                         button {
@@ -414,7 +433,16 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
 
             div {
                 class: "modal-backdrop",
-                onclick: move |_| props.on_close.call(()),
+                onclick: move |_| request_close(),
+            }
+        }
+        if discarding() {
+            DiscardConfirm {
+                on_keep: move |_| discarding.set(false),
+                on_discard: move |_| {
+                    discarding.set(false);
+                    on_close.call(());
+                },
             }
         }
     }

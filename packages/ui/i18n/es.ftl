@@ -5,6 +5,9 @@
 
 loading = Cargando…
 cancel = Cancelar
+discard-title = ¿Descartar los cambios?
+discard-message = Lo que has escrito se perderá.
+discard = Descartar
 retry = Reintentar
 delete = Eliminar
 back = Volver
@@ -421,7 +424,6 @@ move-note-group = El gasto saldrá de { $project } para todos sus miembros y se 
 move-banner = De { $from } a { $to }
 move-submit = Mover
 move-done = Gasto movido a { $project }
-move-delete-failed = El gasto se añadió al otro proyecto pero sigue en { $project }: elimínalo allí.
 history-expense-moved = Gasto movido a otro proyecto: { $name }
 personal-badge = Personal
 move-members =
@@ -701,6 +703,7 @@ split-amounts = Importes
 
 reimbursements-empty-title = ¡Cuentas saldadas!
 reimbursement-record = Saldar
+settlement-recorded = Pago registrado.
 reimbursement-pay-with = Pagar
 reimbursement-pay-shared-by = Compartido por { $name }: comprueba el nombre del destinatario que muestra tu aplicación antes de enviar.
 reimbursement-pay-title = Pagar a { $name }
@@ -881,6 +884,11 @@ edit-project-no-identity = Aún no has elegido quién eres
 edit-project-switch = Cambiar
 edit-project-choose = Elegir
 invite-failed = No se pudieron enviar estas invitaciones: { $emails }
+invite-waiting = Estos amigos tienen que abrir Counted una vez antes de poder ser invitados: { $emails }
+key-offer-title = Otra clave para { $name }
+key-offer-body = Este dispositivo tiene otra clave para este proyecto, que nunca lo ha abierto aquí.
+key-offer-choices = Usar esta clave: el proyecto se abre con la clave de este enlace o invitación. Cancelar: el dispositivo conserva su clave actual y nada cambia.
+key-offer-use = Usar esta clave
 invite-again = Invitar de nuevo
 friend-picker-title = Añadir amigos
 user-selection-invited-hint = { $email } te ha invitado a «{ $project }».
@@ -1009,6 +1017,12 @@ home-remind-message = Pequeño recordatorio: quedan reembolsos pendientes en { $
 home-row-owed = te deben
 home-row-owe = debes
 home-row-settled = Al día
+home-row-quits = Estás al día
+home-row-pending =
+    { $count ->
+        [one] { $count } reembolso pendiente
+       *[other] { $count } reembolsos pendientes
+    }
 home-totals-partial = Sin los proyectos sin tipo de cambio
 error-account-key-changed = La clave de tu cuenta cambió en otro dispositivo. Vuelve a iniciar sesión para continuar.
 settings-security = Seguridad

@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, HashMap};
 use uuid::Uuid;
 
 use crate::categories::{ProjectCategories, ShownCategory, CHART_CATEGORIES};
-use crate::common::{error_message, update_project_fresh, ProjectKey};
+use crate::common::{error_message, update_project_fresh, whole_amount, ProjectKey};
 use crate::crypto::{decrypt_json, encrypt_padded_json};
 use crate::expenses::helpers::budgets::{BudgetLine, Meter};
 use crate::expenses::helpers::expense_form_helpers::parse_amount;
@@ -47,7 +47,7 @@ pub fn BudgetPanel(lines: Vec<BudgetLine>, currency: String, on_manage: EventHan
                 button {
                     id: "budget-manage",
                     r#type: "button",
-                    class: "link link-primary no-underline text-[13px] font-semibold",
+                    class: "link link-primary no-underline text-[0.8125rem] font-semibold",
                     onclick: move |_| on_manage.call(()),
                     {tid!("budget-manage")}
                 }
@@ -239,7 +239,7 @@ pub fn BudgetSheet(
                                     }
                                     span { class: "flex-1 min-w-0 flex flex-col",
                                         span { class: "font-medium truncate", dir: "auto", "{label}" }
-                                        span { class: "text-xs text-base-content/70", {tid!("budget-average", amount: format!("{average:.0} {currency}"))} }
+                                        span { class: "text-xs text-base-content/70", {tid!("budget-average", amount: whole_amount(average, &currency))} }
                                     }
                                     label { class: "input w-28 h-11 rounded-xl gap-1",
                                         input {

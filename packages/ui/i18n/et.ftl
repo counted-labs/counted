@@ -5,6 +5,9 @@
 
 loading = Laadimine…
 cancel = Loobu
+discard-title = Kas hüljata muudatused?
+discard-message = Sinu sisestatu läheb kaotsi.
+discard = Hülga
 confirm = Kinnita
 retry = Proovi uuesti
 delete = Kustuta
@@ -441,6 +444,7 @@ reimbursements-empty-title = Kõik tasaarveldatud!
 reimbursements-empty-hint = Tasaarvelduse soovitused ilmuvad siia, kui arved ei klapi
 reimbursement-owes = { $debtor } võlgneb { $creditor }
 reimbursement-record = Tasaarvelda
+settlement-recorded = Tasaarveldus salvestatud.
 reimbursement-pay-with = Maksa
 reimbursement-pay-shared-by = Jaganud { $name } - enne saatmist kontrolli saaja nime, mida su rakendus näitab.
 reimbursement-pay-title = Maksa { $name }
@@ -476,7 +480,6 @@ move-note-group = Kulu lahkub projektist { $project } kõigi liikmete jaoks ja g
 move-banner = { $from } → { $to }
 move-submit = Teisalda
 move-done = Kulu teisaldati projekti { $project }
-move-delete-failed = Kulu lisati teise projekti, kuid on endiselt projektis { $project }: kustuta see seal.
 history-expense-moved = Kulu teisaldati teise projekti: { $name }
 personal-badge = Isiklik
 move-members =
@@ -853,6 +856,11 @@ edit-project-no-identity = Sa pole veel valinud, kes sa oled
 edit-project-switch = Vaheta
 edit-project-choose = Vali
 invite-failed = Neid kutseid ei õnnestunud saata: { $emails }
+invite-waiting = Need sõbrad peavad Countedi korra avama, enne kui neid saab kutsuda: { $emails }
+key-offer-title = Teine võti projektile { $name }
+key-offer-body = Sellel seadmel on selle projekti jaoks teine võti, mis pole seda siin kunagi avanud.
+key-offer-choices = Kasuta seda võtit: projekt avaneb selle lingi või kutse võtmega. Loobu: seade jätab alles praeguse võtme ja midagi ei muutu.
+key-offer-use = Kasuta seda võtit
 invite-again = Kutsu uuesti
 friend-picker-title = Lisa sõpru
 user-selection-invited-hint = { $email } kutsus sind projekti „{ $project }“.
@@ -981,6 +989,12 @@ home-remind-message = Väike meeldetuletus: projektis { $project } on veel tagas
 home-row-owed = sulle võlgu
 home-row-owe = oled võlgu
 home-row-settled = Tasutud
+home-row-quits = Sa oled tasa
+home-row-pending =
+    { $count ->
+        [one] { $count } tagasimakse ootel
+       *[other] { $count } tagasimakset ootel
+    }
 home-totals-partial = Ilma vahetuskursita projektideta
 error-account-key-changed = Sinu konto võti muutus teises seadmes. Logi uuesti sisse, et jätkata.
 settings-security = Turvalisus

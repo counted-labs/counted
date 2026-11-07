@@ -52,6 +52,9 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 	&& dx bundle --web --release --package web \
 	&& cmp Cargo.lock /tmp/Cargo.lock.before
 
+# The private Dockerfile's step, so both list the same pinned bytes.
+RUN sh packages/web/integrity.sh /app/target/dx/web/release/web/public
+
 # Every file of the bundle by its URL path, minus index.html (the SSR handler answers that URL).
 # The private build's list has one extra line, `server`, which this build cannot produce.
 RUN cd /app/target/dx/web/release/web/public \

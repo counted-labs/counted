@@ -4,14 +4,14 @@ use shared::Account;
 use std::collections::VecDeque;
 use uuid::Uuid;
 
-use crate::friends::friends_service::Invitee;
+use crate::friends::friends_service::Unsent;
 use super::{is_client_outdated_error, read_from_ls, read_queue, LocalStorageState, QueuedOp};
 use crate::crypto::key_from_fragment;
 use crate::i18n::{set_language, use_init_locale};
 
 /// A one-off message raised from anywhere and rendered once, by `AppLayout`. It carries its own
 /// severity: a failure raised through here has to read as a failure, not as a green confirmation.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Flash {
     pub msg: String,
     pub success: bool,
@@ -32,7 +32,7 @@ impl Flash {
 #[derive(Clone, PartialEq)]
 pub struct InviteRetry {
     pub project_id: Uuid,
-    pub invitees: Vec<Invitee>,
+    pub unsent: Unsent,
 }
 
 /// The invitation just accepted, read once by the "who are you?" picker it leads to: who sent it,
@@ -124,9 +124,10 @@ pub fn use_app_contexts() {
     let ls_ctx: Signal<LocalStorageState> = use_context_provider(|| Signal::new(ls_state));
     // No Signal<bool> for is_mobile: it would collide with is_online (contexts are keyed by type).
     // Always true on web; updated by DOM events on mobile native.
-    // Mutation queue gate won't activate on web - offline writes fail with network errors.
+    // Never false on web: a write the network refuses stays queued and retries on the next write.
     let is_online: Signal<bool> = use_context_provider(|| Signal::new(true));
-    // Offline mutation queue - persisted to localStorage/file; drained on reconnect (mobile only).
+    // Write queue for every expense add, edit and delete - persisted to localStorage/file; drained at
+    // once when online, on reconnect otherwise.
     let _pending_ops: Signal<VecDeque<QueuedOp>> =
         use_context_provider(|| Signal::new(read_queue()));
     // Bumped after successful queue replay so child page resources re-execute.
@@ -162,6 +163,14 @@ pub fn use_app_contexts() {
                         crate::i18n::apply_inferred_language(code);
                     }
                 }
+            });
+        }
+    });
+
+    use_effect(move || {
+        if let Some(account) = auth.read().as_ref() {
+            crate::common::update_ls_if_changed(ls_ctx, |state| {
+                crate::friends::friends_service::saw_hybrid_floor(state, account)
             });
         }
     });

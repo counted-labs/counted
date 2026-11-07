@@ -5,6 +5,9 @@
 
 loading = Завантаження…
 cancel = Скасувати
+discard-title = Відкинути зміни?
+discard-message = Введене буде втрачено.
+discard = Відкинути
 confirm = Підтвердити
 retry = Спробувати ще раз
 delete = Видалити
@@ -445,6 +448,7 @@ reimbursements-empty-title = Усе розраховано!
 reimbursements-empty-hint = Пропозиції розрахунку з’являться тут, коли рахунки не зійдуться
 reimbursement-owes = { $debtor } винен { $creditor }
 reimbursement-record = Розрахуватися
+settlement-recorded = Розрахунок записано.
 reimbursement-pay-with = Заплатити
 reimbursement-pay-shared-by = Поділився { $name } - перед надсиланням перевір ім’я отримувача, яке показує твій застосунок.
 reimbursement-pay-title = Заплатити { $name }
@@ -480,7 +484,6 @@ move-note-group = Витрата покине { $project } для всіх уч�
 move-banner = З { $from } до { $to }
 move-submit = Перемістити
 move-done = Витрату переміщено до { $project }
-move-delete-failed = Витрату додано до іншого проєкту, але вона досі в { $project }: видали її там.
 history-expense-moved = Витрату переміщено до іншого проєкту: { $name }
 personal-badge = Особисте
 move-members =
@@ -871,6 +874,11 @@ edit-project-no-identity = Ти ще не вибрав(-ла), хто ти
 edit-project-switch = Змінити
 edit-project-choose = Вибрати
 invite-failed = Не вдалося надіслати ці запрошення: { $emails }
+invite-waiting = Ці друзі мають один раз відкрити Counted, перш ніж їх можна буде запросити: { $emails }
+key-offer-title = Інший ключ для { $name }
+key-offer-body = Цей пристрій має інший ключ до цього проєкту, який ніколи не відкривав його тут.
+key-offer-choices = Використати цей ключ: проєкт відкривається ключем із цього посилання чи запрошення. Скасувати: пристрій залишає свій поточний ключ, і нічого не змінюється.
+key-offer-use = Використати цей ключ
 invite-again = Запросити знову
 friend-picker-title = Додати друзів
 user-selection-invited-hint = { $email } запрошує тебе до «{ $project }».
@@ -999,6 +1007,14 @@ home-remind-message = Невелике нагадування: у { $project } �
 home-row-owed = тобі винні
 home-row-owe = ти винен
 home-row-settled = Розраховано
+home-row-quits = У тебе розраховано
+home-row-pending =
+    { $count ->
+        [one] { $count } очікуване повернення
+        [few] { $count } очікувані повернення
+        [many] { $count } очікуваних повернень
+       *[other] { $count } очікуваного повернення
+    }
 home-totals-partial = Без проєктів без обмінного курсу
 error-account-key-changed = Ключ твого облікового запису змінено на іншому пристрої. Увійди знову, щоб продовжити.
 settings-security = Безпека

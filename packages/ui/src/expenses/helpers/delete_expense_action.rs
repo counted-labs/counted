@@ -1,15 +1,13 @@
 //! Deleting an expense, shared by the detail page's `⋯` menu and the swipe shortcut on the list.
-//! Both need the same three things - an encrypted history entry, an offline fallback, and the
-//! server call - and keeping them here is what stops the two paths drifting apart.
+//! Both need the same two things - an encrypted history entry and the queued op - and keeping them
+//! here is what stops the two paths drifting apart.
 
-use api::expenses::expenses_controller::delete_expense;
-use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use shared::{DeleteExpenseRequest, ExpenseType, HistoryAction, HistoryContext, HistoryEntity, HistoryPayload, ProjectStatus};
 use std::collections::VecDeque;
 use uuid::Uuid;
 
-use crate::common::{error_message, write_queue, Flash, OpKind, QueuedOp};
+use crate::common::{write_queue, OpKind, QueuedOp};
 use crate::crypto::encrypt_padded_json;
 
 /// An archived project is frozen: nothing may be removed from it. Neither may the read-only demo.
@@ -53,35 +51,20 @@ pub(crate) fn delete_expense_request(
     DeleteExpenseRequest { id: expense_id, project_id, history }
 }
 
-/// Sends the deletion, or queues it when offline, then runs `on_done`.
+/// Queues the deletion, online or not, then runs `on_done` at once: the row leaves the list now and
+/// the queue sends the request. A refused delete surfaces as the queue's toast, the op kept.
 ///
-/// `on_done` navigates away or refetches the list, so it runs only once the row is really gone: a
-/// rejected delete raises the failure on `flash` and leaves the caller where it was. Queuing while
-/// offline *is* a success - the op replays on reconnect.
-///
-/// `is_online`, `pending_ops` and `flash` are passed in rather than read here: this runs from an
-/// event handler, and `use_context` is a hook.
+/// `pending_ops` is passed in rather than read here: this runs from an event handler, and
+/// `use_context` is a hook.
 pub(crate) fn run_delete_expense(
     req: DeleteExpenseRequest,
     label: String,
-    is_online: bool,
     mut pending_ops: Signal<VecDeque<QueuedOp>>,
-    mut flash: Signal<Option<Flash>>,
     on_done: impl FnOnce() + 'static,
 ) {
-    if !is_online {
-        pending_ops.write().push_back(QueuedOp::new(Uuid::new_v4(), &label, OpKind::DeleteExpense(req)));
-        write_queue(&pending_ops.read());
-        on_done();
-        return;
-    }
-    spawn(async move {
-        crate::common::project_token::scope(req.project_id);
-        match delete_expense(Json(req)).await {
-            Ok(()) => on_done(),
-            Err(e) => flash.set(Some(Flash::err(error_message(&e)))),
-        }
-    });
+    pending_ops.write().push_back(QueuedOp::new(Uuid::new_v4(), &label, OpKind::DeleteExpense(req)));
+    write_queue(&pending_ops.read());
+    on_done();
 }
 
 #[cfg(test)]

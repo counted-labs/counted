@@ -5,6 +5,9 @@
 
 loading = Nalaganje…
 cancel = Prekliči
+discard-title = Želiš zavreči spremembe?
+discard-message = Vneseno bo izgubljeno.
+discard = Zavrzi
 confirm = Potrdi
 retry = Poskusi znova
 delete = Izbriši
@@ -445,6 +448,7 @@ reimbursements-empty-title = Vse je poravnano!
 reimbursements-empty-hint = Predlogi za poravnavo se prikažejo tukaj, ko računi niso uravnoteženi
 reimbursement-owes = { $debtor } dolguje { $creditor }
 reimbursement-record = Poravnaj
+settlement-recorded = Poravnava zabeležena.
 reimbursement-pay-with = Plačaj
 reimbursement-pay-shared-by = Delil { $name } - pred pošiljanjem preveri ime prejemnika, ki ga prikaže tvoja aplikacija.
 reimbursement-pay-title = Plačaj { $name }
@@ -480,7 +484,6 @@ move-note-group = Strošek bo zapustil { $project } za vse člane, stanje skupin
 move-banner = Iz { $from } v { $to }
 move-submit = Premakni
 move-done = Strošek premaknjen v { $project }
-move-delete-failed = Strošek je bil dodan v drugi projekt, a je še vedno v { $project }: izbriši ga tam.
 history-expense-moved = Strošek premaknjen v drug projekt: { $name }
 personal-badge = Osebno
 move-members =
@@ -871,6 +874,11 @@ edit-project-no-identity = Še nisi izbral(a), kdo si
 edit-project-switch = Zamenjaj
 edit-project-choose = Izberi
 invite-failed = Teh povabil ni bilo mogoče poslati: { $emails }
+invite-waiting = Ti prijatelji morajo enkrat odpreti Counted, preden jih je mogoče povabiti: { $emails }
+key-offer-title = Drug ključ za { $name }
+key-offer-body = Ta naprava ima za ta projekt drug ključ, ki ga tukaj še nikoli ni odprl.
+key-offer-choices = Uporabi ta ključ: projekt se odpre s ključem iz te povezave ali povabila. Prekliči: naprava obdrži trenutni ključ in nič se ne spremeni.
+key-offer-use = Uporabi ta ključ
 invite-again = Povabi znova
 friend-picker-title = Dodaj prijatelje
 user-selection-invited-hint = { $email } te je povabil(a) v »{ $project }«.
@@ -999,6 +1007,14 @@ home-remind-message = Majhen opomnik: v { $project } so še neporavnana vračila
 home-row-owed = dolgujejo ti
 home-row-owe = dolguješ
 home-row-settled = Poravnano
+home-row-quits = Pri tebi poravnano
+home-row-pending =
+    { $count ->
+        [one] { $count } čakajoče vračilo
+        [two] { $count } čakajoči vračili
+        [few] { $count } čakajoča vračila
+       *[other] { $count } čakajočih vračil
+    }
 home-totals-partial = Brez projektov brez menjalnega tečaja
 error-account-key-changed = Ključ tvojega računa se je spremenil v drugi napravi. Znova se prijavi za nadaljevanje.
 settings-security = Varnost

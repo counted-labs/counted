@@ -52,8 +52,8 @@ be 8 bytes long. A server cannot forge a row that a member accepts, **unless it 
 key**. Section 9.1 lists the cases in which an active server can still make an account holder's
 device switch to a key the server chose, if its user accepts a forged invitation: on clients up to
 mobile 3.2.7 and web v1.24.3; on current clients only with a friend's public key substituted before
-the device first saw that friend (section 9.2), which comparing codes detects, and only for a project the device holds no key for or holds a key it has
-never seen open. From then on the server reads that device's new writes to the project and can forge
+the device first saw that friend (section 9.2), which comparing codes detects, and only for a project the device holds no key for, or holds a key it has
+never seen open and its user then confirms the switch (section 6). From then on the server reads that device's new writes to the project and can forge
 rows that device accepts. It still cannot read the rows written under the genuine key. A key
 rotation (8.5) cuts a former member off from the rows written after it, unless they collude with a
 hostile server; it never takes back what they read.
@@ -69,7 +69,8 @@ Resistance to a quantum adversary, beyond what section 3.1 lists.
 | Use | Primitive | Implementation |
 | --- | --- | --- |
 | Symmetric encryption | XChaCha20-Poly1305 (the IETF AEAD construction with a 24-byte nonce) | `chacha20poly1305` 0.10.1 |
-| Friend invitations | X25519, then HChaCha20 to a key, then NaCl `crypto_secretbox` with XChaCha20 and Poly1305 (section 9) | `crypto_box` 0.9.1 (`ChaChaBox`), `crypto_secretbox` 0.1.1, `curve25519-dalek` 4.1.3 |
+| Friend invitations, until `MIN_APP_VERSION` reaches 3.2.10 | X25519, then HChaCha20 to a key, then NaCl `crypto_secretbox` with XChaCha20 and Poly1305 (section 9) | `crypto_box` 0.9.1 (`ChaChaBox`), `crypto_secretbox` 0.1.1, `curve25519-dalek` 4.1.3 |
+| Friend invitations, from 3.2.10 (section 9.1) | The rotation box below with the sender's static X25519 share as a third combiner input | the same as rotation boxes |
 | Rotation boxes (section 8.6) | Ephemeral X25519 and ML-KEM-768 (FIPS 203) to the recipient's two public keys, HKDF-SHA256 over both shared secrets, then the XChaCha20-Poly1305 above | `curve25519-dalek` 4.1.3, `ml-kem` 0.3.4, `hkdf` 0.12.4 |
 | Password hashing | Argon2id, version 0x13 | `argon2` 0.5.3 |
 | Hashing | SHA-256 | `sha2` 0.10.9 |
@@ -89,9 +90,12 @@ A quantum computer breaks X25519, not the symmetric primitives (XChaCha20-Poly13
 keys, Argon2id, SHA-256, HKDF-SHA256) nor ML-KEM-768. Rows encrypted under a project key or the
 account key hold against it, except through two paths:
 
-- Invitation boxes and the public keys they were made with are stored by the server: a future
-  quantum adversary with the database or a backup recovers every project key ever sent as an
-  invitation, and through it every row of those projects. Rotation boxes (8.6) are not exposed:
+- Classical invitation boxes and the public keys they were made with are stored by the server: a
+  future quantum adversary with the database or a backup recovers every project key sent in one,
+  and through it every row of those projects written before the project's next rotation. They are
+  written until `MIN_APP_VERSION` reaches 3.2.10; hybrid invitations (9.1) are not exposed, and
+  after that floor no device that has seen it writes a classical box (one the server never shows
+  the floor to still does, 14.3). Rotation boxes (8.6) are not exposed either:
   their key needs the ML-KEM-768 shared secret as well as the X25519 one. An account member whose
   account has no ML-KEM key yet (no current client has started on it) gets no box, and the new key
   only through the new link.
@@ -256,7 +260,8 @@ The last column gives examples. Every writer outside tests follows its row's pad
 | Master-key wrap | password key | `KeyWrap` (`amk`) | no (fixed size) | `wrap_amk` in [`crypto.rs`](packages/ui/src/crypto.rs) |
 | Recovery wrap | `rk_key` (7.5) | `KeyWrap` (`amk-recovery`) | no (fixed size) | `wrap_recovery` in [`crypto.rs`](packages/ui/src/crypto.rs) |
 | Member-key directory entry (a member's two public keys) | project | `{"use":"member-key",..}` | no (fixed size) | `member_key_entry` in [`rotation.rs`](packages/ui/src/rotation.rs) |
-| Invitation box (project key for a friend) | X25519 pair | bare fragment | no (fixed size) | `box_project_key` in [`crypto.rs`](packages/ui/src/crypto.rs) |
+| Invitation box (project key for a friend), until floor 3.2.10 | X25519 pair | bare fragment | no (fixed size) | `box_project_key` in [`crypto.rs`](packages/ui/src/crypto.rs) |
+| Invitation box, from floor 3.2.10 | hybrid, sender-authenticated (9.1) | `{"use":"invite",..}` | no (fixed-length fields) | `box_for` in [`friends_service.rs`](packages/ui/src/friends/friends_service.rs) |
 | Rotation box (new project key for a member who stays) | hybrid (8.6) | `{"use":"rotate",..}` | no | `seal_box` in [`rotation.rs`](packages/ui/src/rotation.rs) |
 | Queued offline op: its label, and a project edit's name and description (local only, never sent) | project | string, tuple | no | [`offline_queue.rs`](packages/ui/src/common/offline_queue.rs), [`edit_project_modal.rs`](packages/ui/src/expenses/modals/edit_project_modal.rs) |
 | `PaymentPayload` (amount, direction), rows written by older clients only | project | `PaymentPayload` | no | no longer written |
@@ -311,7 +316,7 @@ counted://projects/<uuid>#<base64url(project_key)>          (app deep link)
   as deep links or are pasted into the app.
 - The `counted://` scheme is not exclusive: any installed app can register it and receive the link,
   key included. Verified `https` app links do not have this problem.
-- **Adopting a key** (`may_adopt`, `adopt_project_key` in
+- **Adopting a key** (`adoption`, `adopt_project_key` in
   [`membership.rs`](packages/ui/src/common/membership.rs)). "Opens" below means `decrypt_project`
   succeeds: AEAD check, then a parse as `ProjectPayload`.
   - A device that holds no key for the project takes the candidate, unchecked.
@@ -324,11 +329,21 @@ counted://projects/<uuid>#<base64url(project_key)>          (app deep link)
     only when the stored key changes.
   - A held key without that proof (a wrong link stored earlier, or a key pulled from escrow and
     never opened) is replaced only by a candidate that opens the cached project row, or, when
-    nothing is cached, the row the server returns now. Offline with nothing cached, the held key stays.
+    nothing is cached, the row the server returns now (fetched with the candidate's claim token),
+    and only once the user confirms (`adoption`, `answer_key_offer`): the device names the project
+    the candidate opens and asks whether to use the new key. Cancel writes nothing, so the held
+    key, its `key_opened` and its `chain_seen` stay as they were, and opening the same link again
+    asks again. A confirmation is dropped if the held key changed or opened the project while the
+    question was up. A candidate whose served row names the held key in `rotatedFrom` (8.5)
+    switches without the question. Offline with nothing cached, the held key stays and nothing is
+    asked.
 
-  The served row is the server's word, so that last case stops a wrong link given to an honest
-  server, not a hostile server that chose the candidate and serves a row encrypted under it. Clients
-  up to mobile 3.2.7 and web v1.24.3 checked every candidate against the served row only (section 9.1).
+  Both rows are the server's word: the check stops a wrong link given to an honest server, and the
+  question stops a hostile server that chose the candidate and serves a row encrypted under it,
+  since nothing replaces the held key without a link or invitation the user opened and then a
+  second, explicit yes. Clients up to mobile 3.2.7 and web v1.24.3 checked every candidate against
+  the served row only (section 9.1); clients built before 2026-11-06 replaced an unproven held key
+  without asking.
 
 ## 7. Account-key blobs and key escrow
 
@@ -739,7 +754,49 @@ served public key (as in 9.1).
 
 ### 9.1 The box
 
-An account holder can send a project key to a friend's account:
+An account holder can send a project key to a friend's account, in one of two boxes. Which one is
+the floor's choice (`HYBRID_INVITATIONS_FROM` in [`packages/shared/src/lib.rs`](packages/shared/src/lib.rs)):
+a 3.2.9 reader requires the classical `key`, so the server accepts only the classical box until
+`MIN_APP_VERSION` reaches 3.2.10, and only the hybrid one from then on (`one_form_for_the_floor`;
+the table's CHECK holds exactly one well-formed form per row). A device that has seen the floor
+(`Account.hybrid_invitations`), sent a hybrid box or opened one records it
+(`LocalStorageState.hybrid_invitations`) and never writes a classical box again, so a server cannot
+turn it back. It can still withhold the floor from a device that never saw it, and a recipient
+still opens a classical box (14.3). From the floor, a friend whose account has no ML-KEM key yet gets no invitation, and
+the sender is told that friend has to open Counted once; never a classical box in its place.
+
+**Hybrid box** (from 3.2.10; `seal_auth`/`open_auth` in [`hybrid.rs`](packages/ui/src/hybrid.rs)).
+Sender static `sk_s`/`pk_s`; recipient `pk_r` and `ek_r`, both the keys this device pinned (9.2):
+
+```
+e random;  E = X25519(e, 9)
+ss_e      = X25519(e, pk_r)
+ss_s      = X25519(sk_s, pk_r)                         // what authenticates the sender
+(c, ss_k) = ML-KEM-768.Encaps(ek_r)
+k         = HKDF-SHA256(salt = none, ikm = ss_k || ss_e || ss_s,
+                        info = "counted-hybrid-auth-v1" || E || pk_s || pk_r || SHA-256(c) || SHA-256(ek_r) || context)
+ct        = XChaCha20-Poly1305(k, nonce, plaintext, aad = context)        // context = "counted-invite-v1"
+plaintext = {"use":"invite","project":"<uuid>","from":"<sender account>","to":"<recipient account>","key":"<base64url>"}
+```
+
+It is HPKE Auth mode's shape. The recipient matches the served `from_public_key` against its
+friends as for the classical box, opens with its own X25519 key and ML-KEM seed (both checked
+against the halves the server serves), and accepts only if `from` is that friend's account id, `to`
+its own and `project` the invitation's (`open_invitation`). Every X25519 input goes through the
+small-order check, `pk_s` at open included. Properties:
+
+- **Confidentiality** holds if either X25519 or ML-KEM-768 does: a quantum adversary with the
+  database also needs the recipient's ML-KEM seed.
+- **Sender authentication** stays classical: a server without `sk_s` or `sk_r` cannot make a box
+  that opens under `pk_s`, but a quantum adversary recovering both static X25519 keys could.
+  Key-compromise impersonation remains (`sk_r` alone forges a box to its holder).
+- **Reflection** fails before any field is read: a sender reopening its own box computes
+  `X25519(sk_s, E)` and holds no seed for `ek_r`. `from`/`to`/`project` close re-serving to another
+  recipient or under another project.
+- The plaintext has fixed-length fields, so it is not padded. The server checks the box's lengths
+  (32, 1088, 24, a ciphertext of 16 to 512 bytes), and the same check now covers rotation boxes.
+
+**Classical box** (until 3.2.10):
 
 ```
 shared   = u([clamp(sender_private) mod l] * recipient_public)     // l: order of the prime subgroup
@@ -758,9 +815,9 @@ The Poly1305 tag covers the ciphertext only. **This is not the IETF
 XChaCha20-Poly1305 AEAD of section 5**, and `crypto_box` 0.9 refuses associated data. The box goes
 on the wire as an `EncryptedPair` with a 24-byte random nonce.
 
-Properties:
+Properties of the classical box, and of both where they say so:
 
-- **Authenticated, not sealed**: the invitation comes with a sender public key
+- **Authenticated, not sealed** (both boxes): the invitation comes with a sender public key
   (`ProjectInvitation.from_public_key`) and a `from_email`, both served by the server. The recipient
   opens the box only if that key is byte-equal to the public key of one of its friends, as its
   friends list serves it: the key whose code it can compare (9.2). It then shows that friend's email,
@@ -794,14 +851,18 @@ Properties:
   unreadable to the server. On current clients this needs both of:
   - a friend's public key replaced by the server's in the recipient's friends list, which a comparison
     of codes (9.2) detects, since a box opens only with a friend's key; and
-  - a project the device holds no key for, or holds a key it has never seen open (section 6). A
-    held key that has opened P is replaced only by a key whose served row names it in
-    `rotatedFrom` (8.5), which the server cannot build without a holder of that key.
+  - a project the device holds no key for, or holds a key it has never seen open (section 6), and
+    in that second case a separate yes after Accept: the device asks whether to replace the key it
+    holds, naming the project, and Cancel keeps it. A held key that has opened P is replaced only
+    by a key whose served row names it in `rotatedFrom` (8.5), which the server cannot build
+    without a holder of that key.
 
   Clients up to mobile 3.2.7 and web v1.24.3 opened a box with whatever sender key the server served
   and checked a candidate against the served row only, so on them a server could replace a held,
-  genuine key with no substitution that codes would show. Accepting an invitation for a project
-  whose held key is kept leaves that key in place; the invitation is deleted all the same.
+  genuine key with no substitution that codes would show. Clients built before 2026-11-06 replaced
+  a held key that had never opened P without asking. Accepting an invitation for a project whose
+  held key is kept, by the rule or by Cancel, leaves that key in place; the invitation is deleted
+  all the same.
 - The client uses its own private key only if the server's copy of its public key matches it
   (`my_private_key`). This stops a server from giving two accounts each other's keys so that their
   codes match.
@@ -824,7 +885,8 @@ which turns forging into a birthday search at half the bits.
 
 Each device pins a friend's key the first time the friends list serves one
 (`LocalStorageState.friend_keys`, `pin_keys` in
-[`friends_service.rs`](packages/ui/src/friends/friends_service.rs)). A keypair changes only through
+[`friends_service.rs`](packages/ui/src/friends/friends_service.rs)), and the friend's ML-KEM key
+the same way (`friend_kem_keys`); a change of either takes that key off and flags the friend. A keypair changes only through
 a compromise rotation (7.5), and only a verified account can log in to become a friend **[Not
 independently verified]**, so a changed key is either that or a substitution. A key that differs
 from the pin is taken off that friend on this device: nothing is boxed to it, no box opens with it,
@@ -832,9 +894,12 @@ and the row says the code changed and shows the new one. Once the two people hav
 of band, "The code matches" pins the new key (`trust_key`); removing the friend and adding them
 again does the same. Limits: the pin is per device and is lost when the device is erased; a key
 substituted before a device first sees the friend is pinned as is, which only a code comparison
-catches; and there is no "verified" state. Codes
-cover the keys in the friends list: the keys boxes are sent to and, on current clients, the only
-keys a received box opens with (9.1).
+catches; and there is no "verified" state. Codes cover the X25519 keys in the friends list: the
+only keys a received box opens with (9.1), and one of the two a hybrid box is sealed to. They do
+not cover the ML-KEM key. One substituted before first sight, or pinned through "The code matches"
+after a change, leaves that friend's invitations at X25519 strength, never below the classical box.
+A code over both keys stays rejected: beyond the birthday argument above, every friend's code would
+change when their ML-KEM key first appears, invalidating every comparison already made.
 
 ### 9.3 Friend-request labels
 
@@ -977,8 +1042,8 @@ them.
   project until the server enforces project tokens (8.1): a UUID holder can read the ciphertext and
   delete the rows.
 - **No forward secrecy**: a project key changes only at a rotation and the master key only at a
-  compromise rotation; invitation boxes are static-static, and rotation boxes use an ephemeral
-  sender key but the recipient's static keys.
+  compromise rotation; classical invitation boxes are static-static, and hybrid invitation and
+  rotation boxes use an ephemeral sender share but the recipient's static keys.
 - **Roles are in clear and enforced by the server only** (8.4).
 - **A rotation does not take back what a former member read or saved** (8.5).
 - **Escrow is mandatory** for account holders (7.4): the database and a guessed password reveal
@@ -1009,12 +1074,29 @@ them.
   rotation only the new link reaches them.
 - **A friend key substituted before a device first sees that friend** is pinned as is (9.2); only a
   code comparison catches it, and through it a forged invitation can make the device adopt a key the
-  server chose for a project it holds no proven key for (9.1).
-- **Invitation boxes fall to a quantum adversary** (3.1), and with them every project key ever sent
-  as an invitation. Rotation boxes do not (8.6).
+  server chose for a project it holds no key for, or, if its user confirms the switch, one it holds
+  an unproven key for (9.1).
+- **Classical invitation boxes fall to a quantum adversary** (3.1), and with them every project key
+  sent in one, until that project rotates; they are written until the 3.2.10 floor. Hybrid
+  invitation boxes and rotation boxes do not (9.1, 8.6). After that floor, admins of projects that
+  ever received a classical invitation should rotate them.
+- **The hybrid floor is the server's word** (9.1): a server can withhold
+  `Account.hybrid_invitations` from a fresh install, an erased device or a web session, which then
+  writes classical boxes the server stores, and recipients still open them. A build released after
+  the floor will write and accept only the hybrid box, whatever the server reports.
+- **Invitations carry no key epoch** (9.1): a server can serve an old invitation again after the
+  project rotated, and a device holding no key for that project adopts the old key, as with a
+  classical invitation or an old share link.
+- **A friend's ML-KEM key is not covered by codes** (9.2): one substituted before first sight
+  leaves that friend's hybrid invitations at X25519 strength.
 - **Web code delivery** (section 2): a server can serve altered JavaScript to one visitor without
   detection. No shipping browser can refuse code that was not publicly logged; the WAICT drafts
-  would let one, and only an opt-in extension does today.
+  would let one, and only an opt-in extension does today. What the build does close: the HTML
+  document is the one root of trust. Every script carries `integrity` (sha384), the loader fetches
+  the wasm with one, and `Integrity-Policy: blocked-destinations=(script)` makes the browser refuse
+  any script without integrity metadata, so altered code needs an altered document. The same
+  server renders that document per request, so this narrows what a verifier must check; it does
+  not stop the server.
 
 ### 14.4 Legacy clients and legacy data
 
@@ -1084,7 +1166,7 @@ scopes them.
 | `friend-label` | account | a request id the client draws |
 
 The entity id is a UUID v4 the client draws before its first encryption of the row. Expenses have
-an optional `client_op_id`, set today only for offline-queued adds and recurring occurrences; v2
+an optional `client_op_id`, set on every add that goes through the client's write queue (all of them since the native-feel build, older builds only offline) and on recurring occurrences; v2
 makes it mandatory. The other tables need a new column. The offline queue (local only) and
 `PaymentPayload` (no longer written) get no slot.
 
@@ -1101,16 +1183,20 @@ together with their entity ids would still reassign every share.
 - The plaintext is a typed object,
   `{"use":"invite","project":"<uuid>","from":"<account uuid>","to":"<account uuid>","key":"<base64url>"}`.
   It opens only if `to` is the recipient's own account, `project` the invitation's project and
-  `from` the friend whose key opened it. This defeats reflection (9.1).
+  `from` the friend whose key opened it. This defeats reflection (9.1). Built ahead of v2 for the
+  hybrid box, from floor 3.2.10.
 - An invitation for a project the device already holds is shown as "already a member" and never
   adopted.
 
 ### 15.3 Key adoption
 
 Built ahead of v2, as it does not depend on the format: a held key that has opened the project on
-the device is never replaced (section 6), except under the rotation rule (8.5). A held key that never has is still replaced by a candidate
-that opens the served row when nothing is cached, which keeps a wrong link correctable; open
-question in 15.8.
+the device is never replaced (section 6), except under the rotation rule (8.5). A held key that
+never has is replaced by a candidate that opens the cached row, or the served row when nothing is
+cached, only once the user confirms the switch (2026-11-06), which keeps a wrong link correctable
+without letting a served row decide; this answers the question formerly in 15.8. The server
+learns nothing new from it: the question is local, and the candidate's claim token it sees on the
+check is the one it already saw when a held key refused a new link.
 
 ### 15.4 Revision
 
@@ -1168,25 +1254,20 @@ Each new plaintext column gets its row in the list of what the server sees befor
 
 - **Manifest instead of per-row `rev`.** A per-project manifest MACed under the project key, with a
   monotonic epoch pinned on each device, would also cover deletion. Is it worth its cost over 15.4?
-- **Invitation construction.** Replace `crypto_box` by X25519 (rejecting an all-zero shared
-  secret), HKDF over `shared || pk_sender || pk_recipient`, then the IETF XChaCha20-Poly1305 of
-  section 5 with the AAD of 15.2, instead of binding inside the plaintext? Or by the hybrid box of
-  8.6, which would also survive a quantum adversary but authenticates no sender, so the invitation
-  would need a sender binding of its own (a signature, or a static X25519 share in the combiner)?
-  The candidate we would build, deliberately not built before this review: the box of 8.6 with the
-  sender's static X25519 share as a third input to the combiner
-  (`ikm = ss_k || ss_x || X25519(sender_private, pk_recipient)`, and the sender's public key in the
-  info string), the typed plaintext of 15.2, and the recipient opening it only with the pinned key
-  of the account the invitation names. That keeps today's sender authentication, classical as it is,
-  and adds post-quantum confidentiality. It does nothing for the invitation boxes already stored
+- **Invitation construction, built.** The hybrid box of 9.1: the box of 8.6 with the sender's
+  static X25519 share as a third combiner input and `pk_s` in the info, the typed plaintext of
+  15.2, opened only with a friend's pinned key. Is the sender binding right: `pk_s` in the info
+  rather than the ikm, and the order `ss_k || ss_e || ss_s`? Sender authentication stays classical
+  until invitations are signed (format v2). It does nothing for the classical boxes already stored
   (3.1): only a rotation of those projects closes that.
 - **Key commitment.** Store `commit = SHA-256("counted/v2/commit" || K || nonce)` in each pair and
   check it before decrypting, so that "opens under K" proves K?
 - **Bound project and account ids.** Client-drawn project and account UUIDs would let the AAD bind
   them too. Does that add anything once the key scopes them?
-- **An unproven held key.** Should a held key the device has never seen open the project be kept
-  even when nothing is cached (15.3)? That would close the last case of 9.1 at the cost of a wrong
-  link no longer being correctable until the device has cached the project row.
+- **An unproven held key, answered (2026-11-06).** A held key the device has never seen open the
+  project is kept, cached row or not, and replaced only when the user confirms the new key
+  (15.3, section 6). That closes the silent case of 9.1, and a wrong link stays correctable at the
+  cost of one question.
 
 ## 16. Test vectors
 
@@ -1251,6 +1332,13 @@ encapsulation message `[0x04; 32]`, nonce `[0x05; 24]`. The box is pinned by its
 
 ```
 SHA-256(ephemeral || kemCt || nonce || ct) = EsGlmnmZZnSBMZIDE+tgmIyLtUnNt0KDn0XKwQngE4g=
+```
+
+**Authenticated hybrid box** (`the_authenticated_construction_matches_its_known_answer` in
+[`hybrid.rs`](packages/ui/src/hybrid.rs)). As above, plus sender X25519 secret `[0x02; 32]`:
+
+```
+SHA-256(ephemeral || kemCt || nonce || ct) = En87WjuyLSiVoWSs++KCKQsjpihTgLRFKCMUpJgKdcc=
 ```
 
 **Typed wraps** (`stored_typed_wraps_still_open`). Wrapping key `[0x07; 32]` in every case; project

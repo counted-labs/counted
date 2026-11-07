@@ -2,11 +2,11 @@ use dioxus::prelude::*;
 use crate::tid;
 use shared::ProjectStatus;
 
-use crate::common::status_transitions;
+use crate::common::{haptic, status_transitions, Haptic};
 use crate::expenses::group_security::{GroupSecurity, GroupSecuritySection};
 use crate::icons::{
-    ArchiveIcon, CloseIcon, DownloadIcon, HistoryIcon, LockIcon, LogOutIcon, PencilIcon, RepeatIcon,
-    ShareIcon, SmartphoneIcon, UndoIcon, UserPlusIcon, WalletIcon, ICON_HEADER,
+    ArchiveIcon, CloseIcon, DownloadIcon, HistoryIcon, LockIcon, LogOutIcon, MoreIcon, PencilIcon,
+    RepeatIcon, ShareIcon, SmartphoneIcon, UndoIcon, UserPlusIcon, WalletIcon, ICON_HEADER,
 };
 
 #[derive(PartialEq, Props, Clone)]
@@ -209,7 +209,7 @@ pub fn ProjectActionsSheet(props: ProjectActionsSheetProps) -> Element {
     }
 }
 
-const ROW_CLASS: &str = "flex w-full items-center gap-3 min-h-13 px-4 text-left font-medium";
+const ROW_CLASS: &str = "flex w-full items-center gap-3 min-h-13 px-4 text-left font-medium row-press";
 
 #[component]
 fn Tile(id: String, label: String, onclick: EventHandler<()>, children: Element) -> Element {
@@ -221,6 +221,67 @@ fn Tile(id: String, label: String, onclick: EventHandler<()>, children: Element)
             onclick: move |_| onclick.call(()),
             {children}
             span { class: "text-xs font-semibold truncate max-w-full px-1", "{label}" }
+        }
+    }
+}
+
+pub(crate) const GROUP_CLASS: &str = "bg-base-200 rounded-box overflow-hidden divide-y divide-base-300";
+
+/// The round ⋯ in a page header that opens a [`MenuSheet`]. The sheet goes beside the header,
+/// never inside it: a scrolled header has a `backdrop-filter`, which traps a `position: fixed`
+/// sheet in the bar.
+#[component]
+pub(crate) fn MoreButton(id: &'static str, label: String, open: Signal<bool>) -> Element {
+    let mut open = open;
+    rsx! {
+        button {
+            id,
+            r#type: "button",
+            class: "btn btn-circle size-11 min-h-11 border-0 bg-base-300 glass-button",
+            aria_label: "{label}",
+            aria_haspopup: "dialog",
+            aria_expanded: open(),
+            onclick: move |_| {
+                haptic(Haptic::Light);
+                open.set(true);
+            },
+            MoreIcon { size: 24 }
+        }
+    }
+}
+
+/// A titled bottom sheet of [`Row`] groups, the shell of the project sheet without its tiles.
+#[component]
+pub(crate) fn MenuSheet(id: &'static str, title: String, on_close: EventHandler<()>, children: Element) -> Element {
+    crate::common::use_modal_focus(id);
+    rsx! {
+        div {
+            id,
+            class: "modal modal-open modal-bottom sm:modal-middle",
+            role: "dialog",
+            aria_modal: "true",
+            aria_labelledby: "{id}-title",
+            tabindex: "-1",
+            div { class: "modal-box max-w-md p-0",
+                div { class: "flex flex-col gap-4 px-6 pt-5 pb-6",
+                    div { class: "flex items-center gap-2",
+                        h2 {
+                            id: "{id}-title",
+                            class: "flex-1 min-w-0 truncate font-bold text-lg font-display",
+                            "{title}"
+                        }
+                        button {
+                            r#type: "button",
+                            class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
+                            aria_label: tid!("close"),
+                            onclick: move |_| on_close.call(()),
+                            CloseIcon {}
+                        }
+                    }
+                    {children}
+                }
+            }
+            div { class: "modal-backdrop", onclick: move |_| on_close.call(()) }
         }
     }
 }

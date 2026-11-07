@@ -1,10 +1,16 @@
 use std::sync::{Arc, OnceLock};
 
 /// What a haptic means, not what it feels like - the entry point maps these onto each platform's
-/// own vocabulary (UIKit's impact/notification generators, Android's `HapticFeedbackConstants`).
+/// own vocabulary (UIKit's selection/impact/notification generators, Android's
+/// `HapticFeedbackConstants`).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Haptic {
-    /// A selection changed: a dock tab, a menu opening, the FAB.
+    /// A value picked in a custom control: a segmented tab, an emoji, a currency. Never on a native
+    /// `<select>` or date picker, which tick on their own, and never on the dock (UITabBar and
+    /// Material's navigation bar are silent).
+    Selection,
+    /// A tap on a trigger: a menu or sheet opening, the FAB. Silent on Android, where Material
+    /// controls do not buzz on a plain tap.
     Light,
     /// A gesture crossed a threshold or committed: a row swipe arming, a long press firing.
     Medium,

@@ -13,7 +13,7 @@ use crate::route::Route;
 pub fn PrivacyPage() -> Element {
     rsx! {
         document::Link { rel: "canonical", href: format!("{APP_BASE_URL}{}", Route::PrivacyPage {}) }
-        div { class: "container app-container bg-base-100 overflow-auto p-4 max-w-md mx-auto flex flex-col gap-4",
+        div { class: "container app-container bg-base-100 overflow-auto p-4 pb-24 max-w-md mx-auto flex flex-col gap-4",
             AppHeader {
                 title: tid!("nav-privacy"),
                 back_button_route: Route::ProjectsPage {},

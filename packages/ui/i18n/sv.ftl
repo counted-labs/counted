@@ -5,6 +5,9 @@
 
 loading = Laddar…
 cancel = Avbryt
+discard-title = Slänga ändringarna?
+discard-message = Det du har skrivit försvinner.
+discard = Släng
 confirm = Bekräfta
 retry = Försök igen
 delete = Ta bort
@@ -441,6 +444,7 @@ reimbursements-empty-title = Allt är uppgjort!
 reimbursements-empty-hint = Förslag på uppgörelser visas här när räkenskaperna inte går ihop
 reimbursement-owes = { $debtor } är skyldig { $creditor }
 reimbursement-record = Gör upp
+settlement-recorded = Uppgörelse registrerad.
 reimbursement-pay-with = Betala
 reimbursement-pay-shared-by = Delat av { $name } - kontrollera mottagarnamnet som din app visar innan du skickar.
 reimbursement-pay-title = Betala { $name }
@@ -476,7 +480,6 @@ move-note-group = Utgiften lämnar { $project } för alla medlemmar, och gruppen
 move-banner = Från { $from } till { $to }
 move-submit = Flytta
 move-done = Utgift flyttad till { $project }
-move-delete-failed = Utgiften lades till i det andra projektet men finns kvar i { $project }: radera den där.
 history-expense-moved = Utgift flyttad till ett annat projekt: { $name }
 personal-badge = Personlig
 move-members =
@@ -853,6 +856,11 @@ edit-project-no-identity = Du har inte valt vem du är än
 edit-project-switch = Byt
 edit-project-choose = Välj
 invite-failed = De här inbjudningarna kunde inte skickas: { $emails }
+invite-waiting = De här vännerna måste öppna Counted en gång innan de kan bjudas in: { $emails }
+key-offer-title = En annan nyckel för { $name }
+key-offer-body = Den här enheten har en annan nyckel till projektet, som aldrig har öppnat det här.
+key-offer-choices = Använd den här nyckeln: projektet öppnas med nyckeln från den här länken eller inbjudan. Avbryt: enheten behåller sin nuvarande nyckel och inget ändras.
+key-offer-use = Använd den här nyckeln
 invite-again = Bjud in igen
 friend-picker-title = Lägg till vänner
 user-selection-invited-hint = { $email } har bjudit in dig till ”{ $project }”.
@@ -981,6 +989,12 @@ home-remind-message = Liten påminnelse: det finns fortfarande återbetalningar 
 home-row-owed = du har att få
 home-row-owe = du är skyldig
 home-row-settled = Reglerat
+home-row-quits = Du är kvitt
+home-row-pending =
+    { $count ->
+        [one] { $count } återbetalning väntar
+       *[other] { $count } återbetalningar väntar
+    }
 home-totals-partial = Utan projekt utan växelkurs
 error-account-key-changed = Nyckeln till ditt konto ändrades på en annan enhet. Logga in igen för att fortsätta.
 settings-security = Säkerhet

@@ -1,0 +1,2 @@
+"NSCameraUsageDescription" = "Za čitanje računa i automatsko popunjavanje troška. Fotografija se analizira na tvom telefonu, nikad se ne šalje i ne čuva.";
+"NSPhotoLibraryUsageDescription" = "Za čitanje već fotografisanog računa. Slika se analizira na tvom telefonu, nikad se ne šalje i ne čuva.";

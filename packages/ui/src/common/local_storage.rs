@@ -40,6 +40,13 @@ pub struct LocalStorageState {
     /// written once, so a different key served later is a substitution (`friends_service::pin_keys`).
     #[serde(default)]
     pub friend_keys: std::collections::BTreeMap<Uuid, String>,
+    /// Each friend's ML-KEM key as this device first saw it, pinned like `friend_keys`.
+    #[serde(default)]
+    pub friend_kem_keys: std::collections::BTreeMap<Uuid, String>,
+    /// This device has seen the hybrid invitation floor, or sent or opened a hybrid invitation: it
+    /// never writes a classical one again, whatever the server says (security-fixes §5).
+    #[serde(default)]
+    pub hybrid_invitations: bool,
     /// The account `account_key` belongs to, and the master-key epoch it is. `None` for a key
     /// remembered before either was recorded: the session's account, at epoch 0.
     #[serde(default)]
@@ -111,6 +118,20 @@ impl LocalStorageState {
     }
 }
 
+/// What this device holds, for a page to draw before its sync answers. Read during the first render
+/// in the apps, which do not hydrate; in an effect on the web, where the server render holds an
+/// empty store and the first client render must match it.
+pub fn use_device_cache<T: Default + 'static>(read: impl Fn() -> T + Copy + 'static) -> Signal<T> {
+    const ON_FIRST_RENDER: bool = cfg!(any(target_os = "android", target_os = "ios"));
+    let mut cached = dioxus::prelude::use_signal(|| if ON_FIRST_RENDER { read() } else { T::default() });
+    dioxus::prelude::use_effect(move || {
+        if !ON_FIRST_RENDER {
+            cached.set(read());
+        }
+    });
+    cached
+}
+
 /// False server-side (non-wasm, non-mobile native).
 pub fn is_mobile() -> bool {
     #[cfg(target_arch = "wasm32")]
@@ -167,7 +188,7 @@ pub struct LocalStorageProject {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub converted: bool,
     /// `encryption_key` has decrypted this project's row on this device, so no other key replaces
-    /// it - see `membership::may_adopt`. Kept when the caches are dropped; reset with the key.
+    /// it - see `membership::adoption`. Kept when the caches are dropped; reset with the key.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub key_opened: bool,
     /// The signed-in account administers this project, as its `account_projects` row last said.
@@ -448,19 +469,6 @@ pub fn set_project_cache(
         e.cached_payments = Some(payments);
         e.cached_data_version = data_version.filter(|_| complete);
     }
-}
-
-pub fn user_color_class(user_id: i32) -> &'static str {
-    const COLORS: &[&str] = &[
-        "bg-primary",
-        "bg-[oklch(62%_0.14_300)]",
-        "bg-accent",
-        "bg-info",
-        "bg-[oklch(70%_0.15_350)]",
-        "bg-warning",
-        "bg-error",
-    ];
-    COLORS[(user_id.unsigned_abs() as usize) % COLORS.len()]
 }
 
 /// Up to 2 uppercase initials (first + last word); a single-word name yields one.
@@ -1092,29 +1100,5 @@ mod tests {
     fn test_initials_ignores_extra_words() {
         // Only first and second word are used
         assert_eq!(initials("Jean Pierre Dupont"), "JP");
-    }
-
-    #[test]
-    fn test_user_color_class_deterministic() {
-        assert_eq!(user_color_class(1), user_color_class(1));
-        assert_eq!(user_color_class(42), user_color_class(42));
-    }
-
-    #[test]
-    fn test_user_color_class_valid_values() {
-        const VALID: &[&str] = &[
-            "bg-primary", "bg-[oklch(62%_0.14_300)]", "bg-accent", "bg-info",
-            "bg-[oklch(70%_0.15_350)]", "bg-warning", "bg-error",
-        ];
-        for id in 0..20i32 {
-            assert!(VALID.contains(&user_color_class(id)), "unexpected class for id {id}");
-        }
-    }
-
-    #[test]
-    fn test_user_color_class_all_reachable() {
-        // 7 colors, IDs 0-6 should each hit a different one
-        let classes: std::collections::HashSet<_> = (0..7).map(user_color_class).collect();
-        assert_eq!(classes.len(), 7);
     }
 }

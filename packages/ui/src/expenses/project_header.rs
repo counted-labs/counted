@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use crate::tid;
 use shared::ProjectStatus;
 
-use crate::common::{haptic, AppHeader, Haptic};
+use crate::common::{haptic, AppHeader, Haptic, NavAddButton};
 use crate::expenses::helpers::expenses_page_helpers::HeaderState;
 use crate::expenses::group_security::GroupSecurity;
 use crate::expenses::project_actions_sheet::ProjectActionsSheet;
@@ -44,6 +44,9 @@ pub struct ProjectHeaderProps {
     /// "Open a link" on the rotated screen: the join modal, for the new link a member sends.
     #[props(default)]
     pub on_open_link: Option<EventHandler<()>>,
+    /// Raised by the iOS bar's "+" (`NavAddButton`): the expenses tab opens the add actions.
+    #[props(default)]
+    pub add_open: Option<Signal<bool>>,
 }
 
 /// The project page's header and its actions sheet. Decides nothing - every entry calls back out.
@@ -80,7 +83,7 @@ pub fn ProjectHeader(props: ProjectHeaderProps) -> Element {
             div { id: "project-rotated", role: "alert", class: "rounded-box border border-warning/50 bg-base-100 p-4 flex flex-col gap-2.5",
                 div { class: "flex items-center gap-2.5",
                     span { class: "text-warning shrink-0", KeyIcon { size: 22 } }
-                    h2 { class: "font-display font-bold text-[17px] leading-snug", {tid!("project-rotated-title")} }
+                    h2 { class: "font-display font-bold text-[1.0625rem] leading-snug", {tid!("project-rotated-title")} }
                 }
                 p { class: "text-sm text-base-content/80 leading-snug", {tid!("project-rotated-body")} }
                 div { class: "flex gap-2",
@@ -121,6 +124,9 @@ pub fn ProjectHeader(props: ProjectHeaderProps) -> Element {
                         sheet_open.set(true);
                     },
                     MoreIcon { size: 24 }
+                }
+                if let Some(open) = props.add_open.filter(|_| !read_only && status != ProjectStatus::Archived) {
+                    NavAddButton { id: "add-expense-bar", label: tid!("expense-add"), open }
                 }
             }
             // A sibling of the header, never inside it: a scrolled mobile header gets

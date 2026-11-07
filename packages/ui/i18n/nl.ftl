@@ -5,6 +5,9 @@
 
 loading = Laden…
 cancel = Annuleren
+discard-title = Wijzigingen weggooien?
+discard-message = Wat je hebt ingevuld, gaat verloren.
+discard = Weggooien
 retry = Opnieuw proberen
 delete = Verwijderen
 back = Terug
@@ -421,7 +424,6 @@ move-note-group = De uitgave verlaat { $project } voor alle leden, en het saldo 
 move-banner = Van { $from } naar { $to }
 move-submit = Verplaatsen
 move-done = Uitgave verplaatst naar { $project }
-move-delete-failed = De uitgave is aan het andere project toegevoegd maar staat nog in { $project }: verwijder haar daar.
 history-expense-moved = Uitgave verplaatst naar een ander project: { $name }
 personal-badge = Eigen
 move-members =
@@ -701,6 +703,7 @@ split-amounts = Bedragen
 
 reimbursements-empty-title = Alles is vereffend!
 reimbursement-record = Vereffenen
+settlement-recorded = Vereffening opgeslagen.
 reimbursement-pay-with = Betalen
 reimbursement-pay-shared-by = Gedeeld door { $name } - controleer de naam van de ontvanger die je app toont voordat je verstuurt.
 reimbursement-pay-title = { $name } betalen
@@ -881,6 +884,11 @@ edit-project-no-identity = Je hebt nog niet gekozen wie je bent
 edit-project-switch = Wisselen
 edit-project-choose = Kiezen
 invite-failed = Deze uitnodigingen konden niet worden verstuurd: { $emails }
+invite-waiting = Deze vrienden moeten Counted één keer openen voordat ze kunnen worden uitgenodigd: { $emails }
+key-offer-title = Een andere sleutel voor { $name }
+key-offer-body = Dit apparaat heeft een andere sleutel voor dit project, die het hier nog nooit heeft geopend.
+key-offer-choices = Deze sleutel gebruiken: het project opent met de sleutel uit deze link of uitnodiging. Annuleren: het apparaat houdt zijn huidige sleutel en er verandert niets.
+key-offer-use = Deze sleutel gebruiken
 invite-again = Opnieuw uitnodigen
 friend-picker-title = Vrienden toevoegen
 user-selection-invited-hint = { $email } heeft je uitgenodigd voor “{ $project }”.
@@ -1009,6 +1017,12 @@ home-remind-message = Kleine herinnering: er staan nog terugbetalingen open in {
 home-row-owed = jij krijgt nog
 home-row-owe = jij moet nog
 home-row-settled = Verrekend
+home-row-quits = Jij staat quitte
+home-row-pending =
+    { $count ->
+        [one] { $count } terugbetaling open
+       *[other] { $count } terugbetalingen open
+    }
 home-totals-partial = Zonder projecten zonder wisselkoers
 error-account-key-changed = De sleutel van je account is op een ander apparaat gewijzigd. Log opnieuw in om verder te gaan.
 settings-security = Beveiliging

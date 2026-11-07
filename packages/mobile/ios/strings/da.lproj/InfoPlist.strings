@@ -1,0 +1,2 @@
+"NSCameraUsageDescription" = "For at læse en kvittering og udfylde udgiften. Billedet analyseres på din telefon, sendes aldrig og gemmes ikke.";
+"NSPhotoLibraryUsageDescription" = "For at læse en kvittering, du allerede har taget et billede af. Billedet analyseres på din telefon, sendes aldrig og gemmes ikke.";

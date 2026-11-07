@@ -81,9 +81,9 @@ pub fn ExpensesSkeleton() -> Element {
 #[component]
 pub fn ExpenseRowsSkeleton() -> Element {
     rsx! {
-        div { id: "expense-rows-skeleton", class: "flex flex-col gap-2", aria_hidden: "true",
+        div { id: "expense-rows-skeleton", class: "list-group", style: "--separator-inset: 4rem", aria_hidden: "true",
             for _ in 0..5u8 {
-                div { class: "flex items-center gap-3 p-3 bg-base-100 rounded-box",
+                div { class: "flex items-center gap-3 p-3",
                     div { class: "skeleton h-10 w-10 rounded-full shrink-0" }
                     div { class: "flex-1 flex flex-col gap-2",
                         div { class: "skeleton h-4 w-3/4" }

@@ -20,10 +20,26 @@ use crate::crypto::{
     box_project_key, decrypt, encrypt_padded_json_within, key_fingerprint, open_kem_seed, open_wrap, public_key_of,
     unbox_project_key, unwrap_key, WrapUse,
 };
-use crate::hybrid::{kem_public_key, KEM_SEED_LENGTH};
+use crate::hybrid::{kem_public_key, open_auth, seal_auth, KEM_SEED_LENGTH};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use serde::{Deserialize, Serialize};
+use shared::{EncryptedPair, HybridBox};
 use std::collections::BTreeMap;
 use crate::decrypted::decrypt_project;
+
+const INVITE_CONTEXT: &[u8] = b"counted-invite-v1";
+
+/// What a hybrid invitation box holds: the key, and which project, sender and recipient it is for,
+/// so a box re-served for another project or account is refused (security-fixes §5).
+#[derive(Serialize, Deserialize)]
+struct InviteKey {
+    #[serde(rename = "use")]
+    use_: String,
+    project: Uuid,
+    from: Uuid,
+    to: Uuid,
+    key: String,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FriendRow {
@@ -39,6 +55,8 @@ pub struct FriendRow {
     /// The key now served when `key_changed`: its code is shown, and "The code matches" pins it
     /// once read out by the friend (docs/plans/key-lifecycle.md §7).
     pub new_key: Option<Vec<u8>>,
+    /// The ML-KEM key now served, pinned with `new_key`. The code covers only the X25519 key.
+    pub new_kem_key: Option<Vec<u8>>,
 }
 
 impl FriendRow {
@@ -74,32 +92,48 @@ pub fn friend_row(f: &Friend, changed: &[Uuid]) -> FriendRow {
         fingerprint: f.public_key.as_deref().map(key_fingerprint),
         key_changed: changed.contains(&f.account_id),
         new_key: None,
+        new_kem_key: None,
     }
 }
 
-/// After the two friends read the new code to each other: the served key becomes the pin. A
-/// device cannot tell a rotation from a substitution, so only a person comparing codes can.
-pub fn trust_key(pins: &mut BTreeMap<Uuid, String>, account_id: Uuid, key: &[u8]) {
-    pins.insert(account_id, URL_SAFE_NO_PAD.encode(key));
+/// After the two friends read the new code to each other: the served keys become the pins. A
+/// device cannot tell a rotation from a substitution, so only a person comparing codes can. The
+/// code does not cover the ML-KEM key: one substituted here leaves this friend's invitations at
+/// X25519 strength, never below the classical box (security-fixes §5 c).
+pub fn trust_key(state: &mut LocalStorageState, account_id: Uuid, key: &[u8], kem_key: Option<&[u8]>) {
+    state.friend_keys.insert(account_id, URL_SAFE_NO_PAD.encode(key));
+    if let Some(kem_key) = kem_key {
+        state.friend_kem_keys.insert(account_id, URL_SAFE_NO_PAD.encode(kem_key));
+    }
 }
 
-/// Pins each friend's key the first time it is served, and takes the key off a friend served one
-/// that differs from the pin, returning those friends. A keypair is written once and only a
+/// `true` when `served` differs from the pin, and then takes it off.
+fn pin(pins: &mut BTreeMap<Uuid, String>, account_id: Uuid, served: &mut Option<Vec<u8>>) -> bool {
+    let Some(encoded) = served.as_deref().map(|k| URL_SAFE_NO_PAD.encode(k)) else { return false };
+    match pins.get(&account_id) {
+        Some(pinned) if *pinned != encoded => {
+            *served = None;
+            true
+        }
+        Some(_) => false,
+        None => {
+            pins.insert(account_id, encoded);
+            false
+        }
+    }
+}
+
+/// Pins each friend's X25519 and ML-KEM keys the first time they are served, and takes off a key
+/// that differs from its pin, returning those friends. Both keys are written once and only a
 /// verified account can be a friend, so a changed key is the server's substitution: without its
 /// key, the friend is neither boxed to nor opened from.
-pub fn pin_keys(pins: &mut BTreeMap<Uuid, String>, friends: &mut [Friend]) -> Vec<Uuid> {
+pub fn pin_keys(state: &mut LocalStorageState, friends: &mut [Friend]) -> Vec<Uuid> {
     let mut changed = Vec::new();
     for friend in friends {
-        let Some(served) = friend.public_key.as_deref().map(|k| URL_SAFE_NO_PAD.encode(k)) else { continue };
-        match pins.get(&friend.account_id) {
-            Some(pinned) if *pinned != served => {
-                friend.public_key = None;
-                changed.push(friend.account_id);
-            }
-            Some(_) => {}
-            None => {
-                pins.insert(friend.account_id, served);
-            }
+        let x25519_changed = pin(&mut state.friend_keys, friend.account_id, &mut friend.public_key);
+        let kem_changed = pin(&mut state.friend_kem_keys, friend.account_id, &mut friend.kem_public_key);
+        if x25519_changed || kem_changed {
+            changed.push(friend.account_id);
         }
     }
     changed
@@ -109,7 +143,7 @@ pub fn pin_keys(pins: &mut BTreeMap<Uuid, String>, friends: &mut [Friend]) -> Ve
 pub async fn get_pinned_friends(ls_ctx: Signal<LocalStorageState>) -> Result<(FriendsView, Vec<Uuid>), ServerFnError> {
     let mut view = get_friends().await?;
     let mut changed = Vec::new();
-    update_ls_if_changed(ls_ctx, |state| changed = pin_keys(&mut state.friend_keys, &mut view.friends));
+    update_ls_if_changed(ls_ctx, |state| changed = pin_keys(state, &mut view.friends));
     Ok((view, changed))
 }
 
@@ -145,12 +179,14 @@ pub async fn load(
     raw_ok: bool,
 ) -> Result<FriendsLists, ServerFnError> {
     let mut view = get_friends().await?;
-    let served: BTreeMap<Uuid, Vec<u8>> = view.friends.iter().filter_map(|f| Some((f.account_id, f.public_key.clone()?))).collect();
+    let served: BTreeMap<Uuid, Friend> = view.friends.iter().map(|f| (f.account_id, f.clone())).collect();
     let mut changed = Vec::new();
-    update_ls_if_changed(ls_ctx, |state| changed = pin_keys(&mut state.friend_keys, &mut view.friends));
+    update_ls_if_changed(ls_ctx, |state| changed = pin_keys(state, &mut view.friends));
     let mut lists = to_lists(&view, &changed, account_key.as_ref(), Some(&account), raw_ok);
     for row in lists.friends.iter_mut().filter(|r| r.key_changed) {
-        row.new_key = served.get(&row.account_id).cloned();
+        let served = served.get(&row.account_id);
+        row.new_key = served.and_then(|f| f.public_key.clone());
+        row.new_kem_key = served.and_then(|f| f.kem_public_key.clone());
     }
     Ok(lists)
 }
@@ -215,6 +251,7 @@ pub async fn remove(ls_ctx: Signal<LocalStorageState>, id: Uuid, account_id: Uui
     remove_friend(id).await?;
     update_ls_if_changed(ls_ctx, |state| {
         state.friend_keys.remove(&account_id);
+        state.friend_kem_keys.remove(&account_id);
     });
     Ok(())
 }
@@ -289,38 +326,103 @@ pub struct Invitee {
     pub user_id: Option<i32>,
 }
 
+/// Who sends invitations from this device, and in which box.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Sender {
+    pub account_id: Uuid,
+    pub private: [u8; 32],
+    /// The hybrid box only, never the classical one: the server reports the floor, or this device
+    /// already saw it (`LocalStorageState::hybrid_invitations`).
+    pub hybrid: bool,
+}
+
+pub fn sender(account: &Account, account_key: &[u8; 32], state: &LocalStorageState) -> Option<Sender> {
+    let private = my_private_key(account, account_key, state.raw_wraps_ok(account.id))?;
+    Some(Sender { account_id: account.id, private, hybrid: account.hybrid_invitations || state.hybrid_invitations })
+}
+
+pub fn saw_hybrid_floor(state: &mut LocalStorageState, account: &Account) {
+    state.hybrid_invitations |= account.hybrid_invitations;
+}
+
+/// What was not sent: `failed` can be sent again; `waiting` friends have no ML-KEM key yet, which
+/// they make by opening Counted once, and get no classical box in its place.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Unsent {
+    pub failed: Vec<Invitee>,
+    pub waiting: Vec<Invitee>,
+}
+
+impl Unsent {
+    pub fn is_empty(&self) -> bool {
+        self.failed.is_empty() && self.waiting.is_empty()
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Unboxed {
+    Failed,
+    Waiting,
+}
+
+/// The project key for one friend: the classical box before the hybrid floor, the hybrid box sealed
+/// to both pinned keys and typed with project, sender and recipient from it.
+pub fn box_for(sender: &Sender, project_id: Uuid, friend: &Friend, project_key: &[u8; 32]) -> Result<(Option<EncryptedPair>, Option<HybridBox>), Unboxed> {
+    let public = friend.public_key.as_deref().ok_or(Unboxed::Failed)?;
+    if !sender.hybrid {
+        return box_project_key(&sender.private, public, project_key).map(|k| (Some(k), None)).ok_or(Unboxed::Failed);
+    }
+    let kem = friend.kem_public_key.as_deref().ok_or(Unboxed::Waiting)?;
+    let typed = InviteKey { use_: "invite".into(), project: project_id, from: sender.account_id, to: friend.account_id, key: URL_SAFE_NO_PAD.encode(project_key) };
+    let plaintext = serde_json::to_vec(&typed).map_err(|_| Unboxed::Failed)?;
+    let sealed = seal_auth(&sender.private, public, kem, INVITE_CONTEXT, &plaintext).ok_or(Unboxed::Failed)?;
+    Ok((None, Some(sealed)))
+}
+
 /// One invitation per friend, each carrying the key boxed to that friend, all in one request.
-/// Returns those that were not sent - no private key on this device, no public key on theirs, a
-/// refusal, or a request that failed as a whole.
+/// Returns those that were not sent - no private key on this device, no key on theirs, a refusal,
+/// or a request that failed as a whole.
 pub async fn invite_each(
+    ls_ctx: Signal<LocalStorageState>,
     project_id: Uuid,
     invitees: &[Invitee],
-    my_private: Option<[u8; 32]>,
+    sender: Option<Sender>,
     project_key: &[u8; 32],
-) -> Vec<Invitee> {
-    let (mut boxed, mut failed) = (Vec::new(), Vec::new());
+) -> Unsent {
+    let Some(sender) = sender else {
+        return Unsent { failed: invitees.to_vec(), waiting: Vec::new() };
+    };
+    if sender.hybrid {
+        update_ls_if_changed(ls_ctx, |state| state.hybrid_invitations = true);
+    }
+    let (mut boxed, mut unsent) = (Vec::new(), Unsent::default());
     for invitee in invitees {
-        let key = my_private.as_ref().zip(invitee.friend.public_key.as_deref()).and_then(
-            |(private, public)| box_project_key(private, public, project_key),
-        );
-        let Some(key) = key else {
-            failed.push(invitee.clone());
-            continue;
+        let (key, hybrid) = match box_for(&sender, project_id, &invitee.friend, project_key) {
+            Ok(forms) => forms,
+            Err(Unboxed::Failed) => {
+                unsent.failed.push(invitee.clone());
+                continue;
+            }
+            Err(Unboxed::Waiting) => {
+                unsent.waiting.push(invitee.clone());
+                continue;
+            }
         };
-        let invitation = CreatableProjectInvitation { to_account_id: invitee.friend.account_id, key, user_id: invitee.user_id };
+        let invitation = CreatableProjectInvitation { to_account_id: invitee.friend.account_id, key, hybrid, user_id: invitee.user_id };
         // One by one, a friend named twice kept the later invitation; the batch refuses a repeat.
         boxed.retain(|b: &CreatableProjectInvitation| b.to_account_id != invitation.to_account_id);
         boxed.push(invitation);
     }
     if boxed.is_empty() {
-        return failed;
+        return unsent;
     }
     crate::common::project_token::scope(project_id);
     let refused: Vec<Uuid> = match invite_batch(project_id, Json(boxed)).await {
         Ok(refused) => refused,
         Err(_) => invitees.iter().map(|i| i.friend.account_id).collect(),
     };
-    invitees.iter().filter(|i| refused.contains(&i.friend.account_id) || failed.contains(i)).cloned().collect()
+    let failed = invitees.iter().filter(|i| unsent.failed.contains(i) || (refused.contains(&i.friend.account_id) && !unsent.waiting.contains(i)));
+    Unsent { failed: failed.cloned().collect(), waiting: unsent.waiting }
 }
 
 pub fn invitee_emails(invitees: &[Invitee]) -> String {
@@ -337,34 +439,64 @@ pub struct OpenedInvitation {
     pub project_name: Option<String>,
 }
 
+/// What opens invitations on this device: the X25519 key, and the ML-KEM seed once the account has
+/// one. Both are the halves the account key opens, each equal to the one the server serves.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Opener {
+    pub account_id: Uuid,
+    pub x25519: [u8; 32],
+    pub kem_seed: Option<[u8; KEM_SEED_LENGTH]>,
+}
+
+pub fn opener(account: &Account, account_key: &[u8; 32], raw_ok: bool) -> Option<Opener> {
+    let x25519 = my_private_key(account, account_key, raw_ok)?;
+    Some(Opener { account_id: account.id, x25519, kem_seed: my_kem_seed(account, account_key) })
+}
+
 /// The key and the email of the friend whose public key opens the box. Only a friend's key, the one
 /// whose code the user can compare: the sender key served with the invitation is the server's word
-/// alone, and a box under a key of its own would otherwise open.
-pub fn open_invitation(inv: &ProjectInvitation, my_private: &[u8; 32], friends: &[Friend]) -> Option<([u8; 32], String)> {
+/// alone, and a box under a key of its own would otherwise open. A hybrid box opens only if it
+/// names this project, that friend as sender and this account as recipient.
+pub fn open_invitation(inv: &ProjectInvitation, opener: &Opener, friends: &[Friend]) -> Option<([u8; 32], String)> {
     let sender = friends.iter().find(|f| f.public_key.as_deref() == Some(inv.from_public_key.as_slice()))?;
-    let key = unbox_project_key(my_private, &inv.from_public_key, &inv.key)?;
+    let key = match (&inv.key, &inv.hybrid) {
+        (Some(pair), None) => unbox_project_key(&opener.x25519, &inv.from_public_key, pair)?,
+        (None, Some(sealed)) => {
+            let plaintext = open_auth(&opener.x25519, opener.kem_seed.as_ref()?, &inv.from_public_key, INVITE_CONTEXT, sealed)?;
+            let typed: InviteKey = serde_json::from_slice(&plaintext).ok()?;
+            let fits = typed.use_ == "invite" && typed.project == inv.project_id && typed.from == sender.account_id && typed.to == opener.account_id;
+            if !fits {
+                return None;
+            }
+            URL_SAFE_NO_PAD.decode(typed.key).ok()?.try_into().ok()?
+        }
+        _ => return None,
+    };
     Some((key, sender.email.clone()))
 }
 
 pub async fn load_invitations(
     ls_ctx: Signal<LocalStorageState>,
-    my_private: Option<[u8; 32]>,
+    opener: Option<Opener>,
 ) -> Result<Vec<OpenedInvitation>, ServerFnError> {
     let invitations = get_invitations().await?;
-    let friends = match my_private.is_some() && !invitations.is_empty() {
+    let friends = match opener.is_some() && !invitations.is_empty() {
         true => get_pinned_friends(ls_ctx).await?.0.friends,
         false => Vec::new(),
     };
     let boxed: Vec<(ProjectInvitation, Option<[u8; 32]>)> = invitations
         .into_iter()
         .map(|mut invitation| {
-            let key = my_private.and_then(|p| open_invitation(&invitation, &p, &friends)).map(|(key, email)| {
+            let key = opener.and_then(|o| open_invitation(&invitation, &o, &friends)).map(|(key, email)| {
                 invitation.from_email = email;
                 key
             });
             (invitation, key)
         })
         .collect();
+    if boxed.iter().any(|(i, k)| i.hybrid.is_some() && k.is_some()) {
+        update_ls_if_changed(ls_ctx, |state| state.hybrid_invitations = true);
+    }
     let mut ids: Vec<Uuid> = boxed.iter().filter(|(_, k)| k.is_some()).map(|(i, _)| i.project_id).collect();
     ids.sort();
     ids.dedup();
@@ -421,7 +553,7 @@ mod tests {
     use shared::{EncryptedPair, OutgoingFriendRequest};
 
     fn friend(public_key: Option<Vec<u8>>) -> Friend {
-        Friend { id: Uuid::new_v4(), account_id: Uuid::new_v4(), email: "bob@x.io".into(), public_key }
+        Friend { id: Uuid::new_v4(), account_id: Uuid::new_v4(), email: "bob@x.io".into(), public_key, kem_public_key: None }
     }
 
     #[test]
@@ -604,7 +736,8 @@ mod tests {
             project_id: Uuid::new_v4(),
             from_email: "served@x.io".into(),
             from_public_key: sender_pub,
-            key: box_project_key(sender_priv, to, project_key).unwrap(),
+            key: Some(box_project_key(sender_priv, to, project_key).unwrap()),
+            hybrid: None,
             created_at: NaiveDateTime::default(),
             user_id: None,
         }
@@ -619,10 +752,10 @@ mod tests {
         let inv = boxed_invitation(alice_pub, &alice_priv, &bob_pub, &project_key);
         let friends = [alice];
 
-        assert_eq!(open_invitation(&inv, &bob_priv, &friends), Some((project_key, "alice@x.io".into())));
-        assert_eq!(open_invitation(&inv, &generate_keypair().1, &friends), None);
+        assert_eq!(open_invitation(&inv, &opener_of(bob_priv), &friends), Some((project_key, "alice@x.io".into())));
+        assert_eq!(open_invitation(&inv, &opener_of(generate_keypair().1), &friends), None);
         let swapped = ProjectInvitation { from_public_key: generate_keypair().0, ..inv };
-        assert_eq!(open_invitation(&swapped, &bob_priv, &friends), None);
+        assert_eq!(open_invitation(&swapped, &opener_of(bob_priv), &friends), None);
     }
 
     /// The server boxes a key of its own to Bob and serves its public key as the sender's: it is
@@ -633,16 +766,16 @@ mod tests {
         let (bob_pub, bob_priv) = generate_keypair();
         let inv = boxed_invitation(server_pub, &server_priv, &bob_pub, &generate_key());
 
-        assert_eq!(open_invitation(&inv, &bob_priv, &[friend(Some(generate_keypair().0)), friend(None)]), None);
-        assert_eq!(open_invitation(&inv, &bob_priv, &[]), None);
+        assert_eq!(open_invitation(&inv, &opener_of(bob_priv), &[friend(Some(generate_keypair().0)), friend(None)]), None);
+        assert_eq!(open_invitation(&inv, &opener_of(bob_priv), &[]), None);
     }
 
     #[test]
     fn a_friends_key_is_pinned_once_served_and_kept() {
-        let mut pins = BTreeMap::new();
+        let mut pins = LocalStorageState::default();
         let mut later = friend(None);
         assert!(pin_keys(&mut pins, std::slice::from_mut(&mut later)).is_empty());
-        assert!(pins.is_empty(), "no key, nothing to pin");
+        assert!(pins.friend_keys.is_empty(), "no key, nothing to pin");
 
         let (public, _) = generate_keypair();
         later.public_key = Some(public.clone());
@@ -660,14 +793,14 @@ mod tests {
         let (server_pub, server_priv) = generate_keypair();
         let (bob_pub, bob_priv) = generate_keypair();
         let alice = Friend { email: "alice@x.io".into(), ..friend(Some(alice_pub)) };
-        let mut pins = BTreeMap::new();
+        let mut pins = LocalStorageState::default();
         pin_keys(&mut pins, &mut [alice.clone()]);
 
         let mut served = [Friend { public_key: Some(server_pub.clone()), ..alice.clone() }];
         assert_eq!(pin_keys(&mut pins, &mut served), vec![alice.account_id]);
         assert_eq!(served[0].public_key, None);
         let inv = boxed_invitation(server_pub, &server_priv, &bob_pub, &generate_key());
-        assert_eq!(open_invitation(&inv, &bob_priv, &served), None);
+        assert_eq!(open_invitation(&inv, &opener_of(bob_priv), &served), None);
 
         let view = FriendsView { friends: served.to_vec(), ..Default::default() };
         let row = &to_lists(&view, &[alice.account_id], None, None, true).friends[0];
@@ -680,9 +813,9 @@ mod tests {
         let (old, _) = generate_keypair();
         let (new, _) = generate_keypair();
         let alice = friend(Some(old));
-        let mut pins = BTreeMap::new();
+        let mut pins = LocalStorageState::default();
         pin_keys(&mut pins, &mut [alice.clone()]);
-        pins.remove(&alice.account_id);
+        pins.friend_keys.remove(&alice.account_id);
 
         let mut readded = [Friend { public_key: Some(new.clone()), ..alice }];
         assert!(pin_keys(&mut pins, &mut readded).is_empty());
@@ -692,13 +825,13 @@ mod tests {
     /// Plan §7: once the codes match, the new key is pinned and the friend is trusted again.
     #[test]
     fn a_new_key_trusted_after_comparing_codes_is_kept() {
-        let mut pins = BTreeMap::new();
+        let mut pins = LocalStorageState::default();
         let alice = friend(Some(vec![1; 32]));
         pin_keys(&mut pins, &mut [alice.clone()]);
         let mut rotated = [Friend { public_key: Some(vec![2; 32]), ..alice.clone() }];
         assert_eq!(pin_keys(&mut pins, &mut rotated.clone()), vec![alice.account_id]);
 
-        trust_key(&mut pins, alice.account_id, &[2; 32]);
+        trust_key(&mut pins, alice.account_id, &[2; 32], None);
         assert!(pin_keys(&mut pins, &mut rotated).is_empty());
         assert_eq!(rotated[0].public_key, Some(vec![2; 32]));
     }
@@ -709,7 +842,8 @@ mod tests {
             project_id,
             from_email: "alice@x.io".into(),
             from_public_key: vec![],
-            key: EncryptedPair { ct: String::new(), iv: String::new() },
+            key: Some(EncryptedPair { ct: String::new(), iv: String::new() }),
+            hybrid: None,
             created_at: NaiveDateTime::default(),
             user_id: None,
         }
@@ -779,5 +913,151 @@ mod tests {
         account.public_key = Some(public_key_of(&private));
         assert_eq!(my_private_key(&account, &account_key, true), Some(private));
         assert_eq!(my_private_key(&account, &generate_key(), true), None);
+    }
+
+    fn opener_of(x25519: [u8; 32]) -> Opener {
+        Opener { account_id: Uuid::nil(), x25519, kem_seed: None }
+    }
+
+    /// An account as the hybrid tests need it: both private halves, and the friend row others see.
+    struct Member {
+        opener: Opener,
+        friend: Friend,
+    }
+
+    fn member(email: &str) -> Member {
+        let (public, x25519) = generate_keypair();
+        let seed = crate::hybrid::generate_kem_seed();
+        let account_id = Uuid::new_v4();
+        Member {
+            opener: Opener { account_id, x25519, kem_seed: Some(seed) },
+            friend: Friend { id: Uuid::new_v4(), account_id, email: email.into(), public_key: Some(public), kem_public_key: Some(crate::hybrid::kem_public_key(&seed)) },
+        }
+    }
+
+    fn hybrid_sender(m: &Member) -> Sender {
+        Sender { account_id: m.opener.account_id, private: m.opener.x25519, hybrid: true }
+    }
+
+    fn served(from: &Member, project_id: Uuid, forms: (Option<EncryptedPair>, Option<HybridBox>)) -> ProjectInvitation {
+        ProjectInvitation {
+            id: Uuid::new_v4(),
+            project_id,
+            from_email: "served@x.io".into(),
+            from_public_key: from.friend.public_key.clone().unwrap(),
+            key: forms.0,
+            hybrid: forms.1,
+            created_at: NaiveDateTime::default(),
+            user_id: None,
+        }
+    }
+
+    /// Security-fixes §5: a hybrid invitation opens for its recipient with the sender's pinned key,
+    /// and carries the project key itself.
+    #[test]
+    fn a_hybrid_invitation_opens_for_its_recipient() {
+        let (alice, bob) = (member("alice@x.io"), member("bob@x.io"));
+        let (project_id, project_key) = (Uuid::new_v4(), generate_key());
+        let forms = box_for(&hybrid_sender(&alice), project_id, &bob.friend, &project_key).unwrap();
+        assert!(forms.0.is_none() && forms.1.is_some(), "the hybrid form only");
+
+        let inv = served(&alice, project_id, forms);
+        assert_eq!(open_invitation(&inv, &bob.opener, std::slice::from_ref(&alice.friend)), Some((project_key, "alice@x.io".into())));
+        assert_eq!(open_invitation(&inv, &Opener { kem_seed: None, ..bob.opener }, &[alice.friend]), None, "no ML-KEM seed");
+    }
+
+    /// The box names its project, sender and recipient: re-served under another project, to another
+    /// account or from another friend, it is refused.
+    #[test]
+    fn a_hybrid_invitation_for_another_project_sender_or_recipient_is_refused() {
+        let (alice, bob) = (member("alice@x.io"), member("bob@x.io"));
+        let project_id = Uuid::new_v4();
+        let forms = box_for(&hybrid_sender(&alice), project_id, &bob.friend, &generate_key()).unwrap();
+
+        let moved = served(&alice, Uuid::new_v4(), forms.clone());
+        assert_eq!(open_invitation(&moved, &bob.opener, std::slice::from_ref(&alice.friend)), None, "another project");
+
+        let to_another = Opener { account_id: Uuid::new_v4(), ..bob.opener };
+        let inv = served(&alice, project_id, forms);
+        assert_eq!(open_invitation(&inv, &to_another, std::slice::from_ref(&alice.friend)), None, "another recipient");
+
+        let renamed = Friend { account_id: Uuid::new_v4(), ..alice.friend.clone() };
+        assert_eq!(open_invitation(&inv, &bob.opener, &[renamed]), None, "the key under another account");
+    }
+
+    /// Decision b: from the floor, a friend without an ML-KEM key gets no invitation at all, never a
+    /// classical box; before it, everyone gets the classical box.
+    #[test]
+    fn the_floor_decides_the_form_and_a_friend_without_a_kem_key_waits() {
+        let (alice, bob) = (member("alice@x.io"), member("bob@x.io"));
+        let (project_id, project_key) = (Uuid::new_v4(), generate_key());
+        let classical = Sender { hybrid: false, ..hybrid_sender(&alice) };
+        let forms = box_for(&classical, project_id, &bob.friend, &project_key).unwrap();
+        assert!(forms.0.is_some() && forms.1.is_none(), "the classical form only, before the floor");
+
+        let no_kem = Friend { kem_public_key: None, ..bob.friend.clone() };
+        assert_eq!(box_for(&hybrid_sender(&alice), project_id, &no_kem, &project_key), Err(Unboxed::Waiting));
+        let no_key = Friend { public_key: None, ..bob.friend };
+        assert_eq!(box_for(&hybrid_sender(&alice), project_id, &no_key, &project_key), Err(Unboxed::Failed));
+    }
+
+    /// Plan §5 c: the ML-KEM key is pinned like the X25519 one. A changed one is taken off and
+    /// flagged, so nothing is boxed to the substitute.
+    #[test]
+    fn a_changed_kem_key_is_taken_off_and_nothing_is_boxed() {
+        let (alice, bob) = (member("alice@x.io"), member("bob@x.io"));
+        let mut state = LocalStorageState::default();
+        assert!(pin_keys(&mut state, &mut [bob.friend.clone()]).is_empty());
+        assert!(state.friend_kem_keys.contains_key(&bob.friend.account_id));
+
+        let substitute = crate::hybrid::kem_public_key(&crate::hybrid::generate_kem_seed());
+        let mut served = [Friend { kem_public_key: Some(substitute.clone()), ..bob.friend.clone() }];
+        assert_eq!(pin_keys(&mut state, &mut served), vec![bob.friend.account_id]);
+        assert_eq!(served[0].kem_public_key, None);
+        assert!(box_for(&hybrid_sender(&alice), Uuid::new_v4(), &served[0], &generate_key()).is_err());
+
+        trust_key(&mut state, bob.friend.account_id, bob.friend.public_key.as_deref().unwrap(), Some(&substitute));
+        let mut trusted = [Friend { kem_public_key: Some(substitute.clone()), ..bob.friend.clone() }];
+        assert!(pin_keys(&mut state, &mut trusted).is_empty(), "pinned once the codes were compared");
+    }
+
+    /// A device that saw the floor never writes a classical box again, whatever the server says.
+    #[test]
+    fn a_device_that_saw_the_hybrid_floor_stays_hybrid() {
+        let account_key = generate_key();
+        let (public, private) = generate_keypair();
+        let account = Account { hybrid_invitations: false, ..account_with(&account_key, public, &private) };
+        let mut state = LocalStorageState::default();
+        assert!(!sender(&account, &account_key, &state).unwrap().hybrid);
+
+        state.hybrid_invitations = true;
+        assert!(sender(&account, &account_key, &state).unwrap().hybrid);
+        let floor = Account { hybrid_invitations: true, ..account };
+        assert!(sender(&floor, &account_key, &LocalStorageState::default()).unwrap().hybrid);
+    }
+
+    #[test]
+    fn seeing_the_floor_alone_pins_the_device() {
+        let account_key = generate_key();
+        let (public, private) = generate_keypair();
+        let floor = Account { hybrid_invitations: true, ..account_with(&account_key, public, &private) };
+        let mut state = LocalStorageState::default();
+        saw_hybrid_floor(&mut state, &Account { hybrid_invitations: false, ..floor.clone() });
+        assert!(!state.hybrid_invitations);
+
+        saw_hybrid_floor(&mut state, &floor);
+        let turned_back = Account { hybrid_invitations: false, ..floor };
+        assert!(sender(&turned_back, &account_key, &state).unwrap().hybrid);
+    }
+
+    #[test]
+    fn an_invitation_with_both_forms_or_neither_never_opens() {
+        let (alice, bob) = (member("alice@x.io"), member("bob@x.io"));
+        let project_id = Uuid::new_v4();
+        let classical = box_for(&Sender { hybrid: false, ..hybrid_sender(&alice) }, project_id, &bob.friend, &generate_key()).unwrap().0;
+        let hybrid = box_for(&hybrid_sender(&alice), project_id, &bob.friend, &generate_key()).unwrap().1;
+
+        assert_eq!(open_invitation(&served(&alice, project_id, (classical, hybrid)), &bob.opener, std::slice::from_ref(&alice.friend)), None);
+        assert_eq!(open_invitation(&served(&alice, project_id, (None, None)), &bob.opener, &[alice.friend]), None);
     }
 }

@@ -6,8 +6,8 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::common::{
-    format_date, haptic, is_pending_expense, Flash, Haptic, Mascot, MascotPose, ProjectKey,
-    QueuedOp, ScanSource, SpeedDialAction, Toast,
+    format_date, haptic, is_pending_expense, queued_edit_ids, Flash, Haptic, Mascot, MascotPose, ProjectKey,
+    QueuedOp, ScanSource, SpeedDialAction,
 };
 use crate::decrypted::{payments_are_inconsistent, pickable_users, DecryptedExpense, DecryptedPayment};
 use crate::expenses::helpers::delete_expense_action::{
@@ -28,8 +28,9 @@ use crate::expenses::hooks::use_receipt_scan::use_receipt_scan;
 use crate::expenses::my_spending::{MonthSummary, SearchPill};
 use crate::expenses::project_states::ExpenseRowsSkeleton;
 use crate::preferences::uncounted_projects;
-use crate::expenses::{AddExpenseModal, EditExpenseModal, ExpenseRow};
-use crate::icons::{CameraIcon, CloseIcon, PhotoIcon, PlusIcon, ICON_INLINE};
+use crate::expenses::{AddExpenseModal, EditExpenseModal, ExpenseRow, ExpenseSwipe, QueuedAdd};
+use crate::expenses::project_actions_sheet::{MenuSheet, Row, GROUP_CLASS};
+use crate::icons::{CameraIcon, CloseIcon, PhotoIcon, PlusIcon, ICON_HEADER, ICON_INLINE};
 use crate::expenses::hooks::use_project_store::ProjectStore;
 use crate::recurring::actions::stop_rule;
 use crate::recurring::dialog::DeleteExpenseDialog;
@@ -406,14 +407,6 @@ mod tests {
         assert_eq!(e.len(), 1);
     }
 
-    #[test]
-    fn a_queued_op_asks_for_a_refetch_and_changes_nothing() {
-        let (mut e, mut p) = two_expenses();
-        assert!(!apply_mutation(&mut e, &mut p, &ExpenseMutation::Queued));
-        assert_eq!(e.len(), 2);
-        assert_eq!(p.len(), 3);
-    }
-
     /// The lists are out of step with the server; inventing the row would hide that.
     #[test]
     fn editing_a_row_this_device_never_had_asks_for_a_refetch() {
@@ -626,9 +619,6 @@ pub enum ExpenseMutation {
     Added(ExpenseWithPayments),
     Edited(ExpenseWithPayments),
     Deleted(i32),
-    /// Queued while offline: no server row to patch with, so the parent refetches when it can.
-    /// The op replays on reconnect and the version bump covers it.
-    Queued,
 }
 
 impl ExpenseMutation {
@@ -639,7 +629,7 @@ impl ExpenseMutation {
             ExpenseMutation::Added(c) | ExpenseMutation::Edited(c) => {
                 c.expense.project_id == project_id
             }
-            ExpenseMutation::Deleted(_) | ExpenseMutation::Queued => true,
+            ExpenseMutation::Deleted(_) => true,
         }
     }
 }
@@ -677,7 +667,6 @@ pub(crate) fn apply_mutation(
             expenses.retain(|e| e.id != *id);
             payments.retain(|p| p.expense_id != *id);
         }
-        ExpenseMutation::Queued => return false,
     }
     true
 }
@@ -693,11 +682,11 @@ struct BudgetWatch {
 
 /// "Me prévenir à 80 %": a personal expense that takes its category past 80 % or past the ceiling
 /// says so at once, on this device.
-fn warn_on_budget(key: &[u8; 32], created: &ExpenseWithPayments, watch: &BudgetWatch, mut flash: Signal<Option<Flash>>) {
+fn warn_on_budget(key: &[u8; 32], created: &Expense, watch: &BudgetWatch, mut flash: Signal<Option<Flash>>) {
     if !watch.on {
         return;
     }
-    let Ok(expense) = crate::decrypted::decrypt_expense(key, &created.expense) else { return };
+    let Ok(expense) = crate::decrypted::decrypt_expense(key, created) else { return };
     let row = RowExpense::new(expense, &watch.categories);
     if row.expense.expense_type != ExpenseType::Expense || !in_month(row.date, watch.month) {
         return;
@@ -732,14 +721,16 @@ pub struct ExpensesTabProps {
     pub ledgers: ReadSignal<Arc<Vec<GroupLedger>>>,
     /// The first `ledgers` load: an empty list then is not an empty month yet.
     pub ledgers_loading: bool,
+    /// Raised by the iOS bar's "+": the add form, or with a scanner the add actions sheet.
+    pub add_request: Signal<bool>,
 }
 
 #[component]
 pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
     let key_ctx = use_context::<ProjectKey>().0;
     let nav = use_navigator();
-    let is_online = use_context::<Signal<bool>>();
     let pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
+    let edit_queued = queued_edit_ids(&pending_ops.read(), props.project_id);
     let flash = use_context::<Signal<Option<Flash>>>();
     let store = use_context::<ProjectStore>();
     let mut query = store.query;
@@ -748,6 +739,18 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
     let mut show_add_expense = use_signal(|| false);
     let mut scan = use_receipt_scan(show_add_expense);
     let mut scan_menu = use_signal(|| false);
+    let mut add_menu = use_signal(|| false);
+    let mut add_request = props.add_request;
+    use_effect(move || {
+        if add_request() {
+            add_request.set(false);
+            if scan.available() {
+                add_menu.set(true);
+            } else {
+                show_add_expense.set(true);
+            }
+        }
+    });
     // Delete carries the name so the confirmation can quote it - the expense may be gone by then.
     let mut confirming_delete: Signal<Option<(i32, String)>> = use_signal(|| None);
     let mut editing: Signal<Option<i32>> = use_signal(|| None);
@@ -863,7 +866,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                         id: "tab-expenses",
                         role: "tab",
                         aria_selected: !budget_open,
-                        class: if budget_open { "tab text-[13px] font-semibold text-base-content/70" } else { "tab tab-active text-[13px] font-semibold" },
+                        class: if budget_open { "tab text-[0.8125rem] font-semibold text-base-content/70" } else { "tab tab-active text-[0.8125rem] font-semibold" },
                         onclick: move |_| budget_tab.set(false),
                         {tid!("tab-expenses")}
                     }
@@ -871,7 +874,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                         id: "tab-budget",
                         role: "tab",
                         aria_selected: budget_open,
-                        class: if budget_open { "tab tab-active text-[13px] font-semibold" } else { "tab text-[13px] font-semibold text-base-content/70" },
+                        class: if budget_open { "tab tab-active text-[0.8125rem] font-semibold" } else { "tab text-[0.8125rem] font-semibold text-base-content/70" },
                         onclick: move |_| {
                             {
                                 let mut q = query.write();
@@ -969,7 +972,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
             }
 
             if let Some(summary) = search_summary.filter(|_| !is_empty) {
-                p { id: "expense-search-summary", role: "status", class: "text-[13px] text-base-content/70 px-1", "{summary}" }
+                p { id: "expense-search-summary", role: "status", class: "text-[0.8125rem] text-base-content/70 px-1", "{summary}" }
             }
 
             if budget_open {
@@ -1003,12 +1006,11 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                     }
                 }
             } else {
+                ExpenseSwipe {}
                 for (date , group) in groups {
-                    div { key: "{date}", class: "flex flex-col",
-                        h2 { class: "divider divider-start text-xs text-base-content/70 font-medium my-1",
-                            "{format_date(date)}"
-                        }
-                        ul { class: "flex flex-col gap-2",
+                    div { key: "{date}", class: "ledger-day flex flex-col",
+                        h2 { class: "list-header", "{format_date(date)}" }
+                        ul { class: "list-group", style: "--separator-inset: 4rem",
                             for row in group {
                                 {
                                     let expense_id = row.expense.id;
@@ -1087,7 +1089,7 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                                             recurring: row.expense.recurring_id.is_some(),
                                             estimate: row.expense.estimate,
                                             income: row.expense.expense_type == ExpenseType::Gain,
-                                            pending,
+                                            pending: pending || edit_queued.contains(&expense_id),
                                             can_edit: !pending && can_edit_expense(&project_status, read_only, &etype),
                                             can_delete: !pending && can_delete_expense(&project_status, read_only),
                                             on_open: move |_| {
@@ -1225,10 +1227,37 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                 }
             }
 
-            if let Some(key) = scan.error.read().as_ref() {
-                Toast {
-                    msg: tid!(*key),
-                    onclose: move |_| scan.error.set(None),
+            if add_menu() {
+                MenuSheet { id: "expense-add-sheet", title: tid!("expense-add"), on_close: move |_| add_menu.set(false),
+                    div { class: GROUP_CLASS,
+                        Row {
+                            id: "expense-add-sheet-form",
+                            label: tid!("expense-add"),
+                            onclick: move |_| {
+                                add_menu.set(false);
+                                show_add_expense.set(true);
+                            },
+                            PlusIcon { size: ICON_HEADER }
+                        }
+                        Row {
+                            id: "expense-add-sheet-camera",
+                            label: tid!("scan-take-photo"),
+                            onclick: move |_| {
+                                add_menu.set(false);
+                                scan.start.call(ScanSource::Camera);
+                            },
+                            CameraIcon { size: ICON_HEADER }
+                        }
+                        Row {
+                            id: "expense-add-sheet-library",
+                            label: tid!("scan-choose-photo"),
+                            onclick: move |_| {
+                                add_menu.set(false);
+                                scan.start.call(ScanSource::Library);
+                            },
+                            PhotoIcon { size: ICON_HEADER }
+                        }
+                    }
                 }
             }
 
@@ -1255,16 +1284,12 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                         show_add_expense.set(false);
                         scan.prefill.set(None);
                     },
-                    on_created: move |created: Option<ExpenseWithPayments>| {
+                    on_created: move |queued: Option<QueuedAdd>| {
                         show_add_expense.set(false);
                         scan.prefill.set(None);
-                        if let (Some(c), Some(k)) = (created.as_ref(), key_ctx()) {
-                            warn_on_budget(&k, c, &budget_watch, flash);
+                        if let (Some(q), Some(k)) = (queued.as_ref(), key_ctx()) {
+                            warn_on_budget(&k, &q.row, &budget_watch, flash);
                         }
-                        props.on_expenses_changed.call(match created {
-                            Some(c) => ExpenseMutation::Added(c),
-                            None => ExpenseMutation::Queued,
-                        });
                     },
                     project_id: props.project_id,
                     users: pickable_users(key_ctx().as_ref(), &data.users, &[]),
@@ -1291,12 +1316,10 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                     },
                     on_created: {
                         let draft = draft.clone();
-                        move |created: Option<ExpenseWithPayments>| {
-                            props.on_expenses_changed.call(match created {
-                                Some(c) => ExpenseMutation::Added(c),
-                                None => ExpenseMutation::Queued,
-                            });
-                            finish_move(&draft, is_online(), pending_ops, flash);
+                        move |queued: Option<QueuedAdd>| {
+                            if let Some(q) = queued {
+                                finish_move(&draft, q.op_id, pending_ops, flash);
+                            }
                             let mut pending_move = store.pending_move;
                             pending_move.set(None);
                         }
@@ -1333,12 +1356,9 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                 {
                     EditExpenseModal {
                         on_close: move |_| editing.set(None),
-                        on_edited: move |edited: Option<ExpenseWithPayments>| {
+                        on_edited: move |edited: ExpenseWithPayments| {
                             editing.set(None);
-                            props.on_expenses_changed.call(match edited {
-                                Some(e) => ExpenseMutation::Edited(e),
-                                None => ExpenseMutation::Queued,
-                            });
+                            props.on_expenses_changed.call(ExpenseMutation::Edited(edited));
                         },
                         expense: exp,
                         payments: pays,
@@ -1377,16 +1397,9 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                             props.stored_user_id.unwrap_or(0),
                         );
                         let on_changed = props.on_expenses_changed;
-                        // A queued delete still removes the row locally: the expense is gone as far
-                        // as this device is concerned, and the op replays on reconnect.
-                        run_delete_expense(
-                            req,
-                            del_name.clone(),
-                            is_online(),
-                            pending_ops,
-                            flash,
-                            move || on_changed.call(ExpenseMutation::Deleted(del_id)),
-                        );
+                        run_delete_expense(req, del_name.clone(), pending_ops, move || {
+                            on_changed.call(ExpenseMutation::Deleted(del_id))
+                        });
                     },
                 }
             }

@@ -213,7 +213,9 @@ An attacker in control of our server **could**:
   6 hours. Neither can detect a swap aimed at a single person. If that worries you,
   use the mobile app;
 - substitute a public key during a friend invitation before your device first sees that friend
-  (detectable by comparing friend codes, 5.2; a later change is blocked on the device);
+  (detectable by comparing friend codes, 5.2; a later change is blocked on the device). Codes cover
+  the X25519 key only: a substituted post-quantum key is not detectable that way, and leaves that
+  friend's invitations as strong as the classical box, not weaker;
 - on app versions up to 3.2.7 and web versions up to v1.24.3, make a user who accepts a forged
   invitation switch to a project key the attacker chose, with nothing that comparing codes would show
   ([SPEC.md](SPEC.md) section 9.1);

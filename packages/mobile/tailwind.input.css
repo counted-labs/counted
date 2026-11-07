@@ -39,9 +39,11 @@
   --noise: 0;
 }
 
+/* The system font: SF on iOS, Roboto on Android (Blink maps `system-ui` to it). The web keeps
+   Inter, since `system-ui` is Segoe on Windows. docs/styling.md "Fonts". */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: -apple-system, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", -apple-system, system-ui, sans-serif;
   --color-tile-green: #DDF1E8;
   --color-tile-green-content: #0B7A57;
   --color-tile-blue: #E2EEF9;

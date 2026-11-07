@@ -16,20 +16,21 @@ use crate::common::{
     apply_pull, clear_user_id, copy_missing, copy_text, error_message, haptic, is_offline_error, is_rate_limited, key_of,
     forget_left, leave_project_and_forget, left_elsewhere, mark_converted, mark_synced, pending,
     read_from_ls, set_cached_projects_list, share_link_for, share_text, sleep, to_push, update_ls,
-    update_project_fresh, write_queue, QUICK_ADD,
+    update_project_fresh, use_device_cache, write_queue, QUICK_ADD,
     write_to_ls,
-    ConfirmModal, Mascot, MascotPose, PageTitle,
+    AppHeader, ConfirmModal, Mascot, MascotPose,
     Flash, Haptic, LocalStorageState, OpKind, ProjectEdit, ProjectKey, ProjectTile, PullToRefresh,
-    QueuedOp, SpeedDialAction, SpeedDialFab, LEAVE_CONFIRM_MESSAGE, LEAVE_CONFIRM_TITLE,
+    NavAddButton, QueuedOp, SpeedDialAction, SpeedDialFab, LEAVE_CONFIRM_MESSAGE, LEAVE_CONFIRM_TITLE,
 };
 use crate::common::fx_cache::read_fx;
 use crate::crypto::decrypt_json;
 use crate::conversion::{conversion_plan, rows_verdicts, Verdict};
 use crate::rotation_flow::{adopt_all, lost_projects, rotated_among, rotated_ids};
 use crate::decrypted::{project_status, status_edit};
-use crate::expenses::helpers::my_spending::{cached_ledgers, sync_all, synced_ledgers, GroupLedger};
+use crate::expenses::helpers::my_spending::{cached_ledgers, sync_all, synced_ledgers};
+use crate::expenses::project_actions_sheet::{MenuSheet, Row, GROUP_CLASS};
 use crate::expenses::{EditProjectModal, OPEN_REIMBURSEMENTS};
-use crate::icons::{ChevronRightIcon, ImportIcon, KeyIcon, LinkIcon, LockIcon, PlusIcon, UsersIcon, WalletIcon};
+use crate::icons::{ChevronRightIcon, ImportIcon, KeyIcon, LinkIcon, LockIcon, PlusIcon, UsersIcon, WalletIcon, ICON_HEADER};
 use crate::payment_methods::refill_project_copies;
 use crate::projects::home::{row_subtitle, BalanceCard, RowBalance};
 use crate::projects::home_balances::{debts, glance, home_currency, totals, Debt, ProjectGlance};
@@ -38,7 +39,7 @@ use crate::projects::project_row_sheet::ProjectRowSheet;
 use crate::projects::personal_cards::{is_personal_dto, PersonalCard, PersonalCreateCard, PersonalCreateSheet};
 use crate::projects::{AddProjectModal, ImportTricountModal, JoinProjectModal};
 use crate::friends::friends_service::my_private_key;
-use crate::friends::{InvitationsCard, NotificationsBell};
+use crate::friends::{use_friends, InvitationsCard, NotificationsBell, NotificationsSheet};
 use crate::route::Route;
 
 /// Whether anything has been archived. The filter is noise until something has been, so the page
@@ -55,6 +56,67 @@ fn status_of(state: &LocalStorageState, p: &ProjectDto) -> ProjectStatus {
 }
 
 const CONVERSION_PACE_MS: u32 = 1_000;
+
+/// The list as the last sync wrote it, minus what this device no longer holds and what lost its
+/// key since: neither may be drawn as a live row (the second shows under `LostProjects`).
+fn live_cached_list(state: &LocalStorageState) -> Option<Vec<ProjectDto>> {
+    let live = |id: Uuid| state.projects.iter().any(|p| p.project_id == id && !p.key_rotated);
+    let list = state.cached_projects_list.as_ref()?;
+    Some(list.iter().filter(|p| live(p.id)).cloned().collect())
+}
+
+const LIST_RESYNC_MS: i64 = 30_000;
+
+/// When the list last synced, for which projects and under which `resource_version`.
+#[derive(Clone, PartialEq, Debug)]
+struct ListSync {
+    at_ms: i64,
+    ids: Vec<Uuid>,
+    version: u64,
+}
+
+thread_local! {
+    static LAST_LIST_SYNC: std::cell::RefCell<Option<ListSync>> = const { std::cell::RefCell::new(None) };
+}
+
+fn synced_within(last: Option<&ListSync>, ids: &[Uuid], version: u64, now_ms: i64) -> bool {
+    last.is_some_and(|l| l.ids == ids && l.version == version && (0..LIST_RESYNC_MS).contains(&(now_ms - l.at_ms)))
+}
+
+/// Client-side only: the server's thread serves every visitor, and a throttle there would answer
+/// one with another's empty store.
+const THROTTLES: bool = cfg!(any(target_arch = "wasm32", target_os = "android", target_os = "ios"));
+
+fn list_synced_recently(ids: &[Uuid], version: u64) -> bool {
+    THROTTLES
+        && LAST_LIST_SYNC.with(|last| synced_within(last.borrow().as_ref(), ids, version, chrono::Utc::now().timestamp_millis()))
+}
+
+fn note_list_sync(ids: Vec<Uuid>, version: u64) {
+    if THROTTLES {
+        let at_ms = chrono::Utc::now().timestamp_millis();
+        LAST_LIST_SYNC.with(|last| *last.borrow_mut() = Some(ListSync { at_ms, ids, version }));
+    }
+}
+
+/// Shaped like the grouped list it stands in for: one card of rows, tile, two lines and a balance.
+#[component]
+fn ProjectListSkeleton() -> Element {
+    rsx! {
+        div { class: "list-group shrink-0", style: "--separator-inset: 4.375rem", aria_hidden: "true",
+            for _ in 0..4u8 {
+                div { class: "flex items-center gap-3 px-4 py-3",
+                    div { class: "skeleton size-[2.625rem] shrink-0 rounded-[13px]" }
+                    div { class: "flex-1 flex flex-col gap-1.5",
+                        div { class: "skeleton h-4 w-2/3" }
+                        div { class: "skeleton h-3 w-1/2" }
+                    }
+                    div { class: "skeleton h-4 w-16" }
+                }
+            }
+        }
+    }
+}
 
 #[component]
 pub fn ProjectsPage() -> Element {
@@ -76,6 +138,9 @@ pub fn ProjectsPage() -> Element {
     let mut show_join_project = use_signal(|| false);
     let mut show_personal_expense = use_signal(|| false);
     let mut show_personal_create = use_signal(|| false);
+    let friends = use_friends();
+    let bell_open = use_signal(|| false);
+    let mut add_open = use_signal(|| false);
 
     // What the account and the list's sync each answered, for the conversion further down. It needs
     // both, and must not start before reconciliation has dropped the projects left elsewhere.
@@ -174,8 +239,6 @@ pub fn ProjectsPage() -> Element {
         });
     });
 
-    let cached_list: Option<Vec<ProjectDto>> = ls_ctx.read().cached_projects_list.clone();
-
     let resource_version = use_context::<Signal<u64>>();
 
     // Every membership, archived or not: the toggle only filters what renders. Skipping the
@@ -184,18 +247,28 @@ pub fn ProjectsPage() -> Element {
     // login sync writes once per converted project - enough to trip nginx's burst limit (429).
     let project_ids = use_memo(move || ls_ctx.read().projects.iter().map(|p| p.project_id).collect::<Vec<Uuid>>());
 
-    // Every group's ledger: this device's cache at once, then what the resource's sync answers.
-    // Empty on the server render, so the first client render matches it.
-    let mut ledgers: Signal<Vec<GroupLedger>> = use_signal(Vec::new);
+    // Every group's ledger and the list itself: this device's cache at once, then what the
+    // resource's sync answers.
+    let mut ledgers = use_device_cache(|| cached_ledgers(&read_from_ls(), Uuid::nil()));
+    let cached_shown = use_device_cache(|| live_cached_list(&read_from_ls()));
     let mut synced = use_signal(|| false);
-    use_effect(move || ledgers.set(cached_ledgers(&read_from_ls(), Uuid::nil())));
 
+    // The keyed shell remounts this page on every back: its first run reuses a sync this recent.
+    // Pull to refresh, an accepted invitation or a replayed project edit run it again.
+    let first_run = use_hook(|| std::rc::Rc::new(std::cell::Cell::new(true)));
     let mut projects = use_resource(move || {
+        let first = first_run.replace(false);
         async move {
-            let _v = resource_version();
+            let version = resource_version();
             let ids = project_ids();
             if ids.is_empty() {
                 return Ok(vec![]);
+            }
+            if first && list_synced_recently(&ids, version) {
+                if let Some(list) = live_cached_list(&read_from_ls()) {
+                    synced.set(true);
+                    return Ok(list);
+                }
             }
             // One request for the list and every group's balances: one per project tripped the
             // proxy's burst limit on accounts with a few groups.
@@ -205,10 +278,11 @@ pub fn ProjectsPage() -> Element {
             let rotated = result.as_ref().map(|(_, syncs)| rotated_ids(syncs)).unwrap_or_default();
             let (account, account_key) = (auth_ctx.peek().clone(), *account_key_ctx.peek());
             if !rotated.is_empty() && adopt_all(ls_ctx, &rotated, account, account_key).await {
-                result = sync_all(ids).await;
+                result = sync_all(ids.clone()).await;
             }
             synced.set(true);
             let (before, syncs) = result?;
+            note_list_sync(ids, version);
             ledgers.set(synced_ledgers(&before, &syncs, Uuid::nil()));
             verdicts.set(Some(rows_verdicts(&before, &syncs)));
             let list: Vec<ProjectDto> = syncs.into_iter().filter_map(|s| s.project).collect();
@@ -346,13 +420,107 @@ pub fn ProjectsPage() -> Element {
         write_to_ls(&state);
     };
 
+    // The rows of `list`. `banner` marks a list the server could not refresh: it is said above the
+    // rows, and nothing offers to create from it.
+    let list_view = move |list: Vec<ProjectDto>, banner: Option<String>| -> Element {
+        let shown = |p: &&ProjectDto| show_archived() || status_of(&ls_ctx.peek(), p) != ProjectStatus::Archived;
+        // One per account, pinned above the groups; while there is none, offered last.
+        let mine = list.iter().find(|p| is_personal_dto(p, &ls_ctx.peek())).cloned();
+        let pinned = mine.clone().filter(|p| shown(&p));
+        let filtered: Vec<ProjectDto> =
+            list.iter().filter(shown).filter(|p| Some(p.id) != mine.as_ref().map(|m| m.id)).cloned().collect();
+        let lost = lost_projects(&ls_ctx.read(), &list.iter().map(|p| p.id).collect::<Vec<_>>());
+        let live = banner.is_none();
+        rsx! {
+            if let Some(text) = banner {
+                div { id: "projects-cached-banner", role: "alert",
+                    class: "alert alert-warning alert-soft text-sm",
+                    "{text}"
+                }
+            }
+            if let Some(project) = pinned {
+                PersonalCard { project, ledgers }
+            }
+            if filtered.is_empty() && lost.is_empty() {
+                div { class: "flex flex-col items-center gap-2 py-12 text-base-content/70",
+                    Mascot { pose: MascotPose::Empty }
+                    span { class: "font-semibold", {tid!("projects-empty")} }
+                }
+                if live {
+                    GroupCreateCard { on_create: move |_| show_add_project.set(true) }
+                }
+            } else if !filtered.is_empty() {
+                div { id: "projects-list", class: "list-group shrink-0", style: "--separator-inset: 4.375rem",
+                    for project in filtered.into_iter() {
+                        ProjectCard { glance: glance_of(project.id), synced: synced(), project: project.clone(), on_change: move |_| projects.restart() }
+                    }
+                }
+            }
+            LostProjects { lost }
+            if live && mine.is_none() {
+                PersonalCreateCard {
+                    signed_in: auth_ctx().is_some(),
+                    on_create: move |_| show_personal_create.set(true),
+                }
+            }
+        }
+    };
+    let syncing_cached = projects.read().is_none() && cached_shown.read().is_some();
+
     rsx! {
-        PageTitle { text: format!("{} · counted", tid!("nav-projects")) }
         div { class: "container app-container bg-base-100 overflow-auto p-4 pb-24 max-w-md w-full mx-auto flex flex-col gap-4",
             PullToRefresh { on_refresh: move |_| projects.restart(), busy: pending(&projects) }
-            header { class: "flex items-center justify-between min-h-14 pl-1",
-                h1 { id: "projects-title", class: "font-display font-bold text-[26px] tracking-tight", {tid!("nav-projects")} }
-                NotificationsBell {}
+            AppHeader { title: tid!("nav-projects"), back_button_route: Route::ProjectsPage {}, back: false, large: true,
+                if syncing_cached {
+                    span { id: "projects-syncing", class: "loading loading-spinner loading-sm text-base-content/50", role: "status", aria_label: tid!("loading") }
+                }
+                NotificationsBell { friends, open: bell_open }
+                NavAddButton { id: "projects-add-bar", label: tid!("projects-add"), open: add_open }
+            }
+            NotificationsSheet { friends, open: bell_open }
+            if add_open() {
+                MenuSheet { id: "projects-add-sheet", title: tid!("projects-add"), on_close: move |_| add_open.set(false),
+                    div { class: GROUP_CLASS,
+                        if personal().is_some() {
+                            Row {
+                                id: "projects-add-personal",
+                                label: tid!("projects-personal-expense"),
+                                onclick: move |_| {
+                                    add_open.set(false);
+                                    show_personal_expense.set(true);
+                                },
+                                WalletIcon { size: ICON_HEADER }
+                            }
+                        }
+                        Row {
+                            id: "projects-add-create",
+                            label: tid!("projects-create"),
+                            onclick: move |_| {
+                                add_open.set(false);
+                                show_add_project.set(true);
+                            },
+                            PlusIcon { size: ICON_HEADER }
+                        }
+                        Row {
+                            id: "projects-add-join",
+                            label: tid!("projects-join"),
+                            onclick: move |_| {
+                                add_open.set(false);
+                                show_join_project.set(true);
+                            },
+                            LinkIcon { size: ICON_HEADER }
+                        }
+                        Row {
+                            id: "projects-add-import",
+                            label: tid!("projects-import-tricount"),
+                            onclick: move |_| {
+                                add_open.set(false);
+                                show_import_tricount.set(true);
+                            },
+                            ImportIcon { size: ICON_HEADER }
+                        }
+                    }
+                }
             }
 
             if !ledgers.read().is_empty() {
@@ -395,65 +563,22 @@ pub fn ProjectsPage() -> Element {
             }
 
             match &*projects.read() {
-                None => rsx! {
-                    div { class: "flex flex-col gap-3", aria_hidden: "true",
-                        for _ in 0..3u8 {
-                            div { class: "card bg-base-100 shadow-soft",
-                                div { class: "card-body p-4 gap-2",
-                                    div { class: "skeleton h-4 w-3/4" }
-                                    div { class: "skeleton h-3 w-1/2" }
-                                    div { class: "flex justify-between mt-1",
-                                        div { class: "skeleton h-4 w-16" }
-                                        div { class: "skeleton h-6 w-24" }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                // Still syncing: the list as this device last saw it, or a skeleton shaped like it.
+                None => match cached_shown() {
+                    Some(list) => list_view(list, None),
+                    None => rsx! { ProjectListSkeleton {} },
                 },
                 // A refused refresh is no reason to drop a list already saved: nginx's 429 means this
                 // client asked too fast, and `sync_all` has already retried once.
                 Some(Err(e)) if is_offline_error(e) || is_rate_limited(e) => {
                     let rate_limited = is_rate_limited(e);
-                    // Disk as well as the signal: the resource saves the list to disk only, so after
-                    // a first sync in this session the signal can still hold none.
-                    match &cached_list.clone().or_else(|| read_from_ls().cached_projects_list) {
-                        Some(list) => {
-                            let filtered: Vec<ProjectDto> = list
-                                .iter()
-                                .filter(|p| show_archived() || status_of(&ls_ctx.peek(), p) != ProjectStatus::Archived)
-                                .cloned()
-                                .collect();
-                            let mine = filtered.iter().find(|p| is_personal_dto(p, &ls_ctx.peek())).cloned();
-                            let filtered: Vec<ProjectDto> =
-                                filtered.into_iter().filter(|p| Some(p.id) != mine.as_ref().map(|m| m.id)).collect();
-                            let lost = lost_projects(&ls_ctx.read(), &list.iter().map(|p| p.id).collect::<Vec<_>>());
-                            rsx! {
-                                div { id: "projects-cached-banner", role: "alert",
-                                    class: "alert alert-warning alert-soft text-sm",
-                                    if rate_limited { {tid!("error-rate-limited")} } else { {tid!("projects-offline-banner")} }
-                                }
-                                if let Some(project) = mine {
-                                    PersonalCard { project, ledgers }
-                                }
-                                if filtered.is_empty() && lost.is_empty() {
-                                    div { class: "flex flex-col items-center gap-2 py-12 text-base-content/70",
-                                        Mascot { pose: MascotPose::Empty }
-                                        span { class: "font-semibold", {tid!("projects-empty")} }
-                                    }
-                                } else if !filtered.is_empty() {
-                                    div { id: "projects-list", class: "shrink-0 rounded-[20px] bg-base-100 shadow-soft flex flex-col",
-                                        for (i, project) in filtered.into_iter().enumerate() {
-                                            if i > 0 {
-                                                div { class: "h-px bg-base-200 ml-[70px]" }
-                                            }
-                                            ProjectCard { glance: glance_of(project.id), synced: synced(), project: project.clone(), on_change: move |_| projects.restart() }
-                                        }
-                                    }
-                                }
-                                LostProjects { lost }
-                            }
-                        }
+                    // Disk, not the signal: the resource saves the list to disk only, so after a first
+                    // sync in this session the signal can still hold none.
+                    match live_cached_list(&read_from_ls()) {
+                        Some(list) => list_view(
+                            list,
+                            Some(if rate_limited { tid!("error-rate-limited") } else { tid!("projects-offline-banner") }),
+                        ),
                         None if rate_limited => rsx! {
                             div { role: "alert", class: "alert alert-error", "{error_message(e)}" }
                         },
@@ -471,46 +596,7 @@ pub fn ProjectsPage() -> Element {
                 Some(Err(e)) => rsx! {
                     div { role: "alert", class: "alert alert-error", "{error_message(e)}" }
                 },
-                Some(Ok(list)) => {
-                    // One per account, pinned above the groups; while there is none, offered last.
-                    let mine = list.iter().find(|p| is_personal_dto(p, &ls_ctx.peek())).cloned();
-                    let pinned = mine.clone().filter(|p| show_archived() || status_of(&ls_ctx.peek(), p) != ProjectStatus::Archived);
-                    let filtered: Vec<ProjectDto> = list
-                        .iter()
-                        .filter(|p| show_archived() || status_of(&ls_ctx.peek(), p) != ProjectStatus::Archived)
-                        .filter(|p| Some(p.id) != mine.as_ref().map(|m| m.id))
-                        .cloned()
-                        .collect();
-                    let lost = lost_projects(&ls_ctx.read(), &list.iter().map(|p| p.id).collect::<Vec<_>>());
-                    rsx! {
-                        if let Some(project) = pinned {
-                            PersonalCard { project, ledgers }
-                        }
-                        if filtered.is_empty() && lost.is_empty() {
-                            div { class: "flex flex-col items-center gap-2 py-12 text-base-content/70",
-                                Mascot { pose: MascotPose::Empty }
-                                span { class: "font-semibold", {tid!("projects-empty")} }
-                            }
-                            GroupCreateCard { on_create: move |_| show_add_project.set(true) }
-                        } else if !filtered.is_empty() {
-                            div { id: "projects-list", class: "shrink-0 rounded-[20px] bg-base-100 shadow-soft flex flex-col",
-                                for (i, project) in filtered.into_iter().enumerate() {
-                                    if i > 0 {
-                                        div { class: "h-px bg-base-200 ml-[70px]" }
-                                    }
-                                    ProjectCard { glance: glance_of(project.id), synced: synced(), project: project.clone(), on_change: move |_| projects.restart() }
-                                }
-                            }
-                        }
-                        LostProjects { lost }
-                        if mine.is_none() {
-                            PersonalCreateCard {
-                                signed_in: auth_ctx().is_some(),
-                                on_create: move |_| show_personal_create.set(true),
-                            }
-                        }
-                    }
-                }
+                Some(Ok(list)) => list_view(list.clone(), None),
             }
 
             // FAB - fixed above the bottom dock, expands into import/join/create
@@ -600,24 +686,21 @@ fn LostProjects(lost: Vec<Uuid>) -> Element {
         return rsx! {};
     }
     rsx! {
-        div { id: "projects-lost", class: "shrink-0 rounded-[20px] bg-base-100 shadow-soft flex flex-col",
-            for (i, project_id) in lost.into_iter().enumerate() {
-                if i > 0 {
-                    div { class: "h-px bg-base-200 ml-[70px]" }
-                }
+        div { id: "projects-lost", class: "list-group shrink-0", style: "--separator-inset: 4.375rem",
+            for project_id in lost.into_iter() {
                 button {
                     id: "project-lost-{project_id}",
                     r#type: "button",
-                    class: "flex items-center gap-3 px-4 py-3 text-start first:rounded-t-[20px] last:rounded-b-[20px] active:bg-base-200",
+                    class: "flex items-center gap-3 px-4 py-3 text-start row-press",
                     onclick: move |_| { nav.push(Route::ExpensesPage { project_id }); },
-                    span { class: "size-[42px] shrink-0 rounded-[13px] bg-tile-amber text-tile-amber-content flex items-center justify-center",
+                    span { class: "size-[2.625rem] shrink-0 rounded-[13px] bg-tile-amber text-tile-amber-content flex items-center justify-center",
                         KeyIcon {}
                     }
                     span { class: "flex-1 min-w-0 flex flex-col gap-0.5",
-                        span { class: "font-semibold text-[15px] truncate text-base-content/70", {tid!("project-rotated-title")} }
+                        span { class: "font-semibold text-[0.9375rem] truncate text-base-content/70", {tid!("project-rotated-title")} }
                         span { class: "text-xs text-base-content/70 line-clamp-2", {tid!("project-rotated-row-hint")} }
                     }
-                    span { class: "shrink-0 text-base-content/50", ChevronRightIcon {} }
+                    span { class: "list-chevron", ChevronRightIcon {} }
                 }
             }
         }
@@ -826,7 +909,7 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
                 }
             },
             if locked {
-                span { class: "size-[42px] shrink-0 rounded-[13px] bg-tile-amber text-tile-amber-content flex items-center justify-center",
+                span { class: "size-[2.625rem] shrink-0 rounded-[13px] bg-tile-amber text-tile-amber-content flex items-center justify-center",
                     LockIcon {}
                 }
             } else {
@@ -834,17 +917,17 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
             }
             span { class: "flex-1 min-w-0 flex flex-col gap-0.5",
                 if locked {
-                    span { class: "font-semibold text-[15px] truncate text-base-content/70", {tid!("missing-encryption-key-title")} }
+                    span { class: "font-semibold text-[0.9375rem] truncate text-base-content/70", {tid!("missing-encryption-key-title")} }
                     span { class: "text-xs text-base-content/70 line-clamp-2", {tid!("project-locked-hint")} }
                 } else {
-                    span { class: "font-semibold text-[15px] truncate", "{display_name}" }
+                    span { class: "font-semibold text-[0.9375rem] truncate", "{display_name}" }
                     span { class: "text-xs text-base-content/70 truncate", "{subtitle}" }
                 }
             }
             if locked {
                 span { class: "shrink-0 text-base-content/50", ChevronRightIcon {} }
-            } else if let Some(balance) = props.glance.as_ref().and_then(|g| g.balance) {
-                RowBalance { balance, currency: display_currency.clone() }
+            } else if let Some((balance, pending)) = props.glance.as_ref().and_then(|g| g.balance.map(|b| (b, g.pending))) {
+                RowBalance { balance, pending, currency: display_currency.clone() }
             }
             }
             // The row's actions open on a long press; the trigger stays in the tab order for the
@@ -944,6 +1027,27 @@ mod tests {
             cached_projects_list: cached,
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn the_cached_list_drops_what_this_device_left_and_what_lost_its_key() {
+        let cached = vec![project(1, ProjectStatus::Ongoing), project(2, ProjectStatus::Ongoing), project(3, ProjectStatus::Ongoing)];
+        let mut s = state(&[1, 3], Some(cached));
+        s.projects[1].key_rotated = true;
+        let ids: Vec<Uuid> = live_cached_list(&s).unwrap().iter().map(|p| p.id).collect();
+        assert_eq!(ids, vec![id(1)], "2 was left here, 3 lost its key");
+        assert_eq!(live_cached_list(&state(&[1], None)), None, "never synced: the skeleton");
+    }
+
+    #[test]
+    fn the_list_resyncs_after_the_window_or_on_any_change() {
+        let last = ListSync { at_ms: 1_000, ids: vec![id(1)], version: 2 };
+        assert!(synced_within(Some(&last), &[id(1)], 2, 1_000 + LIST_RESYNC_MS - 1));
+        assert!(!synced_within(Some(&last), &[id(1)], 2, 1_000 + LIST_RESYNC_MS), "the window is over");
+        assert!(!synced_within(Some(&last), &[id(1), id(2)], 2, 2_000), "a project joined");
+        assert!(!synced_within(Some(&last), &[id(1)], 3, 2_000), "a replayed edit bumped the version");
+        assert!(!synced_within(Some(&last), &[id(1)], 2, 500), "a clock that went back");
+        assert!(!synced_within(None, &[id(1)], 2, 2_000));
     }
 
     /// The filter is rendered only when this is true, so a false positive puts a dead control on

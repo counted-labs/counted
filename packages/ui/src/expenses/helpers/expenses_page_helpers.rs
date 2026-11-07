@@ -107,6 +107,21 @@ pub fn decide(
     let cached_project = || cached.and_then(|c| c.cached_project.clone());
 
     let Some(s) = ok_for(sync, project_id) else {
+        // Still syncing (pending, or the answer is another project's): a complete cache is drawn
+        // first and the answer replaces it. A truncated one would show wrong balances until then,
+        // and a project whose key was replaced has nothing current to show.
+        if !matches!(sync, Some(Err(_))) {
+            return match (cached_users(), cached_rows(), cached.filter(|c| !c.key_rotated).and_then(|c| c.cached_data_version)) {
+                (Some(users), Some((expenses, payments)), Some(version)) => Outcome::Load {
+                    users,
+                    project: cached_project(),
+                    expenses,
+                    payments,
+                    version: Some(version),
+                },
+                _ => Outcome::Wait,
+            };
+        }
         // Connectivity failures only - a genuine server error must surface, not be papered over
         // with stale rows. Offline renders what was cached, under the version it was cached at: the
         // cache effect writes these rows straight back, and a `None` there withdrew the claim, so
@@ -190,8 +205,8 @@ pub enum HeaderState {
     /// A translation key, not a sentence: the lookup belongs on the render path, and keeping it
     /// a key is what lets `header_state` be unit-tested without a Dioxus runtime.
     Error(&'static str),
-    /// Offline with nothing but the cached project row: the name renders, the actions do not.
-    /// Every dropdown entry needs the live project.
+    /// Offline or still loading, with nothing but the cached project row: the name renders, the
+    /// actions do not. Every dropdown entry needs the live project.
     Cached { title: String },
     Ready { title: String, status: ProjectStatus, read_only: bool },
     /// The key changed and no box or escrow gave this device the new one (artboard T10). Nothing
@@ -205,8 +220,12 @@ pub fn header_state(
     key: &[u8; 32],
     project_id: Uuid,
 ) -> HeaderState {
-    match sync {
+    let cached_or_loading = || match cached_project {
+        Some(p) => HeaderState::Cached { title: project_name(key, p) },
         None => HeaderState::Loading,
+    };
+    match sync {
+        None => cached_or_loading(),
         Some(Err(e)) if is_project_gone_error(e) => HeaderState::Gone,
         Some(Err(e)) if crate::rotation_flow::is_key_rotated(e) => HeaderState::Rotated,
         Some(Err(e)) => match (is_offline_error(e), cached_project) {
@@ -230,7 +249,7 @@ pub fn header_state(
             },
         },
         // A result for a project this page has already navigated away from.
-        Some(Ok(_)) => HeaderState::Loading,
+        Some(Ok(_)) => cached_or_loading(),
     }
 }
 
@@ -436,6 +455,26 @@ mod tests {
         assert_eq!(out, Outcome::Wait);
     }
 
+    /// Opening a project draws what this device holds while the sync runs, under the version it
+    /// claims, so the answer is "unchanged" or the rows that replace it.
+    #[test]
+    fn a_complete_cache_is_drawn_while_the_sync_runs() {
+        let cache = full_cache();
+        for pending in [None, sync_ok(other_pid(), 7, true)] {
+            let out = decide(pending.as_ref(), Some(&cache), None, pid());
+            let Outcome::Load { users, expenses, version, .. } = out else { panic!("expected Load, got {out:?}") };
+            assert_eq!((users[0].id, expenses[0].id, version), (9, 7, Some(42)));
+        }
+    }
+
+    #[test]
+    fn a_truncated_or_rotated_cache_is_not_drawn_while_the_sync_runs() {
+        let truncated = LocalStorageProject { cached_data_version: None, ..full_cache() };
+        assert_eq!(decide(None, Some(&truncated), None, pid()), Outcome::Wait, "its balances would be wrong");
+        let rotated = LocalStorageProject { key_rotated: true, ..full_cache() };
+        assert_eq!(decide(None, Some(&rotated), None, pid()), Outcome::Wait, "a lost project never shows as live");
+    }
+
     // Rolled back to a server that predates the merged sync: the rows arrive, the participants do
     // not, and the cache is what keeps the page whole.
     #[test]
@@ -580,6 +619,21 @@ mod tests {
     fn a_result_for_another_project_keeps_the_header_loading() {
         let out = header_state(sync_ok(other_pid(), 7, true).as_ref(), None, &test_key(), pid());
         assert_eq!(out, HeaderState::Loading);
+    }
+
+    // A pushed project page draws its bar from the cache at once instead of a spinner.
+    #[test]
+    fn loading_with_a_cached_project_shows_its_name() {
+        let key = test_key();
+        let cached = make_project(&key, pid(), "Trip", "EUR");
+        assert_eq!(header_state(None, Some(&cached), &key, pid()), HeaderState::Cached { title: "Trip".to_string() });
+        let stale = sync_ok(other_pid(), 7, true);
+        assert_eq!(header_state(stale.as_ref(), Some(&cached), &key, pid()), HeaderState::Cached { title: "Trip".to_string() });
+    }
+
+    #[test]
+    fn loading_with_no_cached_project_spins() {
+        assert_eq!(header_state(None, None, &test_key(), pid()), HeaderState::Loading);
     }
 
     #[test]

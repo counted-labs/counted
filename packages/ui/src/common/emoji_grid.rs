@@ -7,16 +7,16 @@ use crate::tid;
 /// Picked from a grid rather than typed: a one-character field opens the letter keyboard on
 /// Android and has no emoji keyboard on desktop. Every entry passes `shared::emoji::is_allowed_emoji`.
 pub const EMOJI_CHOICES: &[&str] = &[
-    "🏝️", "✈️", "🏕️", "🚐", "⛰️", "🗺️", "🧳", "🏖️", "🚆", "⛵", "🏰", "🌋", "🎒", "🌍", "🗼", "🏔️",
-    "🏠", "🏡", "🏢", "🛋️", "🛏️", "🔑", "🧹", "🧺", "🪴", "🛠️", "💡", "🔥", "💧", "⚡", "📡", "🧸",
-    "🍽️", "🛒", "🥕", "🥖", "🧀", "🍷", "☕", "🍕", "🍣", "🥗", "🍔", "🍦", "🥐", "🍺", "🧃", "🍫",
-    "🍜", "🥩", "🍎", "🥑", "🍰", "🍾", "🥂", "🍸", "🌮", "🥘", "🍝", "🍿", "🧁", "🍪", "🥡", "🍱",
+    "🏝️", "✈️", "🏕️", "🚐", "⛰️", "🗺️", "🏨", "🏖️", "🚆", "⛵", "🏰", "🌋", "🎒", "🌍", "🗼", "🏔️",
+    "🏠", "🏡", "🏢", "🛋️", "🛏️", "🔑", "🛁", "🚪", "🌱", "🛠️", "💡", "🔥", "💧", "⚡", "📡", "🍼",
+    "🍽️", "🛒", "🥕", "🥖", "🧀", "🍷", "☕", "🍕", "🍣", "🥗", "🍔", "🍦", "🥐", "🍺", "🍹", "🍫",
+    "🍜", "🍖", "🍎", "🥑", "🍰", "🍾", "🥂", "🍸", "🌮", "🥘", "🍝", "🍿", "🍩", "🍪", "🍛", "🍱",
     "🚕", "🚗", "🛵", "🚲", "🚌", "⛴️", "🚇", "⛽", "🅿️", "🛣️", "🚀", "🛴", "🏍️", "🚁", "🚢", "🚖",
-    "🎉", "🎂", "🎁", "🎄", "🎈", "💍", "🎊", "🥳", "🎃", "💐", "🕯️", "🪅", "👶", "🎓", "💒", "🎆",
-    "🎬", "🎵", "🎮", "🎿", "⚽", "🎾", "🏀", "🏊", "🚴", "🧗", "🎳", "🎨", "📚", "🎭", "🎟️", "🏛️",
-    "🛍️", "👕", "👟", "💄", "📱", "💻", "🎧", "📷", "⌚", "🕶️", "👜", "🧴", "💊", "🏥", "💇", "💆",
+    "🎉", "🎂", "🎁", "🎄", "🎈", "💍", "🎊", "🎀", "🎃", "💐", "🕯️", "🎇", "👶", "🎓", "💒", "🎆",
+    "🎬", "🎵", "🎮", "🎿", "⚽", "🎾", "🏀", "🏊", "🚴", "🏄", "🎳", "🎨", "📚", "🎭", "🎟️", "🏛️",
+    "🛍️", "👕", "👟", "💄", "📱", "💻", "🎧", "📷", "⌚", "🕶️", "👜", "💅", "💊", "🏥", "💇", "💆",
     "🐶", "🐱", "🐾", "🐴", "🌸", "🌳", "🌊", "☀️", "❄️", "🌙", "⭐", "🌈", "🍀", "🐟", "🦄", "🐝",
-    "💼", "📈", "🧾", "💳", "💶", "🏦", "📦", "✏️", "🔧", "🧪", "🩺", "⚖️", "🛡️", "📌", "❤️", "👍",
+    "💼", "📈", "📃", "💳", "💶", "🏦", "📦", "✏️", "🔧", "🔬", "💉", "⚖️", "🛡️", "📌", "❤️", "👍",
 ];
 
 #[component]
@@ -53,7 +53,7 @@ pub fn EmojiGrid(
                     aria_pressed: none_selected,
                     aria_label: tid!("emoji-none"),
                     onclick: move |_| {
-                        haptic(Haptic::Light);
+                        haptic(Haptic::Selection);
                         onpick.call(None);
                     },
                     "{preview}"
@@ -66,7 +66,7 @@ pub fn EmojiGrid(
                     class: if selected.as_deref() == Some(emoji) { "aspect-square rounded-xl text-xl leading-none bg-primary/15 ring-2 ring-primary" } else { "aspect-square rounded-xl text-xl leading-none hover:bg-base-200" },
                     aria_pressed: selected.as_deref() == Some(emoji),
                     onclick: move |_| {
-                        haptic(Haptic::Light);
+                        haptic(Haptic::Selection);
                         onpick.call(Some(emoji.to_string()));
                     },
                     "{emoji}"
@@ -104,5 +104,28 @@ mod tests {
             assert!(shared::emoji::is_allowed_emoji(e), "{e}");
             assert!(seen.insert(*e), "{e} twice");
         }
+    }
+
+    /// Unicode 10 and later: the code points Android 7.0's emoji font (minSdk 24, Unicode 9) draws
+    /// as an empty box.
+    fn after_unicode_9(c: char) -> bool {
+        let unicode_9 = [
+            0x1F910..=0x1F91E, 0x1F920..=0x1F927, 0x1F930..=0x1F930, 0x1F933..=0x1F93E,
+            0x1F940..=0x1F94B, 0x1F950..=0x1F95E, 0x1F980..=0x1F991, 0x1F9C0..=0x1F9C0,
+        ];
+        match c as u32 {
+            cp @ 0x1F900..=0x1F9FF => !unicode_9.iter().any(|r| r.contains(&cp)),
+            0x1FA00..=0x1FAFF | 0x1F6D3..=0x1F6DF | 0x1F6F7..=0x1F6FF | 0x1F7E0..=0x1F7FF => true,
+            _ => false,
+        }
+    }
+
+    #[test]
+    fn every_offered_emoji_renders_on_android_7() {
+        let offered = EMOJI_CHOICES.iter().copied().chain(crate::categories::CATEGORIES.iter().map(|c| c.emoji));
+        for e in offered.chain([crate::categories::DEFAULT_CATEGORY.emoji]) {
+            assert!(!e.chars().any(after_unicode_9), "{e} is newer than Unicode 9");
+        }
+        assert!(after_unicode_9('🧳') && after_unicode_9('🪴') && !after_unicode_9('🥕'));
     }
 }

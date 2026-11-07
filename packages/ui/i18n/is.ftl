@@ -5,6 +5,9 @@
 
 loading = Hleður…
 cancel = Hætta við
+discard-title = Henda breytingunum?
+discard-message = Það sem þú slóst inn glatast.
+discard = Henda
 confirm = Staðfesta
 retry = Reyna aftur
 delete = Eyða
@@ -441,6 +444,7 @@ reimbursements-empty-title = Allt gert upp!
 reimbursements-empty-hint = Uppgjörstillögur birtast hér þegar reikningar stemma ekki
 reimbursement-owes = { $debtor } skuldar { $creditor }
 reimbursement-record = Gera upp
+settlement-recorded = Uppgjör skráð.
 reimbursement-pay-with = Borga
 reimbursement-pay-shared-by = Deilt af { $name } - athugaðu nafn viðtakanda sem forritið þitt sýnir áður en þú sendir.
 reimbursement-pay-title = Borga { $name }
@@ -476,7 +480,6 @@ move-note-group = Útgjöldin fara úr { $project } hjá öllum meðlimum og sta
 move-banner = Frá { $from } í { $to }
 move-submit = Færa
 move-done = Útgjöld færð í { $project }
-move-delete-failed = Útgjöldunum var bætt við hitt verkefnið en eru enn í { $project }: eyddu þeim þar.
 history-expense-moved = Útgjöld færð í annað verkefni: { $name }
 personal-badge = Eigið
 move-members =
@@ -853,6 +856,11 @@ edit-project-no-identity = Þú hefur ekki enn valið hver þú ert
 edit-project-switch = Skipta
 edit-project-choose = Velja
 invite-failed = Ekki tókst að senda þessi boð: { $emails }
+invite-waiting = Þessir vinir þurfa að opna Counted einu sinni áður en hægt er að bjóða þeim: { $emails }
+key-offer-title = Annar lykill fyrir { $name }
+key-offer-body = Þetta tæki hefur annan lykil að þessu verkefni, sem hefur aldrei opnað það hér.
+key-offer-choices = Nota þennan lykil: verkefnið opnast með lyklinum úr þessum tengli eða boði. Hætta við: tækið heldur núverandi lykli sínum og ekkert breytist.
+key-offer-use = Nota þennan lykil
 invite-again = Bjóða aftur
 friend-picker-title = Bæta við vinum
 user-selection-invited-hint = { $email } bauð þér í „{ $project }“.
@@ -981,6 +989,12 @@ home-remind-message = Smá áminning: enn eru endurgreiðslur ógerðar í { $pr
 home-row-owed = þú átt inni
 home-row-owe = þú skuldar
 home-row-settled = Uppgert
+home-row-quits = Þitt er uppgert
+home-row-pending =
+    { $count ->
+        [one] { $count } endurgreiðsla í bið
+       *[other] { $count } endurgreiðslur í bið
+    }
 home-totals-partial = Án verkefna án gengis
 error-account-key-changed = Lykill reikningsins þíns breyttist í öðru tæki. Skráðu þig inn aftur til að halda áfram.
 settings-security = Öryggi

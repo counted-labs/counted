@@ -16,7 +16,7 @@ pub fn NotFoundPage(segments: Vec<String>) -> Element {
     FullstackContext::commit_http_status(StatusCode::NOT_FOUND, None);
 
     rsx! {
-        div { class: "container app-container bg-base-100 p-4 max-w-md mx-auto flex flex-col gap-4",
+        div { class: "container app-container bg-base-100 p-4 pb-24 max-w-md mx-auto flex flex-col gap-4",
             AppHeader { title: tid!("not-found-title"), back_button_route: Route::ProjectsPage {} }
 
             div { class: "card bg-base-100 shadow-soft",

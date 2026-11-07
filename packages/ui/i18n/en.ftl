@@ -7,6 +7,9 @@
 
 loading = Loading…
 cancel = Cancel
+discard-title = Discard changes?
+discard-message = What you entered will be lost.
+discard = Discard
 confirm = Confirm
 retry = Try again
 delete = Delete
@@ -453,6 +456,7 @@ reimbursements-empty-title = All settled up!
 reimbursements-empty-hint = Settlement suggestions appear here when the accounts don’t balance
 reimbursement-owes = { $debtor } owes { $creditor }
 reimbursement-record = Settle
+settlement-recorded = Settlement recorded.
 reimbursement-pay-with = Pay
 reimbursement-pay-shared-by = Shared by { $name } - check the recipient name your app shows before sending.
 reimbursement-pay-title = Pay { $name }
@@ -489,7 +493,6 @@ move-note-group = The expense will leave { $project } for all its members, and t
 move-banner = From { $from } to { $to }
 move-submit = Move
 move-done = Expense moved to { $project }
-move-delete-failed = The expense was added to the other project but is still in { $project }: delete it there.
 history-expense-moved = Expense moved to another project: { $name }
 personal-badge = Personal
 move-members =
@@ -1057,6 +1060,11 @@ edit-project-no-identity = You haven’t picked who you are yet
 edit-project-switch = Switch
 edit-project-choose = Choose
 invite-failed = These invitations couldn’t be sent: { $emails }
+invite-waiting = These friends need to open Counted once before they can be invited: { $emails }
+key-offer-title = A different key for { $name }
+key-offer-body = This device holds another key for this project, one that has never opened it here.
+key-offer-choices = Use this key: the project opens with the key from this link or invitation. Cancel: this device keeps its current key, and nothing changes.
+key-offer-use = Use this key
 invite-again = Invite again
 friend-picker-title = Add friends
 user-selection-invited-hint = { $email } invited you to “{ $project }”.
@@ -1185,6 +1193,12 @@ home-remind-message = Friendly reminder: there are still reimbursements to settl
 home-row-owed = owed to you
 home-row-owe = you owe
 home-row-settled = Settled
+home-row-quits = You’re settled
+home-row-pending =
+    { $count ->
+        [one] { $count } repayment pending
+       *[other] { $count } repayments pending
+    }
 home-totals-partial = Projects without an exchange rate are not included
 error-account-key-changed = Your account key changed on another device. Sign in again to keep going.
 settings-security = Security

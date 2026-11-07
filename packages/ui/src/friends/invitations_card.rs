@@ -3,7 +3,7 @@ use crate::tid;
 use shared::Account;
 use uuid::Uuid;
 
-use super::friends_service::{accept_invitation, decline_invitation, load_invitations, my_private_key, OpenedInvitation};
+use super::friends_service::{accept_invitation, decline_invitation, load_invitations, opener, OpenedInvitation};
 use crate::common::{error_message, AcceptedInvite, Flash, LocalStorageState};
 use crate::route::Route;
 
@@ -28,21 +28,21 @@ pub fn InvitationsCard(props: InvitationsCardProps) -> Element {
 
     // Not `auth_ctx()`: every write to the account (a preference saved, a refill) would reload the
     // card.
-    let opener = use_memo(move || {
+    let held = use_memo(move || {
         let account = auth_ctx.read();
-        account.as_ref().map(|a| (a.id, account_key().and_then(|k| my_private_key(a, &k, ls_ctx.peek().raw_wraps_ok(a.id)))))
+        account.as_ref().map(|a| (a.id, account_key().and_then(|k| opener(a, &k, ls_ctx.peek().raw_wraps_ok(a.id)))))
     });
     let invitations = use_resource(move || {
         let _ = version();
-        let (signed_in, private) = match opener() {
-            Some((_, private)) => (true, private),
+        let (signed_in, keys) = match held() {
+            Some((_, keys)) => (true, keys),
             None => (false, None),
         };
         async move {
             if !signed_in {
                 return Ok(vec![]);
             }
-            load_invitations(ls_ctx, private).await
+            load_invitations(ls_ctx, keys).await
         }
     });
 

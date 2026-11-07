@@ -5,6 +5,9 @@
 
 loading = Φόρτωση…
 cancel = Ακύρωση
+discard-title = Απόρριψη αλλαγών;
+discard-message = Ό,τι έγραψες θα χαθεί.
+discard = Απόρριψη
 confirm = Επιβεβαίωση
 retry = Δοκίμασε ξανά
 delete = Διαγραφή
@@ -441,6 +444,7 @@ reimbursements-empty-title = Όλα εξοφλημένα!
 reimbursements-empty-hint = Οι προτάσεις εξόφλησης εμφανίζονται εδώ όταν οι λογαριασμοί δεν ισορροπούν
 reimbursement-owes = { $debtor } χρωστάει σε { $creditor }
 reimbursement-record = Εξόφληση
+settlement-recorded = Η εξόφληση καταγράφηκε.
 reimbursement-pay-with = Πληρωμή
 reimbursement-pay-shared-by = Κοινοποιήθηκε από { $name } - έλεγξε το όνομα παραλήπτη που δείχνει η εφαρμογή σου πριν στείλεις.
 reimbursement-pay-title = Πληρωμή σε { $name }
@@ -476,7 +480,6 @@ move-note-group = Το έξοδο θα φύγει από το { $project } γι�
 move-banner = Από { $from } σε { $to }
 move-submit = Μετακίνηση
 move-done = Το έξοδο μετακινήθηκε στο { $project }
-move-delete-failed = Το έξοδο προστέθηκε στο άλλο έργο αλλά παραμένει στο { $project }: διάγραψέ το εκεί.
 history-expense-moved = Το έξοδο μετακινήθηκε σε άλλο έργο: { $name }
 personal-badge = Προσωπικό
 move-members =
@@ -853,6 +856,11 @@ edit-project-no-identity = Δεν έχεις διαλέξει ακόμα ποι�
 edit-project-switch = Αλλαγή
 edit-project-choose = Επιλογή
 invite-failed = Δεν ήταν δυνατή η αποστολή αυτών των προσκλήσεων: { $emails }
+invite-waiting = Αυτοί οι φίλοι πρέπει να ανοίξουν το Counted μία φορά πριν μπορέσουν να προσκληθούν: { $emails }
+key-offer-title = Διαφορετικό κλειδί για { $name }
+key-offer-body = Αυτή η συσκευή έχει άλλο κλειδί για αυτό το έργο, που δεν το έχει ανοίξει ποτέ εδώ.
+key-offer-choices = Χρήση αυτού του κλειδιού: το έργο ανοίγει με το κλειδί αυτού του συνδέσμου ή της πρόσκλησης. Ακύρωση: η συσκευή κρατά το τρέχον κλειδί της και τίποτα δεν αλλάζει.
+key-offer-use = Χρήση αυτού του κλειδιού
 invite-again = Νέα πρόσκληση
 friend-picker-title = Προσθήκη φίλων
 user-selection-invited-hint = Ο/Η { $email } σε προσκάλεσε στο «{ $project }».
@@ -981,6 +989,12 @@ home-remind-message = Μικρή υπενθύμιση: στο { $project } εκ�
 home-row-owed = σου χρωστούν
 home-row-owe = χρωστάς
 home-row-settled = Εξοφλημένο
+home-row-quits = Είσαι εντάξει
+home-row-pending =
+    { $count ->
+        [one] { $count } εκκρεμής αποπληρωμή
+       *[other] { $count } εκκρεμείς αποπληρωμές
+    }
 home-totals-partial = Χωρίς τα έργα χωρίς συναλλαγματική ισοτιμία
 error-account-key-changed = Το κλειδί του λογαριασμού σου άλλαξε σε άλλη συσκευή. Συνδέσου ξανά για να συνεχίσεις.
 settings-security = Ασφάλεια

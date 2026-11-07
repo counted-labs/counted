@@ -1,0 +1,2 @@
+"NSCameraUsageDescription" = "To read a receipt and fill in the expense. The photo is analysed on your phone, never sent and not kept.";
+"NSPhotoLibraryUsageDescription" = "To read a receipt you have already photographed. The image is analysed on your phone, never sent and not kept.";

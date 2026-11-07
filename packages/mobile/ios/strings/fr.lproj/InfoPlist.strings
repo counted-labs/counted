@@ -1,0 +1,2 @@
+"NSCameraUsageDescription" = "Pour lire un ticket de caisse et pré-remplir la dépense. La photo est analysée sur votre téléphone, n'est jamais envoyée et n'est pas conservée.";
+"NSPhotoLibraryUsageDescription" = "Pour lire un ticket de caisse déjà photographié. L'image est analysée sur votre téléphone, n'est jamais envoyée et n'est pas conservée.";

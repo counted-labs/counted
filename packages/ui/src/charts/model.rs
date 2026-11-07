@@ -693,13 +693,21 @@ mod tests {
 
     #[test]
     fn money_formats() {
-        assert_eq!(money(1728.4, "EUR"), "1\u{a0}728\u{a0}EUR");
-        assert_eq!(money(640.0, "USD"), "640\u{a0}USD");
-        assert_eq!(money(12.0, ""), "12");
-        assert_eq!(money(-0.3, "EUR"), "0\u{a0}EUR");
-        assert_eq!(signed_money(185.0, "EUR"), "+185\u{a0}EUR");
-        assert_eq!(signed_money(-285.0, "EUR"), "−285\u{a0}EUR");
-        assert_eq!(signed_money(0.2, "EUR"), "0\u{a0}EUR");
+        use dioxus::prelude::*;
+        let mut dom = VirtualDom::new(|| {
+            crate::i18n::use_test_i18n();
+            rsx! {}
+        });
+        dom.rebuild_in_place();
+        dom.in_scope(ScopeId::APP, || {
+            assert_eq!(money(1728.4, "EUR"), "€1\u{a0}728");
+            assert_eq!(money(640.0, "USD"), "640\u{a0}USD");
+            assert_eq!(money(12.0, ""), "12");
+            assert_eq!(money(-0.3, "EUR"), "€0");
+            assert_eq!(signed_money(185.0, "EUR"), "+€185");
+            assert_eq!(signed_money(-285.0, "EUR"), "−€285");
+            assert_eq!(signed_money(0.2, "EUR"), "€0");
+        });
     }
 
     #[test]

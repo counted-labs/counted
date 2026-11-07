@@ -1,0 +1,2 @@
+"NSCameraUsageDescription" = "Per leggere uno scontrino e precompilare la spesa. La foto viene analizzata sul tuo telefono, non viene mai inviata né conservata.";
+"NSPhotoLibraryUsageDescription" = "Per leggere uno scontrino già fotografato. L'immagine viene analizzata sul tuo telefono, non viene mai inviata né conservata.";

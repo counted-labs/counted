@@ -14,7 +14,7 @@ use crate::auth::erase_device::{check_erase, erase_device_stores, EraseCheck};
 use crate::auth::erase_device_sheet::EraseDeviceSheet;
 use crate::auth::{LockedFeatureCard, PaymentMethodsCard};
 use crate::crypto::{decrypt_json, forget_decrypted};
-use crate::icons::{DollarIcon, RightArrowIcon, UserIcon};
+use crate::icons::{ChevronRightIcon, DollarIcon, UserIcon};
 use crate::route::Route;
 
 /// The account key must go with the session in both directions: leaving it in localStorage after
@@ -143,6 +143,7 @@ pub fn SettingsPage() -> Element {
                 title: tid!("settings-title"),
                 back_button_route: Route::ProjectsPage {},
                 back: false,
+                large: true,
             }
 
             if let Some(err) = error_msg() {
@@ -172,7 +173,7 @@ pub fn SettingsPage() -> Element {
             // without `AuthResolved` this slot would flash the sign-in card at someone who is
             // signed in. Server and first client render both see `false`, so hydration agrees.
             if !auth_resolved().0 {
-                div { class: "skeleton h-48 w-full", aria_hidden: "true" }
+                crate::common::AccountCardSkeleton {}
             } else if let Some(account) = account {
                 crate::auth::recovery_ui::PendingResetBanner {}
                 crate::auth::keypair_banner::KeypairMismatchBanner {}
@@ -244,7 +245,7 @@ pub fn SettingsPage() -> Element {
                             }
                             p { class: "text-sm text-base-content/70", {tid!("settings-friends-hint")} }
                         }
-                        RightArrowIcon {}
+                        span { class: "list-chevron", ChevronRightIcon {} }
                     }
                 }
 
@@ -318,21 +319,13 @@ pub fn SettingsPage() -> Element {
 
             // Moved off the projects header dropdown: these are read-once pages, not tools, and a
             // menu on the list screen was the wrong place for them.
-            div { class: "card bg-base-100 shadow-soft",
-                ul { class: "menu w-full",
-                    li { class: "menu-title", {tid!("settings-about")} }
-                    li {
-                        Link { to: Route::HelpPage {}, {tid!("nav-help")} }
-                    }
-                    li {
-                        Link { to: Route::PrivacyPage {}, {tid!("nav-privacy")} }
-                    }
-                    li {
-                        Link { to: Route::TermsPage {}, {tid!("nav-terms")} }
-                    }
-                    li {
-                        Link { to: Route::LegalNoticePage {}, {tid!("nav-legal")} }
-                    }
+            section { class: "flex flex-col",
+                h2 { class: "list-header", {tid!("settings-about")} }
+                ul { class: "list-group",
+                    AboutRow { to: Route::HelpPage {}, label: tid!("nav-help") }
+                    AboutRow { to: Route::PrivacyPage {}, label: tid!("nav-privacy") }
+                    AboutRow { to: Route::TermsPage {}, label: tid!("nav-terms") }
+                    AboutRow { to: Route::LegalNoticePage {}, label: tid!("nav-legal") }
                 }
             }
 
@@ -354,6 +347,18 @@ pub fn SettingsPage() -> Element {
                     on_close: move |_| show_delete_confirm.set(false),
                     on_deleted,
                 }
+            }
+        }
+    }
+}
+
+#[component]
+fn AboutRow(to: Route, label: String) -> Element {
+    rsx! {
+        li {
+            Link { to, class: "flex items-center gap-3 min-h-11 px-4 py-2.5 row-press",
+                span { class: "flex-1 min-w-0", "{label}" }
+                span { class: "list-chevron", ChevronRightIcon {} }
             }
         }
     }

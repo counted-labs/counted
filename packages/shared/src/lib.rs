@@ -609,6 +609,10 @@ pub struct Account {
     /// password change, recovery key and key rotation are offered. Set by the server.
     #[serde(default)]
     pub key_lifecycle: bool,
+    /// Every build older than [`HYBRID_INVITATIONS_FROM`] is refused, so invitations are sealed in
+    /// the hybrid box and a classical one is refused. Set by the server.
+    #[serde(default)]
+    pub hybrid_invitations: bool,
     /// ML-KEM-768 encapsulation key, the post-quantum half of the account's hybrid keypair. `None`
     /// until a build that makes one has started with the account's master key.
     #[serde(default)]
@@ -656,6 +660,18 @@ pub struct HybridBox {
     pub ct: Vec<u8>,
 }
 
+/// A box holds one typed key of fixed-length fields, a few hundred bytes.
+pub const MAX_HYBRID_BOX_CT_LENGTH: usize = 512;
+
+impl HybridBox {
+    pub fn well_formed(&self) -> bool {
+        self.ephemeral.len() == 32
+            && self.kem_ct.len() == KEM_CIPHERTEXT_LENGTH
+            && self.nonce.len() == 24
+            && (16..=MAX_HYBRID_BOX_CT_LENGTH).contains(&self.ct.len())
+    }
+}
+
 /// `PUT /auth/keypair`. Write-once: the server keeps the first keypair an account presents.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -670,6 +686,10 @@ pub struct Keypair {
 /// The first build that reads the account master key and sends `amk_epoch` on every account-key
 /// write. No account leaves epoch 0 before `MIN_APP_VERSION` reaches it.
 pub const KEY_LIFECYCLE_FROM: &str = "3.2.9";
+
+/// The first build that opens a hybrid invitation. None is written before `MIN_APP_VERSION`
+/// reaches it, and no classical one after (docs/plans/security-fixes-2026-11-02.md §5).
+pub const HYBRID_INVITATIONS_FROM: &str = "3.2.10";
 
 /// `POST /auth/account/delete`: the password's proof, as a login sends it, so a session alone (any
 /// script on the origin, an unlocked device) cannot erase the account (security review 2026-11-02 L3).
@@ -947,6 +967,8 @@ pub struct Friend {
     pub account_id: Uuid,
     pub email: String,
     pub public_key: Option<Vec<u8>>,
+    #[serde(default)]
+    pub kem_public_key: Option<Vec<u8>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -976,12 +998,16 @@ pub struct FriendsView {
     pub outgoing: Vec<OutgoingFriendRequest>,
 }
 
-/// `POST /projects/{id}/invitations`: the project key boxed to `to_account_id`'s public key.
+/// `POST /projects/{id}/invitations`: the project key boxed to `to_account_id`'s public keys, in
+/// exactly one form: `key` until [`HYBRID_INVITATIONS_FROM`] is the floor, `hybrid` from then on.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CreatableProjectInvitation {
     pub to_account_id: Uuid,
-    pub key: EncryptedPair,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key: Option<EncryptedPair>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hybrid: Option<HybridBox>,
     /// The participant the sender created for this friend, preselected when they pick who they
     /// are. Must belong to the project.
     #[serde(default)]
@@ -995,7 +1021,10 @@ pub struct ProjectInvitation {
     pub project_id: Uuid,
     pub from_email: String,
     pub from_public_key: Vec<u8>,
-    pub key: EncryptedPair,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key: Option<EncryptedPair>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hybrid: Option<HybridBox>,
     pub created_at: NaiveDateTime,
     #[serde(default)]
     pub user_id: Option<i32>,

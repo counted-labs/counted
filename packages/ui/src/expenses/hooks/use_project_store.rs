@@ -22,6 +22,7 @@ use crate::expenses::helpers::expenses_page_helpers::{
 };
 use crate::expenses::helpers::expense_query::ExpenseQuery;
 use crate::expenses::move_expense::MoveDraft;
+use crate::expenses::tabs::project_tabs::Tab;
 use crate::expenses::helpers::project_data::{self, LiveData, ProjectData};
 use crate::expenses::tabs::expenses_tab::{apply_mutation, ExpenseMutation};
 use crate::recurring::materializer::use_recurring_materializer;
@@ -64,6 +65,9 @@ pub struct ProjectStore {
     /// An expense on its way to another project: set on the source's page, consumed by the
     /// destination's expenses tab once that project is the one loaded.
     pub pending_move: Signal<Option<MoveDraft>>,
+    /// The project page's tab, here so that coming back from history, a rule or an expense lands on
+    /// it again. Paired with its project: any other opens on the expenses.
+    pub tab: Signal<Option<(Uuid, Tab)>>,
 }
 
 impl ProjectStore {
@@ -99,6 +103,7 @@ pub fn use_project_store() -> ProjectStore {
     let mut force_full_sync = use_signal(|| false);
     let mut query = use_signal(ExpenseQuery::default);
     let mut pending_move: Signal<Option<MoveDraft>> = use_signal(|| None);
+    let tab = use_signal(|| None);
 
     // The project the store is following. It never falls back to `None`: leaving a project for the
     // list and returning must cost no request, and clearing it would refetch on the way back.
@@ -144,10 +149,11 @@ pub fn use_project_store() -> ProjectStore {
             // Persisted before the membership write, which escrows whatever the store holds. A
             // fragment key that differs from the held one is kept only if it decrypts the project.
             let adopted = adopt_project_key(ls_ctx, id, k).await;
-            // A refused fragment key must not stay the one the page decrypts and encrypts with:
-            // rows would read as an empty project, and new ones would go up under a key the other
-            // members do not hold.
-            if !adopted && *active.peek() == Some(id) {
+            // The page decrypts and encrypts with the key the store holds once this settles: a
+            // refused fragment key would read rows as an empty project and write new ones under a
+            // key the other members do not hold. Accepted ones too, because the effect re-runs when
+            // `auth_ctx` resolves and the superseded call may have reset the page to the old key.
+            if *active.peek() == Some(id) {
                 let held = project_key(id);
                 if held.is_some() && *key_ctx.peek() != held {
                     let mut key_ctx = key_ctx;
@@ -270,6 +276,7 @@ pub fn use_project_store() -> ProjectStore {
             (decide(resolved, cached, held, id), fresh_rules)
         };
 
+        let answered = fresh_rules.is_some();
         match fresh_rules {
             Some(next) if recurring.peek().as_ref() != Some(&next) => recurring.set(Some(next)),
             None if recurring.peek().as_ref().is_some_and(|r| r.project_id != id) => {
@@ -296,8 +303,9 @@ pub fn use_project_store() -> ProjectStore {
             return;
         };
 
-        // The claim was honoured, so the flag has done its job.
-        if *force_full_sync.peek() {
+        // The claim was honoured, so the flag has done its job. Not by the cache drawn while the sync
+        // runs: clearing it then would re-arm the retry before the forced sync answered.
+        if answered && *force_full_sync.peek() {
             force_full_sync.set(false);
         }
 
@@ -333,8 +341,8 @@ pub fn use_project_store() -> ProjectStore {
         });
     });
 
-    // Patch locally, or fall back to a refetch when the mutation cannot be applied (an offline
-    // queue entry, or an edit to a row this device never had).
+    // Patch locally, or fall back to a refetch when the mutation cannot be applied (an edit to a
+    // row this device never had).
     let on_expenses_changed = use_callback(move |m: ExpenseMutation| {
         let mut guard = live.write();
         let applied = match guard.as_mut() {
@@ -359,8 +367,8 @@ pub fn use_project_store() -> ProjectStore {
     });
 
     // Nothing else may enter here: adding `ls_ctx` invalidates the memo on every load (the cache
-    // effect writes it) and pays for a second full decrypt. The offline queue does, so an expense
-    // added offline is listed and counted at once; it changes only on an offline write or a replay,
+    // effect writes it) and pays for a second full decrypt. The write queue does, so an expense
+    // added is listed and counted at once, before its replay lands; it changes only on a write or a replay,
     // and the rows are copied only when the open project has queued adds.
     let data: Memo<Arc<ProjectData>> = use_memo(move || {
         let live = live.read();
@@ -395,6 +403,7 @@ pub fn use_project_store() -> ProjectStore {
         recurring: recurring_data,
         query,
         pending_move,
+        tab,
     }
 }
 

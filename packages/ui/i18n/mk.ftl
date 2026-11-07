@@ -5,6 +5,9 @@
 
 loading = Вчитување…
 cancel = Откажи
+discard-title = Да се отфрлат промените?
+discard-message = Она што го внесе ќе се изгуби.
+discard = Отфрли
 confirm = Потврди
 retry = Обиди се повторно
 delete = Избриши
@@ -441,6 +444,7 @@ reimbursements-empty-title = Сè е порамнето!
 reimbursements-empty-hint = Предлози за порамнување се појавуваат овде кога сметките не се балансирани
 reimbursement-owes = { $debtor } должи на { $creditor }
 reimbursement-record = Порамни
+settlement-recorded = Порамнувањето е запишано.
 reimbursement-pay-with = Плати
 reimbursement-pay-shared-by = Споделено од { $name } - провери го името на примачот што го прикажува твојата апликација пред да испратиш.
 reimbursement-pay-title = Плати на { $name }
@@ -476,7 +480,6 @@ move-note-group = Трошокот ќе го напушти { $project } за с
 move-banner = Од { $from } во { $to }
 move-submit = Премести
 move-done = Трошокот е преместен во { $project }
-move-delete-failed = Трошокот е додаден во другиот проект, но е сè уште во { $project }: избриши го таму.
 history-expense-moved = Трошокот е преместен во друг проект: { $name }
 personal-badge = Лично
 move-members =
@@ -853,6 +856,11 @@ edit-project-no-identity = Сè уште не си избрал(а) кој си
 edit-project-switch = Смени
 edit-project-choose = Избери
 invite-failed = Овие покани не можеа да се испратат: { $emails }
+invite-waiting = Овие пријатели мора еднаш да го отворат Counted пред да можат да бидат поканети: { $emails }
+key-offer-title = Друг клуч за { $name }
+key-offer-body = Овој уред има друг клуч за овој проект, кој никогаш не го отворил овде.
+key-offer-choices = Користи го овој клуч: проектот се отвора со клучот од овој линк или покана. Откажи: уредот го задржува тековниот клуч и ништо не се менува.
+key-offer-use = Користи го овој клуч
 invite-again = Покани повторно
 friend-picker-title = Додај пријатели
 user-selection-invited-hint = { $email } те покани во „{ $project }“.
@@ -981,6 +989,12 @@ home-remind-message = Мал потсетник: во { $project } сè уште
 home-row-owed = ти должат
 home-row-owe = должиш
 home-row-settled = Подмирено
+home-row-quits = Кај тебе подмирено
+home-row-pending =
+    { $count ->
+        [one] { $count } враќање на чекање
+       *[other] { $count } враќања на чекање
+    }
 home-totals-partial = Без проекти без девизен курс
 error-account-key-changed = Клучот на твојата сметка е сменет на друг уред. Најави се повторно за да продолжиш.
 settings-security = Безбедност

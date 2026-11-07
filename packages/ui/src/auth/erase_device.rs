@@ -194,6 +194,8 @@ mod tests {
             personal_project: Some(Uuid::new_v4()),
             typed_wrap_accounts: vec![account],
             friend_keys: [(account, "k".into())].into(),
+            friend_kem_keys: [(account, "k".into())].into(),
+            hybrid_invitations: true,
             account_key_owner: Some(account),
             account_key_epoch: Some(1),
             amk_epoch_pins: [(account, 1)].into(),

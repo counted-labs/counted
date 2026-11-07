@@ -12,11 +12,14 @@ use super::view::{
     monthly_total, my_monthly_share, next_date, progress, rate_drift, sorted, state, RuleState,
 };
 use crate::categories::ProjectCategories;
-use crate::common::{format_date, fx_cache, pending, read_from_ls, AppHeader, Flash, ProjectKey, PullToRefresh};
+use crate::common::{
+    format_date, fx_cache, pending, read_from_ls, AppHeader, Flash, ProjectKey, PullToRefresh, RowActionsEntry, RowActionsSheet,
+};
+use crate::expenses::project_actions_sheet::Row;
 use crate::expenses::helpers::project_data::ProjectData;
 use crate::expenses::hooks::use_fx_rates::use_fx_rates;
 use crate::expenses::hooks::use_project_store::ProjectStore;
-use crate::icons::{CloseIcon, RepeatIcon, ICON_HEADER, ICON_INLINE};
+use crate::icons::{CloseIcon, PencilIcon, RepeatIcon, ICON_HEADER, ICON_INLINE};
 use crate::route::Route;
 use crate::tid;
 
@@ -62,6 +65,7 @@ fn RecurringView(project_id: Uuid, open: Option<Uuid>) -> Element {
     let mut selected: Signal<Option<Uuid>> = use_signal(|| open);
     let mut editing: Signal<Option<Uuid>> = use_signal(|| None);
     let mut confirm: Signal<Option<(Uuid, bool)>> = use_signal(|| None);
+    let mut actions_for: Signal<Option<Uuid>> = use_signal(|| None);
     let mut hydrated = use_signal(|| false);
     use_effect(move || hydrated.set(true));
 
@@ -147,9 +151,57 @@ fn RecurringView(project_id: Uuid, open: Option<Uuid>) -> Element {
                                                         estimates,
                                                         drift,
                                                         on_open: move |_| selected.set(Some(id)),
+                                                        actions_open: actions_for() == Some(id),
+                                                        on_actions: move |_| actions_for.set(Some(id)),
                                                     }
                                                 }
                                             }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if let Some(rule) = actions_for().and_then(|id| rules.iter().find(|r| r.id == id).cloned()) {
+                            {
+                                let id = rule.id;
+                                let is_paused = rule.payload.paused;
+                                let finished = state(&rule.payload) == RuleState::Finished;
+                                rsx! {
+                                    RowActionsSheet { title: rule.payload.template.name.clone(), on_close: move |_| actions_for.set(None),
+                                        Row {
+                                            id: "row-action-edit",
+                                            label: tid!("edit"),
+                                            onclick: move |_| {
+                                                actions_for.set(None);
+                                                editing.set(Some(id));
+                                            },
+                                            PencilIcon { size: ICON_HEADER }
+                                        }
+                                        if !finished {
+                                            Row {
+                                                id: "row-action-pause",
+                                                label: if is_paused { tid!("recurring-resume") } else { tid!("recurring-pause") },
+                                                onclick: move |_| {
+                                                    actions_for.set(None);
+                                                    if is_paused {
+                                                        confirm.set(Some((id, true)));
+                                                    } else {
+                                                        save_rule(key, project_id, rule.clone(), paused(&rule.payload), stored_user_id, flash, refresh);
+                                                    }
+                                                },
+                                                RepeatIcon { size: ICON_HEADER }
+                                            }
+                                        }
+                                        Row {
+                                            id: "row-action-stop",
+                                            label: tid!("recurring-stop"),
+                                            danger: true,
+                                            onclick: move |_| {
+                                                actions_for.set(None);
+                                                confirm.set(Some((id, false)));
+                                            },
+                                            CloseIcon { size: ICON_HEADER }
                                         }
                                     }
                                 }
@@ -259,11 +311,7 @@ fn RecurringView(project_id: Uuid, open: Option<Uuid>) -> Element {
                         }
                     }
                 }
-                _ => rsx! {
-                    div { class: "flex justify-center py-8",
-                        span { class: "loading loading-spinner loading-md", role: "status", aria_label: tid!("loading") }
-                    }
-                },
+                _ => rsx! { crate::common::RuleListSkeleton {} },
             }
         }
     }
@@ -278,7 +326,10 @@ fn RuleCard(
     estimates: usize,
     drift: Option<f64>,
     on_open: EventHandler<()>,
+    actions_open: bool,
+    on_actions: EventHandler<()>,
 ) -> Element {
+    let long_press = format!("long-press-rule-{}", rule.id);
     let p = &rule.payload;
     let t = &p.template;
     let st = state(p);
@@ -288,8 +339,9 @@ fn RuleCard(
         li {
             button {
                 id: "recurring-rule-{rule.id}",
+                "data-long-press": long_press.clone(),
                 r#type: "button",
-                class: if st == RuleState::Active { "w-full text-left flex items-start gap-3 p-3 rounded-box shadow-soft bg-base-100 hover:bg-base-200" } else { "w-full text-left flex items-start gap-3 p-3 rounded-box shadow-soft bg-base-100 hover:bg-base-200 opacity-70" },
+                class: if st == RuleState::Active { "w-full text-left flex items-start gap-3 p-3 rounded-box shadow-soft bg-base-100 hover:bg-base-200 row-press" } else { "w-full text-left flex items-start gap-3 p-3 rounded-box shadow-soft bg-base-100 hover:bg-base-200 row-press opacity-70" },
                 onclick: move |_| on_open.call(()),
                 span { class: "w-9 h-9 shrink-0 flex items-center justify-center text-xl", aria_hidden: "true", "{emoji}" }
                 div { class: "flex-1 min-w-0 flex flex-col gap-0.5",
@@ -323,6 +375,12 @@ fn RuleCard(
                         }
                     }
                 }
+            }
+            RowActionsEntry {
+                long_press_id: long_press.clone(),
+                label: tid!("member-actions", name: t.name.clone()),
+                open: actions_open,
+                on_open: on_actions,
             }
         }
     }
@@ -483,7 +541,7 @@ pub fn RecurringStrip(project_id: Uuid) -> Element {
         button {
             id: "recurring-strip",
             r#type: "button",
-            class: "flex items-center gap-3 p-3 rounded-box shadow-soft bg-base-100 hover:bg-base-200 text-left w-full",
+            class: "flex items-center gap-3 p-3 rounded-box shadow-soft bg-base-100 hover:bg-base-200 row-press text-left w-full",
             onclick: move |_| { nav.push(Route::RecurringPage { project_id }); },
             span { class: "w-8 h-8 shrink-0 rounded-full bg-primary/15 text-primary flex items-center justify-center",
                 RepeatIcon { size: ICON_INLINE }

@@ -39,7 +39,7 @@ pub fn ParticipantsFieldset(props: ParticipantsFieldsetProps) -> Element {
                 label { class: "flex items-center gap-3 min-h-11 cursor-pointer",
                     input {
                         r#type: "checkbox",
-                        class: "checkbox checkbox-sm",
+                        class: "checkbox checkbox-primary",
                         checked: entries().iter().all(|e| e.checked),
                         oninput: move |_| {
                             let t = total();
@@ -110,7 +110,7 @@ pub fn ParticipantsFieldset(props: ParticipantsFieldsetProps) -> Element {
                                 label { class: "flex items-center gap-3 flex-1 min-w-0 min-h-11 cursor-pointer",
                                     input {
                                         r#type: "checkbox",
-                                        class: "checkbox checkbox-sm",
+                                        class: "checkbox checkbox-primary",
                                         aria_label: "{name}",
                                         checked,
                                         oninput: move |_| {
@@ -434,7 +434,7 @@ mod tests {
 
         dom.runtime().handle_event("input", form_input("60"), ids[FIELD_0]);
         let out = rendered(&dom.render_immediate_to_vec());
-        assert!(out.contains("60.00 / 30.00"), "counter missing from: {out}");
+        assert!(out.contains("60.00 / €30.00"), "counter missing from: {out}");
         // `use_test_i18n` pins the harness to English, so asserting on English copy is stable.
         // Match the word, not the amount: Fluent wraps interpolated values in bidi isolates.
         assert!(out.contains("over"), "over-allocation not flagged: {out}");
@@ -446,7 +446,7 @@ mod tests {
 
         dom.runtime().handle_event("input", form_input("10"), ids[FIELD_0]);
         let out = rendered(&dom.render_immediate_to_vec());
-        assert!(out.contains("10.00 / 30.00"), "counter missing from: {out}");
+        assert!(out.contains("10.00 / €30.00"), "counter missing from: {out}");
         assert!(out.contains("left"), "shortfall not flagged: {out}");
         assert!(out.contains("20.00"), "the shortfall amount is not shown: {out}");
     }
@@ -458,7 +458,7 @@ mod tests {
         // Checking a row runs `redistribute`, which allocates the whole total.
         dom.runtime().handle_event("input", form_input("on"), ids[CHECKBOX_0]);
         let out = rendered(&dom.render_immediate_to_vec());
-        assert!(out.contains("30.00 / 30.00"), "counter missing from: {out}");
+        assert!(out.contains("30.00 / €30.00"), "counter missing from: {out}");
         assert!(!out.contains("left") && !out.contains("over"), "balanced side must not flag: {out}");
     }
 

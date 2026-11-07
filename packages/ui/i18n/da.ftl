@@ -5,6 +5,9 @@
 
 loading = Indlæser…
 cancel = Annuller
+discard-title = Kassér ændringerne?
+discard-message = Det, du har skrevet, går tabt.
+discard = Kassér
 confirm = Bekræft
 retry = Prøv igen
 delete = Slet
@@ -441,6 +444,7 @@ reimbursements-empty-title = Alt er afregnet!
 reimbursements-empty-hint = Forslag til afregning vises her, når regnskabet ikke går op
 reimbursement-owes = { $debtor } skylder { $creditor }
 reimbursement-record = Afregn
+settlement-recorded = Afregning registreret.
 reimbursement-pay-with = Betal
 reimbursement-pay-shared-by = Delt af { $name } - tjek modtagernavnet, som din app viser, før du sender.
 reimbursement-pay-title = Betal { $name }
@@ -476,7 +480,6 @@ move-note-group = Udgiften forlader { $project } for alle medlemmer, og gruppens
 move-banner = Fra { $from } til { $to }
 move-submit = Flyt
 move-done = Udgift flyttet til { $project }
-move-delete-failed = Udgiften blev tilføjet det andet projekt, men er stadig i { $project }: slet den der.
 history-expense-moved = Udgift flyttet til et andet projekt: { $name }
 personal-badge = Personlig
 move-members =
@@ -853,6 +856,11 @@ edit-project-no-identity = Du har ikke valgt, hvem du er, endnu
 edit-project-switch = Skift
 edit-project-choose = Vælg
 invite-failed = Disse invitationer kunne ikke sendes: { $emails }
+invite-waiting = Disse venner skal åbne Counted én gang, før de kan inviteres: { $emails }
+key-offer-title = En anden nøgle til { $name }
+key-offer-body = Denne enhed har en anden nøgle til projektet, som aldrig har åbnet det her.
+key-offer-choices = Brug denne nøgle: projektet åbnes med nøglen fra dette link eller denne invitation. Annuller: enheden beholder sin nuværende nøgle, og intet ændres.
+key-offer-use = Brug denne nøgle
 invite-again = Inviter igen
 friend-picker-title = Tilføj venner
 user-selection-invited-hint = { $email } har inviteret dig til ”{ $project }”.
@@ -981,6 +989,12 @@ home-remind-message = Lille påmindelse: der mangler stadig tilbagebetalinger i 
 home-row-owed = du har til gode
 home-row-owe = du skylder
 home-row-settled = Gjort op
+home-row-quits = Du er kvit
+home-row-pending =
+    { $count ->
+        [one] { $count } afventende tilbagebetaling
+       *[other] { $count } afventende tilbagebetalinger
+    }
 home-totals-partial = Uden projekter uden valutakurs
 error-account-key-changed = Nøglen til din konto blev ændret på en anden enhed. Log ind igen for at fortsætte.
 settings-security = Sikkerhed

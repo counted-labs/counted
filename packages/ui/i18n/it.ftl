@@ -5,6 +5,9 @@
 
 loading = Caricamento…
 cancel = Annulla
+discard-title = Scartare le modifiche?
+discard-message = Quello che hai inserito andrà perso.
+discard = Scarta
 retry = Riprova
 delete = Elimina
 back = Indietro
@@ -421,7 +424,6 @@ move-note-group = La spesa lascerà { $project } per tutti i suoi membri e il sa
 move-banner = Da { $from } a { $to }
 move-submit = Sposta
 move-done = Spesa spostata in { $project }
-move-delete-failed = La spesa è stata aggiunta all’altro progetto ma è ancora in { $project }: eliminala lì.
 history-expense-moved = Spesa spostata in un altro progetto: { $name }
 personal-badge = Personale
 move-members =
@@ -701,6 +703,7 @@ split-amounts = Importi
 
 reimbursements-empty-title = Conti in pari!
 reimbursement-record = Salda
+settlement-recorded = Saldo registrato.
 reimbursement-pay-with = Paga
 reimbursement-pay-shared-by = Condiviso da { $name }: controlla il nome del destinatario mostrato dalla tua app prima di inviare.
 reimbursement-pay-title = Paga { $name }
@@ -881,6 +884,11 @@ edit-project-no-identity = Non hai ancora scelto chi sei
 edit-project-switch = Cambia
 edit-project-choose = Scegli
 invite-failed = Questi inviti non sono stati inviati: { $emails }
+invite-waiting = Questi amici devono aprire Counted una volta prima di poter essere invitati: { $emails }
+key-offer-title = Un’altra chiave per { $name }
+key-offer-body = Questo dispositivo ha un’altra chiave per questo progetto, che qui non l’ha mai aperto.
+key-offer-choices = Usa questa chiave: il progetto si apre con la chiave di questo link o invito. Annulla: il dispositivo tiene la sua chiave attuale e non cambia nulla.
+key-offer-use = Usa questa chiave
 invite-again = Invita di nuovo
 friend-picker-title = Aggiungi amici
 user-selection-invited-hint = { $email } ti ha invitato in «{ $project }».
@@ -1009,6 +1017,12 @@ home-remind-message = Piccolo promemoria: ci sono ancora rimborsi da saldare in 
 home-row-owed = ti devono
 home-row-owe = devi
 home-row-settled = In pari
+home-row-quits = Sei in pari
+home-row-pending =
+    { $count ->
+        [one] { $count } rimborso in sospeso
+       *[other] { $count } rimborsi in sospeso
+    }
 home-totals-partial = Esclusi i progetti senza tasso di cambio
 error-account-key-changed = La chiave del tuo account è cambiata su un altro dispositivo. Accedi di nuovo per continuare.
 settings-security = Sicurezza

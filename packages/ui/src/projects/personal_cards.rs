@@ -308,7 +308,7 @@ pub fn PersonalCard(project: ProjectDto, ledgers: Signal<Vec<GroupLedger>>) -> E
                         span { class: "flex flex-col items-end",
                             span { id: "personal-card-spent", class: "font-bold tabular-nums", "{money(g.spent, &currency)}" }
                             if let Some(b) = &budget {
-                                span { id: "personal-card-left", class: "text-[11px] font-semibold tabular-nums",
+                                span { id: "personal-card-left", class: "text-[0.6875rem] font-semibold tabular-nums",
                                     match b.meter() {
                                         Meter::Left(left) => rsx! { span { class: "text-success", {tid!("budget-left", amount: money(left, &currency))} } },
                                         Meter::Near(_) => rsx! { span { class: "text-warning", {tid!("budget-left", amount: money(b.limit - b.spent, &currency))} } },
