@@ -86,6 +86,10 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
     let result = crate::common::plain_number(props.value, comma);
     let fit_chars = if calc { shown.chars().count().max(result.chars().count()) } else { shown.chars().count().max(1) };
     let fit_width = format!("width: calc({fit_chars}ch + 0.25ch); max-width: 100%");
+    let field_id = props.attributes.iter().find(|a| a.name == "id").and_then(|a| match &a.value {
+        dioxus::dioxus_core::AttributeValue::Text(id) => Some(id.clone()),
+        _ => None,
+    });
 
     // The bar appears below the scroll body once a field takes focus, shrinking it from the bottom
     // after the WebView's own scroll-into-view already ran - without this a row tapped near the
@@ -117,6 +121,7 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
                         // `set_focus` reports `Ok(())` and nothing moves, which is exactly how this
                         // read as "autofocus does not work". Retry until `onfocus` confirms it
                         // landed, rather than hard-coding daisyUI's duration.
+                        let field_id = field_id.clone();
                         spawn(async move {
                             for _ in 0..FOCUS_TRIES {
                                 // The user (or a test) got to another field first: retrying
@@ -124,7 +129,14 @@ pub fn AmountInput(props: AmountInputProps) -> Element {
                                 if crate::common::a_field_has_focus().await {
                                     return;
                                 }
-                                let _ = node.set_focus(true).await;
+                                // With `preventScroll`: `set_focus` is a plain `focus()`, which on
+                                // iOS pans the page to the field, mid-slide to wherever it is.
+                                match &field_id {
+                                    Some(id) => crate::common::focus_field(id).await,
+                                    None => {
+                                        let _ = node.set_focus(true).await;
+                                    }
+                                }
                                 if *focused.peek() {
                                     return;
                                 }

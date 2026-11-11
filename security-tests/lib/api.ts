@@ -24,6 +24,11 @@ export function claimToken(key: Buffer): number[] {
   return [...createHash('sha256').update('counted-claim-v1').update(key).digest()];
 }
 
+/** `X-Project-Token`: every project route requires it once the server's floor reaches `KEY_LIFECYCLE_FROM`. */
+export function tokenHeaders(key: Buffer): Record<string, string> {
+  return { 'x-project-token': Buffer.from(claimToken(key)).toString('base64url') };
+}
+
 function claimVerifier(key: Buffer): number[] {
   return [...createHash('sha256').update(Buffer.from(claimToken(key))).digest()];
 }
@@ -36,7 +41,15 @@ export type Account = {
   cookie: string;
 };
 
-export type Project = { id: string; key: Buffer; userIds: number[]; expenseId: number };
+/** `withKey` is the request options of a key holder; `keyLifecycle` says whether the server enforces it. */
+export type Project = {
+  id: string;
+  key: Buffer;
+  userIds: number[];
+  expenseId: number;
+  keyLifecycle: boolean;
+  withKey: { headers: Record<string, string> };
+};
 
 export const test = base.extend<{
   anon: APIRequestContext;
@@ -135,12 +148,14 @@ export async function json<T>(res: APIResponse, what: string): Promise<T> {
 /** A project with two participants and one expense, written as a key holder without an account. */
 export async function createProject(api: APIRequestContext): Promise<Project> {
   const key = randomBytes(32);
-  const project = await json<{ id: string }>(
+  const project = await json<{ id: string; keyLifecycle?: boolean }>(
     await api.post('/api/v1/projects', { data: { payload: pair(256), claimVerifier: claimVerifier(key), demo: false } }),
     'create project',
   );
+  const withKey = { headers: tokenHeaders(key) };
   const users = await json<{ id: number }[]>(
     await api.post('/api/v1/users', {
+      ...withKey,
       data: [
         { payload: pair(), projectId: project.id },
         { payload: pair(), projectId: project.id },
@@ -150,6 +165,7 @@ export async function createProject(api: APIRequestContext): Promise<Project> {
   );
   const expense = await json<{ expense: { id: number } }>(
     await api.post('/api/v1/expenses', {
+      ...withKey,
       data: {
         projectId: project.id,
         payload: pair(256),
@@ -159,7 +175,14 @@ export async function createProject(api: APIRequestContext): Promise<Project> {
     }),
     'add expense',
   );
-  return { id: project.id, key, userIds: users.map((u) => u.id), expenseId: expense.expense.id };
+  return {
+    id: project.id,
+    key,
+    userIds: users.map((u) => u.id),
+    expenseId: expense.expense.id,
+    keyLifecycle: project.keyLifecycle === true,
+    withKey,
+  };
 }
 
 export function isRefused(status: number): boolean {

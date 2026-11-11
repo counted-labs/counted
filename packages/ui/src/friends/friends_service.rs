@@ -17,8 +17,8 @@ use uuid::Uuid;
 
 use crate::common::{adopt_project_key, update_ls_if_changed, LocalStorageState};
 use crate::crypto::{
-    box_project_key, decrypt, encrypt_padded_json_within, key_fingerprint, open_kem_seed, open_wrap, public_key_of,
-    unbox_project_key, unwrap_key, WrapUse,
+    box_project_key, claim_token, decrypt, encrypt_padded_json_within, key_fingerprint, open_kem_seed, open_wrap,
+    public_key_of, unbox_project_key, unwrap_key, WrapUse,
 };
 use crate::hybrid::{kem_public_key, open_auth, seal_auth, KEM_SEED_LENGTH};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
@@ -63,6 +63,13 @@ impl FriendRow {
     pub fn new_fingerprint(&self) -> Option<String> {
         self.new_key.as_deref().map(key_fingerprint)
     }
+
+    /// Only the ML-KEM half changed: the X25519 key is still the pinned one, so the code reads as
+    /// before and comparing it proves nothing. A rotation replaces both halves and a KEM key is
+    /// written once, so this is never a legitimate change and is never trusted.
+    pub fn kem_only_change(&self) -> bool {
+        self.key_changed && self.fingerprint.is_some()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -74,14 +81,23 @@ pub struct OutgoingRow {
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct FriendsLists {
+    /// The account these were loaded for: a resource restarted for another account keeps the old
+    /// value until the new one lands, and must never show it.
+    pub account_id: Option<Uuid>,
     /// This account's own code: what its friends see next to its email, and what they read out.
     /// Computed from the private key this device opened, never from the served public key.
     pub my_fingerprint: Option<String>,
-    /// The served public key is not the one behind this device's private key.
+    /// A served public key, X25519 or ML-KEM, is not the one behind this device's private keys.
     pub key_mismatch: bool,
     pub friends: Vec<FriendRow>,
     pub incoming: Vec<IncomingFriendRequest>,
     pub outgoing: Vec<OutgoingRow>,
+}
+
+impl FriendsLists {
+    pub fn changed_count(&self) -> usize {
+        self.friends.iter().filter(|f| f.key_changed).count()
+    }
 }
 
 pub fn friend_row(f: &Friend, changed: &[Uuid]) -> FriendRow {
@@ -155,10 +171,12 @@ pub fn to_lists(
     account: Option<&Account>,
     raw_ok: bool,
 ) -> FriendsLists {
-    let my_private = account.zip(account_key).and_then(|(a, k)| my_private_key(a, k, raw_ok));
+    let key_mismatch = account.zip(account_key).is_some_and(|(a, k)| served_keys_mismatch(a, k, raw_ok));
+    let my_private = account.zip(account_key).filter(|_| !key_mismatch).and_then(|(a, k)| my_private_key(a, k, raw_ok));
     FriendsLists {
+        account_id: account.map(|a| a.id),
         my_fingerprint: my_private.map(|p| key_fingerprint(&public_key_of(&p))),
-        key_mismatch: account.zip(account_key).is_some_and(|(a, k)| served_key_mismatch(a, k, raw_ok)),
+        key_mismatch,
         friends: view.friends.iter().map(|f| friend_row(f, changed)).collect(),
         incoming: view.incoming.clone(),
         outgoing: view
@@ -497,17 +515,22 @@ pub async fn load_invitations(
     if boxed.iter().any(|(i, k)| i.hybrid.is_some() && k.is_some()) {
         update_ls_if_changed(ls_ctx, |state| state.hybrid_invitations = true);
     }
-    let mut ids: Vec<Uuid> = boxed.iter().filter(|(_, k)| k.is_some()).map(|(i, _)| i.project_id).collect();
-    ids.sort();
-    ids.dedup();
-    let projects = match ids.is_empty() {
+    let batch = opened_batch(&boxed);
+    let projects = match batch.ids.is_empty() {
         true => Vec::new(),
-        false => {
-            let tokens = crate::common::project_token::tokens(&ids);
-            get_projects_by_ids(Json(BatchProject { ids, tokens })).await.unwrap_or_default()
-        }
+        false => get_projects_by_ids(Json(batch)).await.unwrap_or_default(),
     };
     Ok(boxed.into_iter().map(|(invitation, key)| opened_invitation(invitation, key, &projects)).collect())
+}
+
+/// The invited projects, each with the token of the key its box holds: that key is not in the store
+/// yet, and from `KEY_LIFECYCLE_FROM` the batch drops a project whose token does not match.
+fn opened_batch(boxed: &[(ProjectInvitation, Option<[u8; 32]>)]) -> BatchProject {
+    let mut opened: Vec<(Uuid, [u8; 32])> = boxed.iter().filter_map(|(i, k)| k.map(|k| (i.project_id, k))).collect();
+    opened.sort_by_key(|(id, _)| *id);
+    opened.dedup_by_key(|(id, _)| *id);
+    let (ids, tokens) = opened.iter().map(|(id, k)| (*id, Some(claim_token(k).to_vec()))).unzip();
+    BatchProject { ids, tokens }
 }
 
 /// A box that opens is not a key that decrypts: one holding a wrong key used to show Accept with a
@@ -725,6 +748,26 @@ mod tests {
         assert_eq!(my_private_key(&bob, &bobs_key, true), None);
     }
 
+    /// Security review 2026-11-07 M1: the code covers X25519 only, so a substituted ML-KEM half
+    /// leaves it unchanged; showing it would let two friends compare equal codes while invitations
+    /// to this account are sealed to the server's KEM key.
+    #[test]
+    fn a_substituted_kem_half_of_mine_is_flagged_and_hides_my_code() {
+        let account_key = generate_key();
+        let (public, private) = generate_keypair();
+        let seed = crate::hybrid::generate_kem_seed();
+        let account = Account {
+            private_key: crate::crypto::wrap_key(&account_key, WrapUse::PrivateKey, &private),
+            kem_public_key: Some(crate::hybrid::kem_public_key(&crate::hybrid::generate_kem_seed())),
+            kem_private_key: crate::crypto::wrap_kem_seed(&account_key, &seed),
+            ..account_with(&account_key, public, &private)
+        };
+
+        let lists = to_lists(&FriendsView::default(), &[], Some(&account_key), Some(&account), false);
+        assert!(lists.key_mismatch);
+        assert_eq!(lists.my_fingerprint, None);
+    }
+
     #[test]
     fn an_account_without_a_keypair_has_no_code_of_its_own() {
         assert_eq!(to_lists(&FriendsView::default(), &[], None, None, true).my_fingerprint, None);
@@ -808,6 +851,29 @@ mod tests {
         assert_eq!(row.fingerprint, None);
     }
 
+    /// Security review 2026-11-07 H2: a substituted ML-KEM half leaves the code as it was, so the
+    /// row must say so instead of offering a comparison that always matches.
+    #[test]
+    fn a_kem_only_change_is_told_apart_from_an_x25519_change() {
+        let (alice_pub, _) = generate_keypair();
+        let alice = Friend { kem_public_key: Some(vec![1; 32]), ..friend(Some(alice_pub.clone())) };
+        let mut pins = LocalStorageState::default();
+        pin_keys(&mut pins, &mut [alice.clone()]);
+
+        let mut kem_swapped = [Friend { kem_public_key: Some(vec![2; 32]), ..alice.clone() }];
+        assert_eq!(pin_keys(&mut pins, &mut kem_swapped), vec![alice.account_id]);
+        let view = FriendsView { friends: kem_swapped.to_vec(), ..Default::default() };
+        let row = &to_lists(&view, &[alice.account_id], None, None, true).friends[0];
+        assert!(row.kem_only_change());
+
+        let (other, _) = generate_keypair();
+        let mut x_swapped = [Friend { public_key: Some(other), ..alice.clone() }];
+        pin_keys(&mut pins, &mut x_swapped);
+        let view = FriendsView { friends: x_swapped.to_vec(), ..Default::default() };
+        let row = &to_lists(&view, &[alice.account_id], None, None, true).friends[0];
+        assert!(row.key_changed && !row.kem_only_change());
+    }
+
     #[test]
     fn an_unpinned_friend_is_pinned_afresh() {
         let (old, _) = generate_keypair();
@@ -847,6 +913,23 @@ mod tests {
             created_at: NaiveDateTime::default(),
             user_id: None,
         }
+    }
+
+    #[test]
+    fn invited_projects_are_fetched_with_the_token_of_the_boxed_key() {
+        let (opened, sealed, twice) = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());
+        let (k1, k2) = (generate_key(), generate_key());
+        let boxed = vec![
+            (invitation(twice), Some(k2)),
+            (invitation(opened), Some(k1)),
+            (invitation(sealed), None),
+            (invitation(twice), Some(k2)),
+        ];
+        let batch = opened_batch(&boxed);
+        let mut expected = vec![(opened, claim_token(&k1).to_vec()), (twice, claim_token(&k2).to_vec())];
+        expected.sort();
+        let sent: Vec<(Uuid, Vec<u8>)> = batch.ids.into_iter().zip(batch.tokens.into_iter().map(Option::unwrap)).collect();
+        assert_eq!(sent, expected);
     }
 
     fn project(id: Uuid, key: &[u8; 32], name: &str) -> ProjectDto {

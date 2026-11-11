@@ -1,0 +1,6 @@
+• Settings on one page, friends in tabs and a page for your payment methods
+• Swipe an expense to edit or delete it, or press and hold for its actions
+• Projects and expenses open instantly, and your changes apply at once
+• Counted asks before discarding changes in a form
+• A warning before another key replaces a project's key on this device
+• Small fixes and improvements

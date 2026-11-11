@@ -56,9 +56,9 @@ const coverage: Record<string, Coverage> = {
   'DELETE /api/v1/friends/requests/{id}': { tested: ['A1', 'A2'] },
   'DELETE /api/v1/friends/{id}': { tested: ['A1'] },
 
-  'POST /api/v1/projects/{project_id}/invitations': { pending: 'A2: only to a friend' },
-  'POST /api/v1/projects/{project_id}/invitations/batch': { pending: 'A2: only to a friend' },
-  'GET /api/v1/projects/invitations': { tested: ['A1'] },
+  'POST /api/v1/projects/{project_id}/invitations': { tested: ['A8'] },
+  'POST /api/v1/projects/{project_id}/invitations/batch': { tested: ['A8'] },
+  'GET /api/v1/projects/invitations': { tested: ['A1', 'A8'] },
   'GET /api/v1/projects/{project_id}/invitations/sent': { tested: ['A1'] },
   'DELETE /api/v1/projects/invitations/{id}': { tested: ['A1'] },
 

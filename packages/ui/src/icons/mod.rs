@@ -882,6 +882,117 @@ pub fn EyeOffIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
     }
 }
 
+
+#[component]
+pub fn HelpIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: rem(size),
+            height: rem(size),
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.75",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            circle { cx: "12", cy: "12", r: "10" }
+            path { d: "M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" }
+            path { d: "M12 17h.01" }
+        }
+    }
+}
+
+#[component]
+pub fn EyeIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: rem(size),
+            height: rem(size),
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.75",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" }
+            circle { cx: "12", cy: "12", r: "3" }
+        }
+    }
+}
+
+#[component]
+pub fn FileTextIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: rem(size),
+            height: rem(size),
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.75",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" }
+            path { d: "M14 2v4a2 2 0 0 0 2 2h4" }
+            path { d: "M16 13H8" }
+            path { d: "M16 17H8" }
+        }
+    }
+}
+
+#[component]
+pub fn ScaleIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: rem(size),
+            height: rem(size),
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.75",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" }
+            path { d: "m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" }
+            path { d: "M7 21h10" }
+            path { d: "M12 3v18" }
+            path { d: "M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" }
+        }
+    }
+}
+
+#[component]
+pub fn BankIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg {
+            xmlns: "http://www.w3.org/2000/svg",
+            "aria-hidden": "true",
+            width: rem(size),
+            height: rem(size),
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "1.75",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M10 18v-7" }
+            path { d: "M11.12 2.198a2 2 0 0 1 1.76.006l7.866 3.847c.476.233.31.949-.22.949H3.474c-.53 0-.695-.716-.22-.949z" }
+            path { d: "M14 18v-7" }
+            path { d: "M18 18v-7" }
+            path { d: "M3 22h18" }
+            path { d: "M6 18v-7" }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

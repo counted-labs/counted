@@ -1,0 +1,91 @@
+# Builds the app for an iPhone simulator on a GitHub-hosted Mac and taps the fields of the
+# create-project sheet through the real touch path, reading visualViewport.offsetTop from the page
+# after each one (.github/ios-sim.mjs). Run by hand from the Actions tab on the branch or tag to
+# check; nothing starts it. Debug build on purpose: wry marks the WKWebView inspectable only then,
+# which the webview context needs. The app is built against a closed local port, so the simulator
+# never reaches counted.fr.
+name: ios-simulator
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+    working-directory: src
+
+jobs:
+  tap:
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      DIOXUS_CLI_VERSION: "0.7.10"
+      COUNTED_SERVER_URL: http://127.0.0.1:9
+    steps:
+      - name: Clone the ref
+        working-directory: ${{ github.workspace }}
+        run: git clone -q --depth 1 --branch "$GITHUB_REF_NAME" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" src
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/dx
+            src/target
+          key: ios-simulator-${{ runner.os }}-${{ hashFiles('src/Cargo.lock', 'src/rust-toolchain.toml') }}-${{ env.DIOXUS_CLI_VERSION }}
+
+      - name: Toolchain
+        run: |
+          rustup toolchain install
+          rustup target add aarch64-apple-ios-sim
+          if [ "$(dx --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)" != "$DIOXUS_CLI_VERSION" ]; then
+            cargo install dioxus-cli --locked --version "$DIOXUS_CLI_VERSION"
+          fi
+          xcodebuild -version
+
+      - name: Build the simulator app
+        id: app
+        run: |
+          dx build --platform ios --package mobile
+          APP=$(find target/dx/mobile -type d -name Mobile.app | head -1)
+          [ -n "$APP" ] || { echo "dx build produced no Mobile.app" >&2; exit 1; }
+          echo "path=$APP" >> "$GITHUB_OUTPUT"
+
+      - name: Boot a simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | jq -r '
+            .devices | to_entries | map(select(.key | test("SimRuntime.iOS")))
+            | sort_by(.key | capture("iOS-(?<a>[0-9]+)-(?<b>[0-9]+)") | [(.a | tonumber), (.b | tonumber)])
+            | last.value | map(select(.name | startswith("iPhone"))) | first.udid')
+          [ -n "$UDID" ] && [ "$UDID" != null ] || { echo "no available iPhone simulator" >&2; xcrun simctl list devices available >&2; exit 1; }
+          defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" "${{ steps.app.outputs.path }}"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Start Appium
+        run: |
+          npm install -g appium
+          appium driver install xcuitest
+          appium --log "$GITHUB_WORKSPACE/appium.log" --log-level info >/dev/null 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:4723/status >/dev/null && break; sleep 1; done
+          curl -sf http://127.0.0.1:4723/status
+
+      - name: Tap the create-project sheet
+        run: node .github/ios-sim.mjs "${{ steps.sim.outputs.udid }}" "$GITHUB_WORKSPACE/sim-out"
+
+      - name: Keep the screenshots and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator
+          path: |
+            sim-out
+            appium.log

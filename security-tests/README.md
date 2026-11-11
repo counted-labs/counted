@@ -19,22 +19,26 @@ It does not prove that nothing else is broken.
 | A5 | An unverified account gets no session: not from login, not with a wrong password, and the verification link alone is refused (400); the link with the password verifies and signs in |
 | A6 | A deleted account's session opens nothing, and its credentials no longer sign in |
 | A7 | Deleting an account needs the password's proof: a wrong proof is refused and the account stays; once the server's floor is `KEY_LIFECYCLE_FROM`, the session-only route is refused too |
+| A8 | A project invitation carries exactly one key box, the one the server's floor allows: the classical box below `HYBRID_INVITATIONS_FROM`, the hybrid one from it. Both boxes, or none, are refused, by the single and the batch route |
 | B1 | No endpoint lists projects |
-| B2 | Holding project A's id gives nothing in project B: B's expenses, participants and payment rows cannot be read, edited or deleted through A |
+| B2 | Holding project A's key gives nothing in project B: B's expenses, participants and payment rows cannot be read, edited or deleted through A |
 | B3 | Claiming a participant, or converting a project, needs proof of the project key |
-| B5 | What any id holder reads is ciphertext plus the fields documented in SECURITY.md |
-| B6 | By design: an id holder without the key can write rows (SECURITY.md 5.6) |
+| B5 | What a project serves is ciphertext plus the fields documented in SECURITY.md |
+| B6 | Below the `KEY_LIFECYCLE_FROM` floor, by design, an id holder without the key can write rows (SECURITY.md 5.6); from it, the id alone, or a made-up token, reads and writes nothing |
 | C2 | Failed passwords count, but do not lock the owner out |
 | C3 | Payloads over 64 KiB, nonces that are not 24 bytes, and batches over 500 are refused, and nothing of a refused batch is written |
 | D1 | Malformed bodies are refused with a 4xx and no internal detail; unknown fields have no effect |
 | E1 | Every route in `packages/api/src/**/*_controller.rs` is tested, public by design, or listed as still owed |
 
-The project id is an access token, so "account A reads B's project" is allowed by design: whoever
-holds a share link can read that project's ciphertext. See SECURITY.md 5.6.
+Below the `KEY_LIFECYCLE_FROM` floor the project id is an access token, so "account A reads B's
+project" is allowed by design: whoever holds a share link can read that project's ciphertext. See
+SECURITY.md 5.6. From the floor, every project route also needs the token derived from the project
+key (`X-Project-Token`), which the tests send as a key holder would. A test that depends on the
+floor reads it from the server, so the suite runs at any `MIN_APP_VERSION`.
 
 Still owed, listed route by route in `tests/routes.spec.ts`: rate limits (they live in nginx, which
-the test stack does not run), push tokens, invitations, recurring rules, read-only and demo projects,
-and the Tricount proxy.
+the test stack does not run), push tokens, invitations to someone who is not a friend, recurring
+rules, read-only and demo projects, and the Tricount proxy.
 
 ## Running
 

@@ -24,8 +24,8 @@ test.describe('C - limits', () => {
 
     const p = await project();
     const batch = Array.from({ length: MAX_EXPENSE_BATCH + 1 }, () => ({ projectId: p.id, payload: pair(), payers: [], debtors: [] }));
-    expect((await anon.post('/api/v1/expenses/batch', { data: batch })).status(), 'oversized batch').toBe(400);
-    const expenses = await json<unknown[]>(await anon.get(`/api/v1/projects/${p.id}/expenses`), 'expenses');
+    expect((await anon.post('/api/v1/expenses/batch', { ...p.withKey, data: batch })).status(), 'oversized batch').toBe(400);
+    const expenses = await json<unknown[]>(await anon.get(`/api/v1/projects/${p.id}/expenses`, p.withKey), 'expenses');
     expect(expenses, 'nothing of the refused batch was written').toHaveLength(1);
   });
 
@@ -43,7 +43,7 @@ test.describe('D - malformed input', () => {
     const cases: [string, () => Promise<{ status: () => number; text: () => Promise<string> }>][] = [
       ['broken JSON', () => anon.post('/api/v1/projects', { headers: { 'content-type': 'application/json' }, data: '{"payload":' })],
       ['wrong types', () => anon.post('/api/v1/expenses', { data: { projectId: 42, payload: 'x', payers: {}, debtors: null } })],
-      ['not base64', () => anon.post('/api/v1/expenses', { data: { projectId: p.id, payload: { ct: '%%%', iv: '***' } } })],
+      ['not base64', () => anon.post('/api/v1/expenses', { ...p.withKey, data: { projectId: p.id, payload: { ct: '%%%', iv: '***' } } })],
       ['login without a proof', () => anon.post('/api/v1/auth/login', { data: { email: 'x@example.test' } })],
       ['short proof', () => anon.post('/api/v1/auth/login', { data: { email: 'x@example.test', proof: bytes(31) } })],
     ];

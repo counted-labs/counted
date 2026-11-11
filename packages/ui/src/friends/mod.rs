@@ -1,4 +1,5 @@
 mod friend_checklist;
+mod friend_sheets;
 pub mod friends_service;
 mod friends_page;
 mod invitations_card;

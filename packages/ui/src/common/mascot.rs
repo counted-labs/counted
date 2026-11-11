@@ -197,9 +197,8 @@ pub fn Mascot(pose: MascotPose, #[props(default = MASCOT_EMPTY)] size: u32) -> E
                 stroke_linejoin: "round",
             }
         },
-        // Drawn flat, then sheared onto the right face's plane.
         MascotPose::Locked => rsx! {
-            g { transform: "matrix(0.6 -0.52 0 1 210 180)",
+            g { transform: "translate(271 192) scale(1.3)",
                 path {
                     d: "M-11 -4 V-12 A11 11 0 0 1 11 -12 V-4",
                     fill: "none",

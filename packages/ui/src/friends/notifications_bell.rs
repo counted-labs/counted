@@ -2,15 +2,18 @@ use dioxus::prelude::*;
 use crate::tid;
 use shared::Account;
 
+use super::friend_sheets::{changed_friend_avatar, IncomingRow};
 use super::use_friends::Friends;
-use crate::common::{haptic, Haptic};
+use crate::common::{format_date, haptic, CheckFriend, Haptic, ListRow};
 use crate::expenses::project_actions_sheet::MenuSheet;
 use crate::icons::{BellIcon, ICON_HEADER};
+use crate::route::Route;
 
-/// The unread notifications - today only incoming friend requests - behind a bell with a count.
-/// Renders nothing for an anonymous user. Its sheet is [`NotificationsSheet`], rendered beside the
-/// page header, never in it: the sticky bar is a stacking context under the dock (and once
-/// scrolled a containing block), so a sheet inside it would sit under the dock.
+/// What waits on the account: incoming friend requests and friends whose code changed, both worked
+/// out on this device from the friends list. Renders nothing for an anonymous user. Its sheet is
+/// [`NotificationsSheet`], rendered beside the page header, never in it: the sticky bar is a
+/// stacking context under the dock (and once scrolled a containing block), so a sheet inside it
+/// would sit under the dock.
 #[component]
 pub fn NotificationsBell(friends: Friends, open: Signal<bool>) -> Element {
     let auth_ctx = use_context::<Signal<Option<Account>>>();
@@ -20,10 +23,7 @@ pub fn NotificationsBell(friends: Friends, open: Signal<bool>) -> Element {
         return rsx! {};
     }
 
-    let count = match &*friends.lists.read() {
-        Some(Ok(lists)) => lists.incoming.len(),
-        _ => 0,
-    };
+    let count = friends.current().map(|l| l.incoming.len() + l.changed_count()).unwrap_or(0);
 
     rsx! {
         button {
@@ -49,11 +49,13 @@ pub fn NotificationsBell(friends: Friends, open: Signal<bool>) -> Element {
 
 #[component]
 pub fn NotificationsSheet(friends: Friends, open: Signal<bool>) -> Element {
+    let nav = use_navigator();
+    let mut check_friend = use_context::<Signal<CheckFriend>>();
     let mut open = open;
-    let incoming = match &*friends.lists.read() {
-        Some(Ok(lists)) => lists.incoming.clone(),
-        _ => vec![],
-    };
+    let (incoming, changed) = friends
+        .current()
+        .map(|l| (l.incoming.clone(), l.friends.into_iter().filter(|f| f.key_changed).collect::<Vec<_>>()))
+        .unwrap_or_default();
 
     rsx! {
         if open() {
@@ -61,40 +63,50 @@ pub fn NotificationsSheet(friends: Friends, open: Signal<bool>) -> Element {
                 if let Some(err) = (friends.error)() {
                     p { role: "alert", class: "text-sm text-error", "{err}" }
                 }
-                if incoming.is_empty() {
+                if incoming.is_empty() && changed.is_empty() {
                     p { class: "text-sm text-base-content/70", {tid!("notifications-empty")} }
-                } else {
-                    ul { class: "list bg-base-200 rounded-box",
-                        for req in incoming.into_iter() {
-                            {
-                                let id = req.id;
-                                rsx! {
-                                    li { class: "list-row items-center",
-                                        div { class: "list-col-grow flex flex-col min-w-0",
-                                            span { class: "font-medium truncate", "{req.requester_email}" }
-                                            span { class: "text-xs text-base-content/70", {tid!("notifications-friend-request")} }
-                                        }
-                                        div { class: "flex gap-1",
-                                            button {
-                                                r#type: "button",
-                                                class: "btn btn-primary btn-sm",
-                                                disabled: (friends.busy)(),
-                                                onclick: move |_| friends.accept(id),
-                                                {tid!("friends-accept")}
-                                            }
-                                            button {
-                                                r#type: "button",
-                                                class: "btn btn-ghost btn-sm",
-                                                disabled: (friends.busy)(),
-                                                onclick: move |_| friends.decline_or_withdraw(id),
-                                                {tid!("friends-decline")}
-                                            }
-                                        }
-                                    }
-                                }
+                }
+                if !changed.is_empty() {
+                    ul { class: "list-group", style: "--separator-inset: 4.25rem; background-color: var(--color-base-200)",
+                        for row in changed {
+                            ListRow {
+                                key: "{row.id}",
+                                title: row.email.clone(),
+                                title_class: "font-medium break-all",
+                                subtitle: tid!("friends-code-changed-row"),
+                                subtitle_class: "text-error font-medium",
+                                chevron: true,
+                                onclick: move |_| {
+                                    open.set(false);
+                                    check_friend.set(CheckFriend(Some(row.id)));
+                                    nav.push(Route::FriendsPage {});
+                                },
+                                {changed_friend_avatar(&row)}
                             }
                         }
                     }
+                }
+                if !incoming.is_empty() {
+                    ul { class: "list-group", style: "--separator-inset: 4.25rem; background-color: var(--color-base-200)",
+                        for req in incoming {
+                            IncomingRow {
+                                key: "{req.id}",
+                                subtitle: tid!("notifications-friend-request-on", date: format_date(req.created_at.date())),
+                                req,
+                                friends,
+                            }
+                        }
+                    }
+                }
+                button {
+                    id: "notifications-manage-friends",
+                    r#type: "button",
+                    class: "btn btn-ghost text-secondary-content",
+                    onclick: move |_| {
+                        open.set(false);
+                        nav.push(Route::FriendsPage {});
+                    },
+                    {tid!("notifications-manage-friends")}
                 }
             }
         }

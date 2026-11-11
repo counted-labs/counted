@@ -23,6 +23,21 @@ pub async fn a_field_has_focus() -> bool {
     dioxus::prelude::document::eval(FIELD_FOCUSED_JS).join::<bool>().await.unwrap_or(false)
 }
 
+/// Focuses the field `id` with `preventScroll`, the one flag WebKit honours against its focus
+/// reveal (`keyboard.rs`): a plain `focus()` into a sheet pans the page to the field, and on iOS to
+/// wherever the field is mid-slide. Made from Rust, not page script, so iOS shows the keyboard.
+pub async fn focus_field(id: &str) {
+    #[cfg(target_arch = "wasm32")]
+    crate::common::web_dom::focus_field(id);
+    #[cfg(not(target_arch = "wasm32"))]
+    dioxus::prelude::document::eval(&format!(
+        "const el = document.getElementById({}); if (el) el.focus({{ preventScroll: true }});",
+        serde_json::to_string(id).unwrap_or_default()
+    ))
+    .await
+    .ok();
+}
+
 #[cfg(test)]
 mod tests {
     use super::SELECT_FOCUSED_JS;

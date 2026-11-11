@@ -5,13 +5,27 @@ use crate::common::{haptic, use_modal_focus, Haptic};
 use crate::icons::{CheckIcon, CloseIcon, ICON_ACTION};
 use crate::tid;
 
-/// Codes starting with the query lead, so Enter on "us" picks USD rather than AUD.
-pub fn matching_currencies(query: &str) -> Vec<&'static Currency> {
+pub fn currency_name(currency: &Currency) -> String {
+    let id = format!("currency-{}", currency.code);
+    tid!(&id)
+}
+
+/// Codes starting with the query lead, so Enter on "us" picks USD rather than AUD. The English
+/// name matches too, for someone who knows a currency only by it.
+pub fn matching_currencies(
+    query: &str,
+    local_name: impl Fn(&Currency) -> String,
+) -> Vec<(&'static Currency, String)> {
     let q = query.trim().to_lowercase();
     let (by_code, by_name): (Vec<_>, Vec<_>) = CURRENCIES
         .iter()
-        .filter(|c| c.code.to_lowercase().contains(&q) || c.name.to_lowercase().contains(&q))
-        .partition(|c| c.code.to_lowercase().starts_with(&q));
+        .map(|c| (c, local_name(c)))
+        .filter(|(c, name)| {
+            c.code.to_lowercase().contains(&q)
+                || name.to_lowercase().contains(&q)
+                || c.name.to_lowercase().contains(&q)
+        })
+        .partition(|(c, _)| c.code.to_lowercase().starts_with(&q));
     by_code.into_iter().chain(by_name).collect()
 }
 
@@ -83,8 +97,8 @@ fn CurrencySheet(
 ) -> Element {
     use_modal_focus("currency-sheet");
     let mut query = use_signal(String::new);
-    let matches = matching_currencies(&query());
-    let first = matches.first().map(|c| c.code);
+    let matches = matching_currencies(&query(), currency_name);
+    let first = matches.first().map(|(c, _)| c.code);
     let pick = move |code: &str| {
         haptic(Haptic::Selection);
         on_pick.call(code.to_string());
@@ -137,7 +151,7 @@ fn CurrencySheet(
                     }
                 }
                 ul { class: "flex-1 overflow-y-auto px-3 pb-3", role: "listbox", aria_label: "{title}",
-                    for c in matches {
+                    for (c, name) in matches {
                         li { key: "{c.code}",
                             button {
                                 id: "{id}-{c.code}",
@@ -147,7 +161,7 @@ fn CurrencySheet(
                                 class: "w-full flex gap-3 items-center text-left px-3 min-h-11 rounded-field row-press",
                                 onclick: move |_| pick(c.code),
                                 span { class: "w-11 shrink-0 font-semibold tabular-nums", "{c.code}" }
-                                span { class: "flex-1 min-w-0 truncate text-base-content/70", "{c.name}" }
+                                span { class: "flex-1 min-w-0 truncate text-base-content/70", "{name}" }
                                 if c.code == value {
                                     span { class: "shrink-0 text-primary", aria_hidden: "true",
                                         CheckIcon { size: ICON_ACTION }
@@ -168,7 +182,23 @@ mod tests {
     use super::*;
 
     fn codes(query: &str) -> Vec<&'static str> {
-        matching_currencies(query).iter().map(|c| c.code).collect()
+        matching_currencies(query, |c| c.name.to_string()).iter().map(|(c, _)| c.code).collect()
+    }
+
+    #[test]
+    fn the_local_and_the_english_name_both_match() {
+        let french = |c: &Currency| if c.code == "HUF" { "Forint hongrois".to_string() } else { c.name.to_string() };
+        let found = |q: &str| matching_currencies(q, french).iter().map(|(c, _)| c.code).collect::<Vec<_>>();
+        assert_eq!(found("hongrois"), ["HUF"]);
+        assert_eq!(found("hungarian"), ["HUF"]);
+    }
+
+    #[test]
+    fn every_currency_has_a_message() {
+        let ids = crate::i18n::locale_ids("en");
+        let missing: Vec<_> =
+            CURRENCIES.iter().map(|c| format!("currency-{}", c.code)).filter(|id| !ids.contains(id)).collect();
+        assert!(missing.is_empty(), "en.ftl lacks {missing:?}");
     }
 
     #[test]

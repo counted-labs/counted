@@ -1,4 +1,4 @@
-use crate::auth::{ForgotPasswordPage, LoginPage, RegisterPage, ResetPage, SettingsPage, VerifyEmailPage};
+use crate::auth::{ForgotPasswordPage, LoginPage, PaymentMethodsPage, RegisterPage, ResetPage, SettingsPage, VerifyEmailPage};
 use crate::charts::ChartsPage;
 use crate::demo::DemoPage;
 use crate::common::AppLayout;
@@ -46,6 +46,8 @@ pub enum Route {
         #[redirect("/account", || Route::SettingsPage {})]
         #[route("/settings")]
         SettingsPage {},
+        #[route("/settings/payment-methods")]
+        PaymentMethodsPage {},
         #[route("/friends")]
         FriendsPage {},
         #[route("/verify-email/:token")]
@@ -92,6 +94,7 @@ pub fn project_id_of(route: &Route) -> Option<Uuid> {
         Route::ProjectsPage {}
         | Route::ChartsPage {}
         | Route::SettingsPage {}
+        | Route::PaymentMethodsPage {}
         | Route::FriendsPage {}
         | Route::LoginPage {}
         | Route::RegisterPage {}
@@ -157,6 +160,12 @@ mod tests {
     #[test]
     fn route_settings_page_roundtrip() {
         roundtrip(Route::SettingsPage {});
+    }
+
+    #[test]
+    fn route_payment_methods_page_roundtrip() {
+        roundtrip(Route::PaymentMethodsPage {});
+        assert_eq!(Route::from_str("/settings/payment-methods").unwrap(), Route::PaymentMethodsPage {});
     }
 
     /// The page moved from `/account` to `/settings` when it stopped being account-only. Anyone who
@@ -258,6 +267,8 @@ mod tests {
             Route::ProjectsPage {},
             Route::ChartsPage {},
             Route::SettingsPage {},
+            Route::PaymentMethodsPage {},
+            Route::FriendsPage {},
             Route::LoginPage {},
             Route::RegisterPage {},
             Route::HelpPage {},

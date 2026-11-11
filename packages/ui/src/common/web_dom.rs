@@ -439,3 +439,11 @@ pub fn focus_page_heading() -> bool {
     let _ = heading.unchecked_ref::<web_sys::HtmlElement>().focus_with_options(&options);
     doc.active_element().as_ref() == Some(&heading)
 }
+
+/// Web twin of `focus_field` in `select_focused.rs`.
+pub fn focus_field(id: &str) {
+    let Some(el) = document().and_then(|d| d.get_element_by_id(id)) else { return };
+    let options = web_sys::FocusOptions::new();
+    options.set_prevent_scroll(true);
+    let _ = el.unchecked_ref::<web_sys::HtmlElement>().focus_with_options(&options);
+}

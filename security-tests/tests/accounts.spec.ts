@@ -3,6 +3,7 @@ import { request, type APIRequestContext, type APIResponse } from '@playwright/t
 import {
   BASE_URL,
   bytes,
+  claimToken,
   expect,
   isRefused,
   json,
@@ -18,6 +19,10 @@ import {
 type Call = { name: string; send: (api: APIRequestContext) => Promise<APIResponse> };
 
 const someId = randomUUID();
+
+/** ML-KEM-768 sizes (FIPS 203), as `shared::KEM_PUBLIC_KEY_LENGTH` and `KEM_CIPHERTEXT_LENGTH`. */
+const KEM_PUBLIC_KEY_LENGTH = 1184;
+const KEM_CIPHERTEXT_LENGTH = 1088;
 
 /** Every endpoint scoped to the signed-in account, with a body it accepts once signed in. */
 const accountScoped: Call[] = [
@@ -147,5 +152,46 @@ test.describe('A - account boundaries', () => {
     const anon = await request.newContext({ baseURL: BASE_URL });
     expect((await anon.post('/api/v1/auth/login', { data: { email, proof } })).status()).toBe(401);
     await anon.dispose();
+  });
+
+  test('A8 an invitation carries exactly one key box, the one the floor allows', async ({ account, project }) => {
+    const a = await account();
+    const b = await account();
+    for (const { api } of [a, b]) {
+      await json(await api.put('/api/v1/auth/keypair', { data: { publicKey: bytes(32), privateKey: pair(48) } }), 'keypair');
+    }
+    await json(await b.api.put('/api/v1/auth/kem-key', { data: { publicKey: bytes(KEM_PUBLIC_KEY_LENGTH), privateKey: pair(96) } }), 'KEM key');
+
+    await json(await a.api.post('/api/v1/friends/requests', { data: { email: b.email, label: pair(32) } }), 'A asks B');
+    const [incoming] = (await json<{ incoming: { id: string }[] }>(await b.api.get('/api/v1/friends'), 'B friends')).incoming;
+    await json(await b.api.post(`/api/v1/friends/requests/${incoming.id}/accept`), 'B accepts');
+
+    const p = await project(a.api);
+    await json(
+      await a.api.post('/api/v1/account/projects', { ...p.withKey, data: { projectId: p.id, userId: null, claimToken: claimToken(p.key) } }),
+      'A holds the project',
+    );
+
+    const { hybridInvitations } = await json<{ hybridInvitations: boolean }>(await a.api.get('/api/v1/auth/me'), 'me');
+    const classical = { key: pair(48) };
+    const hybrid = { hybrid: { ephemeral: bytes(32), kemCt: bytes(KEM_CIPHERTEXT_LENGTH), nonce: bytes(24), ct: bytes(80) } };
+    const [allowed, other] = hybridInvitations ? [hybrid, classical] : [classical, hybrid];
+    const invite = (box: object) =>
+      a.api.post(`/api/v1/projects/${p.id}/invitations`, { ...p.withKey, data: { toAccountId: b.id, ...box } });
+    const pending = async () => (await json<unknown[]>(await b.api.get('/api/v1/projects/invitations'), 'B invitations')).length;
+
+    expect((await invite({ ...classical, ...hybrid })).status(), 'both boxes').toBe(400);
+    expect((await invite({})).status(), 'no box').toBe(400);
+    expect((await invite(other)).status(), hybridInvitations ? 'a classical box from the floor' : 'a hybrid box before the floor').toBe(400);
+    const batch = await a.api.post(`/api/v1/projects/${p.id}/invitations/batch`, {
+      ...p.withKey,
+      data: [{ toAccountId: b.id, ...classical, ...hybrid }],
+    });
+    expect(await json<string[]>(batch, 'batch with both boxes'), 'the batch refuses it too').toEqual([b.id]);
+    expect(await pending(), 'nothing refused reached B').toBe(0);
+
+    expect((await invite(allowed)).ok(), 'the box the floor allows').toBe(true);
+    const [received] = await json<{ key?: unknown; hybrid?: unknown }[]>(await b.api.get('/api/v1/projects/invitations'), 'B invitations');
+    expect([received.key !== undefined, received.hybrid !== undefined], 'B receives that box alone').toEqual([!hybridInvitations, hybridInvitations]);
   });
 });

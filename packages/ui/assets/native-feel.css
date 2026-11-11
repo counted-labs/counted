@@ -240,7 +240,9 @@ html[data-plat="android"] {
    `--separator-inset` to where its text starts (the leading tile's edge plus its gap); the line
    under a row is drawn by the row below it, and a sheet a row renders beside itself is skipped
    (`position: relative` would also unpin it). 0.5px is one device pixel at 2x; at 3x it would round
-   to two, hence 0.34px there. A navigating row ends on a `ChevronRightIcon` in `.list-chevron`. */
+   to two, hence 0.34px there. A navigating row ends on a `ChevronRightIcon` in `.list-chevron`.
+   `overflow: hidden` drops a flex item's minimum height to zero, so a group placed straight in a
+   scrolling flex column would shrink to nothing once the page overflows: it never shrinks. */
 :root {
   --color-separator: var(--color-base-300);
 }
@@ -257,6 +259,7 @@ html[data-plat="android"] {
   border-radius: var(--radius-box);
   background-color: var(--color-base-100);
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .list-group > :not(:first-child, .modal) {

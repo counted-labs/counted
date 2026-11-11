@@ -17,9 +17,11 @@ pub struct Friends {
     /// The address of the request just sent, offered "Let them know by message" until the next one.
     pub sent_to: Signal<Option<String>>,
     version: Signal<u64>,
+    auth_ctx: Signal<Option<Account>>,
     account_key: Signal<Option<[u8; 32]>>,
     flash: Signal<Option<Flash>>,
     ls_ctx: Signal<LocalStorageState>,
+    owner: ScopeId,
 }
 
 /// One handle per `use_friends` call: two are the same when they hold the same signals.
@@ -57,16 +59,37 @@ pub fn use_friends() -> Friends {
         }
     });
 
-    Friends { lists, email, busy, error, sent_to, version, account_key, flash, ls_ctx }
+    // What the last account typed or was told must not greet the next one.
+    let mut drafts = (email, error, sent_to);
+    use_effect(move || {
+        let _ = identity();
+        drafts.0.set(String::new());
+        drafts.1.set(None);
+        drafts.2.set(None);
+    });
+
+    let owner = dioxus::core::current_scope_id();
+    Friends { lists, email, busy, error, sent_to, version, auth_ctx, account_key, flash, ls_ctx, owner }
 }
 
 impl Friends {
+    /// The lists, only if they were loaded for the account signed in now.
+    pub fn current(&self) -> Option<FriendsLists> {
+        let account_id = self.auth_ctx.read().as_ref().map(|a| a.id);
+        match &*self.lists.read() {
+            Some(Ok(lists)) if account_id.is_some() && lists.account_id == account_id => Some(lists.clone()),
+            _ => None,
+        }
+    }
+
     pub fn reload(mut self) {
         self.version += 1;
     }
 
+    /// Spawned in the scope that called `use_friends`, not the caller's: a sheet or row that starts
+    /// a request may unmount before it ends, and its task must not die with it and leave `busy` set.
     fn run(mut self, fut: impl std::future::Future<Output = Result<(), ServerFnError>> + 'static, done: Option<String>) {
-        spawn(async move {
+        dioxus::core::Runtime::current().in_scope(self.owner, || spawn(async move {
             self.busy.set(true);
             self.error.set(None);
             match fut.await {
@@ -79,7 +102,7 @@ impl Friends {
                 Err(e) => self.error.set(Some(error_message(&e))),
             }
             self.busy.set(false);
-        });
+        }));
     }
 
     pub fn add_by_email(mut self) {
@@ -134,6 +157,9 @@ impl Friends {
 
     /// "The code matches": the friend read out the code shown, so its new key is pinned.
     pub fn trust_new_key(mut self, row: FriendRow) {
+        if row.kem_only_change() {
+            return;
+        }
         let Some(key) = row.new_key else { return };
         crate::common::update_ls_if_changed(self.ls_ctx, |state| friends_service::trust_key(state, row.account_id, &key, row.new_kem_key.as_deref()));
         self.flash.set(Some(Flash::ok(tid!("friends-code-trusted"))));

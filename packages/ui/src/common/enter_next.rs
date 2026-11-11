@@ -26,6 +26,7 @@ pub fn use_enter_advances_focus() {
                 const textLike = el => el.tagName === 'TEXTAREA'
                     || (el.tagName === 'INPUT' && TEXT.includes((el.getAttribute('type') || 'text').toLowerCase()));
                 window._countedTextLike = textLike;
+                const ios = document.documentElement.dataset.plat === 'ios';
                 document.addEventListener('keydown', function(e) {
                     if (e.key !== 'Enter' || e.defaultPrevented || e.isComposing) return;
                     const from = e.target;
@@ -34,7 +35,7 @@ pub fn use_enter_advances_focus() {
                     const fields = Array.from(scope.querySelectorAll('input, textarea')).filter(textLike);
                     for (const next of fields.slice(fields.indexOf(from) + 1)) {
                         if (next.hasAttribute('readonly')) continue;
-                        next.focus();
+                        next.focus(ios && next.closest('.modal-box') ? { preventScroll: true } : undefined);
                         if (document.activeElement === next) { e.preventDefault(); return; }
                     }
                 });

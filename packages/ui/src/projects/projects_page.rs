@@ -90,6 +90,12 @@ fn list_synced_recently(ids: &[Uuid], version: u64) -> bool {
         && LAST_LIST_SYNC.with(|last| synced_within(last.borrow().as_ref(), ids, version, chrono::Utc::now().timestamp_millis()))
 }
 
+/// The projects the last list sync could serve: from `KEY_LIFECYCLE_FROM` one held without its key
+/// is dropped by the server, so a key arriving for it changes the list as a new project would.
+fn keyed_ids(state: &LocalStorageState) -> Vec<Uuid> {
+    state.projects.iter().filter(|p| key_of(p).is_some()).map(|p| p.project_id).collect()
+}
+
 fn note_list_sync(ids: Vec<Uuid>, version: u64) {
     if THROTTLES {
         let at_ms = chrono::Utc::now().timestamp_millis();
@@ -261,7 +267,8 @@ pub fn ProjectsPage() -> Element {
             if ids.is_empty() {
                 return Ok(vec![]);
             }
-            if first && list_synced_recently(&ids, version) {
+            let keyed = keyed_ids(&read_from_ls());
+            if first && list_synced_recently(&keyed, version) {
                 if let Some(list) = live_cached_list(&read_from_ls()) {
                     synced.set(true);
                     return Ok(list);
@@ -279,7 +286,7 @@ pub fn ProjectsPage() -> Element {
             }
             synced.set(true);
             let (before, syncs) = result?;
-            note_list_sync(ids, version);
+            note_list_sync(keyed, version);
             ledgers.set(synced_ledgers(&before, &syncs, Uuid::nil()));
             verdicts.set(Some(rows_verdicts(&before, &syncs)));
             let list: Vec<ProjectDto> = syncs.into_iter().filter_map(|s| s.project).collect();
@@ -426,7 +433,9 @@ pub fn ProjectsPage() -> Element {
         let pinned = mine.clone().filter(|p| shown(&p));
         let filtered: Vec<ProjectDto> =
             list.iter().filter(shown).filter(|p| Some(p.id) != mine.as_ref().map(|m| m.id)).cloned().collect();
-        let lost = lost_projects(&ls_ctx.read(), &list.iter().map(|p| p.id).collect::<Vec<_>>());
+        let listed: Vec<Uuid> = list.iter().map(|p| p.id).collect();
+        let lost = lost_projects(&ls_ctx.read(), &listed);
+        let locked = locked_projects(&ls_ctx.read(), &listed);
         let live = banner.is_none();
         rsx! {
             if let Some(text) = banner {
@@ -438,7 +447,7 @@ pub fn ProjectsPage() -> Element {
             if let Some(project) = pinned {
                 PersonalCard { project, ledgers }
             }
-            if filtered.is_empty() && lost.is_empty() {
+            if filtered.is_empty() && lost.is_empty() && locked.is_empty() {
                 div { class: "flex flex-col items-center gap-2 py-12 text-base-content/70",
                     Mascot { pose: MascotPose::Empty }
                     span { class: "font-semibold", {tid!("projects-empty")} }
@@ -454,6 +463,7 @@ pub fn ProjectsPage() -> Element {
                 }
             }
             LostProjects { lost }
+            LockedProjects { locked }
             if live && mine.is_none() {
                 PersonalCreateCard {
                     signed_in: auth_ctx().is_some(),
@@ -658,6 +668,56 @@ fn LostProjects(lost: Vec<Uuid>) -> Element {
                     }
                     span { class: "list-chevron", ChevronRightIcon {} }
                 }
+            }
+        }
+    }
+}
+
+/// Projects this device holds without their key that the list did not serve: from
+/// `KEY_LIFECYCLE_FROM` the server answers only to the key's token, so nothing reaches the device to
+/// draw a card with. A rotated one keeps its own row (`lost_projects`).
+fn locked_projects(state: &LocalStorageState, listed: &[Uuid]) -> Vec<Uuid> {
+    state
+        .projects
+        .iter()
+        .filter(|p| key_of(p).is_none() && !p.key_rotated && !listed.contains(&p.project_id))
+        .map(|p| p.project_id)
+        .collect()
+}
+
+/// The locked card, from the store alone: no name to show, and tapping it asks for the share link.
+#[component]
+fn LockedProjects(locked: Vec<Uuid>) -> Element {
+    let mut unlocking: Signal<Option<Uuid>> = use_signal(|| None);
+    if locked.is_empty() {
+        return rsx! {};
+    }
+    rsx! {
+        div { id: "projects-locked", class: "list-group shrink-0", style: "--separator-inset: 4.375rem",
+            for project_id in locked.into_iter() {
+                button {
+                    id: "project-card-{project_id}",
+                    r#type: "button",
+                    class: "flex items-center gap-3 px-4 py-3 text-start row-press",
+                    onclick: move |_| {
+                        haptic(Haptic::Light);
+                        unlocking.set(Some(project_id));
+                    },
+                    span { class: "size-[2.625rem] shrink-0 rounded-[13px] bg-tile-amber text-tile-amber-content flex items-center justify-center",
+                        LockIcon {}
+                    }
+                    span { class: "flex-1 min-w-0 flex flex-col gap-0.5",
+                        span { class: "font-semibold text-[0.9375rem] truncate text-base-content/70", {tid!("missing-encryption-key-title")} }
+                        span { class: "text-xs text-base-content/70 line-clamp-2", {tid!("project-locked-hint")} }
+                    }
+                    span { class: "list-chevron", ChevronRightIcon {} }
+                }
+            }
+        }
+        if let Some(project_id) = unlocking() {
+            JoinProjectModal {
+                expect_project_id: project_id,
+                on_close: move |_| unlocking.set(None),
             }
         }
     }
@@ -952,6 +1012,16 @@ mod tests {
             cached_projects_list: cached,
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn a_held_project_without_its_key_keeps_a_row_the_list_no_longer_serves() {
+        let mut s = state(&[1, 2, 3, 4], None);
+        s.projects[1].encryption_key = Some(crate::crypto::key_to_fragment(&test_fixtures::TEST_KEY));
+        s.projects[2].key_rotated = true;
+        assert_eq!(locked_projects(&s, &[id(3)]), vec![id(1), id(4)], "2 holds its key, 3 lost it to a rotation");
+        assert_eq!(locked_projects(&s, &[id(1)]), vec![id(4)], "1 is served, as a locked card below the floor");
+        assert_eq!(keyed_ids(&s), vec![id(2)], "unlocking 1 or 4 changes what the last list sync covered");
     }
 
     #[test]

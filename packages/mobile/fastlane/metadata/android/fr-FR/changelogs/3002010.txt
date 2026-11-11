@@ -1,0 +1,6 @@
+• Réglages sur une seule page, vos amis en onglets et une page pour vos moyens de paiement
+• Balayez une dépense pour la modifier ou la supprimer, ou appuyez longuement pour ses actions
+• Projets et dépenses s’ouvrent aussitôt, et vos modifications s’appliquent tout de suite
+• Counted demande avant d’abandonner les modifications d’un formulaire
+• Une alerte avant qu’une autre clé remplace celle d’un projet sur cet appareil
+• Petites corrections et améliorations

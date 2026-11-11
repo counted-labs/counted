@@ -38,10 +38,10 @@ pub fn resource_err<T: 'static>(
 }
 
 mod amount;
-pub use amount::{amount, comma_language, number, plain_number, round_amount, signed_amount, whole_amount};
+pub use amount::{amount, comma_language, number, plain_number, rate, round_amount, signed_amount, whole_amount};
 
 mod avatar;
-pub use avatar::{user_color_class, Avatar, SizeClass};
+pub use avatar::{account_color_class, email_initials, user_color_class, Avatar, SizeClass};
 
 mod date_format;
 pub use date_format::{
@@ -77,7 +77,7 @@ mod sleep;
 pub use sleep::sleep;
 
 mod select_focused;
-pub use select_focused::{a_field_has_focus, select_focused_input};
+pub use select_focused::{a_field_has_focus, focus_field, select_focused_input};
 
 mod toast;
 pub use toast::ToastHost;
@@ -112,6 +112,10 @@ pub use local_storage::{
 mod haptics;
 pub use haptics::{haptic, set_haptics_player, Haptic, HapticsPlayer};
 
+mod app_version;
+pub use app_version::{app_version, set_app_version};
+mod list_row;
+pub use list_row::{ListFooter, ListRow, RowTile};
 mod session_flush;
 pub use session_flush::{flush_session, set_session_flusher, SessionFlusher};
 
@@ -224,11 +228,11 @@ pub use project_write::update_project_fresh;
 
 mod app_contexts;
 pub use app_contexts::{
-    use_app_contexts, AcceptedInvite, AuthResolved, Flash, InviteRetry, ProjectKey, UpdateRequired,
+    use_app_contexts, AcceptedInvite, AuthResolved, CheckFriend, Flash, InviteRetry, ProjectKey, UpdateRequired,
 };
 
 mod skeletons;
-pub use skeletons::{AccountCardSkeleton, ChartsSkeleton, ExpenseDetailSkeleton, RuleListSkeleton};
+pub use skeletons::{AccountCardSkeleton, ChartsSkeleton, ExpenseDetailSkeleton, GroupedListSkeleton, RuleListSkeleton};
 mod splash;
 pub use splash::{use_client_ready, SplashScreen};
 

@@ -114,3 +114,23 @@ pub fn AccountCardSkeleton() -> Element {
         }
     }
 }
+
+/// A grouped list of `rows` rows, each a round avatar and two lines: Friends and payment methods.
+#[component]
+pub fn GroupedListSkeleton(rows: u8) -> Element {
+    rsx! {
+        Loading {
+            div { class: "list-group",
+                for _ in 0..rows {
+                    div { class: "flex items-center gap-3 px-4 py-3",
+                        div { class: "skeleton size-10 rounded-full shrink-0" }
+                        div { class: "flex-1 flex flex-col gap-2",
+                            div { class: "skeleton h-4 w-3/4" }
+                            div { class: "skeleton h-3 w-1/2" }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

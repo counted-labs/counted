@@ -271,10 +271,99 @@ pub fn method_display_name(method: &PaymentMethod) -> String {
         .to_string()
 }
 
+/// The stored list a write may start from. `None` when the account is no longer the one the edit
+/// began in (another tab switched it), or when its blob does not open with this key: rebuilding
+/// from the empty list `account_payment_methods` returns then would replace details this device
+/// cannot read.
+pub fn writable_methods(account: &Account, key: &[u8; 32], editing_for: uuid::Uuid) -> Option<Vec<PaymentMethod>> {
+    if account.id != editing_for {
+        return None;
+    }
+    match account.payment_methods.as_ref() {
+        None => Some(Vec::new()),
+        Some(pair) => decrypt_json::<PaymentMethods>(key, pair).ok().map(|p| p.methods),
+    }
+}
+
+/// `edited` in place of the first stored method equal to `original`, else appended: matched by
+/// value, since another device may have reordered or removed methods since the sheet opened.
+pub fn with_method(stored: &[PaymentMethod], original: Option<&PaymentMethod>, edited: PaymentMethod) -> Vec<PaymentMethod> {
+    let mut next = stored.to_vec();
+    match original.and_then(|o| next.iter().position(|m| m == o)) {
+        Some(i) => next[i] = edited,
+        None => next.push(edited),
+    }
+    next
+}
+
+pub fn without_method(stored: &[PaymentMethod], original: &PaymentMethod) -> Vec<PaymentMethod> {
+    let mut next = stored.to_vec();
+    if let Some(i) = next.iter().position(|m| m == original) {
+        next.remove(i);
+    }
+    next
+}
+
+/// Display only: an IBAN shows its first and last four characters, anything else whole.
+pub fn masked_value(method: &PaymentMethod) -> String {
+    let compact: Vec<char> = method.value.chars().filter(|c| !c.is_whitespace()).collect();
+    if method.kind != "iban" || compact.len() < 12 {
+        return method.value.clone();
+    }
+    let head: String = compact[..4].iter().collect();
+    let tail: String = compact[compact.len() - 4..].iter().collect();
+    format!("{head} •••• {tail}")
+}
+
+pub fn masked_tail(method: &PaymentMethod) -> Option<String> {
+    let compact: Vec<char> = method.value.chars().filter(|c| !c.is_whitespace()).collect();
+    (masked_value(method) != method.value).then(|| compact[compact.len() - 4..].iter().collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::crypto::encrypt_json;
+
+    #[test]
+    fn an_edit_replaces_its_original_by_value_wherever_it_moved() {
+        let a = method("iban", "FR76 1", None);
+        let b = method("lydia", "06", None);
+        let stored = vec![b.clone(), a.clone()];
+        let edited = method("iban", "FR76 2", None);
+        assert_eq!(with_method(&stored, Some(&a), edited.clone()), vec![b, edited]);
+    }
+
+    #[test]
+    fn an_edit_whose_original_is_gone_is_added() {
+        let a = method("iban", "FR76 1", None);
+        let b = method("lydia", "06", None);
+        let edited = method("iban", "FR76 2", None);
+        assert_eq!(with_method(std::slice::from_ref(&b), Some(&a), edited.clone()), vec![b.clone(), edited.clone()]);
+        assert_eq!(with_method(std::slice::from_ref(&b), None, edited.clone()), vec![b, edited]);
+    }
+
+    #[test]
+    fn a_delete_removes_one_matching_method_only() {
+        let a = method("iban", "FR76 1", None);
+        let b = method("lydia", "06", None);
+        assert_eq!(without_method(&[a.clone(), b.clone(), a.clone()], &a), vec![b.clone(), a.clone()]);
+        assert_eq!(without_method(std::slice::from_ref(&b), &a), vec![b]);
+    }
+
+    #[test]
+    fn only_an_iban_is_masked_and_only_for_display() {
+        let iban = method("iban", "FR76 3000 6000 0112 3456 7890 452", None);
+        assert_eq!(masked_value(&iban), "FR76 •••• 0452");
+        assert_eq!(masked_tail(&iban).as_deref(), Some("0452"));
+        assert_eq!(iban.value, "FR76 3000 6000 0112 3456 7890 452");
+        let short = method("iban", "FR76 3000", None);
+        assert_eq!(masked_value(&short), "FR76 3000");
+        assert_eq!(masked_tail(&short), None);
+        let phone = method("lydia", "06 12 34 56 78 90 12", None);
+        assert_eq!(masked_value(&phone), "06 12 34 56 78 90 12");
+        assert_eq!(masked_tail(&phone), None);
+    }
     use chrono::NaiveDate;
     use uuid::Uuid;
 
@@ -348,6 +437,19 @@ mod tests {
         let acc = stored(vec![method("iban", "FR76", None)]);
 
         assert_eq!(account_payment_methods(&acc, &[9u8; 32]), Vec::new());
+    }
+
+    /// Security review 2026-11-10 M-1: a sheet opened as A, saved after another tab signed in as B.
+    #[test]
+    fn no_write_starts_from_a_list_this_key_cannot_read_or_from_another_account() {
+        let methods = vec![method("iban", "FR76", None)];
+        let acc = stored(methods.clone());
+
+        assert_eq!(writable_methods(&acc, &KEY, acc.id), Some(methods));
+        assert_eq!(writable_methods(&acc, &[9u8; 32], acc.id), None);
+        assert_eq!(writable_methods(&acc, &KEY, Uuid::new_v4()), None);
+        let fresh = account(None);
+        assert_eq!(writable_methods(&fresh, &KEY, fresh.id), Some(Vec::new()));
     }
 
     /// Fields are added over time and old blobs must keep deserialising, or a field added later

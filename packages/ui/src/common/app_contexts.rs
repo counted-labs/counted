@@ -45,6 +45,11 @@ pub struct AcceptedInvite {
     pub user_id: Option<i32>,
 }
 
+/// The friend whose changed code the bell was tapped on, read once by the Friends page, which opens
+/// that friend's sheet as soon as its own list has the row.
+#[derive(Clone, Copy, PartialEq)]
+pub struct CheckFriend(pub Option<Uuid>);
+
 /// Whether `me()` has come back yet, whatever it said.
 ///
 /// `Signal<Option<Account>>` is `None` for an anonymous user *and* while the call is in flight, so
@@ -121,6 +126,7 @@ pub fn use_app_contexts() {
     let _invite_retry: Signal<Option<InviteRetry>> = use_context_provider(|| Signal::new(None));
     let _accepted_invite: Signal<Option<AcceptedInvite>> =
         use_context_provider(|| Signal::new(None));
+    let _check_friend: Signal<CheckFriend> = use_context_provider(|| Signal::new(CheckFriend(None)));
     let ls_ctx: Signal<LocalStorageState> = use_context_provider(|| Signal::new(ls_state));
     // No Signal<bool> for is_mobile: it would collide with is_online (contexts are keyed by type).
     // Always true on web; updated by DOM events on mobile native.

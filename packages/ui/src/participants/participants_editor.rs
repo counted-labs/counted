@@ -218,6 +218,8 @@ pub fn ParticipantsEditor(props: ParticipantsEditorProps) -> Element {
                 id: "{prefix}-user-add",
                 r#type: "button",
                 class: "btn btn-secondary",
+                onpointerdown: move |e| e.prevent_default(),
+                onmousedown: move |e| e.prevent_default(),
                 onclick: move |_| add_for_button(Pick::Guest(query())),
                 {tid!("add")}
             }
@@ -237,11 +239,15 @@ pub fn ParticipantsEditor(props: ParticipantsEditorProps) -> Element {
                         let mut add_option = add_for_options.clone();
                         rsx! {
                             li { role: "presentation",
+                                onpointerdown: move |e| e.prevent_default(),
+                                onmousedown: move |e| e.prevent_default(),
                                 button {
                                     r#type: "button",
                                     role: "option",
                                     aria_selected: if selected { "true" } else { "false" },
                                     aria_disabled: if !s.ready { "true" },
+                                    onpointerdown: move |e| e.prevent_default(),
+                                    onmousedown: move |e| e.prevent_default(),
                                     disabled: !s.ready,
                                     class: if selected { "w-full flex items-center gap-3 px-2.5 py-2 rounded-field text-left bg-primary/10" } else { "w-full flex items-center gap-3 px-2.5 py-2 rounded-field text-left disabled:opacity-60" },
                                     onclick: move |_| add_option(Pick::Friend(friend.clone())),
@@ -272,10 +278,14 @@ pub fn ParticipantsEditor(props: ParticipantsEditorProps) -> Element {
                     let mut add_guest = add.clone();
                     rsx! {
                         li { role: "presentation", class: if !found.is_empty() { "border-t border-base-200 mt-1 pt-1" },
+                            onpointerdown: move |e| e.prevent_default(),
+                            onmousedown: move |e| e.prevent_default(),
                             button {
                                 id: "{prefix}-suggest-guest",
                                 r#type: "button",
                                 role: "option",
+                                onpointerdown: move |e| e.prevent_default(),
+                                onmousedown: move |e| e.prevent_default(),
                                 aria_selected: if selected { "true" } else { "false" },
                                 class: if selected { "w-full flex items-center gap-3 px-2.5 py-2 rounded-field text-left bg-primary/10" } else { "w-full flex items-center gap-3 px-2.5 py-2 rounded-field text-left" },
                                 onclick: move |_| add_guest(Pick::Guest(query())),
@@ -304,6 +314,8 @@ pub fn ParticipantsEditor(props: ParticipantsEditorProps) -> Element {
                             key: "{f.account_id}",
                             id: "{prefix}-chip-{i}",
                             r#type: "button",
+                            onpointerdown: move |e| e.prevent_default(),
+                            onmousedown: move |e| e.prevent_default(),
                             class: "btn btn-sm btn-outline border-base-300 rounded-full pl-1 gap-2 font-semibold",
                             onclick: move |_| add_chip(Pick::Friend(f.clone())),
                             Avatar { initials: initial(&f.email), size: SizeClass::W7 }

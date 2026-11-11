@@ -98,7 +98,7 @@ pub struct ExpenseFormProps {
     /// it is valid for. `None` when the table could not be obtained - the user must then type a
     /// rate.
     /// Resolved by the parent so this component stays free of fetching and caching.
-    pub auto_rate: Option<f64>,
+    pub auto_rate: ReadSignal<Option<f64>>,
     pub rate_day: Option<String>,
     pub on_submit: EventHandler<FormEvent>,
     pub on_close: EventHandler<()>,
@@ -205,7 +205,8 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
 
     let project_currency = props.currency.clone();
     let foreign = expense_currency() != project_currency;
-    let rate = effective_rate(&rate_input(), props.auto_rate);
+    let auto_rate = props.auto_rate;
+    let rate = effective_rate(&rate_input(), auto_rate());
 
     // The rate table arrives asynchronously, so `auto_rate` can flip from `None` to `Some` *after* the
     // user picked the currency and typed the amount. Without this the handlers below would have
@@ -213,11 +214,10 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
     // preview showed the converted one - and submit would then write that stale total next to
     // correct conversion metadata, which is precisely the inconsistency the payload must never
     // carry. Reconciles only on a real change, so editing one participant's share is left alone.
-    let auto_rate = props.auto_rate;
     let reconcile_currency = props.currency.clone();
     use_effect(move || {
         let foreign = expense_currency() != reconcile_currency;
-        let rate = effective_rate(&rate_input(), auto_rate);
+        let rate = effective_rate(&rate_input(), auto_rate());
         let Some(total) = project_total(source_amount(), foreign, rate) else { return };
         if shared::to_cents(total) == shared::to_cents(*total_amount.peek()) {
             return;
@@ -390,9 +390,10 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                                     let now_foreign = picked != project_currency;
                                     expense_currency.set(picked);
                                     // The rate that applied to the old currency means nothing for
-                                    // the new one - clearing it falls back to the InforEuro rate.
+                                    // the new one - clearing it falls back to the InforEuro rate,
+                                    // which the reconcile effect applies once the parent resolves it.
                                     rate_input.set(String::new());
-                                    resplit(source_amount(), now_foreign, props.auto_rate);
+                                    resplit(source_amount(), now_foreign, None);
                                 },
                             }
                         }
@@ -534,14 +535,11 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                                 r#type: "text",
                                 inputmode: "decimal",
                                 aria_describedby: "expense-rate-hint",
-                                placeholder: match props.auto_rate {
-                                    Some(r) => format!("{r}"),
-                                    None => String::new(),
-                                },
+                                placeholder: auto_rate().map(crate::common::rate).unwrap_or_default(),
                                 value: "{rate_input}",
                                 oninput: move |e| {
                                     let raw = e.value();
-                                    let next = effective_rate(&raw, props.auto_rate);
+                                    let next = effective_rate(&raw, auto_rate());
                                     rate_input.set(raw);
                                     resplit(source_amount(), true, next);
                                 },
@@ -549,13 +547,13 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                             p {
                                 id: "expense-rate-hint",
                                 class: "text-xs text-base-content/70",
-                                match (props.auto_rate, props.rate_day.as_deref()) {
+                                match (auto_rate(), props.rate_day.as_deref()) {
                                     (Some(r), Some(day)) => tid!(
                                         "expense-rate-hint",
                                         month: format_month_str(day),
                                         from: expense_currency(),
                                         to: props.currency.clone(),
-                                        rate: format!("{r:.3}")
+                                        rate: crate::common::rate(r)
                                     ),
                                     _ => tid!("expense-rate-unavailable"),
                                 }
@@ -726,7 +724,11 @@ mod tests {
         expense_currency: String,
         #[props(default)]
         auto_rate: Option<f64>,
+        #[props(default)]
+        rate_slot: RateSlot,
     }
+
+    type RateSlot = Rc<RefCell<Option<Signal<Option<f64>>>>>;
 
     /// Owns the signals `ExpenseForm` mutates, mirroring them into `spy` per render - reading them
     /// here subscribes the harness. Both sides start checked so assertions never depend on which
@@ -754,6 +756,9 @@ mod tests {
         *props.spy.borrow_mut() = (rows(&payers()), rows(&debtors()));
 
         let init_currency = props.expense_currency.clone();
+        let initial_rate = props.auto_rate;
+        let auto_rate = use_signal(move || initial_rate);
+        *props.rate_slot.borrow_mut() = Some(auto_rate);
 
         rsx! {
             ExpenseForm {
@@ -776,8 +781,8 @@ mod tests {
                 expense_currency: use_signal(move || init_currency),
                 source_amount: use_signal(|| 0.0),
                 rate_input: use_signal(String::new),
-                auto_rate: props.auto_rate,
-                rate_day: props.auto_rate.map(|_| "2026-09-01".to_string()),
+                auto_rate: auto_rate(),
+                rate_day: auto_rate().map(|_| "2026-09-01".to_string()),
                 on_submit: move |_| {},
                 on_close: move |_| {},
             }
@@ -977,6 +982,7 @@ mod tests {
             spy: Rc::new(RefCell::new((Vec::new(), Vec::new()))),
             expense_currency: "EUR".to_string(),
             auto_rate: None,
+            rate_slot: RateSlot::default(),
         })
     }
 
@@ -998,6 +1004,7 @@ mod tests {
             spy: Rc::new(RefCell::new((Vec::new(), Vec::new()))),
             expense_currency: "USD".to_string(),
             auto_rate: Some(0.5),
+            rate_slot: RateSlot::default(),
         });
 
         dom.runtime().handle_event("input", form_input("30"), total(&ids));
@@ -1015,6 +1022,7 @@ mod tests {
             spy: Rc::new(RefCell::new((Vec::new(), Vec::new()))),
             expense_currency: "USD".to_string(),
             auto_rate: Some(0.5),
+            rate_slot: RateSlot::default(),
         });
 
         dom.runtime().handle_event("input", form_input("30"), total(&ids));
@@ -1034,6 +1042,7 @@ mod tests {
             spy: Rc::new(RefCell::new((Vec::new(), Vec::new()))),
             expense_currency: "USD".to_string(),
             auto_rate: None,
+            rate_slot: RateSlot::default(),
         });
 
         dom.runtime().handle_event("input", form_input("30"), total(&ids));
@@ -1041,6 +1050,37 @@ mod tests {
 
         let (payers, _) = spy.borrow().clone();
         assert_eq!(payers, vec![(true, 0.0), (true, 0.0)]);
+    }
+
+    /// Effects run only from `process_events`, which returns early while a scope is dirty.
+    fn settle(dom: &mut VirtualDom) {
+        for _ in 0..5 {
+            dom.render_immediate_to_vec();
+            dom.process_events();
+        }
+        dom.render_immediate_to_vec();
+    }
+
+    #[test]
+    fn an_amount_typed_before_the_rate_arrives_is_converted_when_it_does() {
+        let rate_slot = RateSlot::default();
+        let (mut dom, spy, ids) = harness_with(HarnessProps {
+            spy: Rc::new(RefCell::new((Vec::new(), Vec::new()))),
+            expense_currency: "USD".to_string(),
+            auto_rate: None,
+            rate_slot: rate_slot.clone(),
+        });
+
+        settle(&mut dom);
+        dom.runtime().handle_event("input", form_input("30"), total(&ids));
+        settle(&mut dom);
+        let mut auto_rate = rate_slot.borrow().unwrap();
+        dom.in_runtime(|| auto_rate.set(Some(0.5)));
+        settle(&mut dom);
+
+        let (payers, debtors) = spy.borrow().clone();
+        assert_eq!(payers, vec![(true, 7.5), (true, 7.5)]);
+        assert_eq!(debtors, vec![(true, 7.5), (true, 7.5)]);
     }
 
     #[test]
@@ -1063,6 +1103,7 @@ mod tests {
                 spy: Rc::new(RefCell::new((Vec::new(), Vec::new()))),
                 expense_currency: "EUR".to_string(),
                 auto_rate: None,
+                rate_slot: RateSlot::default(),
             },
         );
         let m = dom.rebuild_to_vec();

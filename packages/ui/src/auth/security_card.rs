@@ -4,7 +4,8 @@ use shared::Account;
 use crate::auth::account_key::remember;
 use crate::auth::account_rotation::{change_password, compromise_rotation, Rotated};
 use crate::auth::credentials::password_error_key;
-use crate::common::{error_message, haptic, Flash, Haptic, LocalStorageState};
+use crate::common::{error_message, haptic, Flash, Haptic, ListFooter, ListRow, LocalStorageState, RowTile};
+use crate::icons::{LockIcon, ShieldIcon};
 use crate::tid;
 
 /// Password, recovery and key rotation (docs/plans/key-lifecycle.md). Shown only once the floor
@@ -21,45 +22,42 @@ pub fn SecurityCard(account: Account) -> Element {
     let mut new_recovery_key: Signal<Option<String>> = use_signal(|| None);
     let email = account.email.clone();
 
+    let footnote = match account.recovery_pending_at {
+        Some(at) => Some(("recovery-key-pending", tid!("settings-recovery-key-pending", when: crate::auth::recovery_ui::format_moment(at)))),
+        None if !account.has_recovery_key => Some(("recovery-key-missing", tid!("settings-recovery-key-footnote"))),
+        None => None,
+    };
+
     rsx! {
-        div { id: "security-card", class: "card bg-base-100 shadow-soft",
-            div { class: "card-body gap-2",
-                h2 { class: "card-title text-base", {tid!("settings-security")} }
-                ul { class: "list",
-                    crate::auth::recovery_ui::RecoveryKeyRow { account: account.clone() }
-                    li { class: "list-row items-center",
-                        div { class: "list-col-grow flex flex-col gap-1",
-                            span { class: "font-medium", {tid!("settings-change-password")} }
-                            span { class: "text-sm text-base-content/70", {tid!("settings-change-password-hint")} }
-                        }
-                        button {
-                            id: "change-password-open",
-                            r#type: "button",
-                            class: "btn btn-sm",
-                            onclick: move |_| {
-                                haptic(Haptic::Light);
-                                sheet.set(Some(Sheet::ChangePassword));
-                            },
-                            {tid!("settings-change-password")}
-                        }
-                    }
-                    li { class: "list-row items-center",
-                        div { class: "list-col-grow flex flex-col gap-1",
-                            span { class: "font-medium", {tid!("settings-compromised")} }
-                            span { class: "text-sm text-base-content/70", {tid!("settings-compromised-hint")} }
-                        }
-                        button {
-                            id: "compromised-open",
-                            r#type: "button",
-                            class: "btn btn-sm btn-error btn-outline",
-                            onclick: move |_| {
-                                haptic(Haptic::Light);
-                                sheet.set(Some(Sheet::Compromised));
-                            },
-                            {tid!("settings-compromised-open")}
-                        }
-                    }
+        section { id: "security-card", class: "flex flex-col",
+            h2 { class: "list-header", {tid!("settings-security")} }
+            ul { class: "list-group", style: "--separator-inset: 3.75rem",
+                crate::auth::recovery_ui::RecoveryKeyRow { account: account.clone() }
+                ListRow {
+                    id: "change-password-open",
+                    title: tid!("settings-password"),
+                    chevron: true,
+                    onclick: move |_| {
+                        haptic(Haptic::Light);
+                        sheet.set(Some(Sheet::ChangePassword));
+                    },
+                    RowTile { tint: "bg-base-200 text-base-content/70", LockIcon {} }
                 }
+                ListRow {
+                    id: "compromised-open",
+                    title: tid!("settings-compromised-open"),
+                    subtitle: tid!("settings-compromised-short"),
+                    subtitle_class: "text-base-content/70",
+                    chevron: true,
+                    onclick: move |_| {
+                        haptic(Haptic::Light);
+                        sheet.set(Some(Sheet::Compromised));
+                    },
+                    RowTile { tint: "bg-base-200 text-base-content/70", ShieldIcon {} }
+                }
+            }
+            if let Some((id, footnote)) = footnote {
+                ListFooter { id, "{footnote}" }
             }
         }
         if let Some(open) = sheet() {

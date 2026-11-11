@@ -88,6 +88,9 @@ pub enum Outcome {
     /// Nothing arrives on its own from here, so the page offers a retry instead of a skeleton it
     /// would sit on for ever.
     Unusable,
+    /// The key changed with no way to the new one (T10): the rows the cache drew while the sync ran
+    /// are withdrawn, since the store only learns of the rotation from this answer.
+    Rotated,
 }
 
 /// What the one body resource adds up to, resolved against the rows the page holds and the offline
@@ -126,6 +129,9 @@ pub fn decide(
         // with stale rows. Offline renders what was cached, under the version it was cached at: the
         // cache effect writes these rows straight back, and a `None` there withdrew the claim, so
         // the next online open re-downloaded the whole project.
+        if went_rotated(sync) {
+            return Outcome::Rotated;
+        }
         if !went_offline(sync) {
             return Outcome::Wait;
         }
@@ -465,6 +471,13 @@ mod tests {
             let Outcome::Load { users, expenses, version, .. } = out else { panic!("expected Load, got {out:?}") };
             assert_eq!((users[0].id, expenses[0].id, version), (9, 7, Some(42)));
         }
+    }
+
+    #[test]
+    fn a_rotated_answer_withdraws_the_cache_drawn_before_it() {
+        let rotated = ServerFnError::ServerError { message: shared::errors::PROJECT_KEY_ROTATED.into(), code: 403, details: None };
+        assert_eq!(decide(Some(&Err(rotated)), Some(&full_cache()), None, pid()), Outcome::Rotated);
+        assert_eq!(decide(Some(&Err(gone())), Some(&full_cache()), None, pid()), Outcome::Wait, "any other refusal only waits");
     }
 
     #[test]

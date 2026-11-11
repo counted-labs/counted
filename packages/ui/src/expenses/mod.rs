@@ -15,6 +15,7 @@ mod project_header;
 mod project_states;
 mod project_stats;
 mod rotation_sheets;
+mod share_preview;
 pub(crate) mod tabs;
 
 pub use expense_row::{ExpenseRow, ExpenseSwipe};

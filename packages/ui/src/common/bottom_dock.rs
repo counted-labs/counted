@@ -29,6 +29,7 @@ fn active_tab(route: &Route) -> Option<DockTab> {
         | Route::ForgotPasswordPage {}
         | Route::ResetPage { .. }
         | Route::FriendsPage {}
+        | Route::PaymentMethodsPage {}
         | Route::HelpPage {}
         | Route::PrivacyPage {}
         | Route::TermsPage {}
@@ -260,7 +261,7 @@ mod tests {
 
     #[test]
     fn pages_pushed_from_settings_keep_the_dock_with_settings_lit() {
-        for route in [Route::FriendsPage {}, Route::HelpPage {}, Route::LicensesPage {}, Route::PrivacyPage {}] {
+        for route in [Route::FriendsPage {}, Route::PaymentMethodsPage {}, Route::HelpPage {}, Route::LicensesPage {}, Route::PrivacyPage {}] {
             assert_eq!(active_tab(&route), Some(DockTab::Settings), "{route:?}");
             assert!(shows_dock(&route), "{route:?}");
         }

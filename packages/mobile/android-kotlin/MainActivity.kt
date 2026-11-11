@@ -30,6 +30,7 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.activity.BackEventCompat
 import androidx.activity.OnBackPressedCallback
+import androidx.annotation.Keep
 import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -41,6 +42,9 @@ import org.unifiedpush.android.connector.UnifiedPush
 
 typealias BuildConfig = fr.counted.app.BuildConfig
 
+// Rust reaches openUri, shareFile, setLightSystemBars and requestPush through JNI only, which R8
+// cannot see: without @Keep the release build strips them and every call fails silently.
+@Keep
 class MainActivity : WryActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)

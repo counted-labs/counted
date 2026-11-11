@@ -14,6 +14,16 @@ pub fn user_color_class(user_id: i32) -> &'static str {
     TINTS[(user_id.unsigned_abs() as usize) % TINTS.len()]
 }
 
+pub fn account_color_class(account_id: uuid::Uuid) -> &'static str {
+    TINTS[(account_id.as_u128() % TINTS.len() as u128) as usize]
+}
+
+/// A friend has no name on this device, only an address: "alex.leroy@x" reads "AL".
+pub fn email_initials(email: &str) -> String {
+    let local = email.split(['@', '(']).next().unwrap_or_default();
+    crate::common::local_storage::initials(&local.replace(['.', '_', '-', '+'], " "))
+}
+
 #[derive(PartialEq, Clone, Copy)]
 pub enum SizeClass {
     W6,
@@ -137,6 +147,22 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn initials_come_from_the_address_local_part() {
+        assert_eq!(email_initials("alex.leroy@proton.me"), "AL");
+        assert_eq!(email_initials("theo_moreau@gmail.com"), "TM");
+        assert_eq!(email_initials("julie@gmail.com"), "J");
+        assert_eq!(email_initials(""), "?");
+        assert_eq!(email_initials("Marc (Week-end à Lyon)"), "M");
+    }
+
+    #[test]
+    fn an_account_keeps_one_tint() {
+        let id = uuid::Uuid::from_u128(7);
+        assert_eq!(account_color_class(id), account_color_class(id));
+        assert_eq!(account_color_class(id), TINTS[2]);
     }
 
     #[test]

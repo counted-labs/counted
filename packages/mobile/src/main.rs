@@ -112,8 +112,10 @@ const DYNAMIC_TYPE_SCRIPT: &str = "(function(){function measure(){var p=document
 /// end of the sheet's slide-in (`sheet-in`): focus moving between two fields keeps the keyboard up,
 /// and a field focused mid-slide would make WebKit pan to a box still below the screen. A tap that
 /// opened nothing gives the proxy up after 2 s. `modal_focus.rs` leaves the proxy's focus alone.
-/// Android raises the keyboard on a script focus already.
-const KEYBOARD_PROXY_SCRIPT: &str = "(function(){var proxy=null,start=null,handing=0;function make(){proxy=document.createElement('input');proxy.type='text';proxy.setAttribute('inputmode','decimal');proxy.setAttribute('aria-hidden','true');proxy.setAttribute('data-keyboard-proxy','');proxy.setAttribute('autocomplete','off');proxy.tabIndex=-1;proxy.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;border:0;padding:0;font-size:16px;pointer-events:none';document.body.appendChild(proxy);}function afterSlide(box,then){var ran=false;function run(){if(ran)return;ran=true;then();}var a=box.getAnimations?box.getAnimations().filter(function(x){return x.animationName==='sheet-in'&&x.playState==='running';}):[];if(!a.length)return run();a[0].finished.then(run,run);setTimeout(run,700);}document.addEventListener('touchstart',function(e){var t=e.touches[0];start=e.touches.length===1&&e.target instanceof Element&&e.target.closest('#add-expense-btn')?{x:t.clientX,y:t.clientY}:null;},{capture:true,passive:true});document.addEventListener('touchend',function(e){var s=start;start=null;if(!s||e.touches.length)return;var t=e.changedTouches[0];if(Math.abs(t.clientX-s.x)>10||Math.abs(t.clientY-s.y)>10)return;if(!proxy||!proxy.isConnected)make();proxy.value='';proxy.focus({preventScroll:true});handing=Date.now();setTimeout(function(){handing=0;if(document.activeElement===proxy)proxy.blur();},2000);},{capture:true,passive:true});window._countedObserve(function(){if(!handing||document.activeElement!==proxy)return;var field=document.getElementById('expense-amount');var box=field&&field.closest('.modal-box');if(!box)return;handing=0;afterSlide(box,function(){if(document.activeElement===proxy&&field.isConnected)field.focus({preventScroll:true});});});})();";
+/// Android raises the keyboard on a script focus already. The tap's compatibility `mousedown`
+/// arrives 40 ms after the `touchend` and its default moves the focus off the proxy (measured
+/// 2026-11-10, docs/ios.md), so it is cancelled while the proxy holds the focus for this tap.
+const KEYBOARD_PROXY_SCRIPT: &str = "(function(){var proxy=null,start=null,handing=0;function make(){proxy=document.createElement('input');proxy.type='text';proxy.setAttribute('inputmode','decimal');proxy.setAttribute('aria-hidden','true');proxy.setAttribute('data-keyboard-proxy','');proxy.setAttribute('autocomplete','off');proxy.tabIndex=-1;proxy.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;border:0;padding:0;font-size:16px;pointer-events:none';document.body.appendChild(proxy);}function afterSlide(box,then){var ran=false;function run(){if(ran)return;ran=true;then();}var a=box.getAnimations?box.getAnimations().filter(function(x){return x.animationName==='sheet-in'&&x.playState==='running';}):[];if(!a.length)return run();a[0].finished.then(run,run);setTimeout(run,700);}document.addEventListener('touchstart',function(e){var t=e.touches[0];start=e.touches.length===1&&e.target instanceof Element&&e.target.closest('#add-expense-btn')?{x:t.clientX,y:t.clientY}:null;},{capture:true,passive:true});document.addEventListener('touchend',function(e){var s=start;start=null;if(!s||e.touches.length)return;var t=e.changedTouches[0];if(Math.abs(t.clientX-s.x)>10||Math.abs(t.clientY-s.y)>10)return;if(!proxy||!proxy.isConnected)make();proxy.value='';proxy.focus({preventScroll:true});handing=Date.now();setTimeout(function(){handing=0;if(document.activeElement===proxy)proxy.blur();},2000);},{capture:true,passive:true});document.addEventListener('mousedown',function(e){if(handing&&document.activeElement===proxy&&e.target instanceof Element&&e.target.closest('#add-expense-btn'))e.preventDefault();},true);window._countedObserve(function(){if(!handing||document.activeElement!==proxy)return;var field=document.getElementById('expense-amount');var box=field&&field.closest('.modal-box');if(!box)return;handing=0;afterSlide(box,function(){if(document.activeElement===proxy&&field.isConnected)field.focus({preventScroll:true});});});})();";
 
 /// What a status-bar tap does on iOS (native-feel P4.3): the page scrolls in its own `.app-container`,
 /// which UIKit's scroll-to-top cannot reach, so `ScrollToTop` (the webview scroll view's delegate)
@@ -453,6 +455,7 @@ fn init_persistent_client(data_dir: &str) {
     // killed right after either does not keep the account key on disk with no session beside it.
     // The timer stays as the fallback for every other cookie change.
     ui::common::set_session_flusher(Arc::new(save.clone()));
+    ui::common::set_app_version(env!("CARGO_PKG_VERSION"));
     std::thread::spawn(move || loop {
         std::thread::sleep(std::time::Duration::from_secs(5));
         save();
@@ -1350,6 +1353,7 @@ fn app() -> Element {
         let webview = dioxus::mobile::window().webview.webview();
         set_launch_background(&*webview);
         status_bar_tap::install(&*webview);
+        keyboard_signal::install(unsafe { objc2::rc::Retained::cast_unchecked(webview.clone()) });
         voiceover_escape::install(unsafe { objc2::rc::Retained::cast_unchecked(webview) });
         hide_form_accessory_bar();
     });
@@ -1435,6 +1439,93 @@ fn evaluate_js(webview: &impl objc2::Message, js: &str) {
     let done: Option<&block2::Block<dyn Fn(*mut AnyObject, *mut NSError)>> = None;
     unsafe {
         let _: () = msg_send![webview, evaluateJavaScript: &*NSString::from_str(js), completionHandler: done];
+    }
+}
+
+/// The keyboard's own signal (docs/plans/ios-sheets-keyboard.md G1). iOS posts
+/// `UIKeyboardWillChangeFrameNotification` before the keyboard moves, with the end frame, the
+/// duration and the curve; `ui::common::keyboard` turns it into a prediction the `visualViewport`
+/// events then confirm or correct. The height is the end frame converted into the webview's own
+/// coordinates and measured from the webview's bottom edge, 0 unless the keyboard is docked there
+/// (a floating iPad keyboard, a hardware keyboard's strip); the JS applies its own 80 px floor and
+/// drops a non-local or inactive-state notification. Installed once (the returned token is kept,
+/// the centre holds observers weakly), with no queue, so the block runs inside UIKit's post on the
+/// main thread, before WebKit's own observer has scheduled anything. Not compiled on Windows: a
+/// scratch crate type-checked it for `aarch64-apple-ios`, the Codemagic build is the proof, and
+/// the two `tracing` lines (install, each notification) are how to read it on device.
+#[cfg(target_os = "ios")]
+mod keyboard_signal {
+    use objc2::rc::Retained;
+    use objc2::runtime::{NSObjectProtocol, ProtocolObject};
+    use objc2::MainThreadMarker;
+    use objc2_foundation::{NSNotification, NSNotificationCenter, NSNumber, NSString, NSValue};
+    use objc2_ui_kit::{
+        NSValueUIGeometryExtensions, UIApplication, UIApplicationState, UIKeyboardAnimationCurveUserInfoKey,
+        UIKeyboardAnimationDurationUserInfoKey, UIKeyboardFrameEndUserInfoKey, UIKeyboardIsLocalUserInfoKey,
+        UIKeyboardWillChangeFrameNotification, UIView,
+    };
+    use std::ptr::NonNull;
+    use std::time::Instant;
+
+    thread_local! {
+        static TOKEN: std::cell::OnceCell<Retained<ProtocolObject<dyn NSObjectProtocol>>> = const { std::cell::OnceCell::new() };
+    }
+
+    pub fn install(webview: Retained<UIView>) {
+        let Some(mtm) = MainThreadMarker::new() else {
+            return;
+        };
+        if TOKEN.with(|t| t.get().is_some()) {
+            return;
+        }
+        let start = Instant::now();
+        let block = block2::RcBlock::new(move |note: NonNull<NSNotification>| {
+            let note = unsafe { note.as_ref() };
+            let Some(info) = note.userInfo() else {
+                return;
+            };
+            let number = |key: &NSString| info.objectForKey(key).and_then(|v| v.downcast::<NSNumber>().ok());
+            let bounds = webview.bounds();
+            let bottom = bounds.origin.y + bounds.size.height;
+            let kb = info
+                .objectForKey(unsafe { UIKeyboardFrameEndUserInfoKey })
+                .and_then(|v| v.downcast::<NSValue>().ok())
+                .map(|v| webview.convertRect_fromView(unsafe { v.CGRectValue() }, None))
+                .filter(|end| end.origin.y + end.size.height >= bottom - 1.0)
+                .map(|end| (bottom - end.origin.y).max(0.0))
+                .unwrap_or(0.0);
+            let ms = number(unsafe { UIKeyboardAnimationDurationUserInfoKey })
+                .map(|n| n.doubleValue() * 1000.0)
+                .unwrap_or(0.0);
+            let curve = number(unsafe { UIKeyboardAnimationCurveUserInfoKey }).map(|n| n.integerValue()).unwrap_or(0);
+            let local = number(unsafe { UIKeyboardIsLocalUserInfoKey }).map(|n| n.boolValue()).unwrap_or(true);
+            let state = UIApplication::sharedApplication(mtm).applicationState();
+            let state = if state == UIApplicationState::Active {
+                "active"
+            } else if state == UIApplicationState::Inactive {
+                "inactive"
+            } else {
+                "background"
+            };
+            tracing::info!("keyboard will change frame: kb={kb:.1} ms={ms:.0} curve={curve} local={local} state={state}");
+            let js = format!(
+                "window._countedKeyboard&&window._countedKeyboard.willChange({kb:.1},{ms:.0},{curve},{local},'{state}',{:.1})",
+                start.elapsed().as_secs_f64() * 1000.0
+            );
+            super::evaluate_js(&*webview, &js);
+        });
+        let token = unsafe {
+            NSNotificationCenter::defaultCenter().addObserverForName_object_queue_usingBlock(
+                Some(UIKeyboardWillChangeFrameNotification),
+                None,
+                None,
+                &block,
+            )
+        };
+        tracing::info!("keyboard-frame observer installed");
+        TOKEN.with(|t| {
+            let _ = t.set(token);
+        });
     }
 }
 
@@ -1665,6 +1756,15 @@ mod tests {
             "document.documentElement.dataset.plat='ios';document.documentElement.dataset.ios='17';"
         );
         assert_eq!(platform_markers(None), "document.documentElement.dataset.plat='android';");
+    }
+
+    #[test]
+    fn the_keypad_proxy_survives_the_taps_mousedown() {
+        let script = super::KEYBOARD_PROXY_SCRIPT;
+        assert!(script.contains("proxy.focus({preventScroll:true})"));
+        assert!(script.contains("field.focus({preventScroll:true})"));
+        assert!(script.contains("document.addEventListener('mousedown',function(e){if(handing&&document.activeElement===proxy"));
+        assert_eq!(script.matches("preventDefault").count(), 1, "the mousedown is the one default cancelled");
     }
 
     #[test]

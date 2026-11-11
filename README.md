@@ -51,6 +51,10 @@ GitHub-hosted machine by [`.github/workflows/rebuild.yml`](.github/workflows/reb
 also checks the signature below. Its runs are public in this repository's
 [Actions tab](https://github.com/counted-labs/counted/actions/workflows/rebuild.yml).
 
+A third workflow, [`.github/workflows/ios-simulator.yml`](.github/workflows/ios-simulator.yml), runs
+only by hand: it builds the app for an iPhone simulator and checks, through real taps, that the
+keyboard handling of its sheets holds on a release.
+
 A rebuild says what a release contains, not that counted.fr serves it. Every six hours
 [`.github/workflows/monitor.yml`](.github/workflows/monitor.yml) checks that too: the list
 counted.fr serves must be a signed release's, every file in it must match, and its pages may run

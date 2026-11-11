@@ -97,6 +97,7 @@ pub fn use_project_store() -> ProjectStore {
     // it during the first render is a hydration mismatch that crashes the interpreter.
     let mut key_ctx = use_context_provider(|| ProjectKey(Signal::new(None))).0;
     let mut key_missing = use_signal(|| false);
+    let held_key_changes = use_signal(|| 0u32);
     let mut unusable = use_signal(|| false);
     let mut live: Signal<Option<LiveData>> = use_signal(|| None);
     let mut recurring: Signal<Option<RecurringSnapshot>> = use_signal(|| None);
@@ -148,7 +149,14 @@ pub fn use_project_store() -> ProjectStore {
         spawn(async move {
             // Persisted before the membership write, which escrows whatever the store holds. A
             // fragment key that differs from the held one is kept only if it decrypts the project.
+            let held_before = project_key(id);
             let adopted = adopt_project_key(ls_ctx, id, k).await;
+            // The sync ran under the token of the key held before; from `KEY_LIFECYCLE_FROM` the
+            // server refused it, and nothing else would fetch again.
+            if held_before.is_some() && project_key(id) != held_before {
+                let mut held_key_changes = held_key_changes;
+                *held_key_changes.write() += 1;
+            }
             // The page decrypts and encrypts with the key the store holds once this settles: a
             // refused fragment key would read rows as an empty project and write new ones under a
             // key the other members do not hold. Accepted ones too, because the effect re-runs when
@@ -210,6 +218,7 @@ pub fn use_project_store() -> ProjectStore {
 
     let mut sync = use_resource(use_reactive!(|project_id| async move {
         let _v = resource_version();
+        let _switched = held_key_changes();
         let id = project_id?;
         // `peek`: this must not subscribe, or clearing the flag below would restart the fetch it
         // was set to fix. The restart is always explicit. The page's own rows claim first: the disk
@@ -292,6 +301,9 @@ pub fn use_project_store() -> ProjectStore {
             unusable.set(dead_end);
         }
 
+        if matches!(outcome, Outcome::Rotated) && live.peek().as_ref().is_some_and(|l| l.project_id == id) {
+            live.set(None);
+        }
         let Outcome::Load { users, project, expenses, payments, version } = outcome else {
             // One retry, not a loop: the flag latches on the way *in*, so a second "unchanged"
             // leaves the page waiting rather than restarting forever. The Load path below clears

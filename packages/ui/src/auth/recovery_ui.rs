@@ -9,7 +9,8 @@ use crate::auth::account_key::remember;
 use crate::auth::account_rotation::{cancel_recovery_replacement, save_recovery_key};
 use crate::auth::recovery_flow::cancel_reset_with_password;
 use crate::auth::recovery_key;
-use crate::common::{copy_text, error_message, format_date, haptic, Flash, Haptic, LocalStorageState};
+use crate::common::{copy_text, error_message, format_date, haptic, Flash, Haptic, ListRow, LocalStorageState, RowTile};
+use crate::icons::{KeyIcon, UndoIcon};
 use crate::tid;
 
 /// A server time (UTC) as the device's local date and time.
@@ -28,47 +29,33 @@ pub fn RecoveryKeyRow(account: Account) -> Element {
     let mut sheet = use_signal(|| false);
     let mut cancelling = use_signal(|| false);
 
+    let (status, status_class, tint) = match (account.recovery_pending_at.is_some(), account.has_recovery_key) {
+        (true, _) => (tid!("settings-recovery-key-replacing"), "text-tile-amber-content", "bg-tile-amber text-tile-amber-content"),
+        (false, true) => (tid!("settings-recovery-key-created"), "text-base-content/70", "bg-tile-green text-tile-green-content"),
+        (false, false) => (tid!("settings-recovery-key-missing"), "text-tile-amber-content", "bg-tile-amber text-tile-amber-content"),
+    };
+
     rsx! {
-        li { id: "recovery-key-row", class: "list-row items-center",
-            div { class: "list-col-grow flex flex-col gap-1",
-                span { class: "font-medium", {tid!("settings-recovery-key")} }
-                span { class: "text-sm text-base-content/70",
-                    if account.has_recovery_key {
-                        {tid!("settings-recovery-key-set")}
-                    } else {
-                        {tid!("settings-recovery-key-none")}
-                    }
-                }
-                if let Some(at) = account.recovery_pending_at {
-                    span { id: "recovery-key-pending", class: "text-sm text-warning",
-                        {tid!("settings-recovery-key-pending", when: format_moment(at))}
-                    }
-                }
-            }
-            div { class: "flex flex-col gap-1 items-end",
-                button {
-                    id: "recovery-key-open",
-                    r#type: "button",
-                    class: if account.has_recovery_key { "btn btn-sm" } else { "btn btn-sm btn-primary" },
-                    onclick: move |_| {
-                        haptic(Haptic::Light);
-                        sheet.set(true);
-                    },
-                    if account.has_recovery_key {
-                        {tid!("recovery-key-replace")}
-                    } else {
-                        {tid!("recovery-key-create")}
-                    }
-                }
-                if account.recovery_pending_at.is_some() {
-                    button {
-                        id: "recovery-key-cancel-open",
-                        r#type: "button",
-                        class: "btn btn-sm btn-ghost text-error",
-                        onclick: move |_| cancelling.set(true),
-                        {tid!("recovery-key-cancel-replacement")}
-                    }
-                }
+        ListRow {
+            id: "recovery-key-open",
+            class: "recovery-key-row",
+            title: tid!("settings-recovery-key"),
+            subtitle: status,
+            subtitle_class: status_class,
+            chevron: true,
+            onclick: move |_| {
+                haptic(Haptic::Light);
+                sheet.set(true);
+            },
+            RowTile { tint, KeyIcon {} }
+        }
+        if account.recovery_pending_at.is_some() {
+            ListRow {
+                id: "recovery-key-cancel-open",
+                title: tid!("recovery-key-cancel-replacement"),
+                title_class: "text-error",
+                onclick: move |_| cancelling.set(true),
+                RowTile { tint: "bg-tile-red text-tile-red-content", UndoIcon {} }
             }
         }
         if sheet() {

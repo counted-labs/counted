@@ -91,7 +91,7 @@ pub fn PrivateArt() -> Element {
     rsx! {
         Mascot { pose: MascotPose::Locked, size: 190 }
         LockedTag { label: tid!("welcome-private-names"), class: "start-7 top-[15%]" }
-        LockedTag { label: tid!("welcome-private-amounts"), class: "end-6 top-[35%]" }
+        LockedTag { label: tid!("welcome-private-amounts"), class: "end-6 top-[22%]" }
         LockedTag { label: tid!("welcome-private-projects"), class: "start-11 bottom-[15%]" }
     }
 }

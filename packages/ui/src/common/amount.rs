@@ -26,6 +26,18 @@ fn drop_zero_cents(number: String) -> String {
     }
 }
 
+/// Four significant digits, trailing zeros dropped: "0,002729", "1,083", "370,5".
+pub fn rate(value: f64) -> String {
+    format_rate(value, comma_language())
+}
+
+fn format_rate(value: f64, comma: bool) -> String {
+    let decimals = (3.0 - value.abs().log10().floor()).clamp(0.0, 12.0) as usize;
+    let fixed = format!("{value:.decimals$}");
+    let trimmed = if fixed.contains('.') { fixed.trim_end_matches('0').trim_end_matches('.') } else { &fixed };
+    if comma { trimmed.replace('.', ",") } else { trimmed.to_string() }
+}
+
 pub fn number(value: f64) -> String {
     format_number(value, decimal_comma(&current_lang()))
 }
@@ -125,6 +137,15 @@ fn format_number(value: f64, comma: bool) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_rate_keeps_four_significant_digits_in_the_language_separator() {
+        assert_eq!(format_rate(0.0027294066269992904, true), "0,002729");
+        assert_eq!(format_rate(0.0027294066269992904, false), "0.002729");
+        assert_eq!(format_rate(1.0834, true), "1,083");
+        assert_eq!(format_rate(370.5, true), "370,5");
+        assert_eq!(format_rate(2.0, true), "2");
+    }
 
     #[test]
     fn groups_thousands_and_uses_the_language_separator() {

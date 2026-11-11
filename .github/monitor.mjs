@@ -5,7 +5,6 @@ const ORIGIN = "https://counted.fr";
 const APP_PAGES = ["/projects", "/login", "/register", "/settings", "/help", "/privacy", "/monitor-not-found"];
 const DX_BOOTSTRAP =
 	'window.hydrate_queue=[];window.dx_hydrate=(id,data,debug_types,debug_locations)=>{let decoded=atob(data),bytes=Uint8Array.from(decoded,(c)=>c.charCodeAt(0));if(window.hydration_callback)window.hydration_callback(id,bytes,debug_types,debug_locations);else window.hydrate_queue.push([id,bytes,debug_types,debug_locations])};';
-const HYDRATION_DATA = /^window\.initial_dioxus_hydration_data="[A-Za-z0-9+/=]*";$/;
 const HYDRATION_BLOCK = /^\s*type="text\/plain"\s+id="dioxus-hydration-data"\s*$/;
 const INTEGRITY_POLICY = "blocked-destinations=(script)";
 
@@ -67,7 +66,7 @@ function appScript(attributes, content) {
 	}
 	if (HYDRATION_BLOCK.test(attributes)) return /^[A-Za-z0-9+/=]*$/.test(content) ? null : "hydration data that is not base64";
 	if (attributes.trim() !== "") return "unknown script type";
-	return content === DX_BOOTSTRAP || HYDRATION_DATA.test(content) ? null : "unknown inline script";
+	return content === DX_BOOTSTRAP ? null : "unknown inline script";
 }
 
 function siteScript(attributes, content) {

@@ -205,7 +205,7 @@ const SHEET_DRAG_JS: &str = r#"
         cancel(s);
       }
       if (!narrow.matches || e.touches.length !== 1 || !(e.target instanceof Element)) return;
-      if (window._countedKeyboard && window._countedKeyboard.up()) return;
+      if (window._countedKeyboard && window._countedKeyboard.up() && window._countedKeyboard.gestures()) return;
       var box = e.target.closest('.modal-box');
       if (!box || box.closest('.modal') !== modal || box.dataset.sheetDrag === 'settling') return;
       var t = e.touches[0];

@@ -162,6 +162,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
 
     if key_ctx().is_none() {
         return rsx! {
+            super::share_preview::SharePreview {}
             div { class: "container app-container bg-base-100 overflow-auto p-4 pb-36 max-w-md w-full mx-auto flex flex-col gap-4",
                 PullToRefresh { on_refresh: move |_| sync.restart(), busy: pending(&sync) }
                 AppHeader {
@@ -246,6 +247,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
     let dismiss_guests = move || update_ls(ls_ctx, |state| dismiss_guests_hint(state, project_id));
 
     rsx! {
+        super::share_preview::SharePreview {}
         div { class: "container app-container bg-base-100 overflow-auto p-4 pb-36 max-w-md w-full mx-auto flex flex-col gap-4",
             // Each tab keeps its own scroll offset (page_transition.rs).
             "data-scroll-key": tab_id(active_tab()),

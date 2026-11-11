@@ -1,13 +1,13 @@
 [package]
 name = "mobile"
-version = "3.2.9"
+version = "3.2.10"
 edition = "2021"
 publish = false
 
 # F-Droid's versionCode: major*1000000 + minor*1000 + patch of `version` above, bumped with it.
 # Checked by `android-fdroid-apk` in android.mk. The Play build asks the Play API instead.
 [package.metadata.android]
-version_code = 3002009
+version_code = 3002010
 
 [dependencies]
 dioxus = { workspace = true, features = ["router"] }
@@ -69,6 +69,9 @@ objc2-ui-kit = { version = "0.3", features = [
 	# The iPad popover centred with no arrow: setSourceRect and bounds take a CGRect.
 	"UIPopoverSupport",
 	"objc2-core-foundation",
+	# The keyboard's frame: NSValue+UIGeometry for the end rect, UIApplicationState to drop a
+	# notification posted while the app is not active.
+	"UIGeometry",
 	# Launch background: the system appearance, read off the main screen before any window exists.
 	"UIScreen",
 	"UITraitCollection",
@@ -90,6 +93,9 @@ objc2-foundation = { version = "0.3", features = [
 	"NSProcessInfo",
 	"NSData",
 	"NSDictionary",
+	# The keyboard-frame observer: a block on NSNotificationCenter.
+	"NSOperation",
+	"block2",
 ] }
 # Push: the permission prompt, the completion block it takes, and the hop back to the main queue
 # that registerForRemoteNotifications needs.

@@ -40,6 +40,7 @@ pub fn route_depth(route: &Route) -> u8 {
         | Route::NotFoundPage { .. } => 0,
         Route::ExpensesPage { .. }
         | Route::FriendsPage {}
+        | Route::PaymentMethodsPage {}
         | Route::RegisterPage {}
         | Route::ForgotPasswordPage {}
         | Route::HelpPage {}
