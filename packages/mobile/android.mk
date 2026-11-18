@@ -218,6 +218,9 @@ define patch_deep_links
 	@# sees a press: MainActivity's OnBackPressedCallback is the only back handler. See docs/android.md.
 	@grep -q 'OnBackPressedCallback' $(1)/app/app/src/main/kotlin/dev/dioxus/main/MainActivity.kt \
 		|| { echo "ERROR: MainActivity.kt has no OnBackPressedCallback - back would close the app"; exit 1; }
+	@# Without it Rust finds no store key and keeps every store plain (docs/plans/security-3.3.0.md §4).
+	@grep -q 'fun storeKey(mayCreate: Boolean)' $(1)/app/app/src/main/kotlin/dev/dioxus/main/MainActivity.kt \
+		|| { echo "ERROR: MainActivity.kt has no storeKey - the store would stay plain"; exit 1; }
 	@! grep -q 'enableOnBackInvokedCallback="false"' $(1)/app/app/src/main/AndroidManifest.xml \
 		|| { echo "ERROR: the predictive-back opt-out is back in the manifest"; exit 1; }
 endef
@@ -249,6 +252,12 @@ define patch_release_strip
 		|| { echo "ERROR: keepDebugSymbols still in build.gradle.kts - dx's template changed, release .so would ship unstripped"; exit 1; }
 	@grep -q 'ndkVersion' $(1)/app/app/build.gradle.kts \
 		|| { echo "ERROR: ndkVersion not pinned - AGP 8.7 defaults to an NDK that is not installed"; exit 1; }
+	@grep -qE 'versionCode = $(VERSION_CODE)([^0-9]|$$)' $(1)/app/app/build.gradle.kts \
+		|| { echo "ERROR: versionCode $(VERSION_CODE) not in build.gradle.kts - dx's template changed, the build would carry dx's own code"; exit 1; }
+	@grep -qE 'targetSdk = 36([^0-9]|$$)' $(1)/app/app/build.gradle.kts \
+		|| { echo "ERROR: targetSdk 36 not in build.gradle.kts - dx's template changed"; exit 1; }
+	@grep -q '<string name="app_name">Counted</string>' $(1)/app/app/src/main/res/values/strings.xml \
+		|| { echo "ERROR: the app is not named Counted in strings.xml - dx's template changed, the launcher would show its placeholder"; exit 1; }
 endef
 
 # What F-Droid builds and the android-fdroid CI job signs: no embedded FCM distributor, and the

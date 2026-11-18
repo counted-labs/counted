@@ -1,0 +1,45 @@
+Counted on sovellus kulujen jakamiseen kavereiden kesken: 100 % eurooppalainen ja yksityinen jo lähtökohdiltaan. Loma, kimppakämppä, viikonloppu, yhteislahja: kirjaa kulut, ja Counted kertoo, kuka on velkaa kenelle ja kuinka paljon, mahdollisimman vähillä siirroilla.
+
+🔗 Tiliä ei tarvita
+Luo projekti, lähetä linkki. Siinä kaikki. Kaverisi liittyvät mukaan ilman rekisteröitymistä. Tili? Ei koskaan pakollinen. Sillä löydät projektisi toiselta laitteelta, kutsut kavereita sovelluksesta ja jaat maksutietosi.
+
+🔒 Salattu puhelimessasi
+Nimet, summat, projektit, historia: kaikki salataan puhelimessasi. Vain sinulla on avain. Kukaan ei voi lukea kulujasi, emme edes me. Myöskään salasanasi ei koskaan poistu puhelimestasi.
+
+📷 Kuittien skannaus puhelimessa
+Ota kuitista kuva: summa, päivämäärä ja luokka täyttyvät itsestään. Kaikki tapahtuu puhelimessasi. Kuvaa ei säilytetä.
+
+🇪🇺 100 % eurooppalainen
+Palvelimet Saksassa, sähköpostit lähtevät Ranskasta. Projektisi eivät koskaan poistu Euroopan unionista.
+
+💸 Oikeasti ilmainen
+Ilmainen, ilman mainoksia, ilman seurantaa ja ilman rajaa kulujen tai osallistujien määrälle. Kaikki tässä kuvattu on ilmaista ja pysyy ilmaisena. Emme kerää mitään emmekä myy tietojasi. Se ei ole liiketoimintamallimme.
+
+✨ Kaikki yhteisiin kuluihin
+• Kulut, siirrot ja tulot, useilla maksajilla ja useilla edunsaajilla
+• Jako tasan, osuuksittain tai tarkalla summalla, sentilleen tarkistettuna
+• Mahdollisimman vähän siirtoja ryhmän tasaamiseen
+• Toistuvat kulut, kuten vuokra tai tilaukset: kirjaat kerran, ja ne lisätään joka eräpäivänä
+• Yli 150 valuuttaa, muunnettuna Euroopan komission kuukausikurssilla
+• Tilastot luokittain, henkilöittäin ja kuukausittain
+• Omat luokat, jokaisella oma emojinsa, ja emoji jokaiselle projektille
+• Historia siitä, kuka lisäsi, muokkasi tai poisti mitäkin
+• Haku nimen, muistiinpanon tai luokan mukaan, laitteellasi
+• Tilillä henkilökohtainen ”Omat kulut” -projekti: mitä kulutat yksin, sekä osuutesi ryhmistäsi, kuukausi kuukaudelta
+• Siirrä kulu projektista toiseen
+• Kuukausibudjetit luokittain todellisen osuutesi mukaan ja varoitus 80 %:ssa, laskettuna laitteellasi
+• Aloitusnäytöllä: paljonko sinulle ollaan velkaa ja paljonko olet itse velkaa kaikissa projekteissa, laskettuna laitteellasi
+• ”Oma kulu” -pikakuvake, kun painat sovelluksen kuvaketta pitkään
+• Offline: selaa ja kirjaa ilman verkkoa
+• CSV- ja JSON-vienti yhdellä napautuksella
+• Maksutiedot (IBAN, PayPal, Wero, Lydia, Revolut…) salattuina kuten kaikki muukin
+• Vaihda salasana menettämättä mitään; jos unohdat sen, palautusavain tuo kaiken takaisin
+• Salasana vuotanut tai puhelin kadonnut: uudet tiliavaimet, ja kaikki muut laitteet kirjataan ulos
+• Projektin ylläpitäjät: jonkun poistaminen vaihtaa projektin avaimen, eikä hänen vanha linkkinsä avaa enää mitään
+• Jäsenet, joilla on tili, saavat uuden avaimen automaattisesti, kvanttiturvallisesti salattuna; muut saavat uuden linkin
+• Tricount-tuonti: liitä jakolinkki, ja kaikki siirtyy mukana
+• Verkossa, Androidilla ja iOS:llä: sama projekti kaikkialla, samalla linkillä
+• 32 kieltä, mukaan lukien kaikki EU:n 24 virallista kieltä
+
+Miten se oikeasti toimii? counted.fr/en/encryption
+Tarkista itse koodi, jota ajat: counted.fr/en/verify

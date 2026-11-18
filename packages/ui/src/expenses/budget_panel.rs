@@ -6,11 +6,11 @@ use std::collections::{BTreeMap, HashMap};
 use uuid::Uuid;
 
 use crate::categories::{ProjectCategories, ShownCategory, CHART_CATEGORIES};
-use crate::common::{error_message, update_project_fresh, whole_amount, ProjectKey};
+use crate::common::{error_message, update_project_fresh, whole_amount, ProjectKey, SheetBar, SheetFooter, SHEET_TITLE};
 use crate::crypto::{decrypt_json, encrypt_padded_json};
 use crate::expenses::helpers::budgets::{BudgetLine, Meter};
 use crate::expenses::helpers::expense_form_helpers::parse_amount;
-use crate::icons::{CloseIcon, WalletIcon, ICON_HEADER};
+use crate::icons::WalletIcon;
 use crate::tid;
 
 pub(crate) fn money(amount: f64, currency: &str) -> String {
@@ -205,20 +205,12 @@ pub fn BudgetSheet(
             aria_modal: "true",
             aria_labelledby: "budget-sheet-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md flex flex-col gap-4",
-                div { class: "flex items-start gap-3",
-                    div { class: "flex-1 flex flex-col gap-1",
-                        h2 { id: "budget-sheet-title", class: "font-display font-bold text-xl", {tid!("budget-sheet-title")} }
-                        p { class: "text-sm text-base-content/70", {tid!("budget-sheet-intro")} }
-                    }
-                    button {
-                        r#type: "button",
-                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                        aria_label: tid!("close"),
-                        onclick: move |_| on_close.call(()),
-                        CloseIcon { size: ICON_HEADER }
-                    }
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar { close_id: "budget-close", task: true, on_close,
+                    h2 { id: "budget-sheet-title", class: SHEET_TITLE, {tid!("budget-sheet-title")} }
                 }
+                div { class: "flex-1 overflow-y-auto flex flex-col gap-4 px-5 pt-1 pb-4",
+                p { class: "text-sm text-base-content/70", {tid!("budget-sheet-intro")} }
                 if let Some(err) = error_msg() {
                     div { role: "alert", class: "alert alert-error text-sm", "{err}" }
                 }
@@ -274,17 +266,13 @@ pub fn BudgetSheet(
                         onchange: move |e| alert.set(e.checked()),
                     }
                 }
-                div { class: "flex gap-2.5",
-                    button {
-                        r#type: "button",
-                        class: "btn flex-1 rounded-full",
-                        onclick: move |_| on_close.call(()),
-                        {tid!("cancel")}
-                    }
+                }
+                SheetFooter {
+                    on_cancel: on_close,
                     button {
                         id: "budget-save",
                         r#type: "button",
-                        class: "btn btn-primary flex-[2] rounded-full",
+                        class: "btn btn-primary",
                         disabled: saving(),
                         onclick: on_save,
                         if saving() {

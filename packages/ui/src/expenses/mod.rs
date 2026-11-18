@@ -6,7 +6,6 @@ mod expense_search;
 pub(crate) mod my_spending;
 pub(crate) mod move_expense;
 mod expenses_page;
-mod guests_card;
 pub(crate) mod helpers;
 pub(crate) mod hooks;
 pub(crate) mod modals;

@@ -2,9 +2,9 @@ use dioxus::prelude::*;
 use shared::{Account, User};
 use uuid::Uuid;
 
-use crate::common::{copy_text, error_message, haptic, share_link_for, share_text, Flash, Haptic, LocalStorageState};
+use crate::common::{copy_text, error_message, haptic, share_link_for, share_text, Flash, Haptic, LocalStorageState, SheetBar, SheetFooter, SHEET_TITLE};
 use crate::decrypted::user_name;
-use crate::icons::{CheckIcon, ICON_HEADER, ICON_INLINE};
+use crate::icons::{CheckIcon, ShieldIcon, ICON_HEADER, ICON_INLINE};
 use crate::rotation_flow::{load_audience, names_and_others, rotate, short_link, Audience, Removal, Rotated};
 use crate::tid;
 
@@ -112,6 +112,44 @@ pub fn ProjectRotation(
     }
 }
 
+/// The admin's prompt to change a project's first key (SPEC 14.3), styled as the guests card.
+#[component]
+pub fn FirstKeyCard(on_later: EventHandler<()>, on_rotate: EventHandler<()>) -> Element {
+    rsx! {
+        div { id: "first-key-hint", role: "status", class: "alert alert-warning alert-soft text-sm text-base-content! flex flex-col gap-2",
+            div { class: "flex items-start gap-2 w-full min-w-0",
+                span { class: "shrink-0 flex pt-0.5 text-warning", ShieldIcon { size: ICON_INLINE } }
+                span { class: "flex flex-col min-w-0",
+                    span { class: "font-semibold", {tid!("first-key-hint-title")} }
+                    span { class: "text-base-content/70", {tid!("first-key-hint-body")} }
+                }
+            }
+            div { class: "flex justify-end gap-2 w-full",
+                button {
+                    id: "first-key-hint-later",
+                    r#type: "button",
+                    class: "btn btn-ghost btn-sm",
+                    onclick: move |_| {
+                        haptic(Haptic::Light);
+                        on_later.call(());
+                    },
+                    {tid!("guests-hint-later")}
+                }
+                button {
+                    id: "first-key-hint-rotate",
+                    r#type: "button",
+                    class: "btn btn-primary btn-sm",
+                    onclick: move |_| {
+                        haptic(Haptic::Light);
+                        on_rotate.call(());
+                    },
+                    {tid!("rotation-confirm-rotate")}
+                }
+            }
+        }
+    }
+}
+
 /// Artboard T8: what changing the key does and who it reaches. No recipient checklist (D11).
 #[component]
 pub fn RotateSheet(
@@ -143,8 +181,11 @@ pub fn RotateSheet(
             aria_labelledby: "rotate-sheet-title",
             aria_describedby: "rotate-sheet-body",
             tabindex: "-1",
-            div { class: "modal-box max-w-md flex flex-col gap-3",
-                h2 { id: "rotate-sheet-title", class: "font-bold text-lg font-display", "{title}" }
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar { close_id: "rotate-close", task: true, on_close: cancel,
+                    h2 { id: "rotate-sheet-title", class: SHEET_TITLE, "{title}" }
+                }
+                div { class: "flex-1 overflow-y-auto flex flex-col gap-3 px-5 pt-1 pb-4",
                 p { id: "rotate-sheet-body", class: "text-sm text-base-content/80 leading-snug", "{body}" }
                 if let Some(a) = audience {
                     div { class: "flex items-center gap-3 min-h-11",
@@ -168,19 +209,13 @@ pub fn RotateSheet(
                 if let Some(msg) = error.clone() {
                     div { role: "alert", class: "alert alert-error alert-soft text-sm", "{msg}" }
                 }
-                div { class: "flex gap-2",
-                    button {
-                        id: "rotate-cancel",
-                        r#type: "button",
-                        class: "btn btn-outline border-base-300 h-12.5 flex-1 rounded-full",
-                        disabled: busy,
-                        onclick: cancel,
-                        {tid!("cancel")}
-                    }
+                }
+                SheetFooter {
+                    on_cancel: cancel,
                     button {
                         id: "rotate-confirm",
                         r#type: "button",
-                        class: if removing { "btn btn-error h-12.5 flex-[2] rounded-full px-3 leading-tight" } else { "btn btn-primary h-12.5 flex-[2] rounded-full px-3 leading-tight" },
+                        class: if removing { "btn btn-error leading-tight" } else { "btn btn-primary leading-tight" },
                         disabled: busy || waiting,
                         onclick: move |_| {
                             if !busy && !waiting {
@@ -194,7 +229,7 @@ pub fn RotateSheet(
                     }
                 }
             }
-            div { class: "modal-backdrop", onclick: cancel }
+            div { class: "modal-backdrop", onclick: move |_| cancel(()) }
         }
     }
 }
@@ -225,29 +260,30 @@ pub fn NewLinkSheet(
             aria_modal: "true",
             aria_labelledby: "new-link-sheet-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md flex flex-col gap-4",
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar { close_id: "new-link-close", on_close,
+                    h2 { id: "new-link-sheet-title", class: SHEET_TITLE, {tid!("rotation-done-title")} }
+                }
+                div { class: "flex-1 overflow-y-auto flex flex-col gap-4 px-5 pt-1 pb-6",
                 div { class: "flex items-center gap-3",
                     span { class: "size-11 shrink-0 rounded-full bg-secondary text-secondary-content flex items-center justify-center", aria_hidden: "true",
                         CheckIcon { size: ICON_HEADER }
                     }
-                    div { class: "flex flex-col gap-0.5 min-w-0",
-                        h2 { id: "new-link-sheet-title", class: "font-bold text-lg font-display", {tid!("rotation-done-title")} }
-                        span { class: "text-sm text-base-content/70 leading-snug", "{summary}" }
-                    }
+                    span { class: "text-sm text-base-content/70 leading-snug", "{summary}" }
                 }
                 div { class: "rounded-box border border-base-300 p-3 flex flex-col gap-2",
                     span { class: "text-xs font-semibold text-base-content/70", {tid!("rotation-new-link", count: by_link as i64)} }
                     span { class: "font-mono text-sm text-base-content/80 break-all", "{link}" }
                     div { class: "flex gap-2",
-                        button { id: "new-link-copy", r#type: "button", class: "btn btn-outline border-base-300 flex-1 rounded-full", onclick: move |_| on_copy.call(()), {tid!("copy")} }
-                        button { id: "new-link-share", r#type: "button", class: "btn btn-primary flex-1 rounded-full", onclick: move |_| on_share.call(()), {tid!("share-link")} }
+                        button { id: "new-link-copy", r#type: "button", class: "btn btn-outline border-base-300 flex-1", onclick: move |_| on_copy.call(()), {tid!("copy")} }
+                        button { id: "new-link-share", r#type: "button", class: "btn btn-primary flex-1", onclick: move |_| on_share.call(()), {tid!("share-link")} }
                     }
                 }
                 div { role: "status", class: "alert alert-success alert-soft text-sm",
                     CheckIcon { size: ICON_INLINE }
                     span { {tid!("rotation-link-renewed")} }
                 }
-                button { id: "new-link-done", r#type: "button", class: "btn btn-outline border-base-300 h-12.5 rounded-full", onclick: move |_| on_close.call(()), {tid!("rotation-done")} }
+                }
             }
             div { class: "modal-backdrop", onclick: move |_| on_close.call(()) }
         }

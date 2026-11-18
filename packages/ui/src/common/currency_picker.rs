@@ -1,8 +1,8 @@
 use dioxus::prelude::*;
 use shared::{Currency, CURRENCIES};
 
-use crate::common::{haptic, use_modal_focus, Haptic};
-use crate::icons::{CheckIcon, CloseIcon, ICON_ACTION};
+use crate::common::{haptic, use_modal_focus, Haptic, SheetBar, SHEET_TITLE};
+use crate::icons::{CheckIcon, ICON_ACTION};
 use crate::tid;
 
 pub fn currency_name(currency: &Currency) -> String {
@@ -115,15 +115,8 @@ fn CurrencySheet(
             tabindex: "-1",
             onclick: move |e| e.prevent_default(),
             div { class: "modal-box max-w-md p-0 flex flex-col",
-                div { class: "flex items-center gap-2 px-5 pt-4 pb-2",
-                    h2 { id: "currency-sheet-title", class: "flex-1 min-w-0 truncate font-bold text-lg font-display", "{title}" }
-                    button {
-                        r#type: "button",
-                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                        aria_label: tid!("close"),
-                        onclick: move |_| on_close.call(()),
-                        CloseIcon {}
-                    }
+                SheetBar { close_id: "currency-sheet-close", on_close,
+                    h2 { id: "currency-sheet-title", class: SHEET_TITLE, "{title}" }
                 }
                 div { class: "px-5 pb-2",
                     input {

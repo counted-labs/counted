@@ -11,7 +11,7 @@ use super::amount_input::{AmountInput, FocusedAmount};
 use super::amount_operator_bar::AmountOperatorBar;
 use super::participants_fieldset::ParticipantsFieldset;
 use crate::categories::ProjectCategories;
-use crate::common::{format_month_str, haptic, today_iso, yesterday_iso, CurrencyPicker, DiscardConfirm, FormSheetBar, Haptic};
+use crate::common::{format_month_str, haptic, today_iso, yesterday_iso, CurrencyPicker, DiscardConfirm, Haptic, SheetBar, SheetFooter, SHEET_TITLE};
 use crate::recurring::repeat_picker::RepeatRow;
 use crate::recurring::view::Repeat;
 
@@ -267,6 +267,8 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
     // `shrink-0` is load-bearing: `.collapse` is `overflow: hidden`, giving a flex item an
     // automatic minimum size of zero (CSS flexbox §4.5). Without it these shrink away inside the
     // bounded scroll body instead of making it scroll, clipping their own rows.
+    // Their title and content carry `min-w-0`: `.collapse` is a grid whose one column is `auto`,
+    // so a `truncate` name's full width widened it past the card and ate the right padding.
     let collapse_class = |expanded: bool| {
         // `w-auto`: daisyUI's `.collapse` is `width: 100%`, which a margin does not reduce - with
         // `mx-5` the box became a 100%-wide element with 2.5rem of margin around it and pushed
@@ -289,13 +291,9 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
             aria_labelledby: "expense-form-title",
             tabindex: "-1",
             div { class: "modal-box max-w-md p-0 flex flex-col",
-                div { class: "px-4 pt-3 pb-2 flex-shrink-0",
-                FormSheetBar {
+                SheetBar {
                     close_id: "expense-form-close",
-                    confirm_id: "expense-form-confirm",
-                    confirm_label: props.submit_label.clone(),
-                    form: Some("expense-form-fields"),
-                    disabled: loading(),
+                    task: true,
                     on_close: move |_| request_close(),
                     h2 { id: "expense-form-title", class: "sr-only", "{props.title}" }
                     // The type is a mode switch - it renames both participant sections and decides
@@ -329,9 +327,8 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                             }
                         }
                     } else {
-                        span { class: "flex-1 font-bold text-lg font-display truncate sheet-bar-title", "{props.title}" }
+                        span { class: SHEET_TITLE, "{props.title}" }
                     }
-                }
                 }
 
                 form { id: "expense-form-fields", class: "flex flex-col flex-1 overflow-hidden", onsubmit: props.on_submit,
@@ -575,13 +572,13 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                             // Layout utilities only: daisyUI's padding reserves the 3rem the
                             // absolute arrow needs, and its min-height is what the arrow's fixed
                             // `top` measures against.
-                            class: "collapse-title flex items-center justify-between gap-3 text-left",
+                            class: "collapse-title flex items-center justify-between gap-3 text-left min-w-0",
                             aria_expanded: "{payers_expanded}",
                             onclick: move |_| payers_open.toggle(),
                             span { class: "text-sm font-medium shrink-0", {tid!(payers_label(&expense_type()))} }
                             span { class: "text-sm text-base-content/70 truncate", {participants_summary(&payers()).label()} }
                         }
-                        div { class: "collapse-content",
+                        div { class: "collapse-content min-w-0",
                             ParticipantsFieldset {
                                 id: "expense-payers",
                                 legend: tid!(payers_label(&expense_type())),
@@ -599,13 +596,13 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                             // Layout utilities only: daisyUI's padding reserves the 3rem the
                             // absolute arrow needs, and its min-height is what the arrow's fixed
                             // `top` measures against.
-                            class: "collapse-title flex items-center justify-between gap-3 text-left",
+                            class: "collapse-title flex items-center justify-between gap-3 text-left min-w-0",
                             aria_expanded: "{debtors_expanded}",
                             onclick: move |_| debtors_open.toggle(),
                             span { class: "text-sm font-medium shrink-0", {tid!(debtors_label(&expense_type()))} }
                             span { class: "text-sm text-base-content/70 truncate", {participants_summary(&debtors()).label()} }
                         }
-                        div { class: "collapse-content",
+                        div { class: "collapse-content min-w-0",
                             ParticipantsFieldset {
                                 id: "expense-debtors",
                                 legend: tid!(debtors_label(&expense_type())),
@@ -650,19 +647,12 @@ pub fn ExpenseForm(props: ExpenseFormProps) -> Element {
                     }
 
                 } // end scrollable body
-                    div { class: "modal-action m-0 flex justify-end gap-2 px-5 py-3 border-t border-base-200 flex-shrink-0",
-                        // On a phone the ✕, the backdrop and the swipe down all cancel already, so
-                        // the second button only competes with the one action worth a full target.
-                        button {
-                            r#type: "button",
-                            class: "btn btn-ghost hidden sm:inline-flex",
-                            onclick: move |_| request_close(),
-                            {tid!("cancel")}
-                        }
+                    SheetFooter {
+                        on_cancel: move |_| request_close(),
                         button {
                             id: "expense-form-submit",
                             r#type: "submit",
-                            class: "btn btn-primary flex-1 sm:flex-none",
+                            class: "btn btn-primary",
                             disabled: loading(),
                             if loading() {
                                 span { class: "loading loading-spinner loading-sm" }

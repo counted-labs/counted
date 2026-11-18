@@ -344,3 +344,8 @@ impl Input<'_> {
         .collect()
     }
 }
+
+pub fn hybrid(data: &[u8]) {
+    let Some((&mode, rest)) = data.split_first() else { return };
+    crate::friends::friends_service::open_hostile(mode % 2 == 0, rest);
+}

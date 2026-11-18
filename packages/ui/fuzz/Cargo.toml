@@ -28,6 +28,13 @@ test = false
 doc = false
 bench = false
 
+[[bin]]
+name = "hybrid"
+path = "fuzz_targets/hybrid.rs"
+test = false
+doc = false
+bench = false
+
 [workspace]
 
 [patch.crates-io]

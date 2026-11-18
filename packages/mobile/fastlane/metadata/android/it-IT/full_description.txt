@@ -1,0 +1,45 @@
+Counted è l'app per dividere le spese tra amici: 100% europea e pensata per la privacy. Vacanze, casa condivisa, weekend, regalo di gruppo: registra le spese e Counted ti dice chi deve quanto a chi, con il minor numero di bonifici.
+
+🔗 Nessun account necessario
+Crea un progetto, invia il link. Tutto qui. I tuoi amici entrano e partecipano senza registrarsi. Un account? Mai obbligatorio. Serve a ritrovare i tuoi progetti su un altro dispositivo, invitare gli amici dall'app e condividere i tuoi dati di pagamento.
+
+🔒 Cifrato sul tuo telefono
+Nomi, importi, progetti, cronologia: tutto viene cifrato sul tuo telefono. Solo tu hai la chiave. Nessuno può leggere i tuoi conti, nemmeno noi. Anche la tua password non lascia mai il telefono.
+
+📷 Scansione degli scontrini, sul telefono
+Fotografa lo scontrino: importo, data e categoria si compilano da soli. Tutto avviene sul tuo telefono. La foto non viene conservata.
+
+🇪🇺 100% europeo
+Server in Germania, email inviate dalla Francia. I tuoi progetti non lasciano mai l'Unione europea.
+
+💸 Gratis, davvero
+Gratis, senza pubblicità, senza tracciatori e senza limiti di spese o di partecipanti. Tutto ciò che è descritto qui è gratuito e resta gratuito. Non raccogliamo nulla, non vendiamo i tuoi dati. Non è il nostro modello.
+
+✨ Tutto per le spese condivise
+• Spese, trasferimenti ed entrate, con più pagatori e più beneficiari
+• Divisione in parti uguali, per quote o per importo esatto, verificata al centesimo
+• Il minor numero di bonifici per chiudere i conti del gruppo
+• Spese ricorrenti come affitto o abbonamenti: inserite una volta, aggiunte a ogni scadenza
+• Oltre 150 valute, convertite al tasso mensile della Commissione europea
+• Statistiche per categoria, per persona e mese per mese
+• Le tue categorie, ognuna con la sua emoji, e un'emoji per ogni progetto
+• Cronologia di chi ha aggiunto, modificato o eliminato cosa
+• Ricerca per nome, nota o categoria, eseguita sul tuo dispositivo
+• Con un account, un progetto personale «Le mie spese»: quello che spendi da solo più la tua quota dei gruppi, mese per mese
+• Sposta una spesa da un progetto all'altro
+• Budget mensili per categoria sulla tua quota reale, con un avviso all'80% calcolato sul tuo dispositivo
+• Nella schermata principale, quanto ti devono e quanto devi in tutti i progetti, calcolato sul tuo dispositivo
+• Una scorciatoia «Spesa personale» tenendo premuta l'icona dell'app
+• Offline: consulta e aggiungi spese anche senza rete
+• Esportazione CSV e JSON con un tocco
+• Dati di pagamento (IBAN, PayPal, Wero, Lydia, Revolut…) cifrati come tutto il resto
+• Cambia la password senza perdere nulla; se la dimentichi, una chiave di recupero ti restituisce tutto
+• Password trapelata o telefono perso: nuove chiavi dell'account, tutti gli altri dispositivi disconnessi
+• Amministratori di progetto: rimuovere qualcuno cambia la chiave del progetto, e il suo vecchio link non apre più nulla
+• I membri con un account ricevono la nuova chiave in automatico, con cifratura post-quantistica; gli altri ricevono un nuovo link
+• Importazione da Tricount: incolla il link di condivisione e arriva tutto
+• Web, Android e iOS: lo stesso progetto ovunque, con lo stesso link
+• 32 lingue, comprese tutte le 24 lingue ufficiali dell'UE
+
+Come funziona esattamente? counted.fr/it/encryption
+Verifica tu stesso il codice che esegui: counted.fr/it/verify

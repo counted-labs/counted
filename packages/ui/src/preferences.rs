@@ -197,7 +197,6 @@ mod tests {
             payment_methods: None,
             public_key: None,
             private_key: None,
-            typed_wraps: false,
             ..Default::default()
         }
     }

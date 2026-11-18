@@ -1,0 +1,45 @@
+Counted är appen för att dela utgifter med vänner: 100 % europeisk och privat från grunden. Semester, kollektiv, helgresa, gemensam present: för in utgifterna, så visar Counted dig vem som är skyldig vem och hur mycket, med så få överföringar som möjligt.
+
+🔗 Inget konto behövs
+Skapa ett projekt, skicka länken. Klart. Dina vänner är med utan att registrera sig. Ett konto? Aldrig ett krav. Det används för att hitta dina projekt på en annan enhet, bjuda in vänner från appen och dela dina betalningsuppgifter.
+
+🔒 Krypterat i din telefon
+Namn, belopp, projekt, historik: allt krypteras i din telefon. Bara du har nyckeln. Ingen kan läsa dina räkenskaper, inte ens vi. Ditt lösenord lämnar heller aldrig din telefon.
+
+📷 Kvittoskanning, i telefonen
+Fota kvittot: belopp, datum och kategori fylls i automatiskt. Allt sker i din telefon. Fotot sparas inte.
+
+🇪🇺 100 % europeiskt
+Servrar i Tyskland, mejl skickas från Frankrike. Dina projekt lämnar aldrig Europeiska unionen.
+
+💸 Gratis på riktigt
+Gratis, utan annonser, utan spårare och utan tak för utgifter eller deltagare. Allt som beskrivs här är gratis och förblir gratis. Vi samlar inte in något, vi säljer inte dina uppgifter. Det är inte vår affärsmodell.
+
+✨ Allt för gemensamma utgifter
+• Utgifter, överföringar och inkomster, med flera betalare och flera förmånstagare
+• Dela lika, efter andelar eller med exakta belopp, kontrollerat på öret
+• Så få överföringar som möjligt för att göra upp i gruppen
+• Återkommande utgifter som hyra eller abonnemang: inlagda en gång, tillagda varje gång de förfaller
+• Över 150 valutor, omräknade till Europeiska kommissionens månadskurs
+• Statistik per kategori, per person och månad för månad
+• Egna kategorier, var och en med sin emoji, och en emoji för varje projekt
+• Historik över vem som har lagt till, redigerat eller tagit bort vad
+• Sök på namn, anteckning eller kategori, direkt på din enhet
+• Med ett konto ett personligt projekt ”Mina utgifter”: det du spenderar själv plus din andel i dina grupper, månad för månad
+• Flytta en utgift från ett projekt till ett annat
+• Månadsbudgetar per kategori på din faktiska andel, med en varning vid 80 %, uträknad på din enhet
+• På startskärmen: vad du ska få tillbaka och vad du är skyldig i alla projekt, uträknat på din enhet
+• En genväg ”Personlig utgift” med ett långt tryck på appikonen
+• Offline: bläddra och lägg in utan nätverk
+• Export till CSV och JSON med ett tryck
+• Betalningsuppgifter (IBAN, PayPal, Wero, Lydia, Revolut…) krypterade precis som allt annat
+• Byt lösenord utan att förlora något; glömmer du det, får du tillbaka allt med en återställningsnyckel
+• Lösenordet läckt eller telefonen borta: nya kontonycklar, alla andra enheter utloggade
+• Projektets admins: tar du bort någon byts projektnyckeln, och personens gamla länk öppnar inget längre
+• Medlemmar med konto får den nya nyckeln automatiskt, med postkvantkryptering; de andra får en ny länk
+• Import från Tricount: klistra in delningslänken, så följer allt med
+• Webb, Android och iOS: samma projekt överallt, med samma länk
+• 32 språk, däribland alla 24 officiella EU-språk
+
+Hur fungerar det, egentligen? counted.fr/en/encryption
+Granska själv koden du kör: counted.fr/en/verify

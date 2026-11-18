@@ -35,6 +35,7 @@ pub fn route_depth(route: &Route) -> u8 {
         | Route::SettingsPage {}
         | Route::LoginPage {}
         | Route::VerifyEmailPage { .. }
+        | Route::UnsubscribePage { .. }
         | Route::ResetPage { .. }
         | Route::DemoPage { .. }
         | Route::NotFoundPage { .. } => 0,

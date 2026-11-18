@@ -286,7 +286,6 @@ counted-groups-intro = Tvoj delež v teh skupinah se prišteje k Moji stroški i
 counted-groups-converted = { $from }, pretvorjeno v { $to }
 counted-groups-encrypted = Ta izbira je šifrirana s tvojim računom in te spremlja na tvojih napravah.
 counted-groups-empty = Na tej napravi še ni skupine.
-counted-groups-done = V redu
 counted-save-failed = Te izbire ni bilo mogoče shraniti. Poskusi znova.
 tab-budget = Proračun
 budget-title = Proračuni
@@ -728,6 +727,7 @@ help-encryption-see = Za podrobnosti glej
 help-forgot-password-q = Kaj se zgodi, če pozabim geslo?
 help-forgot-password-warning = Nihče ga ne more obnoviti namesto tebe.
 help-forgot-password-a = Tvoje geslo varuje tvoje šifrirne ključe in nam ni nikoli poslano: nihče - niti mi - ne more dešifrirati tvojih projektov namesto tebe. Hrani ga na varnem, najbolje v upravitelju gesel.
+help-forgot-password-recovery = Z obnovitvenim ključem iz Nastavitev izbereš novo geslo in dobiš vse nazaj. Brez obnovitvenega ključa pozabljeno geslo izbriše tvoje nastavitve, plačilne podatke in kode prijateljev.
 help-archive-delete-q = Kako arhiviram ali izbrišem projekt?
 help-archive-delete-a = Na zaslonu projekta odpri meni in izberi
 help-archive-delete-b = da ga skriješ, a ohraniš. Projekt je dokončno izbrisan, ko ga zapusti zadnji član.
@@ -777,22 +777,9 @@ friends-notify = Obvesti s sporočilom
 friends-notify-message = Prehajam na Counted za naše skupne stroške. Brezplačna registracija na https://counted.fr z naslovom { $email }: tam čaka moja prošnja za prijateljstvo.
 friends-notify-copied = Sporočilo kopirano
 friends-notify-copy-failed = Sporočila ni bilo mogoče kopirati
-guests-hint-title =
-    { $count ->
-        [one] { $count } udeleženec se še ni pridružil projektu
-        [two] { $count } udeleženca se še nista pridružila projektu
-        [few] { $count } udeleženci se še niso pridružili projektu
-       *[other] { $count } udeležencev se še ni pridružilo projektu
-    }
 guests-hint-later = Pozneje
-guests-hint-send = Povabi jih
-guests-send-title = Pošlji projekt udeležencem
-guests-send-friend = Povabi prijatelja iz Counteda
-guests-send-friend-badge = Brez povezave
-guests-send-friend-hint = Če že ima račun, dobi šifrirano povabilo; nič ne gre prek tvoje aplikacije za sporočila.
-guests-send-link = Deli povezavo do projekta
-guests-send-link-hint = Za tiste brez računa. Projekt odprejo z enim dotikom.
-guests-send-link-warning = Kdorkoli ima to povezavo, lahko bere in ureja projekt. Tvoja aplikacija za sporočila jo vidi tudi.
+first-key-hint-title = Zamenjaj ključ tega projekta
+first-key-hint-body = Še vedno uporablja svoj prvi ključ, ki je bil morda poslan v povabilu iz časa pred postkvantnim šifriranjem. Nov ključ ga zaščiti pred kvantnimi računalniki.
 invite-friends-title = Povabi prijatelje
 invite-friends-hint = Ključ projekta je na tej napravi šifriran za vsakega prijatelja. Strežnik ga nikoli ne vidi.
 invite-friends-empty = Še ni prijateljev za povabilo.
@@ -1109,6 +1096,14 @@ error-rotation-expired = Sprememba ključa je trajala predolgo in je bila prekli
 error-rotation-rows-changed = Projekt se je med spremembo ključa spremenil. Začni znova.
 project-rotated-title = Do tega projekta nimaš več dostopa
 project-rotated-body = Ključ tega projekta je bil spremenjen. Za novo povezavo prosi skrbnika projekta.
+store-locked-title = Tvoji shranjeni podatki so zaklenjeni
+store-locked-body = Counted ni mogel odpreti podatkov, shranjenih v tem telefonu. Odkleni telefon in poskusi znova.
+store-lost-title = Ta telefon je izgubil ključ do svojih podatkov
+store-lost-body = Counted ne more več odpreti podatkov, shranjenih v tem telefonu. Ponastavi ga, da začneš znova: projekti, shranjeni v tvojem računu, se vrnejo, ko se prijaviš.
+store-retry = Poskusi znova
+store-reset = Ponastavi ta telefon
+store-reset-warning = Projekti, ki niso shranjeni v računu, bodo za vedno izgubljeni.
+store-reset-confirm = Ponastavi in jih izgubi
 project-rotated-open-link = Odpri povezavo
 rotation-remove-title = Odstraniti { $name } iz projekta?
 rotation-rotate-title = Spremeniti ključ projekta?
@@ -1148,7 +1143,6 @@ rotation-new-link =
        *[other] Nova povezava za pošiljanje · { $count } oseb brez računa
     }
 rotation-link-renewed = Povezava je bila uspešno obnovljena.
-rotation-done = Končano
 history-key-changed = Ključ projekta spremenjen
 history-member-removed = { $name } ni več del projekta
 project-rotated-row-hint = Ključ je bil spremenjen. Prosi za novo povezavo.
@@ -1201,7 +1195,16 @@ friends-decline-label = Zavrni prošnjo od { $email }
 friends-add-hint-short = Ta oseba bo videla tvojo prošnjo, če ima račun. Če ne, ji sporoči.
 friends-send = Pošlji
 friends-sent-hint = Še nima računa? Sporoči ji: sporočilo jo povabi, da se registrira s tem naslovom.
-friends-done = Končano
+friends-mail-checkbox = Pošlji tudi povabilo po e-pošti
+friends-mail-helper = E-pošta ni šifrirana od konca do konca: tvoj naslov in naslov te osebe gresta prek našega ponudnika e-pošte, in ta oseba bo videla tvoj naslov. Natančno preveri naslov.
+friends-mail-learn-more = Več o tem
+friends-sent-mail-hint = Counted pošlje e-pošto na ta naslov, razen če je nedavno prejel povabilo ali se je odjavil.
+friends-sent-private-hint = Nič ni zapustilo šifriranja.
+friends-add-another = Dodaj še nekoga
+unsubscribe-title = Povabila po e-pošti
+unsubscribe-body = Ustaviti vsa povabila po e-pošti od Counted na ta naslov? Prijatelji te lahko še vedno povabijo v aplikaciji.
+unsubscribe-confirm = Nikoli mi ne pošiljaj povabil po e-pošti
+unsubscribe-done = Končano. Counted na ta naslov ne bo več pošiljal povabil po e-pošti.
 friends-their-code = Njegova varnostna koda
 friends-code-compare-hint = Preberita jo skupaj. Isto kodo mora videti na vrhu svoje strani Prijatelji.
 friends-no-key-hint = Še ni pripravljeno: njegov ključ se ustvari, ko naslednjič odpre Counted. Do takrat ga ne moreš povabiti.

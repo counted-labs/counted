@@ -216,7 +216,7 @@ An attacker in control of our server **could**:
   (detectable by comparing friend codes, 5.2; a later change is blocked on the device). Codes cover
   the X25519 key only: a substituted post-quantum key is not detectable that way, and leaves that
   friend's invitations as strong as the classical box, not weaker;
-- on app versions up to 3.2.7 and web versions up to v1.24.3, make a user who accepts a forged
+- on app installs older than 3.2.8 that never updated, make a user who accepts a forged
   invitation switch to a project key the attacker chose, with nothing that comparing codes would show
   ([SPEC.md](SPEC.md) section 9.1);
 - try to guess passwords offline from the stored login-proof hashes. Each guess costs an Argon2id

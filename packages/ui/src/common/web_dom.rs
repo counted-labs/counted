@@ -325,6 +325,8 @@ struct OpenModal {
     id: &'static str,
     opener: Option<web_sys::HtmlElement>,
     inerted: Vec<web_sys::Element>,
+    observer: Option<web_sys::MutationObserver>,
+    _on_mutation: wasm_bindgen::closure::Closure<dyn Fn()>,
 }
 
 thread_local! {
@@ -332,12 +334,23 @@ thread_local! {
     static ESCAPE_LISTENER: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
-fn is_live_region(el: &web_sys::Element) -> bool {
-    el.has_attribute("aria-live")
-        || matches!(el.get_attribute("role").as_deref(), Some("alert") | Some("status"))
+const CONTROLS: &str = "a[href], button, input, select, textarea, [tabindex]";
+
+/// A toast or a status line stays readable behind a dialog; a banner with buttons does not stay
+/// reachable.
+fn stays_live(el: &web_sys::Element) -> bool {
+    let live = el.has_attribute("aria-live")
+        || matches!(el.get_attribute("role").as_deref(), Some("alert") | Some("status"));
+    live && el.query_selector(CONTROLS).ok().flatten().is_none()
 }
 
-fn inert_outside(dialog: &web_sys::Element) -> Vec<web_sys::Element> {
+/// A dialog mounting beside the top one is about to take over, and inerts the rest itself.
+fn holds_dialog(el: &web_sys::Element) -> bool {
+    el.matches("[aria-modal=\"true\"]").unwrap_or(false)
+        || el.query_selector("[aria-modal=\"true\"]").ok().flatten().is_some()
+}
+
+fn inert_outside(dialog: &web_sys::Element, spare_dialogs: bool) -> Vec<web_sys::Element> {
     let body: Option<web_sys::Element> = document().and_then(|d| d.body()).map(Into::into);
     let mut inerted = Vec::new();
     let mut el = dialog.clone();
@@ -345,7 +358,7 @@ fn inert_outside(dialog: &web_sys::Element) -> Vec<web_sys::Element> {
         let Some(parent) = el.parent_element() else { break };
         let mut sibling = parent.first_element_child();
         while let Some(s) = sibling {
-            if s != el && !s.has_attribute("inert") && !is_live_region(&s) {
+            if s != el && !s.has_attribute("inert") && !stays_live(&s) && !(spare_dialogs && holds_dialog(&s)) {
                 let _ = s.set_attribute("inert", "");
                 inerted.push(s.clone());
             }
@@ -387,8 +400,18 @@ pub fn enter_modal(id: &'static str) -> bool {
     if !OPEN_MODALS.with_borrow(|m| m.iter().any(|m| m.id == id)) {
         listen_for_escape(&doc);
         let opener = doc.active_element().and_then(|e| e.dyn_into::<web_sys::HtmlElement>().ok());
-        let inerted = inert_outside(&dialog);
-        OPEN_MODALS.with_borrow_mut(|m| m.push(OpenModal { id, opener, inerted }));
+        let inerted = inert_outside(&dialog, false);
+        let on_mutation = wasm_bindgen::closure::Closure::<dyn Fn()>::new(move || keep_modal(id));
+        let observer = web_sys::MutationObserver::new(on_mutation.as_ref().unchecked_ref()).ok();
+        if let (Some(observer), Some(body)) = (&observer, doc.body()) {
+            let options = web_sys::MutationObserverInit::new();
+            options.set_child_list(true);
+            options.set_subtree(true);
+            let _ = observer.observe_with_options(&body, &options);
+        }
+        OPEN_MODALS.with_borrow_mut(|m| {
+            m.push(OpenModal { id, opener, inerted, observer, _on_mutation: on_mutation })
+        });
     }
     let focus_inside = |doc: &web_sys::Document| {
         dialog.contains(doc.active_element().as_ref().map(|el| el.as_ref()))
@@ -399,17 +422,55 @@ pub fn enter_modal(id: &'static str) -> bool {
     focus_inside(&doc)
 }
 
+fn is_top_modal(id: &'static str) -> bool {
+    OPEN_MODALS.with_borrow(|m| m.last().map(|m| m.id)) == Some(id)
+}
+
+/// Web twin of the observer callback in `modal_focus.rs`: the page mounted new content beside the
+/// top dialog, which is made inert too, or swapped content under the focus, which the dialog takes
+/// back. The focus is checked a task later: between a field's blur and the next one's focus the
+/// active element is the body, and a re-render in that gap would otherwise steal the focus.
+fn keep_modal(id: &'static str) {
+    let Some(dialog) = document().and_then(|d| d.get_element_by_id(id)) else { return };
+    OPEN_MODALS.with_borrow_mut(|m| {
+        if let Some(top) = m.last_mut().filter(|top| top.id == id) {
+            top.inerted.extend(inert_outside(&dialog, true));
+        }
+    });
+    wasm_bindgen_futures::spawn_local(async move {
+        sleep_ms(0).await;
+        let Some(doc) = document() else { return };
+        let body: Option<web_sys::Element> = doc.body().map(Into::into);
+        let active = doc.active_element();
+        if is_top_modal(id) && (active.is_none() || active == body) && dialog.is_connected() {
+            let _ = dialog.unchecked_ref::<web_sys::HtmlElement>().focus();
+        }
+    });
+}
+
 /// Web twin of `leave` in `modal_focus.rs`.
 pub fn leave_modal(id: &'static str) {
-    let Some(modal) = OPEN_MODALS.with_borrow_mut(|m| {
-        m.iter().rposition(|m| m.id == id).map(|i| m.remove(i))
+    let Some((modal, was_top)) = OPEN_MODALS.with_borrow_mut(|m| {
+        let i = m.iter().rposition(|m| m.id == id)?;
+        let was_top = i + 1 == m.len();
+        Some((m.remove(i), was_top))
     }) else {
         return;
     };
-    for el in modal.inerted {
+    if let Some(observer) = &modal.observer {
+        observer.disconnect();
+    }
+    for el in &modal.inerted {
         let _ = el.remove_attribute("inert");
     }
-    if let Some(opener) = modal.opener.filter(|o| o.is_connected()) {
+    let doc = document();
+    OPEN_MODALS.with_borrow_mut(|m| {
+        let Some(top) = m.last_mut() else { return };
+        if let Some(dialog) = doc.as_ref().and_then(|d| d.get_element_by_id(top.id)) {
+            top.inerted.extend(inert_outside(&dialog, false));
+        }
+    });
+    if let Some(opener) = modal.opener.filter(|o| was_top && o.is_connected()) {
         let _ = opener.focus();
     }
 }

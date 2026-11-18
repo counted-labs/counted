@@ -1,0 +1,45 @@
+Counted je aplikacija za delitev stroškov s prijatelji: 100 % evropska in zasebna že po zasnovi. Počitnice, stanovanje s sostanovalci, vikend, skupinsko darilo: vpisuj stroške in Counted ti pove, kdo komu koliko dolguje, z najmanj nakazili.
+
+🔗 Uporabniški račun ni potreben
+Ustvari projekt, pošlji povezavo. To je vse. Prijatelji se pridružijo in sodelujejo brez registracije. Uporabniški račun? Nikoli ni obvezen. Z njim svoje projekte najdeš na drugi napravi, povabiš prijatelje iz aplikacije in deliš svoje podatke za plačilo.
+
+🔒 Šifrirano na tvojem telefonu
+Imena, zneski, projekti, zgodovina: vse se šifrira na tvojem telefonu. Ključ imaš samo ti. Nihče ne more brati tvojih stroškov, niti mi. Tudi tvoje geslo nikoli ne zapusti tvojega telefona.
+
+📷 Skeniranje računov, na telefonu
+Fotografiraj račun: znesek, datum in kategorija se izpolnijo sami. Vse se dogaja na tvojem telefonu. Fotografija se ne shrani.
+
+🇪🇺 100 % evropsko
+Strežniki v Nemčiji, e-pošta se pošilja iz Francije. Tvoji projekti nikoli ne zapustijo Evropske unije.
+
+💸 Res brezplačno
+Brezplačno, brez oglasov, brez sledilnikov in brez omejitve števila stroškov ali udeležencev. Vse, kar je opisano tukaj, je brezplačno in tako tudi ostane. Ničesar ne zbiramo in tvojih podatkov ne prodajamo. To ni naš poslovni model.
+
+✨ Vse za skupne stroške
+• Stroški, nakazila in prejemki, z več plačniki in več upravičenci
+• Delitev na enake dele, po deležih ali po točnem znesku, preverjeno do centa
+• Najmanj nakazil za poravnavo skupine
+• Ponavljajoči se stroški, na primer najemnina ali naročnine: vneseš jih enkrat, dodajo se ob vsaki zapadlosti
+• Več kot 150 valut, preračunanih po mesečnem tečaju Evropske komisije
+• Statistika po kategorijah, po osebah in iz meseca v mesec
+• Lastne kategorije, vsaka s svojim emojijem, in emoji za vsak projekt
+• Zgodovina: kdo je kaj dodal, spremenil ali izbrisal
+• Iskanje po imenu, opombi ali kategoriji, kar na tvoji napravi
+• Z uporabniškim računom osebni projekt »Moji stroški«: tvoji lastni stroški in tvoj delež v skupinah, iz meseca v mesec
+• Premik stroška iz enega projekta v drugega
+• Mesečni proračuni po kategorijah glede na tvoj dejanski delež, z opozorilom pri 80 %, izračunanim na tvoji napravi
+• Na začetnem zaslonu: koliko ti dolgujejo in koliko dolguješ ti, v vseh projektih, izračunano na tvoji napravi
+• Bližnjica »Osebni strošek« z dolgim pritiskom na ikono aplikacije
+• Brez povezave: brskaj in vnašaj brez omrežja
+• Izvoz v CSV in JSON z enim dotikom
+• Podatki za plačilo (IBAN, PayPal, Wero, Lydia, Revolut…) šifrirani kot vse drugo
+• Geslo spremeniš brez izgube podatkov; če ga pozabiš, obnovitveni ključ vrne vse
+• Razkrito geslo ali izgubljen telefon: novi ključi računa, vse druge naprave odjavljene
+• Skrbniki projekta: odstranitev nekoga spremeni ključ projekta in stara povezava te osebe ne odpre ničesar več
+• Člani z uporabniškim računom novi ključ dobijo samodejno, s postkvantnim šifriranjem; drugi dobijo novo povezavo
+• Uvoz iz Tricounta: prilepi povezavo za deljenje in vse se prenese
+• Splet, Android in iOS: isti projekt povsod, z isto povezavo
+• 32 jezikov, vključno z vsemi 24 uradnimi jeziki EU
+
+Kako to v resnici deluje? counted.fr/en/encryption
+Osebno preveri kodo, ki jo poganjaš: counted.fr/en/verify

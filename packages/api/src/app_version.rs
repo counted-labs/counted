@@ -53,8 +53,14 @@ pub fn floor_reached(version: &str) -> bool {
 /// The decision for one request, from its path and headers. The axum layer that calls this lives
 /// in `packages/web` - the only crate that links `dioxus_server`, whose axum is the router's.
 pub fn refuses(path: &str, app_version: Option<&str>, user_agent: Option<&str>) -> bool {
-    path.starts_with("/api/")
-        && outdated(app_version, user_agent, std::env::var(MIN_ENV).ok().as_deref())
+    gated(path) && outdated(app_version, user_agent, std::env::var(MIN_ENV).ok().as_deref())
+}
+
+/// A mail provider's RFC 8058 one-click POST carries no app version and maybe no user agent.
+pub const ONE_CLICK_UNSUBSCRIBE: &str = "/api/v1/mail/unsubscribe/";
+
+fn gated(path: &str) -> bool {
+    path.starts_with("/api/") && !path.starts_with(ONE_CLICK_UNSUBSCRIBE)
 }
 
 #[cfg(test)]
@@ -62,6 +68,14 @@ mod tests {
     use super::*;
 
     const UA: Option<&str> = Some("Mozilla/5.0");
+
+    #[test]
+    fn one_click_unsubscribe_is_outside_the_gate() {
+        assert!(gated("/api/v1/friends"));
+        assert!(gated("/api/v1/mail/unsubscribe"));
+        assert!(!gated("/api/v1/mail/unsubscribe/abc"));
+        assert!(!gated("/projects"));
+    }
 
     #[test]
     fn no_floor_means_no_gate() {

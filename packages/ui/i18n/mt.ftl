@@ -286,7 +286,6 @@ counted-groups-intro = Is-sehem tiegħek f’dawn il-gruppi jiżdied ma’ L-inf
 counted-groups-converted = { $from }, maqlub għal { $to }
 counted-groups-encrypted = Din l-għażla hija kriptata bil-kont tiegħek u ssegwik fuq it-tagħmir tiegħek.
 counted-groups-empty = Għad m’hemm l-ebda grupp fuq dan it-tagħmir.
-counted-groups-done = OK
 counted-save-failed = Din l-għażla ma setgħetx tiġi ssejvjata. Erġa’ pprova.
 tab-budget = Baġit
 budget-title = Baġits
@@ -728,6 +727,7 @@ help-encryption-see = Għad-dettalji, ara
 help-forgot-password-q = X'jiġri jekk ninsa l-password tiegħi?
 help-forgot-password-warning = Ħadd ma jista' jirkupraha għalik.
 help-forgot-password-a = Il-password tiegħek tipproteġi ċ-ċwievet tal-kriptaġġ tiegħek u qatt ma tintbagħtilna: ħadd - lanqas aħna - ma jista' jiddekripta l-proġetti tiegħek minflokok. Żommha sigura, idealment f'password manager.
+help-forgot-password-recovery = Biċ-ċavetta ta’ rkupru mis-Settings tagħżel password ġdida u terġa’ ssib kollox. Mingħajr ċavetta ta' rkupru, password minsija tħassar il-preferenzi, id-dettalji tal-ħlas u l-kodiċijiet tal-ħbieb tiegħek.
 help-archive-delete-q = Kif narkivja jew inħassar proġett?
 help-archive-delete-a = Mill-iskrin tal-proġett, iftaħ il-menu u agħżel
 help-archive-delete-b = biex taħbih waqt li żżommu. Proġett jitħassar għal kollox ladarba l-aħħar membru tiegħu jitilqu.
@@ -777,22 +777,9 @@ friends-notify = Għarraf b'messaġġ
 friends-notify-message = Qed naqleb għal Counted għall-ispejjeż maqsuma tagħna. Reġistrazzjoni b'xejn fuq https://counted.fr bl-indirizz { $email }: it-talba ta' ħbiberija tiegħi qed tistenna hemm.
 friends-notify-copied = Messaġġ ikkupjat
 friends-notify-copy-failed = Ma setax jiġi kkupjat il-messaġġ
-guests-hint-title =
-    { $count ->
-        [one] { $count } parteċipant għadu ma ngħaqadx mal-proġett
-        [few] { $count } parteċipanti għadhom ma ngħaqdux mal-proġett
-        [many] { $count } parteċipanti għadhom ma ngħaqdux mal-proġett
-       *[other] { $count } parteċipanti għadhom ma ngħaqdux mal-proġett
-    }
 guests-hint-later = Aktar tard
-guests-hint-send = Stedinhom
-guests-send-title = Ibgħat il-proġett lill-parteċipanti
-guests-send-friend = Stieden ħabib ta' Counted
-guests-send-friend-badge = Mingħajr link
-guests-send-friend-hint = Jekk diġà għandu kont, jirċievi stedina kriptata; xejn ma jgħaddi mill-app tal-messaġġi tiegħek.
-guests-send-link = Aqsam il-link tal-proġett
-guests-send-link-hint = Għal min m'għandux kont. Jiftħu l-proġett b'tektika waħda.
-guests-send-link-warning = Kull min għandu dan il-link jista' jaqra u jbiddel il-proġett. L-app tal-messaġġi tiegħek tarah ukoll.
+first-key-hint-title = Biddel iċ-ċavetta ta’ dan il-proġett
+first-key-hint-body = Għadu juża l-ewwel ċavetta tiegħu, li setgħet intbagħtet f’stedina ta’ qabel il-kriptaġġ post-kwantistiku. Ċavetta ġdida tipproteġih mill-kompjuters kwantistiċi.
 invite-friends-title = Stieden ħbieb
 invite-friends-hint = Iċ-ċavetta tal-proġett tiġi kriptata għal kull ħabib fuq dan l-apparat. Is-server qatt ma jaraha.
 invite-friends-empty = L-ebda ħabib x'tistieden għadu.
@@ -1109,6 +1096,14 @@ error-rotation-expired = Dan it-tibdil taċ-ċavetta dam wisq u ġie kkanċellat
 error-rotation-rows-changed = Il-proġett inbidel waqt it-tibdil taċ-ċavetta. Erġa' ibda.
 project-rotated-title = M'għadx għandek aċċess għal dan il-proġett
 project-rotated-body = Iċ-ċavetta ta' dan il-proġett inbidlet mill-admin. Itlob il-link il-ġdid lill-admin.
+store-locked-title = Id-data ssejvjata tiegħek hija msakkra
+store-locked-body = Counted ma setax jiftaħ id-data ssejvjata fuq dan it-telefon. Iftaħ it-telefon u erġa’ pprova.
+store-lost-title = Dan it-telefon tilef iċ-ċavetta tad-data tiegħu
+store-lost-body = Counted ma jistax jibqa’ jiftaħ id-data ssejvjata fuq dan it-telefon. Irrisettjah biex terġa’ tibda: il-proġetti ssejvjati fil-kont tiegħek jerġgħu lura meta tidħol.
+store-retry = Erġa’ pprova
+store-reset = Irrisettja dan it-telefon
+store-reset-warning = Il-proġetti li mhumiex issejvjati f’kont jintilfu għal dejjem.
+store-reset-confirm = Irrisettja u itlifhom
 project-rotated-open-link = Iftaħ link
 rotation-remove-title = Tneħħi lil { $name } mill-proġett?
 rotation-rotate-title = Tibdel iċ-ċavetta tal-proġett?
@@ -1148,7 +1143,6 @@ rotation-new-link =
        *[other] Link ġdid biex tibgħat · { $count } persuna mingħajr kont
     }
 rotation-link-renewed = Il-link ġie mġedded b’suċċess.
-rotation-done = Lest
 history-key-changed = Iċ-ċavetta tal-proġett inbidlet
 history-member-removed = { $name } mhux aktar parti mill-proġett
 project-rotated-row-hint = Iċ-ċavetta inbidlet. Itlob il-link il-ġdid.
@@ -1202,7 +1196,16 @@ friends-decline-label = Irrifjuta t-talba ta' { $email }
 friends-add-hint-short = Din il-persuna se tara t-talba tiegħek jekk għandha kont. Jekk le, għarrafha.
 friends-send = Ibgħat
 friends-sent-hint = Għad m'għandhiex kont? Għarrafha: il-messaġġ jistedinha tirreġistra b'dan l-indirizz.
-friends-done = Lest
+friends-mail-checkbox = Ibgħat ukoll stedina bl-email
+friends-mail-helper = L-email mhijiex kriptata minn tarf sa tarf: l-indirizz tiegħek u dak ta' din il-persuna jgħaddu mill-fornitur tal-email tagħna, u din il-persuna tara l-indirizz tiegħek. Iċċekkja sew l-indirizz.
+friends-mail-learn-more = Kun af aktar
+friends-sent-mail-hint = Counted jibgħat email lil dan l-indirizz, sakemm ma rċeviex stedina dan l-aħħar jew ma ħariġx mil-lista.
+friends-sent-private-hint = Xejn ma ħareġ mill-kriptaġġ.
+friends-add-another = Żid persuna oħra
+unsubscribe-title = Emails ta' stedina
+unsubscribe-body = Twaqqaf kull email ta' stedina minn Counted lil dan l-indirizz? Il-ħbieb tiegħek xorta jistgħu jistednuk fl-app.
+unsubscribe-confirm = Qatt tibgħatli stediniet bl-email
+unsubscribe-done = Lest. Counted mhux se jibgħat aktar emails ta' stedina lil dan l-indirizz.
 friends-their-code = Il-kodiċi ta' sigurtà tiegħu
 friends-code-compare-hint = Aqrawh flimkien. Għandu jara l-istess kodiċi fil-quċċata tal-paġna Ħbieb tiegħu.
 friends-no-key-hint = Għadu mhux lest: iċ-ċavetta tiegħu tinħoloq id-darba li jmiss li jiftaħ Counted. Sa dakinhar, ma tistax tistiednu.

@@ -1,0 +1,45 @@
+Counted este aplicația pentru împărțit cheltuieli cu prietenii: 100% europeană și gândită pentru confidențialitate. Vacanță, apartament în comun, weekend, cadou de grup: notează cheltuielile, iar Counted îți spune cine cui cât datorează, cu cât mai puține transferuri.
+
+🔗 Nu ai nevoie de cont
+Creează un proiect, trimite linkul. Atât. Prietenii tăi intră și participă fără să se înregistreze. Un cont? Niciodată obligatoriu. Îți folosește ca să-ți regăsești proiectele pe alt dispozitiv, să-ți inviți prietenii din aplicație și să-ți partajezi detaliile de plată.
+
+🔒 Criptat pe telefonul tău
+Nume, sume, proiecte, istoric: totul este criptat pe telefonul tău. Doar tu deții cheia. Nimeni nu îți poate citi socotelile, nici măcar noi. Nici parola ta nu părăsește vreodată telefonul.
+
+📷 Scanarea bonurilor, pe telefon
+Fotografiază bonul: suma, data și categoria se completează singure. Totul se petrece pe telefonul tău. Fotografia nu este păstrată.
+
+🇪🇺 100% european
+Servere în Germania, e-mailuri trimise din Franța. Proiectele tale nu părăsesc niciodată Uniunea Europeană.
+
+💸 Gratuit, pe bune
+Gratuit, fără reclame, fără trackere și fără limită de cheltuieli sau de participanți. Tot ce este descris aici este gratuit și rămâne gratuit. Nu colectăm nimic, nu îți vindem datele. Nu acesta este modelul nostru.
+
+✨ Tot ce trebuie pentru cheltuieli comune
+• Cheltuieli, transferuri și încasări, cu mai mulți plătitori și mai mulți beneficiari
+• Împărțire egală, pe cote sau pe sume exacte, verificată până la ban
+• Cât mai puține transferuri pentru a regulariza socotelile grupului
+• Cheltuieli recurente, precum chiria sau abonamentele: introduse o dată, adăugate la fiecare scadență
+• Peste 150 de monede, convertite la cursul lunar al Comisiei Europene
+• Statistici pe categorii, pe persoane și lună de lună
+• Categoriile tale, fiecare cu emoji-ul ei, și un emoji pentru fiecare proiect
+• Istoricul: cine a adăugat, a modificat sau a șters ce
+• Căutare după nume, notă sau categorie, făcută pe dispozitivul tău
+• Cu un cont, un proiect personal „Cheltuielile mele”: ce cheltuiești singur plus partea ta din grupuri, lună de lună
+• Mută o cheltuială dintr-un proiect în altul
+• Bugete lunare pe categorii, pe partea ta reală, cu o alertă la 80% calculată pe dispozitivul tău
+• Pe ecranul principal, cât ți se datorează și cât datorezi în toate proiectele, calculat pe dispozitivul tău
+• O comandă rapidă „Cheltuială personală” printr-o apăsare lungă pe pictograma aplicației
+• Offline: consultă și adaugă cheltuieli fără conexiune
+• Export CSV și JSON dintr-o atingere
+• Detalii de plată (IBAN, PayPal, Wero, Lydia, Revolut…) criptate ca tot restul
+• Schimbă-ți parola fără să pierzi nimic; dacă o uiți, o cheie de recuperare îți aduce totul înapoi
+• Parolă compromisă sau telefon pierdut: chei noi pentru cont, toate celelalte dispozitive deconectate
+• Administratorii proiectului: eliminarea cuiva schimbă cheia proiectului, iar vechiul lui link nu mai deschide nimic
+• Membrii cu cont primesc automat noua cheie, cu criptare post-cuantică; ceilalți primesc un link nou
+• Import din Tricount: lipești linkul de partajare și totul este preluat
+• Web, Android și iOS: același proiect peste tot, cu același link
+• 32 de limbi, inclusiv toate cele 24 de limbi oficiale ale UE
+
+Cum funcționează, mai exact? counted.fr/en/encryption
+Verifică singur codul pe care îl rulezi: counted.fr/en/verify

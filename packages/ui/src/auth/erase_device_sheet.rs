@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use crate::tid;
 
 use crate::auth::erase_device::EraseCheck;
-use crate::common::{haptic, Haptic};
+use crate::common::{haptic, Haptic, SheetBar, SheetFooter, SHEET_TITLE};
 
 #[derive(PartialEq, Props, Clone)]
 pub struct EraseDeviceSheetProps {
@@ -32,8 +32,10 @@ pub fn EraseDeviceSheet(props: EraseDeviceSheetProps) -> Element {
             aria_describedby: "erase-device-body",
             tabindex: "-1",
             div { class: "modal-box max-w-md p-0 flex flex-col",
-                div { class: "flex flex-col gap-3 px-6 pt-5 pb-4",
-                    h2 { id: "erase-device-title", class: "font-bold text-lg font-display", {tid!("erase-device-title")} }
+                SheetBar { close_id: "erase-device-close", task: true, on_close,
+                    h2 { id: "erase-device-title", class: SHEET_TITLE, {tid!("erase-device-title")} }
+                }
+                div { class: "flex-1 overflow-y-auto flex flex-col gap-3 px-5 pt-1 pb-4",
                     p { id: "erase-device-body", class: "text-sm text-base-content/70", {tid!("erase-device-body")} }
                     match &props.check {
                         EraseCheck::Checking => rsx! {
@@ -65,15 +67,9 @@ pub fn EraseDeviceSheet(props: EraseDeviceSheetProps) -> Element {
                         EraseCheck::Ready(_) => rsx! {},
                     }
                 }
-                div { class: "flex justify-end gap-2 px-6 py-4 border-t border-base-200",
-                    button {
-                        id: "erase-device-cancel",
-                        r#type: "button",
-                        class: "btn",
-                        onclick: move |_| on_close.call(()),
-                        {tid!("cancel")}
-                    }
-                    if let Some(names) = at_risk {
+                if let Some(names) = at_risk {
+                    SheetFooter {
+                        on_cancel: on_close,
                         button {
                             id: "erase-device-confirm",
                             r#type: "button",

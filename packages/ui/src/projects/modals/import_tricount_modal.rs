@@ -15,13 +15,12 @@ use shared::{
 use std::collections::{HashMap, HashSet};
 
 use crate::common::creator_proof::{keep_creator_secret, new_creator_proof};
-use crate::common::{error_message, update_ls, upsert_project, upsert_project_key, LocalStorageState, NativeClipboardReader};
+use crate::common::{error_message, update_ls, upsert_project, upsert_project_key, LocalStorageState, NativeClipboardReader, SheetBar, SheetFooter, SHEET_TITLE};
 use crate::crypto::{
     claim_token, claim_verifier, encrypt_padded_json, generate_key, key_to_fragment,
     wrap_key, WrapUse,
 };
 use crate::expenses::helpers::expense_modal_helpers::with_shares;
-use crate::icons::{CloseIcon, ICON_HEADER};
 use crate::route::Route;
 
 #[derive(Props, Clone, PartialEq)]
@@ -282,18 +281,11 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
             aria_labelledby: "import-tricount-modal-title",
             tabindex: "-1",
             div { class: "modal-box max-w-sm p-0 flex flex-col",
-                div { class: "flex items-center justify-between px-6 pt-5 pb-4 border-b border-base-200 flex-shrink-0",
-                    h2 { id: "import-tricount-modal-title", class: "font-bold text-lg font-display", {tid!("projects-import-tricount")} }
-                    button {
-                        r#type: "button",
-                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                        aria_label: tid!("close"),
-                        onclick: move |_| on_close.call(()),
-                        CloseIcon { size: ICON_HEADER }
-                    }
+                SheetBar { close_id: "import-tricount-close", task: true, on_close,
+                    h2 { id: "import-tricount-modal-title", class: SHEET_TITLE, {tid!("projects-import-tricount")} }
                 }
                 form { class: "flex flex-col flex-1 overflow-hidden", onsubmit: on_submit,
-                    div { class: "flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4",
+                    div { class: "flex-1 overflow-y-auto px-5 pt-1 pb-4 flex flex-col gap-4",
                         if let Some(err) = error_msg() {
                             div { role: "alert", class: "alert alert-error text-sm", "{err}" }
                         }
@@ -355,14 +347,10 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                             }
                         }
                     }
-                    div { class: "flex justify-end gap-2 px-6 py-4 border-t border-base-200 flex-shrink-0",
+                    SheetFooter {
+                        on_cancel: props.on_close,
                         button {
-                            r#type: "button",
-                            class: "btn",
-                            onclick: move |_| props.on_close.call(()),
-                            {tid!("cancel")}
-                        }
-                        button {
+                            id: "import-tricount-submit",
                             r#type: "submit",
                             class: "btn btn-primary",
                             disabled: loading(),

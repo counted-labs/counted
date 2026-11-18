@@ -19,7 +19,8 @@ It does not prove that nothing else is broken.
 | A5 | An unverified account gets no session: not from login, not with a wrong password, and the verification link alone is refused (400); the link with the password verifies and signs in |
 | A6 | A deleted account's session opens nothing, and its credentials no longer sign in |
 | A7 | Deleting an account needs the password's proof: a wrong proof is refused and the account stays; once the server's floor is `KEY_LIFECYCLE_FROM`, the session-only route is refused too |
-| A8 | A project invitation carries exactly one key box, the one the server's floor allows: the classical box below `HYBRID_INVITATIONS_FROM`, the hybrid one from it. Both boxes, or none, are refused, by the single and the batch route |
+| A8 | A project invitation carries exactly one key box, the hybrid one, whatever the floor (the server refuses to start below `HYBRID_INVITATIONS_FROM`), and `hybridInvitations` is served true. The classical box, both boxes, or none are refused, by the single and the batch route |
+| A9 | Asking for an invitation mail (`sendMail`) gets the same status and body for an address with an account and one without; a forged unsubscribe token is refused by the one-click route and by the page's endpoint |
 | B1 | No endpoint lists projects |
 | B2 | Holding project A's key gives nothing in project B: B's expenses, participants and payment rows cannot be read, edited or deleted through A |
 | B3 | Claiming a participant, or converting a project, needs proof of the project key |

@@ -2,9 +2,9 @@ use dioxus::prelude::*;
 use crate::tid;
 use shared::ProjectStatus;
 
-use crate::common::status_transitions;
+use crate::common::{status_transitions, SheetBar, SHEET_TITLE};
 use crate::expenses::project_actions_sheet::Row;
-use crate::icons::{ArchiveIcon, CloseIcon, LockIcon, LogOutIcon, PencilIcon, UndoIcon, ICON_HEADER};
+use crate::icons::{ArchiveIcon, LockIcon, LogOutIcon, PencilIcon, UndoIcon, ICON_HEADER};
 
 #[derive(PartialEq, Props, Clone)]
 pub struct ProjectRowSheetProps {
@@ -41,23 +41,11 @@ pub fn ProjectRowSheet(props: ProjectRowSheetProps) -> Element {
             aria_modal: "true",
             aria_labelledby: "project-row-sheet-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md p-0",
-                div { class: "flex flex-col gap-4 px-6 pt-5 pb-6",
-                    div { class: "flex items-center gap-2",
-                        h2 {
-                            id: "project-row-sheet-title",
-                            class: "flex-1 min-w-0 truncate font-bold text-lg font-display",
-                            "{props.title}"
-                        }
-                        button {
-                            id: "project-row-sheet-close",
-                            r#type: "button",
-                            class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                            aria_label: tid!("close"),
-                            onclick: move |_| on_close.call(()),
-                            CloseIcon {}
-                        }
-                    }
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar { close_id: "project-row-sheet-close", on_close,
+                    h2 { id: "project-row-sheet-title", class: SHEET_TITLE, "{props.title}" }
+                }
+                div { class: "flex-1 overflow-y-auto flex flex-col gap-4 px-5 pt-1 pb-6",
                     div { class: "bg-base-200 rounded-box overflow-hidden divide-y divide-base-300",
                         if props.locked {
                             Row {

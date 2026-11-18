@@ -3,13 +3,13 @@ use shared::IncomingFriendRequest;
 
 use super::friends_service::FriendRow;
 use super::use_friends::Friends;
-use crate::common::{account_color_class, email_initials, format_date, Avatar, FormSheetBar, SizeClass};
-use crate::icons::{CheckIcon, CloseIcon, SendIcon, UserMinusIcon, ICON_HEADER};
+use crate::common::{account_color_class, email_initials, format_date, Avatar, SheetBar, SheetFooter, SizeClass, SHEET_TITLE};
+use crate::icons::{CheckIcon, SendIcon, UserMinusIcon, ICON_HEADER};
+use crate::route::Route;
 use crate::tid;
 
-/// A bottom sheet with the title leading and the close trailing, as every sheet in the app that is
-/// not a form. The title wraps instead of truncating: an address cut at its domain is how a
-/// lookalike account would pass.
+/// A content sheet for the friends pages. The title wraps instead of truncating: an address cut at
+/// its domain is how a lookalike account would pass.
 #[component]
 pub fn FriendsSheet(id: &'static str, title: String, on_close: EventHandler<()>, children: Element) -> Element {
     crate::common::use_modal_focus(id);
@@ -21,21 +21,11 @@ pub fn FriendsSheet(id: &'static str, title: String, on_close: EventHandler<()>,
             aria_modal: "true",
             aria_labelledby: "{id}-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md p-0",
-                div { class: "flex flex-col gap-4 px-6 pt-5 pb-6",
-                    div { class: "flex items-center gap-2",
-                        h2 { id: "{id}-title", tabindex: "-1", class: "flex-1 min-w-0 break-all font-bold text-lg font-display", "{title}" }
-                        button {
-                            id: "{id}-close",
-                            r#type: "button",
-                            class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80 shrink-0",
-                            aria_label: tid!("close"),
-                            onclick: move |_| on_close.call(()),
-                            CloseIcon {}
-                        }
-                    }
-                    {children}
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar { close_id: "{id}-close", on_close,
+                    h2 { id: "{id}-title", tabindex: "-1", class: "flex-1 min-w-0 break-all font-bold text-lg font-display sheet-bar-title", "{title}" }
                 }
+                div { class: "flex-1 overflow-y-auto flex flex-col gap-4 px-5 pt-1 pb-6", {children} }
             }
             div { class: "modal-backdrop", onclick: move |_| on_close.call(()) }
         }
@@ -155,6 +145,7 @@ pub fn AddFriendSheet(friends: Friends, on_close: EventHandler<()>) -> Element {
     crate::common::use_modal_focus("add-friend-sheet");
     let mut email = friends.email;
     let mut sent_to = friends.sent_to;
+    let invite_mail = friends.current().is_some_and(|lists| lists.invite_mail);
     let mut close = move || {
         sent_to.set(None);
         on_close.call(());
@@ -168,12 +159,18 @@ pub fn AddFriendSheet(friends: Friends, on_close: EventHandler<()>) -> Element {
             aria_modal: "true",
             aria_labelledby: "add-friend-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md p-0",
+            div { class: "modal-box max-w-md p-0 flex flex-col",
                 if let Some(sent) = sent_to() {
-                    div { id: "friend-request-sent", role: "status", class: "flex flex-col items-center gap-3 px-6 pt-6 pb-6 text-center",
+                    SheetBar { close_id: "add-friend-close", on_close: move |_| close() }
+                    div { id: "friend-request-sent", role: "status", class: "flex flex-col items-center gap-3 px-6 pb-6 text-center",
                         span { class: "size-16 rounded-2xl grid place-items-center bg-primary/10 text-secondary-content", CheckIcon { size: 32 } }
                         h2 { id: "add-friend-title", class: "font-display font-bold text-lg", {tid!("friends-request-sent")} }
                         bdi { class: "text-sm text-base-content/70 break-all", "{sent}" }
+                        match (friends.sent_mail)() {
+                            Some(true) => rsx! { p { id: "friend-sent-mail", class: "text-sm text-base-content/70", {tid!("friends-sent-mail-hint")} } },
+                            Some(false) => rsx! { p { id: "friend-sent-private", class: "text-sm text-base-content/70", {tid!("friends-sent-private-hint")} } },
+                            None => rsx! {},
+                        }
                         p { class: "text-sm text-base-content/70", {tid!("friends-sent-hint")} }
                         button {
                             id: "friend-notify",
@@ -183,25 +180,23 @@ pub fn AddFriendSheet(friends: Friends, on_close: EventHandler<()>) -> Element {
                             SendIcon { size: ICON_HEADER }
                             {tid!("friends-notify")}
                         }
-                        button { id: "friend-done", r#type: "button", class: "btn w-full", onclick: move |_| close(), {tid!("friends-done")} }
+                        button { id: "friend-add-another", r#type: "button", class: "btn w-full", onclick: move |_| friends.add_another(), {tid!("friends-add-another")} }
                     }
                 } else {
+                    SheetBar {
+                        close_id: "add-friend-close",
+                        task: true,
+                        on_close: move |_| close(),
+                        h2 { id: "add-friend-title", class: SHEET_TITLE, {tid!("friends-add-title")} }
+                    }
                     form {
                         id: "add-friend-form",
-                        class: "flex flex-col gap-3 px-6 pt-4 pb-6",
+                        class: "flex flex-col flex-1 min-h-0",
                         onsubmit: move |e| {
                             e.prevent_default();
                             friends.add_by_email();
                         },
-                        FormSheetBar {
-                            close_id: "add-friend-close",
-                            confirm_id: "friend-add",
-                            confirm_label: tid!("friends-send"),
-                            form: "add-friend-form",
-                            disabled: (friends.busy)() || email().trim().is_empty(),
-                            on_close: move |_| close(),
-                            h2 { id: "add-friend-title", class: "w-full text-center font-display font-bold text-lg truncate", {tid!("friends-add-title")} }
-                        }
+                        div { class: "flex-1 overflow-y-auto px-5 pt-1 pb-4 flex flex-col gap-3",
                         label { class: "flex flex-col gap-1.5", r#for: "friend-email",
                             span { class: "text-sm font-medium text-base-content/70", {tid!("field-email")} }
                             input {
@@ -220,10 +215,39 @@ pub fn AddFriendSheet(friends: Friends, on_close: EventHandler<()>) -> Element {
                                 oninput: move |e| email.set(e.value()),
                             }
                         }
+                        if invite_mail {
+                            label { class: "flex items-center gap-3 min-h-11 cursor-pointer", r#for: "friend-send-mail",
+                                input {
+                                    id: "friend-send-mail",
+                                    r#type: "checkbox",
+                                    class: "checkbox checkbox-primary",
+                                    checked: (friends.send_mail)(),
+                                    aria_describedby: "friend-send-mail-hint",
+                                    onchange: move |e| friends.set_send_mail(e.checked()),
+                                }
+                                span { class: "text-sm font-medium", {tid!("friends-mail-checkbox")} }
+                            }
+                            p { id: "friend-send-mail-hint", class: "text-sm text-base-content/70",
+                                {tid!("friends-mail-helper")}
+                                " "
+                                Link { to: Route::PrivacyPage {}, class: "link", {tid!("friends-mail-learn-more")} }
+                            }
+                        }
                         if let Some(err) = (friends.error)() {
                             p { role: "alert", class: "text-sm text-error", "{err}" }
                         }
                         p { class: "text-sm text-base-content/70", {tid!("friends-add-hint-short")} }
+                        }
+                        SheetFooter {
+                            on_cancel: move |_| close(),
+                            button {
+                                id: "friend-add",
+                                r#type: "submit",
+                                class: "btn btn-primary",
+                                disabled: (friends.busy)() || email().trim().is_empty(),
+                                {tid!("friends-send")}
+                            }
+                        }
                     }
                 }
             }

@@ -1,0 +1,45 @@
+Counted on 100 % Euroopa rakendus kulude jagamiseks sõpradega, loodud algusest peale privaatsust silmas pidades. Puhkus, ühiskorter, nädalavahetus, ühine kingitus: pane kulud kirja ja Counted ütleb, kes kellele kui palju võlgneb, võimalikult väheste ülekannetega.
+
+🔗 Kontot pole vaja
+Loo projekt, saada link. Ongi kõik. Sõbrad liituvad ja osalevad ilma registreerumata. Konto? Pole kunagi kohustuslik. Sellega leiad oma projektid teisest seadmest, kutsud sõpru rakendusest ja jagad oma makseandmeid.
+
+🔒 Krüpteeritud sinu telefonis
+Nimed, summad, projektid, ajalugu: kõik krüpteeritakse sinu telefonis. Võti on ainult sinul. Keegi ei saa sinu arveid lugeda, isegi mitte meie. Ka sinu parool ei lahku kunagi sinu telefonist.
+
+📷 Tšekkide skannimine, sinu telefonis
+Pildista tšekki: summa, kuupäev ja kategooria täituvad ise. Kõik toimub sinu telefonis. Fotot ei säilitata.
+
+🇪🇺 100 % Euroopa
+Serverid Saksamaal, e-kirjad saadetakse Prantsusmaalt. Sinu projektid ei lahku kunagi Euroopa Liidust.
+
+💸 Päriselt tasuta
+Tasuta, ilma reklaamide ja jälgijateta ning ilma kulude või osalejate arvu piiranguta. Kõik siin kirjeldatu on tasuta ja jääb tasuta. Me ei kogu midagi ega müü sinu andmeid. See pole meie ärimudel.
+
+✨ Kõik ühiste kulude jaoks
+• Kulud, ülekanded ja tulud, mitme maksja ja mitme saajaga
+• Jagamine võrdselt, osade kaupa või täpse summaga, sendi täpsusega kontrollitud
+• Võimalikult vähe ülekandeid, et grupp tasaarveldada
+• Korduvad kulud nagu üür või tellimused: sisestad korra ja need lisatakse iga maksetähtaja saabudes
+• Üle 150 valuuta, ümber arvestatud Euroopa Komisjoni kuukursiga
+• Statistika kategooriate, inimeste ja kuude kaupa
+• Oma kategooriad, igaühel oma emoji, ja emoji igale projektile
+• Ajalugu sellest, kes mida lisas, muutis või kustutas
+• Otsing nime, märkuse või kategooria järgi, otse sinu seadmes
+• Kontoga isiklik projekt „Minu kulud“: mida kulutad üksi ja sinu osa gruppide kuludest, kuu kaupa
+• Kulu teisaldamine ühest projektist teise
+• Kuueelarved kategooriate kaupa sinu tegeliku osa põhjal, hoiatusega 80 % juures, arvutatud sinu seadmes
+• Avaekraanil: kui palju sulle võlgnetakse ja kui palju sina võlgned kõigis projektides, arvutatud sinu seadmes
+• Otsetee „Isiklik kulu“, kui vajutad pikalt rakenduse ikoonile
+• Võrguühenduseta: sirvi ja sisesta ilma võrguta
+• CSV- ja JSON-eksport ühe puudutusega
+• Makseandmed (IBAN, PayPal, Wero, Lydia, Revolut…) krüpteeritud nagu kõik muu
+• Muuda parooli midagi kaotamata; kui selle unustad, toob taastevõti kõik tagasi
+• Parool lekkinud või telefon kadunud: uued kontovõtmed, kõik teised seadmed logitakse välja
+• Projekti adminid: kellegi eemaldamine muudab projekti võtit ja tema vana link ei ava enam midagi
+• Kontoga liikmed saavad uue võtme automaatselt, kvantkindlalt krüpteeritud; teised saavad uue lingi
+• Tricounti import: kleebi jagamislink ja kõik tuleb üle
+• Veeb, Android ja iOS: sama projekt kõikjal, sama lingiga
+• 32 keelt, sealhulgas kõik 24 ELi ametlikku keelt
+
+Kuidas see tegelikult töötab? counted.fr/en/encryption
+Kontrolli ise koodi, mida käivitad: counted.fr/en/verify

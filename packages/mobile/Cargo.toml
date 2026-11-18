@@ -1,13 +1,13 @@
 [package]
 name = "mobile"
-version = "3.2.10"
+version = "3.3.1"
 edition = "2021"
 publish = false
 
 # F-Droid's versionCode: major*1000000 + minor*1000 + patch of `version` above, bumped with it.
 # Checked by `android-fdroid-apk` in android.mk. The Play build asks the Play API instead.
 [package.metadata.android]
-version_code = 3002010
+version_code = 3003001
 
 [dependencies]
 dioxus = { workspace = true, features = ["router"] }
@@ -42,6 +42,9 @@ jni = { version = "0.21", default-features = false, features = ["invocation"] }
 # iOS: UIPasteboard clipboard access, UIFeedbackGenerator haptics, UIActivityViewController share
 # sheet, Foundation for persistent data dir
 [target.'cfg(target_os = "ios")'.dependencies]
+# The store key as a Keychain item (src/store_key.rs); both already in the graph through native-tls.
+core-foundation = "0.10"
+security-framework-sys = "2.17"
 objc2 = "0.6"
 objc2-ui-kit = { version = "0.3", features = [
 	"UIPasteboard",

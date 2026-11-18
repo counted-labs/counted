@@ -1,0 +1,45 @@
+Counted yra programėlė, skirta dalintis išlaidomis su draugais: 100 % europietiška ir sukurta privatumui. Atostogos, bendras butas, savaitgalis, bendra dovana: įrašyk išlaidas, o Counted tau pasakys, kas kam kiek skolingas, su kuo mažiau pervedimų.
+
+🔗 Paskyros nereikia
+Sukurk projektą, nusiųsk nuorodą. Ir viskas. Tavo draugai prisijungia ir dalyvauja be jokios registracijos. Paskyra? Niekada neprivaloma. Ji skirta rasti savo projektus kitame įrenginyje, kviesti draugus iš programėlės ir dalintis savo mokėjimo duomenimis.
+
+🔒 Užšifruota tavo telefone
+Vardai, sumos, projektai, istorija: viskas užšifruojama tavo telefone. Raktą turi tik tu. Niekas negali skaityti tavo sąskaitų, net ir mes. Ir tavo slaptažodis niekada nepalieka telefono.
+
+📷 Kvitų skenavimas tavo telefone
+Nufotografuok kvitą: suma, data ir kategorija užpildomos pačios. Viskas vyksta tavo telefone. Nuotrauka nesaugoma.
+
+🇪🇺 100 % europietiška
+Serveriai Vokietijoje, el. laiškai siunčiami iš Prancūzijos. Tavo projektai niekada nepalieka Europos Sąjungos.
+
+💸 Tikrai nemokama
+Nemokama, be reklamų, be sekimo įrankių ir be išlaidų ar dalyvių skaičiaus ribos. Viskas, kas čia aprašyta, yra ir liks nemokama. Nieko nerenkame, tavo duomenų neparduodame. Tai ne mūsų modelis.
+
+✨ Viskas bendroms išlaidoms
+• Išlaidos, pervedimai ir pajamos, kai moka keli ir dalijama keliems
+• Dalijimas po lygiai, pagal dalis arba tiksliomis sumomis, patikrintas iki cento
+• Kuo mažiau pervedimų, kad grupė atsiskaitytų
+• Pasikartojančios išlaidos, pvz., nuoma ar prenumeratos: įvedamos kartą, pridedamos kaskart atėjus terminui
+• Daugiau nei 150 valiutų, perskaičiuojamų Europos Komisijos mėnesio kursu
+• Statistika pagal kategorijas, pagal žmones ir mėnuo po mėnesio
+• Savos kategorijos, kiekviena su savo jaustuku, ir jaustukas kiekvienam projektui
+• Istorija: kas ką pridėjo, redagavo ar ištrynė
+• Paieška pagal pavadinimą, pastabą ar kategoriją, atliekama tavo įrenginyje
+• Turint paskyrą, asmeninis projektas „Mano išlaidos“: tavo asmeninės išlaidos ir tavo dalis grupėse, mėnuo po mėnesio
+• Išlaidų perkėlimas iš vieno projekto į kitą
+• Mėnesio biudžetai pagal kategorijas, skaičiuojami nuo tavo tikrosios dalies, su įspėjimu ties 80 %, apskaičiuojamu tavo įrenginyje
+• Pradžios ekrane: kiek tau skolingi ir kiek turi grąžinti visuose projektuose, apskaičiuojama tavo įrenginyje
+• Greitasis veiksmas „Asmeninė išlaida“ ilgai paspaudus programėlės piktogramą
+• Neprisijungus: naršyk ir įvesk be ryšio
+• CSV ir JSON eksportas vienu palietimu
+• Mokėjimo duomenys (IBAN, PayPal, Wero, Lydia, Revolut…) užšifruoti kaip ir visa kita
+• Slaptažodžio keitimas nieko neprarandant; pamiršus jį, atkūrimo raktas viską grąžina
+• Nutekėjęs slaptažodis ar pamestas telefonas: nauji paskyros raktai, visi kiti įrenginiai atjungiami
+• Projekto administratoriai: pašalinus ką nors, pasikeičia projekto raktas, o senoji to žmogaus nuoroda nieko nebeatidaro
+• Nariai su paskyra naująjį raktą gauna patys, apsaugotą postkvantiniu šifravimu; kiti gauna naują nuorodą
+• Tricount importas: įklijuok bendrinimo nuorodą ir viskas perkeliama
+• Naršyklėje, Android ir iOS: tas pats projektas visur, su ta pačia nuoroda
+• 32 kalbos, įskaitant visas 24 oficialiąsias ES kalbas
+
+Kaip tai iš tikrųjų veikia? (anglų k.) counted.fr/en/encryption
+Savarankiškai patikrink kodą, kurį paleidi: counted.fr/en/verify

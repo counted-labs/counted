@@ -94,10 +94,15 @@ pub async fn check_erase(account: Account, account_key: Option<[u8; 32]>, pendin
 }
 
 pub fn erase_device_stores() {
-    write_to_ls(&erased(&read_from_ls()));
+    let (kept, theme) = (erased(&read_from_ls()), crate::common::stored_theme());
     remove_quarantined_ls();
     clear_queue();
     clear_fx();
+    crate::common::store_seal::erase();
+    write_to_ls(&kept);
+    if theme != crate::common::Theme::default() {
+        crate::common::store_theme(theme);
+    }
     forget_decrypted();
 }
 
@@ -187,6 +192,7 @@ mod tests {
         let state = LocalStorageState {
             projects: vec![holding(Uuid::new_v4(), &generate_key())],
             onboarding_seen: true,
+            invite_mail_off: true,
             show_archived: true,
             cached_projects_list: Some(vec![]),
             account_key: Some("k".into()),
@@ -195,7 +201,6 @@ mod tests {
             typed_wrap_accounts: vec![account],
             friend_keys: [(account, "k".into())].into(),
             friend_kem_keys: [(account, "k".into())].into(),
-            hybrid_invitations: true,
             account_key_owner: Some(account),
             account_key_epoch: Some(1),
             amk_epoch_pins: [(account, 1)].into(),

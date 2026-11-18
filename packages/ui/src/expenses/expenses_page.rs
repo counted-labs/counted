@@ -13,10 +13,9 @@ use crate::common::{
     LEAVE_CONFIRM_TITLE,
 };
 use crate::common::offline_queue::drop_project_ops;
-use crate::expenses::rotation_sheets::ProjectRotation;
+use crate::expenses::helpers::first_key::{dismiss_first_key_hint, first_key_hint_dismissed, first_key_prompt};
+use crate::expenses::rotation_sheets::{FirstKeyCard, ProjectRotation};
 use crate::expenses::helpers::my_spending::load_ledgers;
-use crate::expenses::helpers::guest_invites::{dismiss_guests_hint, guests_hint_dismissed, unclaimed_guests};
-use crate::expenses::guests_card::{GuestsCard, SendToGuestsSheet};
 use crate::expenses::my_spending::{CountedGroup, CountedGroupsSheet};
 use crate::preferences::{push_counted, uncounted_projects};
 use crate::projects::personal_cards::is_personal_dto;
@@ -74,7 +73,6 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
     let mut show_edit_modal = use_signal(|| false);
     let mut recreate: Signal<Option<GroupPrefill>> = use_signal(|| None);
     let mut show_invite_modal = use_signal(|| false);
-    let mut show_guests_sheet = use_signal(|| false);
     let mut show_switch = use_signal(|| false);
     let mut invite_retry = use_context::<Signal<Option<InviteRetry>>>();
     let mut retry_invitees: Signal<Vec<Invitee>> = use_signal(Vec::new);
@@ -220,6 +218,17 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
     };
 
     let can_rotate = security.as_ref().is_some_and(|s| s.access == AdminAccess::Admin);
+    let first_key_users = {
+        let snapshot = live.read();
+        let dismissed = first_key_hint_dismissed(&ls_ctx.read(), project_id);
+        snapshot
+            .as_ref()
+            .filter(|l| l.project_id == project_id)
+            .and_then(|l| Some((l.project.as_ref()?.key_epoch, &l.users)))
+            .filter(|(epoch, users)| first_key_prompt(security.as_ref().map(|s| &s.access), *epoch, users, stored_user_id(), dismissed))
+            .map(|(_, users)| users.clone())
+    };
+    let dismiss_first_key = move || update_ls(ls_ctx, |state| dismiss_first_key_hint(state, project_id));
 
     // (message, server-unreachable) - the second drives the cache fallback.
     let body_err = sync_error(sync.read().as_ref().and_then(|r| r.as_ref()));
@@ -244,7 +253,6 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
         });
     }));
     let invite = (auth_ctx().is_some() && !personal).then(|| EventHandler::new(move |_| show_invite_modal.set(true)));
-    let dismiss_guests = move || update_ls(ls_ctx, |state| dismiss_guests_hint(state, project_id));
 
     rsx! {
         super::share_preview::SharePreview {}
@@ -396,12 +404,6 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                     let currency = d.currency.clone();
                     let project_status = d.project_status.clone();
                     let read_only = d.read_only;
-                    let guests = match (share_link, uid) {
-                        (Some(_), Some(me)) if !read_only && !guests_hint_dismissed(&ls_ctx.read(), project_id) => {
-                            unclaimed_guests(&key, &pickable, me)
-                        }
-                        _ => Vec::new(),
-                    };
                     // The edit modal must never open on another project's row.
                     let project_dto = live
                         .read()
@@ -442,27 +444,10 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                             }
                         }
 
-                        if !guests.is_empty() {
-                            GuestsCard {
-                                names: guests,
-                                on_later: move |_| dismiss_guests(),
-                                on_send: move |_| show_guests_sheet.set(true),
-                            }
-                        }
-
-                        if show_guests_sheet() {
-                            if let Some(share_link) = share_link {
-                                SendToGuestsSheet {
-                                    on_invite: invite.map(|open| EventHandler::new(move |_| {
-                                        dismiss_guests();
-                                        open.call(());
-                                    })),
-                                    on_share_link: move |_| {
-                                        dismiss_guests();
-                                        share_link.call(());
-                                    },
-                                    on_close: move |_| show_guests_sheet.set(false),
-                                }
+                        if let Some(users) = first_key_users.clone() {
+                            FirstKeyCard {
+                                on_later: move |_| dismiss_first_key(),
+                                on_rotate: move |_| rotation.set(Some(RotationTarget { k1: key, users: users.clone(), removee: None })),
                             }
                         }
 

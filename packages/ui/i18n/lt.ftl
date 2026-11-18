@@ -286,7 +286,6 @@ counted-groups-intro = Tavo dalis šiose grupėse pridedama prie Mano išlaidos 
 counted-groups-converted = { $from }, perskaičiuota į { $to }
 counted-groups-encrypted = Šis pasirinkimas užšifruotas tavo paskyra ir seka tave tavo įrenginiuose.
 counted-groups-empty = Šiame įrenginyje dar nėra grupių.
-counted-groups-done = Gerai
 counted-save-failed = Nepavyko išsaugoti šio pasirinkimo. Bandyk dar kartą.
 tab-budget = Biudžetas
 budget-title = Biudžetai
@@ -728,6 +727,7 @@ help-encryption-see = Išsamiau žr.
 help-forgot-password-q = Kas nutiks, jei pamiršiu slaptažodį?
 help-forgot-password-warning = Niekas negali jo atkurti už tave.
 help-forgot-password-a = Tavo slaptažodis saugo tavo šifravimo raktus ir niekada mums nesiunčiamas: niekas - net mes - negali iššifruoti tavo projektų už tave. Saugok jį saugiai, geriausia slaptažodžių tvarkyklėje.
+help-forgot-password-recovery = Su atkūrimo raktu iš Nustatymų pasirenki naują slaptažodį ir atgauni viską. Be atkūrimo rakto pamirštas slaptažodis ištrina tavo nuostatas, mokėjimo duomenis ir draugų kodus.
 help-archive-delete-q = Kaip archyvuoti arba ištrinti projektą?
 help-archive-delete-a = Projekto ekrane atidaryk meniu ir pasirink
 help-archive-delete-b = kad paslėptum jį išsaugodamas. Projektas ištrinamas visam laikui, kai iš jo išeina paskutinis narys.
@@ -777,22 +777,9 @@ friends-notify = Pranešti žinute
 friends-notify-message = Pereinu prie Counted mūsų bendroms išlaidoms. Nemokama registracija svetainėje https://counted.fr su el. pašto adresu { $email }: ten laukia mano draugystės užklausa.
 friends-notify-copied = Žinutė nukopijuota
 friends-notify-copy-failed = Nepavyko nukopijuoti žinutės
-guests-hint-title =
-    { $count ->
-        [one] { $count } dalyvis dar neprisijungė prie projekto
-        [few] { $count } dalyviai dar neprisijungė prie projekto
-        [many] { $count } dalyvio dar neprisijungė prie projekto
-       *[other] { $count } dalyvių dar neprisijungė prie projekto
-    }
 guests-hint-later = Vėliau
-guests-hint-send = Pakviesk juos
-guests-send-title = Siųsti projektą dalyviams
-guests-send-friend = Pakviesti Counted draugą
-guests-send-friend-badge = Be nuorodos
-guests-send-friend-hint = Jei jau turi paskyrą, gauna šifruotą kvietimą; niekas neina per tavo žinučių programėlę.
-guests-send-link = Bendrinti projekto nuorodą
-guests-send-link-hint = Tiems, kas neturi paskyros. Projektą atidaro vienu palietimu.
-guests-send-link-warning = Bet kas, turintis šią nuorodą, gali skaityti ir keisti projektą. Tavo žinučių programėlė ją irgi mato.
+first-key-hint-title = Pakeisk šio projekto raktą
+first-key-hint-body = Jis vis dar naudoja pirmąjį raktą, kuris galėjo būti išsiųstas kvietime dar prieš postkvantinį šifravimą. Naujas raktas apsaugo jį nuo kvantinių kompiuterių.
 invite-friends-title = Pakviesti draugus
 invite-friends-hint = Projekto raktas užšifruojamas kiekvienam draugui šiame įrenginyje. Serveris jo niekada nemato.
 invite-friends-empty = Dar nėra draugų, kuriuos galėtum pakviesti.
@@ -1109,6 +1096,14 @@ error-rotation-expired = Rakto keitimas užtruko per ilgai ir buvo atšauktas. P
 error-rotation-rows-changed = Projektas pasikeitė keičiant raktą. Pradėk iš naujo.
 project-rotated-title = Nebeturi prieigos prie šio projekto
 project-rotated-body = Administratorius pakeitė šio projekto raktą. Paprašyk administratoriaus naujos nuorodos.
+store-locked-title = Tavo išsaugoti duomenys užrakinti
+store-locked-body = Counted nepavyko atidaryti šiame telefone išsaugotų duomenų. Atrakink telefoną ir bandyk dar kartą.
+store-lost-title = Šis telefonas prarado savo duomenų raktą
+store-lost-body = Counted nebegali atidaryti šiame telefone išsaugotų duomenų. Atkurk jį, kad pradėtum iš naujo: tavo paskyroje išsaugoti projektai sugrįš, kai prisijungsi.
+store-retry = Bandyti dar kartą
+store-reset = Atkurti šį telefoną
+store-reset-warning = Projektai, neišsaugoti paskyroje, bus prarasti visam laikui.
+store-reset-confirm = Atkurti ir juos prarasti
 project-rotated-open-link = Atidaryti nuorodą
 rotation-remove-title = Pašalinti { $name } iš projekto?
 rotation-rotate-title = Pakeisti projekto raktą?
@@ -1148,7 +1143,6 @@ rotation-new-link =
        *[other] Nauja nuoroda išsiųsti · { $count } žmonių be paskyros
     }
 rotation-link-renewed = Nuoroda sėkmingai atnaujinta.
-rotation-done = Atlikta
 history-key-changed = Projekto raktas pakeistas
 history-member-removed = { $name } nebedalyvauja projekte
 project-rotated-row-hint = Raktas pakeistas. Paprašyk naujos nuorodos.
@@ -1201,7 +1195,16 @@ friends-decline-label = Atmesti { $email } užklausą
 friends-add-hint-short = Šis žmogus pamatys tavo užklausą, jei turi paskyrą. Jei ne, pranešk jam.
 friends-send = Siųsti
 friends-sent-hint = Dar neturi paskyros? Pranešk jam: žinutė kviečia užsiregistruoti šiuo adresu.
-friends-done = Atlikta
+friends-mail-checkbox = Taip pat išsiųsti kvietimą el. paštu
+friends-mail-helper = El. paštas nėra ištisai šifruojamas: tavo ir šio žmogaus adresai keliauja per mūsų el. pašto paslaugų teikėją, o šis žmogus matys tavo adresą. Atidžiai patikrink adresą.
+friends-mail-learn-more = Sužinoti daugiau
+friends-sent-mail-hint = Counted išsiųs laišką šiuo adresu, nebent jis neseniai gavo kvietimą arba atsisakė kvietimų.
+friends-sent-private-hint = Niekas nepaliko šifravimo.
+friends-add-another = Pridėti dar ką nors
+unsubscribe-title = Kvietimai el. paštu
+unsubscribe-body = Nutraukti visus Counted kvietimus el. paštu šiuo adresu? Draugai vis tiek galės tave pakviesti programėlėje.
+unsubscribe-confirm = Niekada nesiųsti man kvietimų el. paštu
+unsubscribe-done = Atlikta. Counted daugiau nesiųs kvietimų el. paštu šiuo adresu.
 friends-their-code = Jo saugos kodas
 friends-code-compare-hint = Perskaitykite jį kartu. Jis turi matyti tą patį kodą savo puslapio Draugai viršuje.
 friends-no-key-hint = Dar neparuošta: jo raktas bus sukurtas, kai jis kitą kartą atidarys Counted. Iki tol negali jo pakviesti.

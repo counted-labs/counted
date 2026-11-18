@@ -35,7 +35,10 @@ fn active_tab(route: &Route) -> Option<DockTab> {
         | Route::TermsPage {}
         | Route::LegalNoticePage {}
         | Route::LicensesPage {} => Some(DockTab::Settings),
-        Route::VerifyEmailPage { .. } | Route::DemoPage { .. } | Route::NotFoundPage { .. } => None,
+        Route::VerifyEmailPage { .. }
+        | Route::UnsubscribePage { .. }
+        | Route::DemoPage { .. }
+        | Route::NotFoundPage { .. } => None,
     }
 }
 
@@ -43,7 +46,7 @@ fn active_tab(route: &Route) -> Option<DockTab> {
 /// pages that are a step in a flow rather than a place go without: the e-mail check and the demo
 /// loader, both gone once they answer.
 fn shows_dock(route: &Route) -> bool {
-    !matches!(route, Route::VerifyEmailPage { .. } | Route::DemoPage { .. })
+    !matches!(route, Route::VerifyEmailPage { .. } | Route::UnsubscribePage { .. } | Route::DemoPage { .. })
 }
 
 /// Each tab keeps its own place, as on iOS and Android: leaving a project for another tab and

@@ -28,9 +28,16 @@ pub fn back_armed() -> bool {
 ///
 /// At depth 0 off the home page the press navigates home instead of exiting, which is what a dock
 /// tab reached by `replace` (or a cold-started deep link) should do. On the home page nothing is
-/// armed, and the system finishes the Activity. On Android every change of the armed state is
+/// armed, and the system finishes the Activity. On Android the armed state `_syncBack` settles on is
 /// reported to `MainActivity` (`CountedBack.setArmed`), whose `OnBackPressedCallback` is enabled
 /// only while armed, so the system's predictive back-to-home preview plays at the root.
+///
+/// A press's `popstate` disarms without telling `MainActivity`: the callback stays enabled while that
+/// back is in flight, and only the state the next `_syncBack` settles on is reported. Reporting the
+/// disarm and the re-arm both left a gap between them in which a second press found no callback,
+/// reached the system and closed the app (`back-button.spec.ts`, two presses at once: 1 exit in 6).
+/// A press that lands before the re-arm's `pushState` finds no entry to go back to, and
+/// `MainActivity` waits for one.
 ///
 /// The `history.back()` that disarms is a traversal, and it lands after any script that runs
 /// before it. A sheet closing as a route opens (creating a project) disarmed and re-armed at once,
@@ -80,12 +87,15 @@ pub fn NavigationSync() -> Element {
                         const open = document.querySelectorAll('.modal.modal-open'); \
                         return open.length ? open[open.length - 1] : null; \
                     }; \
-                    const setArmed = function(armed) { \
-                        window._dioxusBackArmed = armed; \
+                    const setArmed = function(armed) { window._dioxusBackArmed = armed; }; \
+                    const report = function() { \
+                        const armed = !!window._dioxusBackArmed; \
+                        if (window._nativeBackArmed === armed) { return; } \
+                        window._nativeBackArmed = armed; \
                         if (window.CountedBack) { window.CountedBack.setArmed(armed); } \
                     }; \
                     const ios = document.documentElement.dataset.plat === 'ios'; \
-                    window._syncBack = function() { \
+                    const sync = function() { \
                         const sheetOpen = !!topSheet(); \
                         if (window._countedEdgeSync) { window._countedEdgeSync(); } \
                         if (ios && sheetOpen !== !!window._countedSheetOpen) { \
@@ -103,6 +113,7 @@ pub fn NavigationSync() -> Element {
                             window.history.back(); \
                         } \
                     }; \
+                    window._syncBack = function() { sync(); report(); }; \
                     window._countedObserve(function() { window._syncBack(); }); \
                     window.addEventListener('popstate', function() { \
                         if (window._dioxusSyntheticBack) { \

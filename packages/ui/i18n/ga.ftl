@@ -287,7 +287,6 @@ counted-groups-intro = Cuirtear do scair sna grúpaí seo le Mo chostais agus le
 counted-groups-converted = { $from }, tiontaithe go { $to }
 counted-groups-encrypted = Tá an rogha seo criptithe le do chuntas agus leanann sé thú ar do ghléasanna.
 counted-groups-empty = Níl aon ghrúpa ar an ngléas seo fós.
-counted-groups-done = OK
 counted-save-failed = Níorbh fhéidir an rogha seo a shábháil. Bain triail eile as.
 tab-budget = Buiséad
 budget-title = Buiséid
@@ -735,6 +734,7 @@ help-encryption-see = Le haghaidh na sonraí, féach an
 help-forgot-password-q = Cad a tharlaíonn má dhéanaim dearmad ar mo phasfhocal?
 help-forgot-password-warning = Ní féidir le duine ar bith é a aisghabháil duit.
 help-forgot-password-a = Cosnaíonn do phasfhocal d'eochracha criptithe agus ní sheoltar chugainn riamh é: ní féidir le duine ar bith - muidne san áireamh - do thionscadail a dhíchriptiú ar do shon. Coinnigh slán é, i mbainisteoir pasfhocal más féidir.
+help-forgot-password-recovery = Le d’eochair athshlánaithe ó Socruithe, roghnaíonn tú pasfhocal nua agus faigheann tú gach rud ar ais. Gan eochair athshlánaithe, scriosann pasfhocal dearmadta do shainroghanna, do shonraí íocaíochta agus cóid do chairde.
 help-archive-delete-q = Conas a chartlannaím nó a scriosaim tionscadal?
 help-archive-delete-a = Ó scáileán an tionscadail, oscail an roghchlár agus roghnaigh
 help-archive-delete-b = chun é a cheilt agus é a choinneáil. Scriostar tionscadal go deo nuair a fhágann a bhall deireanach é.
@@ -784,23 +784,9 @@ friends-notify = Cuir in iúl le teachtaireacht
 friends-notify-message = Táim ag aistriú go Counted dár gcostais roinnte. Clárú saor in aisce ar https://counted.fr leis an seoladh { $email }: tá m'iarratas cairdis ag fanacht ansin.
 friends-notify-copied = Teachtaireacht cóipeáilte
 friends-notify-copy-failed = Níorbh fhéidir an teachtaireacht a chóipeáil
-guests-hint-title =
-    { $count ->
-        [one] Níl { $count } rannpháirtí tar éis teacht isteach sa tionscadal fós
-        [two] Níl { $count } rannpháirtí tar éis teacht isteach sa tionscadal fós
-        [few] Níl { $count } rannpháirtí tar éis teacht isteach sa tionscadal fós
-        [many] Níl { $count } rannpháirtí tar éis teacht isteach sa tionscadal fós
-       *[other] Níl { $count } rannpháirtí tar éis teacht isteach sa tionscadal fós
-    }
 guests-hint-later = Ar ball
-guests-hint-send = Tabhair cuireadh dóibh
-guests-send-title = Seol an tionscadal chuig na rannpháirtithe
-guests-send-friend = Tabhair cuireadh do chara Counted
-guests-send-friend-badge = Gan nasc
-guests-send-friend-hint = Má tá cuntas aige cheana, faigheann sé cuireadh criptithe; ní théann aon rud trí d'aip teachtaireachtaí.
-guests-send-link = Roinn nasc an tionscadail
-guests-send-link-hint = Dóibh siúd gan chuntas. Osclaíonn siad an tionscadal le tapáil amháin.
-guests-send-link-warning = Is féidir le duine ar bith a bhfuil an nasc seo aige an tionscadal a léamh agus a athrú. Feiceann d'aip teachtaireachtaí é freisin.
+first-key-hint-title = Athraigh eochair an tionscadail seo
+first-key-hint-body = Úsáideann sé a chéad eochair fós, a d’fhéadfadh a bheith seolta i gcuireadh roimh an gcriptiú iarchandamach. Cosnaíonn eochair nua é ar ríomhairí candamacha.
 invite-friends-title = Tabhair cuireadh do chairde
 invite-friends-hint = Criptítear eochair an tionscadail do gach cara ar an ngléas seo. Ní fheiceann an freastalaí choíche í.
 invite-friends-empty = Gan cairde le cuireadh a thabhairt dóibh fós.
@@ -1119,6 +1105,14 @@ error-rotation-expired = Thóg an t-athrú eochrach rófhada agus cuireadh ar ce
 error-rotation-rows-changed = Athraíodh an tionscadal le linn an athraithe eochrach. Tosaigh arís.
 project-rotated-title = Níl rochtain agat ar an tionscadal seo a thuilleadh
 project-rotated-body = Athraíodh eochair an tionscadail seo. Iarr an nasc nua ar riarthóir an tionscadail.
+store-locked-title = Tá na sonraí a shábháil tú faoi ghlas
+store-locked-body = Níorbh fhéidir le Counted na sonraí atá sábháilte ar an bhfón seo a oscailt. Díghlasáil do ghuthán, ansin bain triail eile as.
+store-lost-title = Chaill an fón seo eochair a chuid sonraí
+store-lost-body = Ní féidir le Counted na sonraí atá sábháilte ar an bhfón seo a oscailt a thuilleadh. Athshocraigh é chun tosú as an nua: tagann na tionscadail atá sábháilte i do chuntas ar ais nuair a shíníonn tú isteach.
+store-retry = Bain triail eile as
+store-reset = Athshocraigh an fón seo
+store-reset-warning = Caillfear go deo na tionscadail nach bhfuil sábháilte i gcuntas.
+store-reset-confirm = Athshocraigh agus caill iad
 project-rotated-open-link = Oscail nasc
 rotation-remove-title = { $name } a bhaint den tionscadal?
 rotation-rotate-title = Eochair an tionscadail a athrú?
@@ -1149,7 +1143,6 @@ rotation-new-link =
        *[other] Nasc nua le seoladh · daoine gan chuntas: { $count }
     }
 rotation-link-renewed = Athnuadh an nasc.
-rotation-done = Déanta
 history-key-changed = Athraíodh eochair an tionscadail
 history-member-removed = Níl { $name } páirteach sa tionscadal a thuilleadh
 project-rotated-row-hint = Athraíodh an eochair. Iarr an nasc nua.
@@ -1203,7 +1196,16 @@ friends-decline-label = Diúltaigh d'iarraidh { $email }
 friends-add-hint-short = Feicfidh an duine seo d'iarraidh má tá cuntas aige. Mura bhfuil, cuir in iúl dó é.
 friends-send = Seol
 friends-sent-hint = Gan chuntas fós? Cuir in iúl dó é: tugann an teachtaireacht cuireadh dó clárú leis an seoladh seo.
-friends-done = Déanta
+friends-mail-checkbox = Seol cuireadh trí ríomhphost freisin
+friends-mail-helper = Níl ríomhphost criptithe ceann go ceann: téann do sheoladh agus seoladh an duine seo trínár soláthraí ríomhphoist, agus feicfidh an duine seo do sheoladh. Seiceáil an seoladh go cúramach.
+friends-mail-learn-more = Tuilleadh eolais
+friends-sent-mail-hint = Seolann Counted ríomhphost chuig an seoladh seo, mura bhfuair sé cuireadh le déanaí nó mura ndearnadh é a dhíliostáil.
+friends-sent-private-hint = Níor fhág aon rud an criptiú.
+friends-add-another = Cuir duine eile leis
+unsubscribe-title = Ríomhphoist chuiridh
+unsubscribe-body = Gach ríomhphost cuiridh ó Counted chuig an seoladh seo a stopadh? Is féidir le do chairde cuireadh a thabhairt duit san aip fós.
+unsubscribe-confirm = Ná seol cuirí chugam riamh trí ríomhphost
+unsubscribe-done = Déanta. Ní sheolfaidh Counted ríomhphoist chuiridh chuig an seoladh seo arís.
 friends-their-code = A chód sábháilteachta
 friends-code-compare-hint = Léigh le chéile é. Caithfidh sé an cód céanna a fheiceáil ag barr a leathanaigh Cairde.
 friends-no-key-hint = Níl sé réidh fós: cruthaítear a eochair an chéad uair eile a osclaíonn sé Counted. Go dtí sin, ní féidir leat cuireadh a thabhairt dó.

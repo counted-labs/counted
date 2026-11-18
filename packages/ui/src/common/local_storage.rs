@@ -14,6 +14,9 @@ pub struct LocalStorageState {
     pub projects: Vec<LocalStorageProject>,
     #[serde(default)]
     pub onboarding_seen: bool,
+    /// The user unticked "Also email them an invitation": the box starts unticked from then on.
+    #[serde(default)]
+    pub invite_mail_off: bool,
     /// Invisible to SSR like `onboarding_seen` - read it post-mount or hydration breaks.
     #[serde(default)]
     pub show_archived: bool,
@@ -43,10 +46,6 @@ pub struct LocalStorageState {
     /// Each friend's ML-KEM key as this device first saw it, pinned like `friend_keys`.
     #[serde(default)]
     pub friend_kem_keys: std::collections::BTreeMap<Uuid, String>,
-    /// This device has seen the hybrid invitation floor, or sent or opened a hybrid invitation: it
-    /// never writes a classical one again, whatever the server says (security-fixes §5).
-    #[serde(default)]
-    pub hybrid_invitations: bool,
     /// The account `account_key` belongs to, and the master-key epoch it is. `None` for a key
     /// remembered before either was recorded: the session's account, at epoch 0.
     #[serde(default)]
@@ -218,9 +217,9 @@ pub struct LocalStorageProject {
     /// never in a link or a synced payload. Dropped once the server settles it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub creator_secret: Option<String>,
-    /// "Later" on the card listing the participants who may not have the project yet.
+    /// "Later" on the card asking an admin to change a first key (SPEC 14.3).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub guests_hint_dismissed: bool,
+    pub first_key_hint_dismissed: bool,
 }
 
 /// How many expenses are cached per project. **Web is the only target with a ceiling.**
@@ -259,6 +258,9 @@ pub fn remove_quarantined_ls() {
 pub fn write_to_ls(state: &LocalStorageState) -> bool {
     if write_json(LS_KEY, "local storage", state) {
         return true;
+    }
+    if !super::persist::writable() {
+        return false;
     }
     let mut lean = state.clone();
     drop_caches(&mut lean);

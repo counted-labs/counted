@@ -12,8 +12,8 @@ use crate::common::{
 };
 use crate::crypto::{claim_label, claim_token};
 use crate::decrypted::{decrypt_user, DecryptedUser};
-use crate::icons::{CloseIcon, LockIcon, ICON_ACTION, ICON_HEADER};
-use crate::common::{initials, user_color_class, Avatar, SizeClass};
+use crate::icons::{LockIcon, ICON_ACTION};
+use crate::common::{initials, user_color_class, Avatar, SheetBar, SheetFooter, SizeClass, SHEET_TITLE};
 use crate::payment_methods::refill_project_copies;
 
 #[derive(PartialEq, Props, Clone)]
@@ -195,27 +195,16 @@ pub fn UserSelectionModal(props: UserSelectionModalProps) -> Element {
             aria_describedby: "user-selection-hint",
             tabindex: "-1",
             div { class: "modal-box p-0 flex flex-col",
-                div { class: "flex items-start justify-between gap-2 px-6 pt-5 pb-4 border-b border-base-200 flex-shrink-0",
-                    div { class: "flex flex-col gap-0.5",
-                        h2 { id: "user-selection-title", class: "text-lg font-bold font-display", {tid!("user-selection-title")} }
-                        p { id: "user-selection-hint", class: "text-sm text-base-content/70",
-                            match invited_hint {
-                                Some((email, project)) => rsx! { {tid!("user-selection-invited-hint", email: email, project: project)} },
-                                None => rsx! { {tid!("user-selection-hint")} },
-                            }
-                        }
-                    }
-                    if let Some(close) = on_close {
-                        button {
-                            r#type: "button",
-                            class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80 -mr-3 -mt-1",
-                            aria_label: tid!("close"),
-                            onclick: move |_| close.call(()),
-                            CloseIcon { size: ICON_HEADER }
-                        }
+                SheetBar { close_id: "user-selection-close", task: true, on_close,
+                    h2 { id: "user-selection-title", class: SHEET_TITLE, {tid!("user-selection-title")} }
+                }
+                div { class: "flex-1 overflow-y-auto px-5 pt-1 pb-4",
+                p { id: "user-selection-hint", class: "text-sm text-base-content/70 mb-3",
+                    match invited_hint {
+                        Some((email, project)) => rsx! { {tid!("user-selection-invited-hint", email: email, project: project)} },
+                        None => rsx! { {tid!("user-selection-hint")} },
                     }
                 }
-                div { class: "flex-1 overflow-y-auto px-6 py-4",
                 if let Some(key) = error_key() {
                     div { role: "alert", class: "alert alert-error text-sm mb-3", {tid!(key)} }
                 }
@@ -284,7 +273,8 @@ pub fn UserSelectionModal(props: UserSelectionModalProps) -> Element {
                 p { class: "text-xs text-base-content/70 mt-3", {tid!("user-selection-missing")} }
 
                 } // end scrollable body
-                div { class: "flex justify-end px-6 py-4 border-t border-base-200 flex-shrink-0",
+                SheetFooter {
+                    on_cancel: on_close,
                     button {
                         id: "user-selection-confirm",
                         r#type: "button",

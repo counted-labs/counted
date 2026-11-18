@@ -1,0 +1,45 @@
+Counted to aplikacja do dzielenia wydatków ze znajomymi: w 100% europejska i z założenia prywatna. Wakacje, wspólne mieszkanie, weekend, prezent od całej grupy: zapisuj wydatki, a Counted powie Ci, kto komu ile jest winien, przy jak najmniejszej liczbie przelewów.
+
+🔗 Bez zakładania konta
+Utwórz projekt, wyślij link. To wszystko. Twoi znajomi dołączają i biorą udział bez rejestracji. Konto? Nigdy nie jest obowiązkowe. Służy do odnajdywania projektów na innym urządzeniu, zapraszania znajomych z aplikacji i udostępniania Twoich danych do płatności.
+
+🔒 Szyfrowane na Twoim telefonie
+Imiona, kwoty, projekty, historia: wszystko jest szyfrowane na Twoim telefonie. Tylko Ty masz klucz. Nikt nie może odczytać Twoich rozliczeń, nawet my. Twoje hasło również nigdy nie opuszcza telefonu.
+
+📷 Skanowanie paragonów na telefonie
+Zrób zdjęcie paragonu: kwota, data i kategoria uzupełniają się same. Wszystko dzieje się na Twoim telefonie. Zdjęcie nie jest przechowywane.
+
+🇪🇺 W 100% europejskie
+Serwery w Niemczech, e-maile wysyłane z Francji. Twoje projekty nigdy nie opuszczają Unii Europejskiej.
+
+💸 Naprawdę za darmo
+Za darmo, bez reklam, bez śledzenia i bez limitu wydatków czy uczestników. Wszystko, co tu opisano, jest darmowe i takie pozostanie. Nic nie zbieramy, nie sprzedajemy Twoich danych. To nie jest nasz model.
+
+✨ Wszystko do wspólnych wydatków
+• Wydatki, przelewy i wpływy, z wieloma płacącymi i podziałem na wiele osób
+• Podział po równo, według udziałów lub według dokładnych kwot, sprawdzany co do grosza
+• Jak najmniej przelewów, żeby rozliczyć grupę
+• Wydatki cykliczne, jak czynsz czy subskrypcje: wpisane raz, dodawane przy każdym terminie
+• Ponad 150 walut, przeliczanych po miesięcznym kursie Komisji Europejskiej
+• Statystyki według kategorii, według osób i miesiąc po miesiącu
+• Własne kategorie, każda z własnym emoji, i emoji dla każdego projektu
+• Historia: kto co dodał, zmienił lub usunął
+• Wyszukiwanie po nazwie, notatce lub kategorii, na Twoim urządzeniu
+• Z kontem osobisty projekt „Moje wydatki”: to, co wydajesz w pojedynkę, plus Twój udział w grupach, miesiąc po miesiącu
+• Przenoszenie wydatku z jednego projektu do innego
+• Miesięczne budżety na kategorię, liczone od Twojego rzeczywistego udziału, z ostrzeżeniem przy 80% obliczanym na Twoim urządzeniu
+• Na ekranie głównym: ile Ci się należy i ile masz do oddania we wszystkich projektach, obliczane na Twoim urządzeniu
+• Skrót „Wydatek osobisty” po przytrzymaniu ikony aplikacji
+• Offline: przeglądaj i dodawaj bez sieci
+• Eksport do CSV i JSON jednym dotknięciem
+• Dane do płatności (IBAN, PayPal, Wero, Lydia, Revolut…) szyfrowane jak wszystko inne
+• Zmiana hasła bez utraty czegokolwiek; jeśli je zapomnisz, klucz odzyskiwania przywróci wszystko
+• Wyciek hasła lub zgubiony telefon: nowe klucze konta, wszystkie inne urządzenia wylogowane
+• Administratorzy projektu: usunięcie kogoś zmienia klucz projektu, a stary link tej osoby niczego już nie otwiera
+• Członkowie z kontem dostają nowy klucz automatycznie, z szyfrowaniem postkwantowym; pozostali dostają nowy link
+• Import z Tricount: wklej link udostępniania, a wszystko zostanie przeniesione
+• Przeglądarka, Android i iOS: ten sam projekt wszędzie, z tym samym linkiem
+• 32 języki, w tym wszystkie 24 języki urzędowe UE
+
+Jak to właściwie działa? (po angielsku) counted.fr/en/encryption
+Sprawdź samodzielnie kod, który uruchamiasz: counted.fr/en/verify

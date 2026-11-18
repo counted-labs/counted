@@ -1,0 +1,5 @@
+• Recovery key: get everything back after a forgotten password
+• Change your password, and a project's key to remove someone from it
+• Invitations between friends move to post-quantum encryption
+• Counted asks admins to change a project's first key
+• Small fixes and improvements

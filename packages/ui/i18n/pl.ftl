@@ -286,7 +286,6 @@ counted-groups-intro = Twój udział w tych grupach dolicza się do Moje wydatki
 counted-groups-converted = { $from }, przeliczone na { $to }
 counted-groups-encrypted = Ten wybór jest szyfrowany twoim kontem i podąża za tobą na twoich urządzeniach.
 counted-groups-empty = Na tym urządzeniu nie ma jeszcze żadnej grupy.
-counted-groups-done = OK
 counted-save-failed = Nie udało się zapisać tego wyboru. Spróbuj ponownie.
 tab-budget = Budżet
 budget-title = Budżety
@@ -728,6 +727,7 @@ help-encryption-see = Szczegóły znajdziesz w
 help-forgot-password-q = Co się stanie, jeśli zapomnę hasła?
 help-forgot-password-warning = Nikt nie odzyska go za Ciebie.
 help-forgot-password-a = Twoje hasło chroni Twoje klucze szyfrowania i nigdy nie jest do nas wysyłane: nikt - łącznie z nami - nie odszyfruje Twoich projektów za Ciebie. Przechowuj je bezpiecznie, najlepiej w menedżerze haseł.
+help-forgot-password-recovery = Klucz odzyskiwania z Ustawień pozwala ci wybrać nowe hasło i odzyskać wszystko. Bez klucza odzyskiwania zapomniane hasło usuwa Twoje preferencje, dane do płatności i kody znajomych.
 help-archive-delete-q = Jak zarchiwizować lub usunąć projekt?
 help-archive-delete-a = Na ekranie projektu otwórz menu i wybierz
 help-archive-delete-b = aby go ukryć, zachowując go. Projekt jest usuwany na dobre, gdy opuści go ostatni członek.
@@ -777,22 +777,9 @@ friends-notify = Daj znać wiadomością
 friends-notify-message = Przechodzę na Counted dla naszych wspólnych wydatków. Darmowa rejestracja na https://counted.fr z adresem { $email }: czeka tam moje zaproszenie do znajomych.
 friends-notify-copied = Skopiowano wiadomość
 friends-notify-copy-failed = Nie udało się skopiować wiadomości
-guests-hint-title =
-    { $count ->
-        [one] { $count } uczestnik jeszcze nie dołączył do projektu
-        [few] { $count } uczestnicy jeszcze nie dołączyli do projektu
-        [many] { $count } uczestników jeszcze nie dołączyło do projektu
-       *[other] { $count } uczestnika jeszcze nie dołączyło do projektu
-    }
 guests-hint-later = Później
-guests-hint-send = Zaproś ich
-guests-send-title = Wyślij projekt uczestnikom
-guests-send-friend = Zaproś znajomego z Counted
-guests-send-friend-badge = Bez linku
-guests-send-friend-hint = Jeśli ma już konto, dostaje zaszyfrowane zaproszenie; nic nie przechodzi przez Twój komunikator.
-guests-send-link = Udostępnij link do projektu
-guests-send-link-hint = Dla osób bez konta. Otwierają projekt jednym dotknięciem.
-guests-send-link-warning = Każdy, kto ma ten link, może czytać i edytować projekt. Twój komunikator też go widzi.
+first-key-hint-title = Zmień klucz tego projektu
+first-key-hint-body = Wciąż używa swojego pierwszego klucza, który mógł zostać wysłany w zaproszeniu sprzed szyfrowania postkwantowego. Nowy klucz chroni go przed komputerami kwantowymi.
 invite-friends-title = Zaproś znajomych
 invite-friends-hint = Klucz projektu jest szyfrowany dla każdego znajomego na tym urządzeniu. Serwer nigdy go nie widzi.
 invite-friends-empty = Nie ma jeszcze znajomych do zaproszenia.
@@ -1109,6 +1096,14 @@ error-rotation-expired = Zmiana klucza trwała zbyt długo i została anulowana.
 error-rotation-rows-changed = Projekt zmienił się podczas zmiany klucza. Zacznij od nowa.
 project-rotated-title = Nie masz już dostępu do tego projektu
 project-rotated-body = Klucz tego projektu został zmieniony przez admina. Poproś admina o nowy link.
+store-locked-title = Twoje zapisane dane są zablokowane
+store-locked-body = Counted nie mógł otworzyć danych zapisanych na tym telefonie. Odblokuj telefon i spróbuj ponownie.
+store-lost-title = Ten telefon stracił klucz do swoich danych
+store-lost-body = Counted nie może już otworzyć danych zapisanych na tym telefonie. Zresetuj go, aby zacząć od nowa: projekty zapisane na twoim koncie wrócą po zalogowaniu.
+store-retry = Spróbuj ponownie
+store-reset = Zresetuj ten telefon
+store-reset-warning = Projekty, które nie są zapisane na koncie, przepadną na zawsze.
+store-reset-confirm = Zresetuj i je strać
 project-rotated-open-link = Otwórz link
 rotation-remove-title = Usunąć { $name } z projektu?
 rotation-rotate-title = Zmienić klucz projektu?
@@ -1154,7 +1149,6 @@ rotation-new-link =
        *[other] Nowy link do wysłania · { $count } osoby bez konta
     }
 rotation-link-renewed = Link został odnowiony.
-rotation-done = Gotowe
 history-key-changed = Zmieniono klucz projektu
 history-member-removed = { $name } nie należy już do projektu
 project-rotated-row-hint = Klucz został zmieniony. Poproś o nowy link.
@@ -1207,7 +1201,16 @@ friends-decline-label = Odrzuć zaproszenie od { $email }
 friends-add-hint-short = Ta osoba zobaczy Twoje zaproszenie, jeśli ma konto. Jeśli nie, daj jej znać.
 friends-send = Wyślij
 friends-sent-hint = Nie ma jeszcze konta? Daj jej znać: wiadomość zaprasza ją do rejestracji na ten adres.
-friends-done = Gotowe
+friends-mail-checkbox = Wyślij też zaproszenie e-mailem
+friends-mail-helper = E-mail nie jest szyfrowany end-to-end: Twój adres i adres tej osoby przechodzą przez naszego dostawcę poczty, a ta osoba zobaczy Twój adres. Sprawdź go dokładnie.
+friends-mail-learn-more = Dowiedz się więcej
+friends-sent-mail-hint = Counted wyśle e-mail na ten adres, chyba że niedawno dostał zaproszenie lub zrezygnował z zaproszeń.
+friends-sent-private-hint = Nic nie opuściło szyfrowania.
+friends-add-another = Dodaj kolejną osobę
+unsubscribe-title = Zaproszenia e-mailem
+unsubscribe-body = Wstrzymać wszystkie zaproszenia e-mailem od Counted na ten adres? Znajomi nadal mogą Cię zaprosić w aplikacji.
+unsubscribe-confirm = Nigdy nie wysyłaj mi zaproszeń e-mailem
+unsubscribe-done = Gotowe. Counted nie wyśle już zaproszeń e-mailem na ten adres.
 friends-their-code = Kod bezpieczeństwa znajomego
 friends-code-compare-hint = Przeczytajcie go razem. Znajomy musi widzieć ten sam kod na górze swojej strony Znajomi.
 friends-no-key-hint = Jeszcze niegotowe: klucz znajomego powstanie, gdy następnym razem otworzy Counted. Do tego czasu nie możesz go zaprosić.

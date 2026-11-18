@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use shared::Account;
 
 use crate::auth::credentials::delete_with_password;
-use crate::common::{error_message, haptic, Haptic};
+use crate::common::{error_message, haptic, Haptic, SheetBar, SheetFooter, SHEET_TITLE};
 use crate::tid;
 
 /// Deleting the account asks for the password (security review 2026-11-02 L3): the proof goes with
@@ -44,10 +44,13 @@ pub fn DeleteAccountSheet(on_close: EventHandler<()>, on_deleted: EventHandler<(
             aria_labelledby: "delete-account-title",
             aria_describedby: "delete-account-body",
             tabindex: "-1",
-            div { class: "modal-box max-w-md",
-                h2 { id: "delete-account-title", class: "font-bold text-lg font-display mb-3", {tid!("account-delete-confirm-title")} }
-                p { id: "delete-account-body", class: "text-sm text-base-content/70 mb-3", {tid!("account-delete-confirm-message")} }
-                form { class: "flex flex-col gap-3", onsubmit: on_submit,
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar { close_id: "delete-account-close", task: true, on_close: move |_| if !deleting() { on_close.call(()) },
+                    h2 { id: "delete-account-title", class: SHEET_TITLE, {tid!("account-delete-confirm-title")} }
+                }
+                form { class: "flex flex-col flex-1 min-h-0", onsubmit: on_submit,
+                    div { class: "flex-1 overflow-y-auto flex flex-col gap-3 px-5 pt-1 pb-4",
+                    p { id: "delete-account-body", class: "text-sm text-base-content/70", {tid!("account-delete-confirm-message")} }
                     if let Some(err) = error() {
                         div { id: "delete-account-error", role: "alert", class: "alert alert-error text-sm", "{err}" }
                     }
@@ -63,15 +66,9 @@ pub fn DeleteAccountSheet(on_close: EventHandler<()>, on_deleted: EventHandler<(
                             oninput: move |e| password.set(e.value()),
                         }
                     }
-                    div { class: "modal-action mt-0",
-                        button {
-                            id: "delete-account-cancel",
-                            r#type: "button",
-                            class: "btn",
-                            disabled: deleting(),
-                            onclick: move |_| on_close.call(()),
-                            {tid!("cancel")}
-                        }
+                    }
+                    SheetFooter {
+                        on_cancel: move |_| if !deleting() { on_close.call(()) },
                         button {
                             id: "delete-account-confirm",
                             r#type: "submit",

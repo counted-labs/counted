@@ -9,6 +9,7 @@ pub mod expenses;
 pub mod friends;
 pub mod fx;
 pub mod history;
+pub mod mail;
 pub mod payments;
 pub mod projects;
 pub mod push;

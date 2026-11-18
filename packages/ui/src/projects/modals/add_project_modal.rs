@@ -11,7 +11,7 @@ use shared::{
 
 use crate::common::creator_proof::{keep_creator_secret, new_creator_proof};
 use crate::common::{
-    error_message, haptic, project_initial, tile_class, tile_text, update_ls, CurrencyPicker, DiscardConfirm, EmojiGrid, FormSheetBar, Haptic,
+    error_message, haptic, project_initial, tile_class, tile_text, update_ls, CurrencyPicker, DiscardConfirm, EmojiGrid, Haptic, SheetBar, SheetFooter, SHEET_TITLE,
     upsert_project, upsert_project_key, InviteRetry, LocalStorageState,
 };
 use crate::crypto::{
@@ -226,7 +226,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                     .collect();
                 if !invitees.is_empty() {
                     let from = account_key.and_then(|ak| sender(account, &ak, &ls_ctx.peek()));
-                    let unsent = invite_each(ls_ctx, project_id, &invitees, from, &key).await;
+                    let unsent = invite_each(project_id, &invitees, from, &key).await;
                     if !unsent.is_empty() {
                         invite_retry.set(Some(InviteRetry { project_id, unsent }));
                     }
@@ -268,20 +268,15 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
             aria_labelledby: "add-project-modal-title",
             tabindex: "-1",
             div { class: "modal-box max-w-sm p-0 flex flex-col",
-                div { class: "px-4 pt-3 pb-3 border-b border-base-200 flex-shrink-0",
-                    FormSheetBar {
-                        close_id: "add-project-close",
-                        confirm_id: "add-project-confirm",
-                        confirm_label: tid!("create"),
-                        form: Some("add-project-fields"),
-                        disabled: loading() || !ready,
-                        on_close: move |_| request_close(),
-                        h2 { id: "add-project-modal-title", class: "flex-1 min-w-0 truncate font-bold text-lg font-display sheet-bar-title", {tid!("add-project-title")} }
-                    }
+                SheetBar {
+                    close_id: "add-project-close",
+                    task: true,
+                    on_close: move |_| request_close(),
+                    h2 { id: "add-project-modal-title", class: SHEET_TITLE, {tid!("add-project-title")} }
                 }
 
                 form { id: "add-project-fields", class: "flex flex-col flex-1 overflow-hidden", onsubmit: on_submit,
-                div { class: "flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-5",
+                div { class: "flex-1 overflow-y-auto px-5 pt-1 pb-4 flex flex-col gap-5",
                 if let Some(err) = error_msg().filter(|e| *e != name_required) {
                     div { id: "add-project-error", role: "alert", class: "alert alert-error text-sm", "{err}" }
                 }
@@ -407,13 +402,8 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                     }
 
                 } // end scrollable body
-                    div { class: "flex justify-end gap-2 px-6 py-4 border-t border-base-200 flex-shrink-0",
-                        button {
-                            r#type: "button",
-                            class: "btn",
-                            onclick: move |_| request_close(),
-                            {tid!("cancel")}
-                        }
+                    SheetFooter {
+                        on_cancel: move |_| request_close(),
                         button {
                             id: "add-project-submit",
                             r#type: "submit",

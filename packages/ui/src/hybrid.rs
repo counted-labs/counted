@@ -213,6 +213,35 @@ mod tests {
         assert!(seal(&random::<32>(), &kem_pub[..100], b"ctx", b"k").is_none());
     }
 
+    /// libsodium's `has_small_order` list (`crypto_scalarmult/curve25519/ref10`): 0, 1, the two
+    /// points of order 8, and p - 1, p, p + 1; each also with the ignored top bit set.
+    #[test]
+    fn every_libsodium_small_order_key_is_refused() {
+        let mut blacklist = vec![[0u8; 32], { let mut k = [0u8; 32]; k[0] = 1; k }];
+        blacklist.push([
+            0xe0, 0xeb, 0x7a, 0x7c, 0x3b, 0x41, 0xb8, 0xae, 0x16, 0x56, 0xe3, 0xfa, 0xf1, 0x9f, 0xc4, 0x6a,
+            0xda, 0x09, 0x8d, 0xeb, 0x9c, 0x32, 0xb1, 0xfd, 0x86, 0x62, 0x05, 0x16, 0x5f, 0x49, 0xb8, 0x00,
+        ]);
+        blacklist.push([
+            0x5f, 0x9c, 0x95, 0xbc, 0xa3, 0x50, 0x8c, 0x24, 0xb1, 0xd0, 0xb1, 0x55, 0x9c, 0x83, 0xef, 0x5b,
+            0x04, 0x44, 0x5c, 0xc4, 0x58, 0x1c, 0x8e, 0x86, 0xd8, 0x22, 0x4e, 0xdd, 0xd0, 0x9f, 0x11, 0x57,
+        ]);
+        for low in [0xec, 0xed, 0xee] {
+            let mut k = [0xffu8; 32];
+            (k[0], k[31]) = (low, 0x7f);
+            blacklist.push(k);
+        }
+        let with_top_bit: Vec<[u8; 32]> = blacklist.iter().map(|k| { let mut k = *k; k[31] |= 0x80; k }).collect();
+
+        for bad in blacklist.iter().chain(&with_top_bit) {
+            assert_eq!(x25519(random::<32>(), bad), None, "{bad:02x?}");
+        }
+        for _ in 0..32 {
+            let (_, _, x_pub, _) = recipient();
+            assert!(x25519(random::<32>(), &x_pub).is_some());
+        }
+    }
+
     /// Known answer (SPEC §16): fixed keys, randomness, context and plaintext give a fixed box. A
     /// change to the combiner, the KEM or the AEAD changes this digest.
     #[test]

@@ -125,8 +125,12 @@ pub fn use_theme_choice() -> Signal<Theme> {
 pub fn choose_theme(mut choice: Signal<Theme>, theme: Theme) {
     haptic(Haptic::Selection);
     choice.set(theme);
-    write_json(THEME_KEY, "theme", &theme);
+    store_theme(theme);
     apply_theme(theme);
+}
+
+pub fn store_theme(theme: Theme) {
+    write_json(THEME_KEY, "theme", &theme);
 }
 
 #[cfg(test)]

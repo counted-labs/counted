@@ -5,8 +5,8 @@ use super::labels::{anchor_label, ends_label, frequency_label, lands_on_month_en
 use super::model::{Ends, Freq};
 use super::schedule::last_date;
 use super::view::{backfill_count, Repeat};
-use crate::common::format_date;
-use crate::icons::{CheckIcon, CloseIcon, RepeatIcon, RightArrowIcon, ICON_HEADER, ICON_INLINE};
+use crate::common::{format_date, SheetBar, SheetFooter, SHEET_TITLE};
+use crate::icons::{CheckIcon, RepeatIcon, RightArrowIcon, ICON_INLINE};
 use crate::tid;
 
 fn parse(date: &str) -> Option<NaiveDate> {
@@ -148,15 +148,8 @@ pub fn RepeatPicker(
             aria_labelledby: "repeat-title",
             tabindex: "-1",
             div { class: "modal-box max-w-md p-0 flex flex-col",
-                div { class: "flex items-center gap-2 px-5 pt-4 pb-2",
-                    h2 { id: "repeat-title", class: "flex-1 font-bold text-lg font-display", {tid!("repeat-label")} }
-                    button {
-                        r#type: "button",
-                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                        aria_label: tid!("close"),
-                        onclick: move |_| on_close.call(()),
-                        CloseIcon { size: ICON_HEADER }
-                    }
+                SheetBar { close_id: "repeat-close", task: true, on_close,
+                    h2 { id: "repeat-title", class: SHEET_TITLE, {tid!("repeat-label")} }
                 }
                 div { class: "flex-1 overflow-y-auto flex flex-col pb-2",
                     ul { class: "flex flex-col px-3", role: "radiogroup", aria_labelledby: "repeat-title",
@@ -285,11 +278,12 @@ pub fn RepeatPicker(
                         }
                     }
                 }
-                div { class: "px-5 py-3 border-t border-base-200",
+                SheetFooter {
+                    on_cancel: on_close,
                     button {
                         id: "repeat-done",
                         r#type: "button",
-                        class: "btn btn-primary w-full",
+                        class: "btn btn-primary",
                         onclick: move |_| on_done.call(picked()),
                         {tid!("repeat-done")}
                     }

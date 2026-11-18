@@ -26,6 +26,9 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import android.util.Log
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.activity.BackEventCompat
@@ -37,10 +40,110 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsAnimationCompat
 import androidx.core.view.WindowInsetsCompat
 import java.io.File
+import java.io.FileOutputStream
+import java.security.KeyStore
+import java.security.ProviderException
+import java.security.SecureRandom
 import java.util.Locale
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
 import org.unifiedpush.android.connector.UnifiedPush
 
 typealias BuildConfig = fr.counted.app.BuildConfig
+
+private const val BACK_WAIT_MS = 1000L
+private const val BACK_POLL_MS = 16L
+
+// The store key (docs/plans/security-3.3.0.md §4): 32 random bytes that seal every store file,
+// wrapped by an AES-256-GCM key that never leaves the Android Keystore. `store_key.bin` is
+// version + IV + ciphertext; it is written tmp, synced, renamed, then read back and unwrapped from
+// disk before Rust seals anything with it. Answers a status byte, then the key: 0 ready,
+// 1 created, 2 locked (try again later), 3 lost (the Keystore key or its file is gone for good).
+private object StoreKey {
+    private const val ALIAS = "counted.store.wrap"
+    private const val FILE = "store_key.bin"
+    private const val DEBUG_FILE = "store_key.debug"
+    private const val VERSION: Byte = 1
+    private const val IV = 12
+    private val AAD = "counted/store-key/v1".toByteArray()
+    const val READY: Byte = 0
+    const val CREATED: Byte = 1
+    const val LOCKED: Byte = 2
+    const val LOST: Byte = 3
+
+    private fun keystore() = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+
+    fun open(dir: File, mayCreate: Boolean): ByteArray {
+        val keystore = keystore()
+        val file = File(dir, FILE)
+        if (file.exists()) {
+            if (!keystore.containsAlias(ALIAS)) return byteArrayOf(LOST)
+            val blob = file.readBytes()
+            if (blob.size != 1 + IV + 32 + 16 || blob[0] != VERSION) return byteArrayOf(LOST)
+            val key = unwrap(keystore, blob) ?: return byteArrayOf(LOCKED)
+            debugCopy(dir, key)
+            return byteArrayOf(READY) + key
+        }
+        if (!mayCreate) return byteArrayOf(LOST)
+        // An alias with no file under it wraps nothing: left by a launch killed between the two.
+        if (keystore.containsAlias(ALIAS)) keystore.deleteEntry(ALIAS)
+        val wrapping = generate()
+        val key = ByteArray(32).also { SecureRandom().nextBytes(it) }
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, wrapping) }
+        cipher.updateAAD(AAD)
+        val blob = byteArrayOf(VERSION) + cipher.iv + cipher.doFinal(key)
+        val tmp = File(dir, "$FILE.tmp")
+        FileOutputStream(tmp).use { it.write(blob); it.fd.sync() }
+        if (!tmp.renameTo(file)) return byteArrayOf(LOCKED)
+        val back = unwrap(keystore(), file.readBytes())
+        if (back == null || !back.contentEquals(key)) return byteArrayOf(LOCKED)
+        debugCopy(dir, key)
+        return byteArrayOf(CREATED) + key
+    }
+
+    fun reset(dir: File) {
+        val keystore = keystore()
+        if (keystore.containsAlias(ALIAS)) keystore.deleteEntry(ALIAS)
+        File(dir, FILE).delete()
+        File(dir, DEBUG_FILE).delete()
+    }
+
+    private fun unwrap(keystore: KeyStore, blob: ByteArray): ByteArray? = try {
+        val wrapping = keystore.getKey(ALIAS, null) as SecretKey
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, wrapping, GCMParameterSpec(128, blob, 1, IV))
+        cipher.updateAAD(AAD)
+        cipher.doFinal(blob, 1 + IV, blob.size - 1 - IV)
+    } catch (e: Exception) {
+        Log.e("counted", "store key unwrap failed", e)
+        null
+    }
+
+    private fun generate(): SecretKey {
+        fun spec(strongBox: Boolean) = KeyGenParameterSpec.Builder(ALIAS, KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setKeySize(256)
+            .apply { if (strongBox && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) setIsStrongBoxBacked(true) }
+            .build()
+        val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+        return try {
+            generator.init(spec(strongBox = true))
+            generator.generateKey()
+        } catch (e: ProviderException) {
+            generator.init(spec(strongBox = false))
+            generator.generateKey()
+        }
+    }
+
+    // Debug builds only (the e2e APK): the harness reads the store through `run-as` and needs the key
+    // to open it. A release build has BuildConfig.DEBUG false, and R8 drops this branch.
+    private fun debugCopy(dir: File, key: ByteArray) {
+        if (BuildConfig.DEBUG) File(dir, DEBUG_FILE).writeText(key.joinToString("") { "%02x".format(it) })
+    }
+}
 
 // Rust reaches openUri, shareFile, setLightSystemBars and requestPush through JNI only, which R8
 // cannot see: without @Keep the release build strips them and every call fails silently.
@@ -101,8 +204,8 @@ class MainActivity : WryActivity() {
     }
 
     // Back goes through the AndroidX dispatcher, not WryActivity.onKeyDown: at targetSdk 36 predictive
-    // back is on and the system sends no KEYCODE_BACK at all. The callback is enabled exactly while
-    // the page has armed a history entry (`_dioxusBackArmed`, NavigationSync in
+    // back is on and the system sends no KEYCODE_BACK at all. The callback is enabled while the page
+    // has armed a history entry or a back is in flight (`_dioxusBackArmed`, NavigationSync in
     // packages/ui/src/common/navigation_sync.rs, reported through `CountedBack.setArmed`), so at the
     // root no callback is enabled and the system plays its back-to-home preview and finishes.
     override val handleBackNavigation: Boolean = false
@@ -120,14 +223,33 @@ class MainActivity : WryActivity() {
         override fun handleOnBackCancelled() = backProgress(-1f, BackEventCompat.EDGE_LEFT)
 
         override fun handleOnBackPressed() {
-            val webView = backWebView
-            if (webView != null && webView.canGoBack()) {
-                backProgress(2f, BackEventCompat.EDGE_LEFT)
-                webView.goBack()
-            } else {
-                isEnabled = false
-                onBackPressedDispatcher.onBackPressed()
+            val webView = backWebView ?: return finishBack()
+            awaitEntry(webView, System.currentTimeMillis() + BACK_WAIT_MS)
+        }
+
+        // Enabled with no entry behind the page: the previous press's back is still in flight and
+        // the page has not pushed its next entry yet. Finishing here closed the app on a quick double
+        // press (navigation_sync.rs). Waits for the entry; the page disarming instead (home reached)
+        // drops the press; a page that answers neither is asked to report again, and finishes only
+        // if it has no back handling at all.
+        private fun awaitEntry(webView: WebView, deadline: Long) {
+            when {
+                !isEnabled -> return
+                webView.canGoBack() -> {
+                    backProgress(2f, BackEventCompat.EDGE_LEFT)
+                    webView.goBack()
+                }
+                System.currentTimeMillis() < deadline ->
+                    webView.postDelayed({ awaitEntry(webView, deadline) }, BACK_POLL_MS)
+                else -> webView.evaluateJavascript("!!window._syncBack&&(window._syncBack(),true)") {
+                    if (it != "true") finishBack()
+                }
             }
+        }
+
+        private fun finishBack() {
+            isEnabled = false
+            onBackPressedDispatcher.onBackPressed()
         }
     }
     private var backWebView: WebView? = null
@@ -135,6 +257,23 @@ class MainActivity : WryActivity() {
     private fun backProgress(progress: Float, edge: Int) {
         val p = "%.4f".format(Locale.ROOT, progress)
         backWebView?.evaluateJavascript("window._countedBackProgress&&window._countedBackProgress($p,$edge)", null)
+    }
+
+    // Called from Rust (src/store_key.rs) once per launch, before the first store read. Every
+    // failure is "locked", never a plain store.
+    fun storeKey(mayCreate: Boolean): ByteArray = try {
+        StoreKey.open(filesDir, mayCreate)
+    } catch (e: Exception) {
+        Log.e("counted", "store key failed", e)
+        byteArrayOf(StoreKey.LOCKED)
+    }
+
+    fun resetStoreKey(): ByteArray = try {
+        StoreKey.reset(filesDir)
+        byteArrayOf()
+    } catch (e: Exception) {
+        Log.e("counted", "store key reset failed", e)
+        byteArrayOf()
     }
 
     inner class BackBridge {

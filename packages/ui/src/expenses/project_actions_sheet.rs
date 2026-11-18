@@ -2,10 +2,10 @@ use dioxus::prelude::*;
 use crate::tid;
 use shared::ProjectStatus;
 
-use crate::common::{haptic, status_transitions, Haptic};
+use crate::common::{haptic, status_transitions, Haptic, SheetBar, SHEET_TITLE};
 use crate::expenses::group_security::{GroupSecurity, GroupSecuritySection};
 use crate::icons::{
-    ArchiveIcon, CloseIcon, DownloadIcon, HistoryIcon, LockIcon, LogOutIcon, MoreIcon, PencilIcon,
+    ArchiveIcon, DownloadIcon, HistoryIcon, LockIcon, LogOutIcon, MoreIcon, PencilIcon,
     RepeatIcon, ShareIcon, SmartphoneIcon, UndoIcon, UserPlusIcon, WalletIcon, ICON_HEADER,
 };
 
@@ -61,23 +61,11 @@ pub fn ProjectActionsSheet(props: ProjectActionsSheetProps) -> Element {
             aria_modal: "true",
             aria_labelledby: "project-actions-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md p-0",
-                div { class: "flex flex-col gap-4 px-6 pt-5 pb-6",
-                div { class: "flex items-center gap-2",
-                    h2 {
-                        id: "project-actions-title",
-                        class: "flex-1 min-w-0 truncate font-bold text-lg font-display",
-                        "{props.title}"
-                    }
-                    button {
-                        id: "project-actions-close",
-                        r#type: "button",
-                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                        aria_label: tid!("close"),
-                        onclick: move |_| on_close.call(()),
-                        CloseIcon {}
-                    }
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar { close_id: "project-actions-close", on_close,
+                    h2 { id: "project-actions-title", class: SHEET_TITLE, "{props.title}" }
                 }
+                div { class: "flex-1 overflow-y-auto flex flex-col gap-4 px-5 pt-1 pb-6",
                 div { class: "flex gap-2",
                     if let Some(on_share) = props.on_share {
                         Tile {
@@ -262,24 +250,11 @@ pub(crate) fn MenuSheet(id: &'static str, title: String, on_close: EventHandler<
             aria_modal: "true",
             aria_labelledby: "{id}-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md p-0",
-                div { class: "flex flex-col gap-4 px-6 pt-5 pb-6",
-                    div { class: "flex items-center gap-2",
-                        h2 {
-                            id: "{id}-title",
-                            class: "flex-1 min-w-0 truncate font-bold text-lg font-display",
-                            "{title}"
-                        }
-                        button {
-                            r#type: "button",
-                            class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                            aria_label: tid!("close"),
-                            onclick: move |_| on_close.call(()),
-                            CloseIcon {}
-                        }
-                    }
-                    {children}
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar { close_id: "{id}-close", on_close,
+                    h2 { id: "{id}-title", class: SHEET_TITLE, "{title}" }
                 }
+                div { class: "flex-1 overflow-y-auto flex flex-col gap-4 px-5 pt-1 pb-6", {children} }
             }
             div { class: "modal-backdrop", onclick: move |_| on_close.call(()) }
         }

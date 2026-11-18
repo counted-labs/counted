@@ -74,6 +74,8 @@ try {
           platformName: 'iOS',
           'appium:automationName': 'XCUITest',
           'appium:udid': udid,
+          'appium:isHeadless': true,
+          'appium:simulatorStartupTimeout': 300000,
           'appium:bundleId': 'fr.counted.app',
           'appium:language': 'en',
           'appium:locale': 'en_US',

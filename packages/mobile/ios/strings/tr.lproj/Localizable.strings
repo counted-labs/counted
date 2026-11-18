@@ -1,4 +1,5 @@
 "push.title" = "Counted";
+"push.generic" = "Counted’da yeni bir şey var";
 "push.friend_request" = "Yeni arkadaşlık isteği";
 "push.friend_accepted" = "Arkadaşlık isteğin kabul edildi";
 "push.project_invitation" = "Bir projeye yeni davet";

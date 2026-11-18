@@ -196,8 +196,8 @@ pub struct Unwrapped {
 }
 
 /// A project key or the private key, encrypted under the account key - see `docs/e2ee.md`, "Key
-/// escrow". Always a typed [`KeyWrap`], whatever `Account.typed_wraps` says: every build the server
-/// still serves reads it, and a server-held switch would let a hostile server keep wraps untyped.
+/// escrow". Always a typed [`KeyWrap`]: every build the server still serves reads it, and a
+/// server-held switch would let a hostile server keep wraps untyped.
 pub fn wrap_key(account_key: &[u8; 32], use_: WrapUse, key: &[u8; 32]) -> Option<EncryptedPair> {
     let (use_, project) = use_.parts();
     encrypt_json(account_key, &KeyWrap { use_: use_.to_string(), project, account: None, epoch: None, key: key_to_fragment(key) }).ok()
@@ -301,41 +301,6 @@ pub fn public_key_of(private: &[u8; 32]) -> Vec<u8> {
     crypto_box::SecretKey::from_bytes(*private).public_key().to_bytes().to_vec()
 }
 
-/// `crypto_box` does not reject what libsodium does: a key of small order yields one of at most 8
-/// shared secrets and leaks the sender's private scalar mod 8. Such a point is one that [8]P sends
-/// to the identity, which the ladder encodes as u = 0.
-fn has_small_order(public: &[u8; 32]) -> bool {
-    use curve25519_dalek::{montgomery::MontgomeryPoint, scalar::Scalar};
-    (MontgomeryPoint(*public) * Scalar::from(8u8)).to_bytes() == [0u8; 32]
-}
-
-fn chacha_box(my_private: &[u8; 32], their_public: &[u8]) -> Option<crypto_box::ChaChaBox> {
-    let public = crypto_box::PublicKey::from_slice(their_public).ok()?;
-    if has_small_order(public.as_bytes()) {
-        return None;
-    }
-    Some(crypto_box::ChaChaBox::new(&public, &crypto_box::SecretKey::from_bytes(*my_private)))
-}
-
-/// A project key boxed for one friend. Authenticated, not sealed: the recipient opens it with the
-/// sender's public key, which is how they know who sent it.
-pub fn box_project_key(
-    my_private: &[u8; 32],
-    their_public: &[u8],
-    project_key: &[u8; 32],
-) -> Option<EncryptedPair> {
-    seal(&chacha_box(my_private, their_public)?, key_to_fragment(project_key).as_bytes()).ok()
-}
-
-pub fn unbox_project_key(
-    my_private: &[u8; 32],
-    their_public: &[u8],
-    boxed: &EncryptedPair,
-) -> Option<[u8; 32]> {
-    let plain = open(&chacha_box(my_private, their_public)?, boxed).ok()?;
-    key_from_fragment(std::str::from_utf8(&plain).ok()?).ok()
-}
-
 /// Sixteen characters, in groups of four, that two friends can read to each other to check the
 /// server handed out the right key: SHA-256 of the public key, first 80 bits, base32. 40 bits was
 /// within reach of a server grinding a lookalike key - see `docs/e2ee.md`.
@@ -404,7 +369,6 @@ mod tests {
             payment_methods: None,
             public_key: None,
             private_key: None,
-            typed_wraps: false,
             ..Default::default()
         }
     }
@@ -550,7 +514,6 @@ mod tests {
             let pair =
                 EncryptedPair { ct: STANDARD.encode([0u8; 32]), iv: STANDARD.encode(vec![0u8; len]) };
             assert!(decrypt(&key, &pair).is_err());
-            assert_eq!(unbox_project_key(&[1u8; 32], &generate_keypair().0, &pair), None);
         }
     }
 
@@ -667,16 +630,6 @@ mod tests {
     }
 
     #[test]
-    fn a_stored_box_still_opens() {
-        let alice = crypto_box::SecretKey::from_bytes([1u8; 32]);
-        let boxed = EncryptedPair {
-            ct: "D9WCNfn2fqB0KJnUUYlu62jNE+MhMBhBgXxPC38URyIYssGmA5YzUaKbcceqhN1Y4IsojuLVKlXcCjw=".into(),
-            iv: "3dibiCBYV3+7yGCn8BBp7Z/4zbNS5lki".into(),
-        };
-        assert_eq!(unbox_project_key(&[2u8; 32], alice.public_key().as_bytes(), &boxed), Some([7u8; 32]));
-    }
-
-    #[test]
     fn derivations_are_unchanged() {
         assert_eq!(STANDARD.encode(claim_token(&[7u8; 32])), "1KxVDogT+QG43nuv4CJUZaD2XTrcSRfgRtHfxV3loCg=");
         assert_eq!(
@@ -687,34 +640,6 @@ mod tests {
             STANDARD.encode(derive_login_proof(shared::AUTH_VERSION_CURRENT, "password", &[0x11u8; 16]).unwrap()),
             "DUkKmgemaxbhVxsKh20fRqjNBC/eb8WqiyQPJFKT7ic="
         );
-    }
-
-    #[test]
-    fn a_boxed_project_key_opens_only_for_the_two_parties() {
-        let (alice_pub, alice_priv) = generate_keypair();
-        let (bob_pub, bob_priv) = generate_keypair();
-        let (eve_pub, eve_priv) = generate_keypair();
-        let project_key = generate_key();
-
-        let boxed = box_project_key(&alice_priv, &bob_pub, &project_key).unwrap();
-
-        assert_eq!(unbox_project_key(&bob_priv, &alice_pub, &boxed), Some(project_key));
-        assert_eq!(unbox_project_key(&alice_priv, &bob_pub, &boxed), Some(project_key));
-        assert_eq!(unbox_project_key(&eve_priv, &alice_pub, &boxed), None);
-        assert_eq!(unbox_project_key(&bob_priv, &eve_pub, &boxed), None);
-        assert!(decrypt(&project_key, &boxed).is_err());
-    }
-
-    #[test]
-    fn a_tampered_box_does_not_open() {
-        let (alice_pub, alice_priv) = generate_keypair();
-        let (bob_pub, bob_priv) = generate_keypair();
-        let mut boxed = box_project_key(&alice_priv, &bob_pub, &generate_key()).unwrap();
-        let mut ct = STANDARD.decode(&boxed.ct).unwrap();
-        ct[0] ^= 1;
-        boxed.ct = STANDARD.encode(ct);
-        assert_eq!(unbox_project_key(&bob_priv, &alice_pub, &boxed), None);
-        assert_eq!(unbox_project_key(&bob_priv, &[0u8; 31], &boxed), None);
     }
 
     #[test]
@@ -846,37 +771,6 @@ mod tests {
         assert!(lengths.iter().all(|l| *l == lengths[0]), "{lengths:?}");
         let back: UserPayload = decrypt_json(&key, &sealed("Al", true)).unwrap();
         assert!(back.removed && back.name == "Al");
-    }
-
-    /// libsodium's `has_small_order` list (`crypto_scalarmult/curve25519/ref10`): 0, 1, the two
-    /// points of order 8, and p - 1, p, p + 1; each also with the ignored top bit set.
-    #[test]
-    fn a_small_order_public_key_boxes_and_opens_nothing() {
-        let mut blacklist = vec![[0u8; 32], { let mut k = [0u8; 32]; k[0] = 1; k }];
-        blacklist.push([
-            0xe0, 0xeb, 0x7a, 0x7c, 0x3b, 0x41, 0xb8, 0xae, 0x16, 0x56, 0xe3, 0xfa, 0xf1, 0x9f, 0xc4, 0x6a,
-            0xda, 0x09, 0x8d, 0xeb, 0x9c, 0x32, 0xb1, 0xfd, 0x86, 0x62, 0x05, 0x16, 0x5f, 0x49, 0xb8, 0x00,
-        ]);
-        blacklist.push([
-            0x5f, 0x9c, 0x95, 0xbc, 0xa3, 0x50, 0x8c, 0x24, 0xb1, 0xd0, 0xb1, 0x55, 0x9c, 0x83, 0xef, 0x5b,
-            0x04, 0x44, 0x5c, 0xc4, 0x58, 0x1c, 0x8e, 0x86, 0xd8, 0x22, 0x4e, 0xdd, 0xd0, 0x9f, 0x11, 0x57,
-        ]);
-        for low in [0xec, 0xed, 0xee] {
-            let mut k = [0xffu8; 32];
-            (k[0], k[31]) = (low, 0x7f);
-            blacklist.push(k);
-        }
-        let with_top_bit: Vec<[u8; 32]> = blacklist.iter().map(|k| { let mut k = *k; k[31] |= 0x80; k }).collect();
-
-        let (_, mine) = generate_keypair();
-        let project_key = generate_key();
-        for bad in blacklist.iter().chain(&with_top_bit) {
-            assert!(has_small_order(bad), "{bad:02x?}");
-            assert_eq!(box_project_key(&mine, bad, &project_key), None);
-        }
-        for _ in 0..32 {
-            assert!(!has_small_order(&generate_keypair().0.try_into().unwrap()));
-        }
     }
 
     /// Below the cap the buckets are `pad_json`'s; the bucket the cap cuts holds every length up to

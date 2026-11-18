@@ -1,0 +1,131 @@
+# The fallback for codemagic.yaml when Codemagic runs out of minutes: the same scripts/ios-release.sh
+# on a GitHub-hosted Mac (free on this public repository), from a release tag, uploaded to
+# TestFlight. Run by hand from the Actions tab; nothing starts it. The app-store environment holds
+# the signing material and waits for a maintainer's approval before the job can read it, and each
+# secret reaches only the step that needs it: the keychain and the profile arrive after the Rust
+# build, so no dependency's build script runs beside them. No cache, so no cached dx can be planted.
+name: ios-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build and upload (vX.Y.Z)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency: ios-release
+
+jobs:
+  testflight:
+    runs-on: macos-26
+    timeout-minutes: 180
+    environment: app-store
+    defaults:
+      run:
+        shell: bash
+        working-directory: src
+    env:
+      SQLX_OFFLINE: "true"
+    steps:
+      - name: Clone the tag
+        working-directory: ${{ github.workspace }}
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "ERROR: $TAG is not a vX.Y.Z tag" >&2; exit 1; }
+          git clone -q --depth 1 --branch "$TAG" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" src
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version
+
+      - name: Check App Store version
+        env:
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: bash scripts/ios-release.sh check
+
+      - name: Set App Store release notes
+        continue-on-error: true
+        env:
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: node scripts/asc.mjs release-notes
+
+      - name: Install Rust
+        run: bash scripts/ios-release.sh toolchain
+
+      - name: Install Dioxus CLI
+        run: bash scripts/ios-release.sh dx
+
+      - name: Build iOS app
+        run: bash scripts/ios-release.sh build
+
+      - name: Generate app icons
+        run: bash scripts/ios-release.sh icons
+
+      - name: Set up keychain
+        env:
+          CM_CERTIFICATE: ${{ secrets.CM_CERTIFICATE }}
+          CM_CERTIFICATE_PASSWORD: ${{ secrets.CM_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/ios-release.keychain-db"
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 24)
+          echo "$CM_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/certificate.p12" -P "$CM_CERTIFICATE_PASSWORD" -f pkcs12 -k "$KEYCHAIN" -T /usr/bin/codesign
+          rm "$RUNNER_TEMP/certificate.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v -p codesigning "$KEYCHAIN" | grep -q "Apple Distribution" || {
+            echo "ERROR: no valid Apple Distribution identity in CM_CERTIFICATE (wrong password, expired, or the Apple WWDR G3 intermediate missing)" >&2
+            exit 1
+          }
+
+      - name: Set up provisioning profile
+        env:
+          CM_PROVISIONING_PROFILE: ${{ secrets.CM_PROVISIONING_PROFILE }}
+        run: |
+          PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILES_HOME"
+          echo "$CM_PROVISIONING_PROFILE" | base64 --decode > "$PROFILES_HOME/profile.mobileprovision"
+
+      - name: Sign and package IPA
+        env:
+          APP_STORE_ENCRYPTION_CODE: ${{ secrets.APP_STORE_ENCRYPTION_CODE }}
+        run: bash scripts/ios-release.sh package
+
+      # --upload-package with the numeric app id: --upload-app is deprecated and, on Xcode 26, can
+      # pick the wrong app. altool can also exit 0 on a failed upload, so the upload counts once App
+      # Store Connect lists the build (asc.mjs wait-build).
+      - name: Upload to TestFlight
+        env:
+          APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+          APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          KEYS="$HOME/.appstoreconnect/private_keys"
+          mkdir -p "$KEYS"
+          (umask 077 && printf '%s\n' "$APP_STORE_CONNECT_PRIVATE_KEY" > "$KEYS/AuthKey_$APP_STORE_CONNECT_KEY_IDENTIFIER.p8")
+          SHORT_VERSION=$(grep '^version' packages/mobile/Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          BUILD=$(cat /tmp/ios_build_number)
+          xcrun altool --upload-package Counted.ipa --type ios \
+            --apple-id 6772807915 --bundle-id fr.counted.app \
+            --bundle-version "$BUILD" --bundle-short-version-string "$SHORT_VERSION" \
+            --apiKey "$APP_STORE_CONNECT_KEY_IDENTIFIER" --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+          node scripts/asc.mjs wait-build "$BUILD"
+
+      - name: Remove the signing material
+        if: always()
+        working-directory: ${{ github.workspace }}
+        run: |
+          security delete-keychain "$RUNNER_TEMP/ios-release.keychain-db" 2>/dev/null || true
+          rm -rf "$HOME/.appstoreconnect" "$HOME/Library/MobileDevice/Provisioning Profiles/profile.mobileprovision"

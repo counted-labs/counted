@@ -1,4 +1,4 @@
-Counted, c'est le partage de dépenses entre amis : 100 % européen, respectueux de votre vie privée, engagé pour l'environnement. Vacances, coloc, week-end, cadeau commun : notez vos dépenses, Counted vous dit qui doit combien à qui, en un minimum de virements.
+Counted, c'est le partage de dépenses entre amis : 100 % européen et respectueux de votre vie privée. Vacances, coloc, week-end, cadeau commun : notez vos dépenses, Counted vous dit qui doit combien à qui, en un minimum de virements.
 
 🔗 Pas besoin de compte
 Créez un projet, envoyez le lien. C'est tout. Vos amis rejoignent et participent sans s'inscrire. Un compte ? Jamais obligatoire. Il sert à retrouver vos projets sur un autre appareil, inviter vos amis depuis l'app et partager vos coordonnées de paiement.
@@ -40,9 +40,6 @@ Gratuit, sans pub ni traqueur, sans plafond de dépenses ni de participants. Tou
 • Importez vos projets depuis Tricount d'un simple copier-coller
 • Web, Android et iOS : le même projet partout, avec le même lien
 • 32 langues, dont les 24 langues officielles de l'Union européenne
-
-🌱 Une mission
-Counted est conçu pour être efficace et simple : pas de pub ni de traqueur. Les calculs sont effectués sur votre appareil. Nous nous engageons à reverser une part de nos revenus à des associations environnementales.
 
 Comment ça marche exactement ? counted.fr/encryption
 Vérifiez vous-même le code que vous exécutez : counted.fr/verify

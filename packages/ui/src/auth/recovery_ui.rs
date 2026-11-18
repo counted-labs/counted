@@ -9,7 +9,7 @@ use crate::auth::account_key::remember;
 use crate::auth::account_rotation::{cancel_recovery_replacement, save_recovery_key};
 use crate::auth::recovery_flow::cancel_reset_with_password;
 use crate::auth::recovery_key;
-use crate::common::{copy_text, error_message, format_date, haptic, Flash, Haptic, ListRow, LocalStorageState, RowTile};
+use crate::common::{copy_text, error_message, format_date, haptic, Flash, Haptic, ListRow, LocalStorageState, RowTile, SheetBar, SheetFooter, SHEET_TITLE};
 use crate::icons::{KeyIcon, UndoIcon};
 use crate::tid;
 
@@ -194,16 +194,22 @@ fn RecoveryKeySheet(replacing: bool, on_close: EventHandler<()>) -> Element {
             aria_modal: "true",
             aria_labelledby: "recovery-key-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md flex flex-col gap-3",
-                h2 { id: "recovery-key-title", class: "font-bold text-lg font-display", {tid!("recovery-key-title")} }
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar { close_id: "recovery-key-close", task: true, on_close: move |_| if !saving() { on_close.call(()) },
+                    h2 { id: "recovery-key-title", class: SHEET_TITLE, {tid!("recovery-key-title")} }
+                }
                 if let Some(err) = error() {
-                    div { id: "recovery-key-error", role: "alert", class: "alert alert-error text-sm", "{err}" }
+                    div { class: "px-5 pb-2",
+                        div { id: "recovery-key-error", role: "alert", class: "alert alert-error text-sm", "{err}" }
+                    }
                 }
                 match step() {
                     Step::Show => rsx! {
-                        KeyDisplay { key_text: key_text.clone(), email: email.clone() }
-                        div { class: "modal-action mt-0",
-                            button { r#type: "button", class: "btn", onclick: move |_| on_close.call(()), {tid!("cancel")} }
+                        div { class: "flex-1 overflow-y-auto flex flex-col gap-3 px-5 pt-1 pb-4",
+                            KeyDisplay { key_text: key_text.clone(), email: email.clone() }
+                        }
+                        SheetFooter {
+                            on_cancel: on_close,
                             button {
                                 id: "recovery-key-next",
                                 r#type: "button",
@@ -214,7 +220,8 @@ fn RecoveryKeySheet(replacing: bool, on_close: EventHandler<()>) -> Element {
                         }
                     },
                     Step::Confirm => rsx! {
-                        form { class: "flex flex-col gap-3", onsubmit: on_confirm,
+                        form { class: "flex flex-col flex-1 min-h-0", onsubmit: on_confirm,
+                            div { class: "flex-1 overflow-y-auto flex flex-col gap-3 px-5 pt-1 pb-4",
                             label { class: "text-sm", r#for: "recovery-key-group", {tid!("recovery-key-confirm-body", n: asked as i64)} }
                             input {
                                 id: "recovery-key-group",
@@ -228,14 +235,18 @@ fn RecoveryKeySheet(replacing: bool, on_close: EventHandler<()>) -> Element {
                                 value: "{typed}",
                                 oninput: move |e| typed.set(e.value()),
                             }
-                            div { class: "modal-action mt-0",
-                                button { r#type: "button", class: "btn", onclick: move |_| step.set(Step::Show), {tid!("back")} }
+                            }
+                            SheetFooter {
+                                secondary: rsx! {
+                                    button { id: "recovery-key-back", r#type: "button", class: "btn btn-ghost", onclick: move |_| step.set(Step::Show), {tid!("back")} }
+                                },
                                 button { id: "recovery-key-confirm", r#type: "submit", class: "btn btn-primary", {tid!("recovery-key-next")} }
                             }
                         }
                     },
                     Step::Password => rsx! {
-                        form { class: "flex flex-col gap-3", onsubmit: on_save,
+                        form { class: "flex flex-col flex-1 min-h-0", onsubmit: on_save,
+                            div { class: "flex-1 overflow-y-auto flex flex-col gap-3 px-5 pt-1 pb-4",
                             label { class: "text-sm", r#for: "recovery-key-password", {tid!("recovery-key-password-body")} }
                             input {
                                 id: "recovery-key-password",
@@ -246,8 +257,9 @@ fn RecoveryKeySheet(replacing: bool, on_close: EventHandler<()>) -> Element {
                                 value: "{password}",
                                 oninput: move |e| password.set(e.value()),
                             }
-                            div { class: "modal-action mt-0",
-                                button { r#type: "button", class: "btn", disabled: saving(), onclick: move |_| on_close.call(()), {tid!("cancel")} }
+                            }
+                            SheetFooter {
+                                on_cancel: move |_| if !saving() { on_close.call(()) },
                                 button {
                                     id: "recovery-key-submit",
                                     r#type: "submit",
@@ -306,9 +318,12 @@ fn CancelReplacementSheet(on_close: EventHandler<()>) -> Element {
             aria_modal: "true",
             aria_labelledby: "recovery-cancel-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md",
-                h2 { id: "recovery-cancel-title", class: "font-bold text-lg font-display mb-3", {tid!("recovery-key-cancel-replacement")} }
-                form { class: "flex flex-col gap-3", onsubmit: on_submit,
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar { close_id: "recovery-cancel-close", task: true, on_close,
+                    h2 { id: "recovery-cancel-title", class: SHEET_TITLE, {tid!("recovery-key-cancel-replacement")} }
+                }
+                form { class: "flex flex-col flex-1 min-h-0", onsubmit: on_submit,
+                    div { class: "flex-1 overflow-y-auto flex flex-col gap-3 px-5 pt-1 pb-4",
                     if let Some(err) = error() {
                         div { role: "alert", class: "alert alert-error text-sm", "{err}" }
                     }
@@ -325,8 +340,9 @@ fn CancelReplacementSheet(on_close: EventHandler<()>) -> Element {
                         value: "{key}",
                         oninput: move |e| key.set(e.value()),
                     }
-                    div { class: "modal-action mt-0",
-                        button { r#type: "button", class: "btn", onclick: move |_| on_close.call(()), {tid!("cancel")} }
+                    }
+                    SheetFooter {
+                        on_cancel: on_close,
                         button { id: "recovery-cancel-submit", r#type: "submit", class: "btn btn-error", disabled: busy(), {tid!("recovery-key-cancel-replacement")} }
                     }
                 }

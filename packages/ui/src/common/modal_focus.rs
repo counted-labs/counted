@@ -2,7 +2,10 @@
 //! behind becomes `inert` (Chromium does not prune it for `aria-modal`, so TalkBack swiped straight
 //! into it), Escape anywhere clicks the dialog's own `.modal-backdrop` - the same dismissal as
 //! Android Back in `navigation_sync.rs`, so a dialog without a backdrop stays open - and focus
-//! returns to the opener on close. Live regions are never made inert, so a toast is still read.
+//! returns to the opener on close. Live regions without controls are never made inert, so a toast
+//! is still read; a banner with buttons is. While a dialog is on top, content the page mounts
+//! beside it is made inert too, and content swapped in place under the focus hands it back to the
+//! dialog. A dialog closing under another re-inerts the page for the one on top.
 //! The iOS keyboard proxy (`data-keyboard-proxy`, `KEYBOARD_PROXY_SCRIPT` in the mobile crate) is
 //! neither made inert nor robbed of the focus: it holds the keypad up until the amount field takes
 //! over, which the web build never needs.
@@ -22,6 +25,17 @@ const MODAL_JS: &str = r#"
 if (!window._countedModals) {
   const open = [];
   const isLive = el => el.hasAttribute('aria-live') || ['alert', 'status'].includes(el.getAttribute('role'));
+  const staysLive = el => isLive(el) && !el.querySelector('a[href], button, input, select, textarea, [tabindex]');
+  const holdsDialog = el => el.matches('[aria-modal="true"]') || !!el.querySelector('[aria-modal="true"]');
+  const inertOutside = (dialog, spareDialogs) => {
+    const inerted = [];
+    for (let el = dialog; el !== document.body && el.parentElement; el = el.parentElement) {
+      for (const sibling of el.parentElement.children) {
+        if (sibling !== el && !sibling.inert && !staysLive(sibling) && !(spareDialogs && holdsDialog(sibling)) && !sibling.hasAttribute('data-keyboard-proxy')) { sibling.inert = true; inerted.push(sibling); }
+      }
+    }
+    return inerted;
+  };
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape' || e.defaultPrevented || !open.length) return;
     const dialog = document.getElementById(open[open.length - 1].id);
@@ -34,13 +48,20 @@ if (!window._countedModals) {
       if (!dialog) return false;
       const proxied = !!document.activeElement && document.activeElement.hasAttribute('data-keyboard-proxy');
       if (!open.some(m => m.id === id)) {
-        const inerted = [];
-        for (let el = dialog; el !== document.body && el.parentElement; el = el.parentElement) {
-          for (const sibling of el.parentElement.children) {
-            if (sibling !== el && !sibling.inert && !isLive(sibling) && !sibling.hasAttribute('data-keyboard-proxy')) { sibling.inert = true; inerted.push(sibling); }
-          }
-        }
-        open.push({ id, opener: proxied ? null : document.activeElement, inerted });
+        const inerted = inertOutside(dialog, false);
+        const observer = new MutationObserver(() => {
+          const top = open[open.length - 1];
+          const current = document.getElementById(id);
+          if (!top || top.id !== id || !current) return;
+          top.inerted.push(...inertOutside(current, true));
+          setTimeout(() => {
+            const active = document.activeElement;
+            const stillTop = open.length && open[open.length - 1].id === id;
+            if (stillTop && current.isConnected && (!active || active === document.body)) current.focus();
+          }, 0);
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        open.push({ id, opener: proxied ? null : document.activeElement, inerted, observer });
       }
       if (proxied) return true;
       if (!dialog.contains(document.activeElement)) dialog.focus();
@@ -49,9 +70,14 @@ if (!window._countedModals) {
     leave(id) {
       const i = open.map(m => m.id).lastIndexOf(id);
       if (i < 0) return;
+      const wasTop = i === open.length - 1;
       const [m] = open.splice(i, 1);
+      m.observer.disconnect();
       m.inerted.forEach(el => { el.inert = false; });
-      if (m.opener && m.opener.isConnected) m.opener.focus();
+      const top = open[open.length - 1];
+      const topDialog = top && document.getElementById(top.id);
+      if (topDialog) top.inerted.push(...inertOutside(topDialog, false));
+      if (wasTop && m.opener && m.opener.isConnected) m.opener.focus();
     },
   };
 }

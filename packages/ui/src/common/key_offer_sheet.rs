@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use crate::tid;
 
-use crate::common::{answer_key_offer, haptic, key_offer_shown, use_modal_focus, Haptic, LocalStorageState};
+use crate::common::{answer_key_offer, haptic, key_offer_shown, use_modal_focus, Haptic, LocalStorageState, SheetBar, SheetFooter, SHEET_TITLE};
 
 /// Mounted once in `AppLayout`, after the page, so it covers any sheet the link was opened from.
 #[component]
@@ -40,14 +40,14 @@ pub fn KeyOfferDialog(props: KeyOfferDialogProps) -> Element {
             aria_describedby: "key-offer-body",
             tabindex: "-1",
             div { class: "modal-box max-w-md p-0 flex flex-col",
-                div { class: "flex flex-col gap-3 px-6 pt-5 pb-4",
-                    h2 { id: "key-offer-title", class: "font-bold text-lg font-display break-words", {tid!("key-offer-title", name: props.name.clone())} }
-                    div { id: "key-offer-body", class: "flex flex-col gap-2 text-sm text-base-content/70",
-                        p { {tid!("key-offer-body")} }
-                        p { {tid!("key-offer-choices")} }
-                    }
+                SheetBar { close_id: "key-offer-close", task: true, on_close: on_keep,
+                    h2 { id: "key-offer-title", class: SHEET_TITLE, {tid!("key-offer-title", name: props.name.clone())} }
                 }
-                div { class: "flex justify-end gap-2 px-6 py-4 border-t border-base-200",
+                div { id: "key-offer-body", class: "flex-1 overflow-y-auto flex flex-col gap-2 px-5 pt-1 pb-4 text-sm text-base-content/70",
+                    p { {tid!("key-offer-body")} }
+                    p { {tid!("key-offer-choices")} }
+                }
+                SheetFooter {
                     button {
                         id: "key-offer-keep",
                         r#type: "button",

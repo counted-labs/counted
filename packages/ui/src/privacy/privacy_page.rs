@@ -57,6 +57,7 @@ pub fn PrivacyPage() -> Element {
                         li { strong { {tid!("privacy-collected-anon-term")} } " " {tid!("privacy-collected-anon-def")} }
                         li { strong { {tid!("privacy-collected-invite-term")} } " " {tid!("privacy-collected-invite-def")} }
                         li { strong { {tid!("privacy-collected-friends-term")} } " " {tid!("privacy-collected-friends-def")} }
+                        li { strong { {tid!("privacy-collected-invite-mail-term")} } " " {tid!("privacy-collected-invite-mail-def")} }
                         li { strong { {tid!("privacy-collected-push-term")} } " " {tid!("privacy-collected-push-def")} }
                         li { strong { {tid!("privacy-collected-logs-term")} } " " {tid!("privacy-collected-logs-def")} }
                     }

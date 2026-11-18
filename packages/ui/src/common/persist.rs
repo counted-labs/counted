@@ -96,36 +96,90 @@ pub fn read_json<T: DeserializeOwned + Default>(key: &str) -> T {
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
+        // Bytes, not a string: a sealed file is not UTF-8, and a read that failed on it used to
+        // look like an empty store that the next write made permanent.
         let path = file_for(key);
-        let Ok(raw) = std::fs::read_to_string(&path) else {
+        let Ok(bytes) = std::fs::read(&path) else {
             return T::default();
         };
-        match serde_json::from_str(&raw) {
-            Ok(v) => v,
-            Err(e) => {
-                // Renamed rather than overwritten: whatever is in there may be the only copy of a
-                // project key, and the very next write would otherwise destroy it.
-                let quarantine = path.with_extension("json.corrupt");
-                let kept = std::fs::rename(&path, &quarantine).is_ok();
-                dioxus::logger::tracing::error!(
-                    "counted: {} did not parse, starting empty (kept a copy: {kept}): {e}",
-                    path.display()
-                );
+        let state = store_seal::state();
+        let migrate = matches!(state, StoreKey::Ready { created: true, .. }) && !store_seal::is_sealed(&bytes);
+        match loaded(state, key, &bytes) {
+            Loaded::Skip => T::default(),
+            Loaded::Quarantine(why) => {
+                quarantine(state, key, &bytes, why);
                 T::default()
             }
+            Loaded::Json(json) => match serde_json::from_slice(&json) {
+                Ok(v) => {
+                    if migrate {
+                        write_bytes(state, key, &json);
+                    }
+                    v
+                }
+                Err(e) => {
+                    quarantine(state, key, &bytes, &e.to_string());
+                    T::default()
+                }
+            },
         }
     }
 }
 
-/// Deletes the copy [`read_json`] set aside. It can hold every project key and the account key in
-/// clear, so it goes with the session instead of staying for good.
+#[cfg(not(target_arch = "wasm32"))]
+use super::store_seal::{self, StoreKey};
+
+#[cfg(not(target_arch = "wasm32"))]
+#[derive(Debug, PartialEq)]
+enum Loaded {
+    Json(Vec<u8>),
+    Quarantine(&'static str),
+    Skip,
+}
+
+/// What a store file's bytes are worth under the key state: a plain store is adopted only on the
+/// launch that made the key, so a plain file planted after that is set aside, not believed.
+#[cfg(not(target_arch = "wasm32"))]
+fn loaded(state: StoreKey, name: &str, bytes: &[u8]) -> Loaded {
+    match state {
+        StoreKey::Locked | StoreKey::Lost => Loaded::Skip,
+        StoreKey::Plain if store_seal::is_sealed(bytes) => Loaded::Skip,
+        StoreKey::Plain => Loaded::Json(bytes.to_vec()),
+        StoreKey::Ready { key, .. } if store_seal::is_sealed(bytes) => match store_seal::open(&key, name, bytes) {
+            Some(json) => Loaded::Json(json),
+            None => Loaded::Quarantine("a sealed store did not open"),
+        },
+        StoreKey::Ready { created: true, .. } => Loaded::Json(bytes.to_vec()),
+        StoreKey::Ready { created: false, .. } => Loaded::Quarantine("a plain store where every store is sealed"),
+    }
+}
+
+/// Moved aside rather than overwritten: whatever is in there may be the only copy of a project key,
+/// and the very next write would otherwise destroy it. A plain copy is sealed when a key is ready.
+#[cfg(not(target_arch = "wasm32"))]
+fn quarantine(state: StoreKey, name: &str, bytes: &[u8], why: &str) {
+    let path = file_for(name);
+    let aside = path.with_extension("json.corrupt");
+    let kept = match state {
+        StoreKey::Ready { key, .. } if !store_seal::is_sealed(bytes) => store_seal::seal(&key, &format!("{name}.corrupt"), bytes)
+            .is_some_and(|sealed| std::fs::write(&aside, sealed).is_ok() && std::fs::remove_file(&path).is_ok()),
+        _ => std::fs::rename(&path, &aside).is_ok(),
+    };
+    dioxus::logger::tracing::error!("counted: {} set aside, starting empty (kept a copy: {kept}): {why}", path.display());
+}
+
+/// Deletes the copy [`read_json`] set aside. It can hold every project key and the account key, so
+/// it goes with the session instead of staying for good. Nothing is deleted while the store is
+/// locked: an empty session must not reach the files the key would open.
 pub fn remove_quarantine(key: &str) {
     #[cfg(target_arch = "wasm32")]
     if let Some(s) = web_storage() {
         let _ = s.remove_item(&format!("{key}.corrupt"));
     }
     #[cfg(not(target_arch = "wasm32"))]
-    let _ = std::fs::remove_file(file_for(key).with_extension("json.corrupt"));
+    if store_seal::usable() {
+        let _ = std::fs::remove_file(file_for(key).with_extension("json.corrupt"));
+    }
 }
 
 pub fn remove_store(key: &str) {
@@ -134,7 +188,9 @@ pub fn remove_store(key: &str) {
         let _ = s.remove_item(key);
     }
     #[cfg(not(target_arch = "wasm32"))]
-    let _ = std::fs::remove_file(file_for(key));
+    if store_seal::usable() {
+        let _ = std::fs::remove_file(file_for(key));
+    }
     remove_quarantine(key);
 }
 
@@ -164,36 +220,141 @@ pub fn write_json<T: Serialize>(key: &str, label: &str, value: &T) -> bool {
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
-        let path = file_for(key);
-        match serde_json::to_string(value) {
-            Ok(json) => {
-                if let Some(parent) = path.parent() {
-                    let _ = std::fs::create_dir_all(parent);
-                }
-                // Write to a sibling tmp file and rename: an interrupted write leaves the
-                // previous contents intact instead of a truncated file.
-                let tmp = path.with_extension("json.tmp");
-                // `sync_all` before the rename: otherwise a power loss can persist the rename ahead
-                // of the data and leave a zero-length store.
-                let res = std::fs::File::create(&tmp)
-                    .and_then(|mut f| {
-                        std::io::Write::write_all(&mut f, json.as_bytes())?;
-                        f.sync_all()
-                    })
-                    .and_then(|_| std::fs::rename(&tmp, &path));
-                match res {
-                    Ok(()) => true,
-                    Err(e) => {
-                        let _ = std::fs::remove_file(&tmp);
-                        dioxus::logger::tracing::error!("counted: write {} failed: {e}", path.display());
-                        false
-                    }
-                }
-            }
+        let state = store_seal::state();
+        if !store_seal::usable() {
+            dioxus::logger::tracing::error!("counted: {label} not written, the store is locked");
+            return false;
+        }
+        match serde_json::to_vec(value) {
+            Ok(json) => write_bytes(state, key, &json),
             Err(e) => {
                 dioxus::logger::tracing::error!("counted: serialize {label} failed: {e}");
                 false
             }
         }
+    }
+}
+
+/// A store that is not JSON the app parses (the mobile cookie jar), under the same rules as
+/// [`read_json`]: opened when sealed, adopted and sealed on the launch that made the key, set aside
+/// when it does not open, nothing while locked.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn read_raw(name: &str) -> Option<Vec<u8>> {
+    let bytes = std::fs::read(file_for(name)).ok()?;
+    let state = store_seal::state();
+    match loaded(state, name, &bytes) {
+        Loaded::Skip => None,
+        Loaded::Quarantine(why) => {
+            quarantine(state, name, &bytes, why);
+            None
+        }
+        Loaded::Json(plain) => {
+            if matches!(state, StoreKey::Ready { created: true, .. }) && !store_seal::is_sealed(&bytes) {
+                write_bytes(state, name, &plain);
+            }
+            Some(plain)
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+pub fn write_raw(name: &str, bytes: &[u8]) -> bool {
+    store_seal::usable() && write_bytes(store_seal::state(), name, bytes)
+}
+
+/// Whether a write can reach storage at all; false while the mobile store is locked, so a caller's
+/// fallback write is not tried either.
+pub fn writable() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    return true;
+    #[cfg(not(target_arch = "wasm32"))]
+    store_seal::usable()
+}
+
+/// Sealed under the store key when one is ready, plain otherwise.
+#[cfg(not(target_arch = "wasm32"))]
+fn stored_bytes(state: StoreKey, name: &str, json: &[u8]) -> Option<Vec<u8>> {
+    match state {
+        StoreKey::Ready { key, .. } => store_seal::seal(&key, name, json),
+        StoreKey::Plain => Some(json.to_vec()),
+        StoreKey::Locked | StoreKey::Lost => None,
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn write_bytes(state: StoreKey, name: &str, json: &[u8]) -> bool {
+    let path = file_for(name);
+    let Some(bytes) = stored_bytes(state, name, json) else {
+        return false;
+    };
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    // Write to a sibling tmp file and rename: an interrupted write leaves the previous contents
+    // intact instead of a truncated file. `sync_all` before the rename: otherwise a power loss can
+    // persist the rename ahead of the data and leave a zero-length store.
+    let tmp = path.with_extension("json.tmp");
+    let res = std::fs::File::create(&tmp)
+        .and_then(|mut f| {
+            std::io::Write::write_all(&mut f, &bytes)?;
+            f.sync_all()
+        })
+        .and_then(|_| std::fs::rename(&tmp, &path));
+    match res {
+        Ok(()) => true,
+        Err(e) => {
+            let _ = std::fs::remove_file(&tmp);
+            dioxus::logger::tracing::error!("counted: write {} failed: {e}", path.display());
+            false
+        }
+    }
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod sealed_tests {
+    use super::*;
+
+    const KEY: [u8; 32] = [7; 32];
+    const READY: StoreKey = StoreKey::Ready { key: KEY, created: false };
+    const CREATED: StoreKey = StoreKey::Ready { key: KEY, created: true };
+
+    #[test]
+    fn a_sealed_store_reads_back_under_its_key() {
+        let sealed = stored_bytes(READY, "s", b"{\"a\":1}").unwrap();
+        assert!(store_seal::is_sealed(&sealed));
+        assert_eq!(loaded(READY, "s", &sealed), Loaded::Json(b"{\"a\":1}".to_vec()));
+    }
+
+    #[test]
+    fn a_plain_store_is_adopted_only_on_the_launch_that_made_the_key() {
+        assert_eq!(loaded(CREATED, "s", b"{}"), Loaded::Json(b"{}".to_vec()));
+        assert!(matches!(loaded(READY, "s", b"{}"), Loaded::Quarantine(_)), "planted after the store was sealed");
+    }
+
+    #[test]
+    fn a_sealed_store_that_does_not_open_is_set_aside() {
+        let mut sealed = stored_bytes(READY, "s", b"{}").unwrap();
+        let last = sealed.len() - 1;
+        sealed[last] ^= 1;
+        assert!(matches!(loaded(READY, "s", &sealed), Loaded::Quarantine(_)));
+        let other_store = stored_bytes(READY, "other", b"{}").unwrap();
+        assert!(matches!(loaded(READY, "s", &other_store), Loaded::Quarantine(_)), "another store's file");
+    }
+
+    #[test]
+    fn nothing_is_read_or_written_while_locked_or_lost() {
+        let sealed = stored_bytes(READY, "s", b"{}").unwrap();
+        for state in [StoreKey::Locked, StoreKey::Lost] {
+            assert_eq!(loaded(state, "s", &sealed), Loaded::Skip);
+            assert_eq!(loaded(state, "s", b"{}"), Loaded::Skip);
+            assert_eq!(stored_bytes(state, "s", b"{}"), None);
+        }
+    }
+
+    #[test]
+    fn a_plain_build_never_reads_a_sealed_store_and_writes_plain() {
+        let sealed = stored_bytes(READY, "s", b"{}").unwrap();
+        assert_eq!(loaded(StoreKey::Plain, "s", &sealed), Loaded::Skip);
+        assert_eq!(stored_bytes(StoreKey::Plain, "s", b"{}"), Some(b"{}".to_vec()));
     }
 }

@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use super::friend_checklist::FriendChecklist;
 use super::friends_service::{get_pinned_friends, invite_each, invitee_emails, sender, Invitee, Unsent};
-use crate::common::{error_message, Flash, LocalStorageState};
+use crate::common::{error_message, Flash, LocalStorageState, SheetBar, SheetFooter, SHEET_TITLE};
 use crate::route::Route;
 
 #[derive(PartialEq, Props, Clone)]
@@ -69,7 +69,7 @@ pub fn InviteFriendsModal(props: InviteFriendsModalProps) -> Element {
         spawn(async move {
             busy.set(true);
             error.set(None);
-            let unsent = invite_each(ls_ctx, project_id, &chosen, from, &project_key).await;
+            let unsent = invite_each(project_id, &chosen, from, &project_key).await;
             if unsent.is_empty() {
                 flash.set(Some(Flash::ok(tid!("invite-sent", count: chosen.len()))));
                 on_close.call(());
@@ -89,11 +89,11 @@ pub fn InviteFriendsModal(props: InviteFriendsModalProps) -> Element {
             aria_labelledby: "invite-friends-title",
             tabindex: "-1",
             div { class: "modal-box p-0 flex flex-col",
-                div { class: "flex flex-col gap-0.5 px-6 pt-5 pb-4 border-b border-base-200 flex-shrink-0",
-                    h2 { id: "invite-friends-title", class: "text-lg font-bold font-display", {tid!("invite-friends-title")} }
-                    p { class: "text-sm text-base-content/70", {tid!("invite-friends-hint")} }
+                SheetBar { close_id: "invite-friends-close", task: true, on_close,
+                    h2 { id: "invite-friends-title", class: SHEET_TITLE, {tid!("invite-friends-title")} }
                 }
-                div { class: "flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-3",
+                div { class: "flex-1 overflow-y-auto px-5 pt-1 pb-4 flex flex-col gap-3",
+                    p { class: "text-sm text-base-content/70", {tid!("invite-friends-hint")} }
                     if let Some(err) = error() {
                         div { role: "alert", class: "alert alert-error text-sm", "{err}" }
                     }
@@ -111,13 +111,8 @@ pub fn InviteFriendsModal(props: InviteFriendsModalProps) -> Element {
                         },
                     }
                 }
-                div { class: "flex justify-end gap-2 px-6 py-4 border-t border-base-200 flex-shrink-0",
-                    button {
-                        r#type: "button",
-                        class: "btn btn-ghost",
-                        onclick: move |_| on_close.call(()),
-                        {tid!("cancel")}
-                    }
+                SheetFooter {
+                    on_cancel: on_close,
                     button {
                         id: "invite-friends-confirm",
                         r#type: "button",
@@ -162,24 +157,19 @@ pub fn FriendPickerModal(props: FriendPickerModalProps) -> Element {
             aria_labelledby: "friend-picker-title",
             tabindex: "-1",
             div { class: "modal-box p-0 flex flex-col",
-                div { class: "flex flex-col gap-0.5 px-6 pt-5 pb-4 border-b border-base-200 flex-shrink-0",
-                    h2 { id: "friend-picker-title", class: "text-lg font-bold font-display", {tid!("friend-picker-title")} }
-                    p { class: "text-sm text-base-content/70", {tid!("invite-friends-hint")} }
+                SheetBar { close_id: "friend-picker-close", task: true, on_close,
+                    h2 { id: "friend-picker-title", class: SHEET_TITLE, {tid!("friend-picker-title")} }
                 }
-                div { class: "flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-3",
+                div { class: "flex-1 overflow-y-auto px-5 pt-1 pb-4 flex flex-col gap-3",
+                    p { class: "text-sm text-base-content/70", {tid!("invite-friends-hint")} }
                     if props.friends.is_empty() {
                         p { class: "text-sm text-base-content/70", {tid!("invite-friends-empty")} }
                     } else {
                         FriendChecklist { friends: props.friends.clone(), selected, disabled: false }
                     }
                 }
-                div { class: "flex justify-end gap-2 px-6 py-4 border-t border-base-200 flex-shrink-0",
-                    button {
-                        r#type: "button",
-                        class: "btn btn-ghost",
-                        onclick: move |_| on_close.call(()),
-                        {tid!("cancel")}
-                    }
+                SheetFooter {
+                    on_cancel: on_close,
                     button {
                         id: "friend-picker-confirm",
                         r#type: "button",

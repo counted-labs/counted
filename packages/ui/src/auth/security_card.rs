@@ -4,7 +4,7 @@ use shared::Account;
 use crate::auth::account_key::remember;
 use crate::auth::account_rotation::{change_password, compromise_rotation, Rotated};
 use crate::auth::credentials::password_error_key;
-use crate::common::{error_message, haptic, Flash, Haptic, ListFooter, ListRow, LocalStorageState, RowTile};
+use crate::common::{error_message, haptic, Flash, Haptic, ListFooter, ListRow, LocalStorageState, RowTile, SheetBar, SheetFooter, SHEET_TITLE};
 use crate::icons::{LockIcon, ShieldIcon};
 use crate::tid;
 
@@ -138,21 +138,24 @@ fn ChangePasswordSheet(compromise: bool, on_close: EventHandler<()>, on_new_reco
             aria_modal: "true",
             aria_labelledby: "change-password-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md",
-                h2 { id: "change-password-title", class: "font-bold text-lg font-display mb-3",
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar { close_id: "change-password-close", task: true, on_close: move |_| if !saving() { on_close.call(()) },
+                    h2 { id: "change-password-title", class: SHEET_TITLE,
+                        if compromise {
+                            {tid!("compromised-title")}
+                        } else {
+                            {tid!("change-password-title")}
+                        }
+                    }
+                }
+                form { class: "flex flex-col flex-1 min-h-0", onsubmit: on_submit,
+                    div { class: "flex-1 overflow-y-auto flex flex-col gap-3 px-5 pt-1 pb-4",
                     if compromise {
-                        {tid!("compromised-title")}
-                    } else {
-                        {tid!("change-password-title")}
+                        div { class: "flex flex-col gap-2 text-sm text-base-content/70",
+                            p { {tid!("compromised-body")} }
+                            p { {tid!("compromised-keeps")} }
+                        }
                     }
-                }
-                if compromise {
-                    div { class: "flex flex-col gap-2 mb-3 text-sm text-base-content/70",
-                        p { {tid!("compromised-body")} }
-                        p { {tid!("compromised-keeps")} }
-                    }
-                }
-                form { class: "flex flex-col gap-3", onsubmit: on_submit,
                     if let Some(err) = error() {
                         div { id: "change-password-error", role: "alert", class: "alert alert-error text-sm", "{err}" }
                     }
@@ -192,15 +195,9 @@ fn ChangePasswordSheet(compromise: bool, on_close: EventHandler<()>, on_new_reco
                             p { class: "label whitespace-normal", {tid!("settings-change-password-hint")} }
                         }
                     }
-                    div { class: "modal-action mt-0",
-                        button {
-                            id: "change-password-cancel",
-                            r#type: "button",
-                            class: "btn",
-                            disabled: saving(),
-                            onclick: move |_| on_close.call(()),
-                            {tid!("cancel")}
-                        }
+                    }
+                    SheetFooter {
+                        on_cancel: move |_| if !saving() { on_close.call(()) },
                         button {
                             id: "change-password-submit",
                             r#type: "submit",
@@ -236,11 +233,15 @@ fn NewRecoveryKeySheet(key_text: String, email: String, on_close: EventHandler<(
             aria_modal: "true",
             aria_labelledby: "new-recovery-key-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md flex flex-col gap-3",
-                h2 { id: "new-recovery-key-title", class: "font-bold text-lg font-display", {tid!("recovery-key-title")} }
-                p { class: "text-sm", {tid!("compromised-new-key")} }
-                crate::auth::recovery_ui::KeyDisplay { key_text, email }
-                div { class: "modal-action mt-0",
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar {
+                    h2 { id: "new-recovery-key-title", class: SHEET_TITLE, {tid!("recovery-key-title")} }
+                }
+                div { class: "flex-1 overflow-y-auto flex flex-col gap-3 px-5 pt-1 pb-4",
+                    p { class: "text-sm", {tid!("compromised-new-key")} }
+                    crate::auth::recovery_ui::KeyDisplay { key_text, email }
+                }
+                SheetFooter {
                     button { id: "new-recovery-key-done", r#type: "button", class: "btn btn-primary", onclick: move |_| on_close.call(()), {tid!("recovery-key-next")} }
                 }
             }

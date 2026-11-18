@@ -14,7 +14,7 @@ use uuid::Uuid;
 
 use crate::common::{
     error_message, key_of, month_title, update_ls, upsert_project, upsert_project_key,
-    CurrencyPicker, LocalStorageState,
+    CurrencyPicker, LocalStorageState, SheetBar, SheetFooter, SHEET_TITLE,
 };
 use crate::crypto::{
     claim_token, claim_verifier, decrypt_json, encrypt_padded_json, generate_key, key_to_fragment, wrap_key, WrapUse,
@@ -23,7 +23,7 @@ use crate::common::fx_cache::read_fx;
 use crate::expenses::budget_panel::money;
 use crate::expenses::helpers::my_spending::{month_glance, GroupLedger};
 use crate::preferences::uncounted_projects;
-use crate::icons::{ChartIcon, CloseIcon, LockIcon, UserIcon, WalletIcon, ICON_HEADER};
+use crate::icons::{ChartIcon, LockIcon, UserIcon, WalletIcon};
 use crate::participants::use_my_display_name;
 use crate::route::Route;
 use crate::tid;
@@ -179,20 +179,12 @@ pub fn PersonalCreateSheet(on_close: EventHandler<()>) -> Element {
             aria_modal: "true",
             aria_labelledby: "personal-create-title",
             tabindex: "-1",
-            form { class: "modal-box max-w-md flex flex-col gap-4", onsubmit: on_submit,
-                div { class: "flex items-start gap-3",
-                    div { class: "flex-1 flex flex-col gap-1",
-                        h2 { id: "personal-create-title", class: "font-display font-bold text-xl", {tid!("personal-sheet-title")} }
-                        p { class: "text-sm text-base-content/70", {tid!("personal-sheet-intro")} }
-                    }
-                    button {
-                        r#type: "button",
-                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                        aria_label: tid!("close"),
-                        onclick: move |_| on_close.call(()),
-                        CloseIcon { size: ICON_HEADER }
-                    }
+            form { class: "modal-box max-w-md p-0 flex flex-col", onsubmit: on_submit,
+                SheetBar { close_id: "personal-create-close", task: true, on_close,
+                    h2 { id: "personal-create-title", class: SHEET_TITLE, {tid!("personal-sheet-title")} }
                 }
+                div { class: "flex-1 overflow-y-auto flex flex-col gap-4 px-5 pt-1 pb-4",
+                p { class: "text-sm text-base-content/70", {tid!("personal-sheet-intro")} }
                 if let Some(err) = error_msg() {
                     div { role: "alert", class: "alert alert-error text-sm", "{err}" }
                 }
@@ -231,17 +223,13 @@ pub fn PersonalCreateSheet(on_close: EventHandler<()>) -> Element {
                         span { {tid!("personal-sheet-point-stats")} }
                     }
                 }
-                div { class: "flex gap-2.5",
-                    button {
-                        r#type: "button",
-                        class: "btn flex-1 rounded-full",
-                        onclick: move |_| on_close.call(()),
-                        {tid!("cancel")}
-                    }
+                }
+                SheetFooter {
+                    on_cancel: on_close,
                     button {
                         id: "personal-create-submit",
                         r#type: "submit",
-                        class: "btn btn-primary flex-[2] rounded-full",
+                        class: "btn btn-primary",
                         disabled: loading(),
                         if loading() {
                             span { class: "loading loading-spinner loading-sm" }

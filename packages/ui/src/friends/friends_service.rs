@@ -17,13 +17,13 @@ use uuid::Uuid;
 
 use crate::common::{adopt_project_key, update_ls_if_changed, LocalStorageState};
 use crate::crypto::{
-    box_project_key, claim_token, decrypt, encrypt_padded_json_within, key_fingerprint, open_kem_seed, open_wrap,
-    public_key_of, unbox_project_key, unwrap_key, WrapUse,
+    claim_token, decrypt, encrypt_padded_json_within, key_fingerprint, open_kem_seed, open_wrap, public_key_of,
+    unwrap_key, WrapUse,
 };
 use crate::hybrid::{kem_public_key, open_auth, seal_auth, KEM_SEED_LENGTH};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use serde::{Deserialize, Serialize};
-use shared::{EncryptedPair, HybridBox};
+use shared::HybridBox;
 use std::collections::BTreeMap;
 use crate::decrypted::decrypt_project;
 
@@ -92,6 +92,8 @@ pub struct FriendsLists {
     pub friends: Vec<FriendRow>,
     pub incoming: Vec<IncomingFriendRequest>,
     pub outgoing: Vec<OutgoingRow>,
+    /// The server mails invitations: only then is the checkbox offered.
+    pub invite_mail: bool,
 }
 
 impl FriendsLists {
@@ -187,6 +189,7 @@ pub fn to_lists(
                 label: account_key.and_then(|k| decrypt(k, &o.label).ok()).map(read_label).unwrap_or_default(),
             })
             .collect(),
+        invite_mail: view.invite_mail,
     }
 }
 
@@ -235,10 +238,18 @@ pub fn plain_message(text: &str) -> String {
 }
 
 /// The response is the same whether or not the address has an account; so is what this returns.
-pub async fn add_by_email(email: &str, account_key: &[u8; 32]) -> Result<(), ServerFnError> {
+/// `send_mail` also asks the server to email an invitation; `lang` picks its language.
+pub async fn add_by_email(email: &str, account_key: &[u8; 32], send_mail: bool, lang: String) -> Result<(), ServerFnError> {
     let email = email.trim().to_string();
     let label = write_label(account_key, &email)?;
-    let sent = request_by_email(Json(FriendRequestByEmail { email, label, amk_epoch: crate::auth::account_key::held_amk_epoch() })).await;
+    let sent = request_by_email(Json(FriendRequestByEmail {
+        email,
+        label,
+        amk_epoch: crate::auth::account_key::held_amk_epoch(),
+        send_mail,
+        lang: Some(lang),
+    }))
+    .await;
     crate::auth::account_key::note(&sent);
     sent
 }
@@ -344,23 +355,16 @@ pub struct Invitee {
     pub user_id: Option<i32>,
 }
 
-/// Who sends invitations from this device, and in which box.
+/// Who sends invitations from this device.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Sender {
     pub account_id: Uuid,
     pub private: [u8; 32],
-    /// The hybrid box only, never the classical one: the server reports the floor, or this device
-    /// already saw it (`LocalStorageState::hybrid_invitations`).
-    pub hybrid: bool,
 }
 
 pub fn sender(account: &Account, account_key: &[u8; 32], state: &LocalStorageState) -> Option<Sender> {
     let private = my_private_key(account, account_key, state.raw_wraps_ok(account.id))?;
-    Some(Sender { account_id: account.id, private, hybrid: account.hybrid_invitations || state.hybrid_invitations })
-}
-
-pub fn saw_hybrid_floor(state: &mut LocalStorageState, account: &Account) {
-    state.hybrid_invitations |= account.hybrid_invitations;
+    Some(Sender { account_id: account.id, private })
 }
 
 /// What was not sent: `failed` can be sent again; `waiting` friends have no ML-KEM key yet, which
@@ -383,25 +387,20 @@ pub enum Unboxed {
     Waiting,
 }
 
-/// The project key for one friend: the classical box before the hybrid floor, the hybrid box sealed
-/// to both pinned keys and typed with project, sender and recipient from it.
-pub fn box_for(sender: &Sender, project_id: Uuid, friend: &Friend, project_key: &[u8; 32]) -> Result<(Option<EncryptedPair>, Option<HybridBox>), Unboxed> {
+/// The project key for one friend, in the hybrid box only, whatever the server reports (SPEC 14.3):
+/// sealed to both pinned keys and typed with project, sender and recipient.
+pub fn box_for(sender: &Sender, project_id: Uuid, friend: &Friend, project_key: &[u8; 32]) -> Result<HybridBox, Unboxed> {
     let public = friend.public_key.as_deref().ok_or(Unboxed::Failed)?;
-    if !sender.hybrid {
-        return box_project_key(&sender.private, public, project_key).map(|k| (Some(k), None)).ok_or(Unboxed::Failed);
-    }
     let kem = friend.kem_public_key.as_deref().ok_or(Unboxed::Waiting)?;
     let typed = InviteKey { use_: "invite".into(), project: project_id, from: sender.account_id, to: friend.account_id, key: URL_SAFE_NO_PAD.encode(project_key) };
     let plaintext = serde_json::to_vec(&typed).map_err(|_| Unboxed::Failed)?;
-    let sealed = seal_auth(&sender.private, public, kem, INVITE_CONTEXT, &plaintext).ok_or(Unboxed::Failed)?;
-    Ok((None, Some(sealed)))
+    seal_auth(&sender.private, public, kem, INVITE_CONTEXT, &plaintext).ok_or(Unboxed::Failed)
 }
 
 /// One invitation per friend, each carrying the key boxed to that friend, all in one request.
 /// Returns those that were not sent - no private key on this device, no key on theirs, a refusal,
 /// or a request that failed as a whole.
 pub async fn invite_each(
-    ls_ctx: Signal<LocalStorageState>,
     project_id: Uuid,
     invitees: &[Invitee],
     sender: Option<Sender>,
@@ -410,13 +409,10 @@ pub async fn invite_each(
     let Some(sender) = sender else {
         return Unsent { failed: invitees.to_vec(), waiting: Vec::new() };
     };
-    if sender.hybrid {
-        update_ls_if_changed(ls_ctx, |state| state.hybrid_invitations = true);
-    }
     let (mut boxed, mut unsent) = (Vec::new(), Unsent::default());
     for invitee in invitees {
-        let (key, hybrid) = match box_for(&sender, project_id, &invitee.friend, project_key) {
-            Ok(forms) => forms,
+        let hybrid = match box_for(&sender, project_id, &invitee.friend, project_key) {
+            Ok(sealed) => sealed,
             Err(Unboxed::Failed) => {
                 unsent.failed.push(invitee.clone());
                 continue;
@@ -426,7 +422,7 @@ pub async fn invite_each(
                 continue;
             }
         };
-        let invitation = CreatableProjectInvitation { to_account_id: invitee.friend.account_id, key, hybrid, user_id: invitee.user_id };
+        let invitation = CreatableProjectInvitation { to_account_id: invitee.friend.account_id, key: None, hybrid: Some(hybrid), user_id: invitee.user_id };
         // One by one, a friend named twice kept the later invitation; the batch refuses a repeat.
         boxed.retain(|b: &CreatableProjectInvitation| b.to_account_id != invitation.to_account_id);
         boxed.push(invitation);
@@ -473,23 +469,21 @@ pub fn opener(account: &Account, account_key: &[u8; 32], raw_ok: bool) -> Option
 
 /// The key and the email of the friend whose public key opens the box. Only a friend's key, the one
 /// whose code the user can compare: the sender key served with the invitation is the server's word
-/// alone, and a box under a key of its own would otherwise open. A hybrid box opens only if it
-/// names this project, that friend as sender and this account as recipient.
+/// alone, and a box under a key of its own would otherwise open. Only the hybrid box, whatever the
+/// server reports (SPEC 14.3), and only if it names this project, that friend as sender and this
+/// account as recipient.
 pub fn open_invitation(inv: &ProjectInvitation, opener: &Opener, friends: &[Friend]) -> Option<([u8; 32], String)> {
     let sender = friends.iter().find(|f| f.public_key.as_deref() == Some(inv.from_public_key.as_slice()))?;
-    let key = match (&inv.key, &inv.hybrid) {
-        (Some(pair), None) => unbox_project_key(&opener.x25519, &inv.from_public_key, pair)?,
-        (None, Some(sealed)) => {
-            let plaintext = open_auth(&opener.x25519, opener.kem_seed.as_ref()?, &inv.from_public_key, INVITE_CONTEXT, sealed)?;
-            let typed: InviteKey = serde_json::from_slice(&plaintext).ok()?;
-            let fits = typed.use_ == "invite" && typed.project == inv.project_id && typed.from == sender.account_id && typed.to == opener.account_id;
-            if !fits {
-                return None;
-            }
-            URL_SAFE_NO_PAD.decode(typed.key).ok()?.try_into().ok()?
-        }
-        _ => return None,
+    let (None, Some(sealed)) = (&inv.key, &inv.hybrid) else {
+        return None;
     };
+    let plaintext = open_auth(&opener.x25519, opener.kem_seed.as_ref()?, &inv.from_public_key, INVITE_CONTEXT, sealed)?;
+    let typed: InviteKey = serde_json::from_slice(&plaintext).ok()?;
+    let fits = typed.use_ == "invite" && typed.project == inv.project_id && typed.from == sender.account_id && typed.to == opener.account_id;
+    if !fits {
+        return None;
+    }
+    let key = URL_SAFE_NO_PAD.decode(typed.key).ok()?.try_into().ok()?;
     Some((key, sender.email.clone()))
 }
 
@@ -512,9 +506,6 @@ pub async fn load_invitations(
             (invitation, key)
         })
         .collect();
-    if boxed.iter().any(|(i, k)| i.hybrid.is_some() && k.is_some()) {
-        update_ls_if_changed(ls_ctx, |state| state.hybrid_invitations = true);
-    }
     let batch = opened_batch(&boxed);
     let projects = match batch.ids.is_empty() {
         true => Vec::new(),
@@ -568,9 +559,71 @@ pub async fn decline_invitation(id: Uuid) -> Result<(), ServerFnError> {
     delete_invitation(id).await
 }
 
+#[cfg(any(test, fuzzing))]
+const HOSTILE_PROJECT: Uuid = Uuid::from_u128(1);
+#[cfg(any(test, fuzzing))]
+const HOSTILE_FROM: Uuid = Uuid::from_u128(2);
+#[cfg(any(test, fuzzing))]
+const HOSTILE_TO: Uuid = Uuid::from_u128(3);
+
+/// Bytes a hostile server or friend controls, through what the opening device does with them:
+/// `raw` as the served box itself, otherwise as the plaintext of a box that does open under the
+/// pinned keys, so the typed checks of [`open_invitation`] run on it. Fixed keys, so a crash
+/// replays.
+#[cfg(any(test, fuzzing))]
+pub(crate) fn open_hostile(raw: bool, data: &[u8]) -> Option<[u8; 32]> {
+    let (sender, recipient, seed) = ([1u8; 32], [2u8; 32], [3u8; KEM_SEED_LENGTH]);
+    let (from_public, to_public, to_kem) = (public_key_of(&sender), public_key_of(&recipient), kem_public_key(&seed));
+    let sealed = match raw {
+        true => {
+            let byte = |i: usize| data.get(i).copied().unwrap_or(0) as usize;
+            let kem_len = if byte(1) % 2 == 0 { shared::KEM_CIPHERTEXT_LENGTH } else { byte(1) * 5 };
+            let mut rest = data.get(3..).unwrap_or_default();
+            let mut take = |n: usize| {
+                let (head, tail) = rest.split_at(n.min(rest.len()));
+                rest = tail;
+                head.to_vec()
+            };
+            let (ephemeral, kem_ct, nonce) = (take(byte(0) % 40), take(kem_len), take(byte(2) % 30));
+            HybridBox { ephemeral, kem_ct, nonce, ct: rest.to_vec() }
+        }
+        false => seal_auth(&sender, &to_public, &to_kem, INVITE_CONTEXT, data)?,
+    };
+    let inv = ProjectInvitation {
+        id: Uuid::nil(),
+        project_id: HOSTILE_PROJECT,
+        from_email: String::new(),
+        from_public_key: from_public.clone(),
+        key: None,
+        hybrid: Some(sealed),
+        created_at: chrono::NaiveDateTime::default(),
+        user_id: None,
+    };
+    let friend = Friend { id: Uuid::nil(), account_id: HOSTILE_FROM, email: String::new(), public_key: Some(from_public), kem_public_key: None };
+    let opener = Opener { account_id: HOSTILE_TO, x25519: recipient, kem_seed: Some(seed) };
+    open_invitation(&inv, &opener, &[friend]).map(|(key, _)| key)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_hostile_invitation_opens_only_as_the_typed_plaintext_it_must_be() {
+        let key = [9u8; 32];
+        let typed = |project: Uuid, from: Uuid, to: Uuid, use_: &str| {
+            serde_json::to_vec(&InviteKey { use_: use_.into(), project, from, to, key: URL_SAFE_NO_PAD.encode(key) }).unwrap()
+        };
+        assert_eq!(open_hostile(false, &typed(HOSTILE_PROJECT, HOSTILE_FROM, HOSTILE_TO, "invite")), Some(key));
+        assert_eq!(open_hostile(false, &typed(Uuid::from_u128(9), HOSTILE_FROM, HOSTILE_TO, "invite")), None, "another project");
+        assert_eq!(open_hostile(false, &typed(HOSTILE_PROJECT, HOSTILE_TO, HOSTILE_TO, "invite")), None, "another sender");
+        assert_eq!(open_hostile(false, &typed(HOSTILE_PROJECT, HOSTILE_FROM, HOSTILE_FROM, "invite")), None, "another recipient");
+        assert_eq!(open_hostile(false, &typed(HOSTILE_PROJECT, HOSTILE_FROM, HOSTILE_TO, "escrow")), None, "another use");
+        for data in [&b""[..], b"{}", b"\xff\xfe", &[0u8; 2000]] {
+            assert_eq!(open_hostile(false, data), None);
+            assert_eq!(open_hostile(true, data), None);
+        }
+    }
     use crate::crypto::{encrypt, generate_key, generate_keypair};
     use chrono::NaiveDateTime;
     use shared::{EncryptedPair, OutgoingFriendRequest};
@@ -627,6 +680,7 @@ mod tests {
                 label: encrypt(&account_key, "carol@x.io").unwrap(),
                 created_at: NaiveDateTime::default(),
             }],
+            invite_mail: false,
         };
         assert_eq!(to_lists(&view, &[], Some(&account_key), None, true).outgoing[0].label, "carol@x.io");
         assert_eq!(to_lists(&view, &[], None, None, true).outgoing[0].label, "");
@@ -711,7 +765,6 @@ mod tests {
             payment_methods: None,
             public_key: Some(public_key),
             private_key: crate::crypto::wrap_key_untyped(account_key, WrapUse::PrivateKey, private),
-            typed_wraps: false,
             ..Default::default()
         }
     }
@@ -773,44 +826,47 @@ mod tests {
         assert_eq!(to_lists(&FriendsView::default(), &[], None, None, true).my_fingerprint, None);
     }
 
-    fn boxed_invitation(sender_pub: Vec<u8>, sender_priv: &[u8; 32], to: &[u8], project_key: &[u8; 32]) -> ProjectInvitation {
-        ProjectInvitation {
-            id: Uuid::new_v4(),
-            project_id: Uuid::new_v4(),
-            from_email: "served@x.io".into(),
-            from_public_key: sender_pub,
-            key: Some(box_project_key(sender_priv, to, project_key).unwrap()),
-            hybrid: None,
-            created_at: NaiveDateTime::default(),
-            user_id: None,
-        }
+    fn boxed_invitation(from: &Member, to: &Member, project_key: &[u8; 32]) -> ProjectInvitation {
+        let project_id = Uuid::new_v4();
+        served(from, project_id, box_for(&sender_of(from), project_id, &to.friend, project_key).unwrap())
     }
 
     #[test]
     fn an_invitation_opens_with_the_senders_public_key_only() {
-        let (alice_pub, alice_priv) = generate_keypair();
-        let (bob_pub, bob_priv) = generate_keypair();
+        let (alice, bob) = (member("alice@x.io"), member("bob@x.io"));
         let project_key = generate_key();
-        let alice = Friend { email: "alice@x.io".into(), ..friend(Some(alice_pub.clone())) };
-        let inv = boxed_invitation(alice_pub, &alice_priv, &bob_pub, &project_key);
-        let friends = [alice];
+        let inv = boxed_invitation(&alice, &bob, &project_key);
+        let friends = [alice.friend];
 
-        assert_eq!(open_invitation(&inv, &opener_of(bob_priv), &friends), Some((project_key, "alice@x.io".into())));
-        assert_eq!(open_invitation(&inv, &opener_of(generate_keypair().1), &friends), None);
+        assert_eq!(open_invitation(&inv, &bob.opener, &friends), Some((project_key, "alice@x.io".into())));
+        assert_eq!(open_invitation(&inv, &member("eve@x.io").opener, &friends), None);
         let swapped = ProjectInvitation { from_public_key: generate_keypair().0, ..inv };
-        assert_eq!(open_invitation(&swapped, &opener_of(bob_priv), &friends), None);
+        assert_eq!(open_invitation(&swapped, &bob.opener, &friends), None);
     }
 
     /// The server boxes a key of its own to Bob and serves its public key as the sender's: it is
     /// no friend's key, so the box stays shut.
     #[test]
     fn an_invitation_from_a_key_no_friend_holds_never_opens() {
-        let (server_pub, server_priv) = generate_keypair();
-        let (bob_pub, bob_priv) = generate_keypair();
-        let inv = boxed_invitation(server_pub, &server_priv, &bob_pub, &generate_key());
+        let (server, bob) = (member("server@x.io"), member("bob@x.io"));
+        let inv = boxed_invitation(&server, &bob, &generate_key());
 
-        assert_eq!(open_invitation(&inv, &opener_of(bob_priv), &[friend(Some(generate_keypair().0)), friend(None)]), None);
-        assert_eq!(open_invitation(&inv, &opener_of(bob_priv), &[]), None);
+        assert_eq!(open_invitation(&inv, &bob.opener, &[friend(Some(generate_keypair().0)), friend(None)]), None);
+        assert_eq!(open_invitation(&inv, &bob.opener, &[]), None);
+    }
+
+    /// SPEC 14.3: a well-formed classical box from a friend no longer opens, whatever the server
+    /// reports. The box is the known answer `unbox_project_key` opened to `[7; 32]`.
+    #[test]
+    fn a_classical_invitation_never_opens() {
+        let alice_pub = public_key_of(&[1u8; 32]);
+        let alice = friend(Some(alice_pub.clone()));
+        let classical = EncryptedPair {
+            ct: "D9WCNfn2fqB0KJnUUYlu62jNE+MhMBhBgXxPC38URyIYssGmA5YzUaKbcceqhN1Y4IsojuLVKlXcCjw=".into(),
+            iv: "3dibiCBYV3+7yGCn8BBp7Z/4zbNS5lki".into(),
+        };
+        let inv = ProjectInvitation { from_public_key: alice_pub, key: Some(classical), hybrid: None, ..invitation(Uuid::new_v4()) };
+        assert_eq!(open_invitation(&inv, &opener_of([2u8; 32]), &[alice]), None);
     }
 
     #[test]
@@ -833,17 +889,16 @@ mod tests {
     #[test]
     fn a_changed_key_is_taken_off_the_friend_and_flagged() {
         let (alice_pub, _) = generate_keypair();
-        let (server_pub, server_priv) = generate_keypair();
-        let (bob_pub, bob_priv) = generate_keypair();
+        let (server, bob) = (member("server@x.io"), member("bob@x.io"));
         let alice = Friend { email: "alice@x.io".into(), ..friend(Some(alice_pub)) };
         let mut pins = LocalStorageState::default();
         pin_keys(&mut pins, &mut [alice.clone()]);
 
-        let mut served = [Friend { public_key: Some(server_pub.clone()), ..alice.clone() }];
+        let mut served = [Friend { public_key: server.friend.public_key.clone(), ..alice.clone() }];
         assert_eq!(pin_keys(&mut pins, &mut served), vec![alice.account_id]);
         assert_eq!(served[0].public_key, None);
-        let inv = boxed_invitation(server_pub, &server_priv, &bob_pub, &generate_key());
-        assert_eq!(open_invitation(&inv, &opener_of(bob_priv), &served), None);
+        let inv = boxed_invitation(&server, &bob, &generate_key());
+        assert_eq!(open_invitation(&inv, &bob.opener, &served), None);
 
         let view = FriendsView { friends: served.to_vec(), ..Default::default() };
         let row = &to_lists(&view, &[alice.account_id], None, None, true).friends[0];
@@ -988,7 +1043,6 @@ mod tests {
             payment_methods: None,
             public_key: None,
             private_key: None,
-            typed_wraps: false,
             ..Default::default()
         };
         assert_eq!(my_private_key(&account, &account_key, true), None);
@@ -1018,18 +1072,18 @@ mod tests {
         }
     }
 
-    fn hybrid_sender(m: &Member) -> Sender {
-        Sender { account_id: m.opener.account_id, private: m.opener.x25519, hybrid: true }
+    fn sender_of(m: &Member) -> Sender {
+        Sender { account_id: m.opener.account_id, private: m.opener.x25519 }
     }
 
-    fn served(from: &Member, project_id: Uuid, forms: (Option<EncryptedPair>, Option<HybridBox>)) -> ProjectInvitation {
+    fn served(from: &Member, project_id: Uuid, sealed: HybridBox) -> ProjectInvitation {
         ProjectInvitation {
             id: Uuid::new_v4(),
             project_id,
             from_email: "served@x.io".into(),
             from_public_key: from.friend.public_key.clone().unwrap(),
-            key: forms.0,
-            hybrid: forms.1,
+            key: None,
+            hybrid: Some(sealed),
             created_at: NaiveDateTime::default(),
             user_id: None,
         }
@@ -1041,10 +1095,9 @@ mod tests {
     fn a_hybrid_invitation_opens_for_its_recipient() {
         let (alice, bob) = (member("alice@x.io"), member("bob@x.io"));
         let (project_id, project_key) = (Uuid::new_v4(), generate_key());
-        let forms = box_for(&hybrid_sender(&alice), project_id, &bob.friend, &project_key).unwrap();
-        assert!(forms.0.is_none() && forms.1.is_some(), "the hybrid form only");
+        let sealed = box_for(&sender_of(&alice), project_id, &bob.friend, &project_key).unwrap();
 
-        let inv = served(&alice, project_id, forms);
+        let inv = served(&alice, project_id, sealed);
         assert_eq!(open_invitation(&inv, &bob.opener, std::slice::from_ref(&alice.friend)), Some((project_key, "alice@x.io".into())));
         assert_eq!(open_invitation(&inv, &Opener { kem_seed: None, ..bob.opener }, &[alice.friend]), None, "no ML-KEM seed");
     }
@@ -1055,33 +1108,28 @@ mod tests {
     fn a_hybrid_invitation_for_another_project_sender_or_recipient_is_refused() {
         let (alice, bob) = (member("alice@x.io"), member("bob@x.io"));
         let project_id = Uuid::new_v4();
-        let forms = box_for(&hybrid_sender(&alice), project_id, &bob.friend, &generate_key()).unwrap();
+        let sealed = box_for(&sender_of(&alice), project_id, &bob.friend, &generate_key()).unwrap();
 
-        let moved = served(&alice, Uuid::new_v4(), forms.clone());
+        let moved = served(&alice, Uuid::new_v4(), sealed.clone());
         assert_eq!(open_invitation(&moved, &bob.opener, std::slice::from_ref(&alice.friend)), None, "another project");
 
         let to_another = Opener { account_id: Uuid::new_v4(), ..bob.opener };
-        let inv = served(&alice, project_id, forms);
+        let inv = served(&alice, project_id, sealed);
         assert_eq!(open_invitation(&inv, &to_another, std::slice::from_ref(&alice.friend)), None, "another recipient");
 
         let renamed = Friend { account_id: Uuid::new_v4(), ..alice.friend.clone() };
         assert_eq!(open_invitation(&inv, &bob.opener, &[renamed]), None, "the key under another account");
     }
 
-    /// Decision b: from the floor, a friend without an ML-KEM key gets no invitation at all, never a
-    /// classical box; before it, everyone gets the classical box.
+    /// Decision b: a friend without an ML-KEM key gets no invitation at all, never a classical box.
     #[test]
-    fn the_floor_decides_the_form_and_a_friend_without_a_kem_key_waits() {
+    fn a_friend_without_a_kem_key_waits() {
         let (alice, bob) = (member("alice@x.io"), member("bob@x.io"));
         let (project_id, project_key) = (Uuid::new_v4(), generate_key());
-        let classical = Sender { hybrid: false, ..hybrid_sender(&alice) };
-        let forms = box_for(&classical, project_id, &bob.friend, &project_key).unwrap();
-        assert!(forms.0.is_some() && forms.1.is_none(), "the classical form only, before the floor");
-
         let no_kem = Friend { kem_public_key: None, ..bob.friend.clone() };
-        assert_eq!(box_for(&hybrid_sender(&alice), project_id, &no_kem, &project_key), Err(Unboxed::Waiting));
+        assert_eq!(box_for(&sender_of(&alice), project_id, &no_kem, &project_key), Err(Unboxed::Waiting));
         let no_key = Friend { public_key: None, ..bob.friend };
-        assert_eq!(box_for(&hybrid_sender(&alice), project_id, &no_key, &project_key), Err(Unboxed::Failed));
+        assert_eq!(box_for(&sender_of(&alice), project_id, &no_key, &project_key), Err(Unboxed::Failed));
     }
 
     /// Plan §5 c: the ML-KEM key is pinned like the X25519 one. A changed one is taken off and
@@ -1097,50 +1145,22 @@ mod tests {
         let mut served = [Friend { kem_public_key: Some(substitute.clone()), ..bob.friend.clone() }];
         assert_eq!(pin_keys(&mut state, &mut served), vec![bob.friend.account_id]);
         assert_eq!(served[0].kem_public_key, None);
-        assert!(box_for(&hybrid_sender(&alice), Uuid::new_v4(), &served[0], &generate_key()).is_err());
+        assert!(box_for(&sender_of(&alice), Uuid::new_v4(), &served[0], &generate_key()).is_err());
 
         trust_key(&mut state, bob.friend.account_id, bob.friend.public_key.as_deref().unwrap(), Some(&substitute));
         let mut trusted = [Friend { kem_public_key: Some(substitute.clone()), ..bob.friend.clone() }];
         assert!(pin_keys(&mut state, &mut trusted).is_empty(), "pinned once the codes were compared");
     }
 
-    /// A device that saw the floor never writes a classical box again, whatever the server says.
-    #[test]
-    fn a_device_that_saw_the_hybrid_floor_stays_hybrid() {
-        let account_key = generate_key();
-        let (public, private) = generate_keypair();
-        let account = Account { hybrid_invitations: false, ..account_with(&account_key, public, &private) };
-        let mut state = LocalStorageState::default();
-        assert!(!sender(&account, &account_key, &state).unwrap().hybrid);
-
-        state.hybrid_invitations = true;
-        assert!(sender(&account, &account_key, &state).unwrap().hybrid);
-        let floor = Account { hybrid_invitations: true, ..account };
-        assert!(sender(&floor, &account_key, &LocalStorageState::default()).unwrap().hybrid);
-    }
-
-    #[test]
-    fn seeing_the_floor_alone_pins_the_device() {
-        let account_key = generate_key();
-        let (public, private) = generate_keypair();
-        let floor = Account { hybrid_invitations: true, ..account_with(&account_key, public, &private) };
-        let mut state = LocalStorageState::default();
-        saw_hybrid_floor(&mut state, &Account { hybrid_invitations: false, ..floor.clone() });
-        assert!(!state.hybrid_invitations);
-
-        saw_hybrid_floor(&mut state, &floor);
-        let turned_back = Account { hybrid_invitations: false, ..floor };
-        assert!(sender(&turned_back, &account_key, &state).unwrap().hybrid);
-    }
-
     #[test]
     fn an_invitation_with_both_forms_or_neither_never_opens() {
         let (alice, bob) = (member("alice@x.io"), member("bob@x.io"));
         let project_id = Uuid::new_v4();
-        let classical = box_for(&Sender { hybrid: false, ..hybrid_sender(&alice) }, project_id, &bob.friend, &generate_key()).unwrap().0;
-        let hybrid = box_for(&hybrid_sender(&alice), project_id, &bob.friend, &generate_key()).unwrap().1;
+        let hybrid = served(&alice, project_id, box_for(&sender_of(&alice), project_id, &bob.friend, &generate_key()).unwrap());
+        let both = ProjectInvitation { key: Some(EncryptedPair { ct: "AA==".into(), iv: "AA==".into() }), ..hybrid.clone() };
+        let neither = ProjectInvitation { hybrid: None, ..hybrid };
 
-        assert_eq!(open_invitation(&served(&alice, project_id, (classical, hybrid)), &bob.opener, std::slice::from_ref(&alice.friend)), None);
-        assert_eq!(open_invitation(&served(&alice, project_id, (None, None)), &bob.opener, &[alice.friend]), None);
+        assert_eq!(open_invitation(&both, &bob.opener, std::slice::from_ref(&alice.friend)), None);
+        assert_eq!(open_invitation(&neither, &bob.opener, &[alice.friend]), None);
     }
 }

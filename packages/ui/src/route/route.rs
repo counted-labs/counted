@@ -12,6 +12,7 @@ use crate::privacy::PrivacyPage;
 use crate::project_history::ProjectHistoryPage;
 use crate::projects::ProjectsPage;
 use crate::recurring::recurring_page::{RecurringPage, RecurringRulePage};
+use crate::unsubscribe::UnsubscribePage;
 use dioxus::prelude::*;
 use uuid::Uuid;
 
@@ -52,6 +53,8 @@ pub enum Route {
         FriendsPage {},
         #[route("/verify-email/:token")]
         VerifyEmailPage { token: String },
+        #[route("/unsubscribe/:token")]
+        UnsubscribePage { token: String },
         #[route("/forgot-password")]
         ForgotPasswordPage {},
         #[route("/reset/:token")]
@@ -99,6 +102,7 @@ pub fn project_id_of(route: &Route) -> Option<Uuid> {
         | Route::LoginPage {}
         | Route::RegisterPage {}
         | Route::VerifyEmailPage { .. }
+        | Route::UnsubscribePage { .. }
         | Route::ForgotPasswordPage {}
         | Route::ResetPage { .. }
         | Route::HelpPage {}

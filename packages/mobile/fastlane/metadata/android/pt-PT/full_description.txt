@@ -1,4 +1,4 @@
-O Counted é a app para dividir despesas entre amigos: 100 % europeia, privada por natureza, com uma missão ambiental. Férias, casa partilhada, fim de semana, prenda de grupo: registem as vossas despesas e o Counted diz-te quem deve quanto a quem, com o mínimo de transferências.
+O Counted é a app para dividir despesas entre amigos: 100 % europeia e privada por natureza. Férias, casa partilhada, fim de semana, prenda de grupo: registem as vossas despesas e o Counted diz-te quem deve quanto a quem, com o mínimo de transferências.
 
 🔗 Sem necessidade de conta
 Cria um projeto, envia o link. É só isso. Os teus amigos juntam-se e participam sem se registarem. Uma conta? Nunca obrigatória. Serve para encontrares os teus projetos noutro dispositivo, convidares amigos a partir da app e partilhares os teus dados de pagamento.
@@ -40,9 +40,6 @@ Grátis, sem publicidade, sem rastreadores, sem limite de despesas ou participan
 • Importação do Tricount: cola o link de partilha e passa tudo
 • Web, Android e iOS: o mesmo projeto em todo o lado, com o mesmo link
 • 32 línguas, incluindo as 24 línguas oficiais da UE
-
-🌱 Uma missão
-O Counted foi feito para ser eficiente e simples: sem publicidade, sem rastreadores. Os cálculos correm no teu dispositivo. Comprometemo-nos a doar uma parte das nossas receitas a causas ambientais.
 
 Como funciona exatamente? (em inglês) counted.fr/en/encryption
 Verifica tu mesmo o código que executas: counted.fr/en/verify

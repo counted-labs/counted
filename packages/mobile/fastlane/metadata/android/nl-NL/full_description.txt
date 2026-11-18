@@ -1,0 +1,45 @@
+Counted is de app om uitgaven te delen met vrienden: 100% Europees en ontworpen met privacy voorop. Vakantie, huisgenoten, weekendje weg, groepscadeau: noteer je uitgaven en Counted vertelt je wie hoeveel aan wie moet betalen, met zo min mogelijk overboekingen.
+
+🔗 Geen account nodig
+Maak een project aan, stuur de link. Dat is alles. Je vrienden doen mee zonder zich te registreren. Een account? Nooit verplicht. Daarmee vind je je projecten terug op een ander apparaat, nodig je vrienden uit vanuit de app en deel je je betaalgegevens.
+
+🔒 Versleuteld op je telefoon
+Namen, bedragen, projecten, geschiedenis: alles wordt op je telefoon versleuteld. Alleen jij hebt de sleutel. Niemand kan je rekeningen lezen, zelfs wij niet. Ook je wachtwoord verlaat je telefoon nooit.
+
+📷 Bonnen scannen, op je telefoon
+Maak een foto van de bon: bedrag, datum en categorie vullen zich vanzelf in. Alles gebeurt op je telefoon. De foto wordt niet bewaard.
+
+🇪🇺 100% Europees
+Servers in Duitsland, e-mails verstuurd vanuit Frankrijk. Je projecten verlaten nooit de Europese Unie.
+
+💸 Echt gratis
+Gratis, zonder advertenties, zonder trackers en zonder limiet op uitgaven of deelnemers. Alles wat hier staat, is gratis en blijft gratis. We verzamelen niets, we verkopen je gegevens niet. Dat is niet ons verdienmodel.
+
+✨ Alles voor gedeelde uitgaven
+• Uitgaven, overboekingen en inkomsten, met meerdere betalers en meerdere begunstigden
+• Gelijk verdelen, op aandelen of met exacte bedragen, tot op de cent gecontroleerd
+• Zo min mogelijk overboekingen om alles in de groep te vereffenen
+• Terugkerende uitgaven zoals huur of abonnementen: één keer ingevoerd, op elke vervaldag toegevoegd
+• Meer dan 150 valuta, omgerekend tegen de maandkoers van de Europese Commissie
+• Statistieken per categorie, per persoon en maand voor maand
+• Je eigen categorieën, elk met een eigen emoji, en een emoji voor elk project
+• Geschiedenis van wie wat heeft toegevoegd, bewerkt of verwijderd
+• Zoeken op naam, notitie of categorie, op je eigen apparaat
+• Met een account een persoonlijk project ‘Mijn uitgaven’: wat je in je eentje uitgeeft plus je aandeel in je groepen, maand voor maand
+• Een uitgave van het ene project naar het andere verplaatsen
+• Maandbudgetten per categorie op je werkelijke aandeel, met een waarschuwing bij 80%, berekend op je apparaat
+• Op het startscherm: wat je nog krijgt en wat je verschuldigd bent in al je projecten, berekend op je apparaat
+• Een snelkoppeling ‘Eigen uitgave’ als je lang op het app-icoon drukt
+• Offline: bekijken en invoeren zonder netwerk
+• Exporteren naar CSV en JSON met één tik
+• Betaalgegevens (IBAN, PayPal, Wero, Lydia, Revolut…) versleuteld zoals al het andere
+• Wijzig je wachtwoord zonder iets te verliezen; vergeten? Met een herstelsleutel krijg je alles terug
+• Wachtwoord gelekt of telefoon kwijt: nieuwe accountsleutels, alle andere apparaten uitgelogd
+• Projectbeheerders: verwijder je iemand, dan verandert de projectsleutel en opent de oude link van die persoon niets meer
+• Leden met een account krijgen de nieuwe sleutel vanzelf, met post-kwantumversleuteling; de anderen krijgen een nieuwe link
+• Tricount-import: plak de deellink en alles komt mee
+• Web, Android en iOS: overal hetzelfde project, met dezelfde link
+• 32 talen, waaronder alle 24 officiële talen van de EU
+
+Hoe werkt het precies? counted.fr/en/encryption
+Controleer zelf de code die je draait: counted.fr/en/verify

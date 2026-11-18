@@ -8,13 +8,13 @@ use std::collections::VecDeque;
 use uuid::Uuid;
 
 use crate::common::{
-    key_of, write_queue, Flash, LocalStorageState, OpKind, ProjectTile, QueuedOp,
+    key_of, write_queue, Flash, LocalStorageState, OpKind, ProjectTile, QueuedOp, SheetBar, SHEET_TITLE,
 };
 use crate::categories::ProjectCategories;
 use crate::crypto::decrypt_json;
 use crate::decrypted::{pickable_users, project_status};
 use crate::expenses::helpers::delete_expense_action::delete_expense_request;
-use crate::icons::{ChevronRightIcon, CloseIcon, WalletIcon};
+use crate::icons::{ChevronRightIcon, WalletIcon};
 use crate::tid;
 
 /// Everything the destination's form needs, gathered on the source's page while its key is the one
@@ -132,21 +132,11 @@ pub fn MoveExpenseSheet(
             aria_modal: "true",
             aria_labelledby: "move-expense-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md p-0",
-                div { class: "flex flex-col gap-3 px-6 pt-5 pb-6",
-                    div { class: "flex items-center gap-2",
-                        h2 { id: "move-expense-title", class: "flex-1 min-w-0 truncate font-bold text-lg font-display",
-                            {tid!("move-expense-title")}
-                        }
-                        button {
-                            id: "move-expense-close",
-                            r#type: "button",
-                            class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                            aria_label: tid!("close"),
-                            onclick: move |_| on_close.call(()),
-                            CloseIcon {}
-                        }
-                    }
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar { close_id: "move-expense-close", on_close,
+                    h2 { id: "move-expense-title", class: SHEET_TITLE, {tid!("move-expense-title")} }
+                }
+                div { class: "flex-1 overflow-y-auto flex flex-col gap-3 px-5 pt-1 pb-6",
                     ul { class: "flex flex-col",
                         for d in destinations {
                             {

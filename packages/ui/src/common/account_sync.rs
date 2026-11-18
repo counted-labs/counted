@@ -593,7 +593,7 @@ mod tests {
     mod typed_wraps {
         use super::*;
 
-        fn account(typed_wraps: bool) -> Account {
+        fn account() -> Account {
             Account {
                 id: Uuid::new_v4(),
                 email: "a@b.c".into(),
@@ -606,7 +606,6 @@ mod tests {
                 payment_methods: None,
                 public_key: None,
                 private_key: None,
-                typed_wraps,
                 ..Default::default()
             }
         }
@@ -657,19 +656,19 @@ mod tests {
         }
 
         #[test]
-        fn an_untyped_row_is_rewrapped_once_whatever_the_server_flag() {
+        fn an_untyped_row_is_rewrapped_once() {
             let id = Uuid::new_v4();
             let account_key = generate_key();
             let pk = generate_key();
             let s = state(vec![local(id, None, Some(key_to_fragment(&pk)))]);
             let untyped = vec![remote(id, None, Some(wrap_key_untyped(&account_key, WrapUse::Escrow(id), &pk).unwrap()))];
 
-            let push = to_push(&s, &untyped, Some(&account_key), Some(&account(false)));
+            let push = to_push(&s, &untyped, Some(&account_key), Some(&account()));
             let rewrapped = push[0].key.clone().unwrap();
             assert_eq!(open_wrap(&account_key, WrapUse::Escrow(id), &rewrapped), Some(crate::crypto::Unwrapped { key: pk, typed: true }));
 
             let typed = vec![remote(id, None, Some(rewrapped))];
-            assert!(to_push(&s, &typed, Some(&account_key), Some(&account(false))).is_empty());
+            assert!(to_push(&s, &typed, Some(&account_key), Some(&account())).is_empty());
         }
     }
 }

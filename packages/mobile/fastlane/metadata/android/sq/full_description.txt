@@ -1,0 +1,45 @@
+Counted është aplikacioni për ndarjen e shpenzimeve me miqtë: 100% evropian dhe i ndërtuar për privatësinë. Pushime, apartament i përbashkët, fundjavë, dhuratë në grup: regjistro shpenzimet dhe Counted të tregon kush i detyrohet kujt dhe sa, me sa më pak transferta.
+
+🔗 Pa nevojë për llogari
+Krijo një projekt, dërgo lidhjen. Kaq. Miqtë e tu bashkohen dhe marrin pjesë pa u regjistruar. Llogari? Nuk është kurrë e detyrueshme. Shërben për të gjetur projektet e tua në një pajisje tjetër, për të ftuar miqtë nga aplikacioni dhe për të ndarë të dhënat e tua të pagesës.
+
+🔒 E enkriptuar në telefonin tënd
+Emra, shuma, projekte, historik: gjithçka enkriptohet në telefonin tënd. Vetëm ti e ke çelësin. Askush nuk mund t'i lexojë shpenzimet e tua, madje as ne. Edhe fjalëkalimi yt nuk largohet kurrë nga telefoni.
+
+📷 Skanimi i faturave, në telefonin tënd
+Bëji një foto faturës: shuma, data dhe kategoria plotësohen vetë. Gjithçka ndodh në telefonin tënd. Fotoja nuk ruhet.
+
+🇪🇺 100% evropian
+Serverë në Gjermani, email-e të dërguara nga Franca. Projektet e tua nuk largohen kurrë nga Bashkimi Evropian.
+
+💸 Vërtet falas
+Falas, pa reklama, pa gjurmues dhe pa kufi për numrin e shpenzimeve apo të pjesëmarrësve. Gjithçka që përshkruhet këtu është falas dhe mbetet falas. Nuk mbledhim asgjë, nuk i shesim të dhënat e tua. Ky nuk është modeli ynë.
+
+✨ Gjithçka për shpenzimet e përbashkëta
+• Shpenzime, transferta dhe fitime, me disa pagues dhe disa përfitues
+• Ndarje në mënyrë të barabartë, sipas pjesëve ose me shumë të saktë, e kontrolluar deri në qindarkë
+• Sa më pak transferta për të shlyer llogaritë e grupit
+• Shpenzime të përsëritura si qiraja ose abonimet: i fut një herë, shtohen sa herë që u vjen afati
+• Mbi 150 monedha, të konvertuara me kursin mujor të Komisionit Evropian
+• Statistika sipas kategorisë, sipas personit dhe muaj pas muaji
+• Kategoritë e tua, secila me emoji-n e vet, dhe një emoji për çdo projekt
+• Historik: kush shtoi, ndryshoi ose fshiu çfarë
+• Kërkim sipas emrit, shënimit ose kategorisë, në pajisjen tënde
+• Me llogari, një projekt personal «Shpenzimet e mia»: çfarë shpenzon për veten plus pjesa jote në grupet e tua, muaj pas muaji
+• Zhvendosja e një shpenzimi nga një projekt në tjetrin
+• Buxhete mujore për kategori mbi pjesën tënde reale, me paralajmërim në 80%, të llogaritur në pajisjen tënde
+• Në ekranin kryesor: sa të detyrohen të tjerët dhe sa u detyrohesh ti në të gjitha projektet, të llogaritura në pajisjen tënde
+• Shkurtore «Shpenzim personal» me shtypje të gjatë mbi ikonën e aplikacionit
+• Jashtë linje: shfleto dhe fut shpenzime pa rrjet
+• Eksport në CSV dhe JSON me një prekje
+• Të dhënat e pagesës (IBAN, PayPal, Wero, Lydia, Revolut…), të enkriptuara si gjithçka tjetër
+• Ndrysho fjalëkalimin pa humbur asgjë; nëse e harron, çelësi i rikuperimit t'i rikthen të gjitha
+• Fjalëkalim i rrjedhur ose telefon i humbur: çelësa të rinj për llogarinë, dalje nga të gjitha pajisjet e tjera
+• Administratorët e projektit: heqja e dikujt ndryshon çelësin e projektit dhe lidhja e tij e vjetër nuk hap më asgjë
+• Anëtarët me llogari e marrin çelësin e ri automatikisht, me enkriptim post-kuantik; të tjerët marrin një lidhje të re
+• Import nga Tricount: ngjit lidhjen e ndarjes dhe gjithçka kalon
+• Web, Android dhe iOS: i njëjti projekt kudo, me të njëjtën lidhje
+• 32 gjuhë, përfshirë të 24 gjuhët zyrtare të BE-së
+
+Si funksionon në të vërtetë? counted.fr/en/encryption
+Verifiko vetë kodin që ekzekuton: counted.fr/en/verify

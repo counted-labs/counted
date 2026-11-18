@@ -13,7 +13,7 @@ use super::view::{
 };
 use crate::categories::ProjectCategories;
 use crate::common::{
-    format_date, fx_cache, pending, read_from_ls, AppHeader, Flash, ProjectKey, PullToRefresh, RowActionsEntry, RowActionsSheet,
+    format_date, fx_cache, pending, read_from_ls, AppHeader, Flash, ProjectKey, PullToRefresh, RowActionsEntry, RowActionsSheet, SheetBar,
 };
 use crate::expenses::project_actions_sheet::Row;
 use crate::expenses::helpers::project_data::ProjectData;
@@ -419,17 +419,10 @@ fn RuleSheet(
             aria_labelledby: "rule-sheet-title",
             tabindex: "-1",
             div { class: "modal-box max-w-md p-0 flex flex-col",
-                div { class: "flex items-start gap-2 px-5 pt-4 pb-1",
-                    h2 { id: "rule-sheet-title", class: "flex-1 min-w-0 self-center font-bold text-lg font-display leading-snug wrap-anywhere text-pretty", "{t.name}" }
-                    button {
-                        r#type: "button",
-                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                        aria_label: tid!("close"),
-                        onclick: move |_| on_close.call(()),
-                        CloseIcon { size: ICON_HEADER }
-                    }
+                SheetBar { close_id: "rule-sheet-close", on_close,
+                    h2 { id: "rule-sheet-title", class: "flex-1 min-w-0 font-bold text-lg font-display leading-snug wrap-anywhere text-pretty sheet-bar-title", "{t.name}" }
                 }
-                div { class: "flex-1 overflow-y-auto flex flex-col gap-3 px-5 pb-4",
+                div { class: "flex-1 overflow-y-auto flex flex-col gap-3 px-5 pt-1 pb-4",
                     div { class: "text-center",
                         p { class: "font-display font-extrabold text-3xl tabular-nums",
                             if t.variable { "≈ " }
@@ -498,7 +491,7 @@ fn RuleSheet(
                         }
                     }
                 }
-                div { class: "flex flex-col gap-2 px-5 py-3 border-t border-base-200",
+                div { class: "flex flex-col gap-2 px-5 py-3 border-t border-base-200 flex-shrink-0",
                     button { id: "recurring-edit", r#type: "button", class: "btn btn-primary w-full", onclick: move |_| on_edit.call(()), {tid!("edit")} }
                     div { class: "flex gap-2",
                         if !finished {

@@ -1,0 +1,45 @@
+Counted, arkadaşlar arasında harcama paylaşma uygulaması: %100 Avrupalı ve en baştan gizlilik için tasarlanmış. Tatil, ev arkadaşları, hafta sonu, ortak hediye: harcamaları gir, Counted da kimin kime ne kadar borçlu olduğunu en az sayıda transferle söylesin.
+
+🔗 Hesap gerekmez
+Bir proje oluştur, bağlantıyı gönder. Bu kadar. Arkadaşların kaydolmadan katılır ve harcamalara dahil olur. Hesap mı? Asla zorunlu değil. Projelerini başka bir cihazda bulmana, arkadaşlarını uygulamadan davet etmene ve ödeme bilgilerini paylaşmana yarar.
+
+🔒 Telefonunda şifrelenir
+Adlar, tutarlar, projeler, geçmiş: hepsi telefonunda şifrelenir. Anahtar yalnızca sende. Harcamalarını kimse okuyamaz, biz bile. Şifren de telefonundan asla çıkmaz.
+
+📷 Fiş tarama, telefonunda
+Fişin fotoğrafını çek: tutar, tarih ve kategori kendiliğinden dolar. Her şey telefonunda gerçekleşir. Fotoğraf saklanmaz.
+
+🇪🇺 %100 Avrupa
+Sunucular Almanya'da, e-postalar Fransa'dan gönderilir. Projelerin Avrupa Birliği'nden asla çıkmaz.
+
+💸 Gerçekten ücretsiz
+Ücretsiz; reklam yok, izleyici yok, harcama ya da katılımcı sınırı yok. Burada anlatılan her şey ücretsiz ve ücretsiz kalacak. Hiçbir şey toplamıyoruz, verilerini satmıyoruz. Bizim iş modelimiz bu değil.
+
+✨ Ortak harcamalar için her şey
+• Harcamalar, transferler ve gelirler; birden fazla ödeyen ve birden fazla yararlanan ile
+• Eşit, paylara göre ya da tam tutarla bölüşüm, kuruşu kuruşuna kontrol edilir
+• Grubun hesaplaşması için en az sayıda transfer
+• Kira ya da abonelikler gibi tekrarlanan harcamalar: bir kez girersin, her vadesinde eklenir
+• 150'den fazla para birimi, Avrupa Komisyonu'nun aylık kuruyla çevrilir
+• Kategoriye, kişiye ve aya göre istatistikler
+• Her biri kendi emojisiyle kendi kategorilerin ve her proje için bir emoji
+• Kimin neyi eklediğini, düzenlediğini ya da sildiğini gösteren geçmiş
+• Ada, nota ya da kategoriye göre arama, cihazında çalışır
+• Hesabın varsa kişisel bir “Harcamalarım” projesi: tek başına harcadıkların artı gruplarındaki payın, ay ay
+• Bir harcamayı bir projeden diğerine taşı
+• Gerçek payın üzerinden kategori başına aylık bütçeler, cihazında hesaplanan %80 uyarısıyla
+• Ana ekranda: tüm projelerde sana olan borçlar ve senin borçların, cihazında hesaplanır
+• Uygulama simgesine uzun basınca “Kişisel harcama” kısayolu
+• Çevrimdışı: internet olmadan göz at ve harcama gir
+• Tek dokunuşla CSV ve JSON dışa aktarma
+• Ödeme bilgileri (IBAN, PayPal, Wero, Lydia, Revolut…) her şey gibi şifreli
+• Hiçbir şey kaybetmeden şifreni değiştir; unutursan kurtarma anahtarı her şeyi geri getirir
+• Şifren sızdı ya da telefonun kayboldu: yeni hesap anahtarları, diğer tüm cihazlarda oturum kapatılır
+• Proje yöneticileri: birini çıkarmak proje anahtarını değiştirir, onun eski bağlantısı artık hiçbir şey açmaz
+• Hesabı olan üyeler yeni anahtarı otomatik olarak, kuantum sonrası şifrelemeyle alır; diğerleri yeni bir bağlantı alır
+• Tricount içe aktarma: paylaşım bağlantısını yapıştır, her şey aktarılır
+• Web, Android ve iOS: her yerde aynı proje, aynı bağlantıyla
+• 24 resmî AB dilinin tümü dahil 32 dil
+
+Peki gerçekte nasıl çalışıyor? counted.fr/en/encryption
+Çalıştırdığın kodu kendin doğrula: counted.fr/en/verify

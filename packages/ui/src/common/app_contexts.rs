@@ -174,14 +174,6 @@ pub fn use_app_contexts() {
     });
 
     use_effect(move || {
-        if let Some(account) = auth.read().as_ref() {
-            crate::common::update_ls_if_changed(ls_ctx, |state| {
-                crate::friends::friends_service::saw_hybrid_floor(state, account)
-            });
-        }
-    });
-
-    use_effect(move || {
         if crate::auth::account_key::ACCOUNT_KEY_STALE() {
             spawn(async move {
                 crate::auth::account_key::settle_stale(ls_ctx, account_enc_key, auth).await;

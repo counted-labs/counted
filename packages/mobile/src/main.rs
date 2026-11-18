@@ -10,6 +10,8 @@ use ui::common::push_deep_link;
 
 #[cfg(any(target_os = "android", target_os = "ios"))]
 mod push;
+#[cfg(any(target_os = "android", target_os = "ios"))]
+mod store_key;
 
 /// Where `UpdateRequiredScreen` sends the user. `webbrowser` - what an anchor click in the WebView
 /// goes through - only opens http(s), so the link is the store's web page, which hands off to the
@@ -421,32 +423,33 @@ fn install_tls_provider() {
 
 /// A reqwest client with a file-backed cookie store, registered as the global Dioxus fullstack
 /// client. Must be called before any server function.
+///
+/// The jar is a live session, so it is a store like the others (`ui::common::persist`): sealed
+/// under the store key, written tmp then renamed, and neither read nor written while the store is
+/// locked; it is read again once the store opens.
 #[cfg(not(feature = "server"))]
-fn init_persistent_client(data_dir: &str) {
+fn init_persistent_client() {
     use reqwest_cookie_store::{CookieStore, CookieStoreMutex};
     use std::sync::Arc;
 
-    let cookie_path = std::path::PathBuf::from(data_dir).join("counted_cookies.json");
-
+    const JAR: &str = "counted_cookies";
     #[allow(deprecated)]
-    let store = std::fs::File::open(&cookie_path)
-        .ok()
-        .and_then(|f| CookieStore::load_json(std::io::BufReader::new(f)).ok())
-        .unwrap_or_default();
-    let store = Arc::new(CookieStoreMutex::new(store));
+    fn load() -> CookieStore {
+        ui::common::persist::read_raw(JAR).and_then(|bytes| CookieStore::load_json(bytes.as_slice()).ok()).unwrap_or_default()
+    }
+    let store = Arc::new(CookieStoreMutex::new(load()));
+    {
+        let store = store.clone();
+        ui::common::store_seal::on_unlock(Arc::new(move || *store.lock().unwrap() = load()));
+    }
 
-    // Sibling tmp file and rename, as `ui::common::persist` does: a kill mid-write leaves the
-    // previous jar intact rather than a truncated file that loads as "signed out".
     let save = {
         let store = store.clone();
-        let tmp = cookie_path.with_extension("json.tmp");
         move || {
+            let mut bytes = Vec::new();
             #[allow(deprecated)]
-            let written = std::fs::File::create(&tmp)
-                .and_then(|mut f| store.lock().unwrap().save_json(&mut f).map_err(std::io::Error::other))
-                .and_then(|_| std::fs::rename(&tmp, &cookie_path));
-            if written.is_err() {
-                let _ = std::fs::remove_file(&tmp);
+            if store.lock().unwrap().save_json(&mut bytes).is_ok() {
+                ui::common::persist::write_raw(JAR, &bytes);
             }
         }
     };
@@ -1254,8 +1257,11 @@ fn main() {
         dioxus::fullstack::set_server_url(
             option_env!("COUNTED_SERVER_URL").unwrap_or("https://counted.fr"),
         );
-        let data_dir = init_data_dir();
-        init_persistent_client(&data_dir);
+        init_data_dir();
+        // Before anything reads a store: the cookie jar and every store are sealed under this key.
+        #[cfg(any(target_os = "android", target_os = "ios"))]
+        store_key::install();
+        init_persistent_client();
     }
 
     // Before launch, so no call site can race an unset player. Every other target leaves it unset
@@ -1335,8 +1341,30 @@ fn main() {
     builder.launch(app);
 }
 
+/// The locked screen stands in front of everything that reads a store: the app's contexts mount,
+/// and read the stores, only once the key opens them (docs/plans/security-3.3.0.md §4).
 #[component]
 fn app() -> Element {
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        use ui::common::store_seal::{self, StoreKey};
+        ui::i18n::use_init_locale();
+        let mut store = use_signal(store_seal::state);
+        if matches!(store(), StoreKey::Locked | StoreKey::Lost) {
+            return rsx! {
+                ui::common::StoreLocked {
+                    lost: store() == StoreKey::Lost,
+                    on_retry: move |_| store.set(store_seal::retry()),
+                    on_reset: move |_| store.set(store_seal::reset()),
+                }
+            };
+        }
+    }
+    rsx! { UnlockedApp {} }
+}
+
+#[component]
+fn UnlockedApp() -> Element {
     use_app_contexts();
     let ready = use_client_ready();
     // The window and its status bar exist only once mounted; the page took the theme from the head.

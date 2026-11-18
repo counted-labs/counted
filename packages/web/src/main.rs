@@ -68,13 +68,25 @@ fn main() {
     // the boot instead of the first login.
     #[cfg(feature = "server")]
     {
+        api::server::secrets::load_from_files();
         if std::env::var("AUTH_SALT_PEPPER").map_or(true, |p| p.len() < 32) {
             panic!("AUTH_SALT_PEPPER must be set to at least 32 characters (openssl rand -hex 32)");
+        }
+        if !api::app_version::floor_reached(shared::HYBRID_INVITATIONS_FROM) {
+            panic!(
+                "MIN_APP_VERSION must be at least {}: this server takes only the hybrid invitation box \
+                 (docs/plans/security-3.3.0.md, C2)",
+                shared::HYBRID_INVITATIONS_FROM
+            );
         }
         // `dioxus::launch` is `serve(router(app))` with nothing added; spelling it out is what
         // lets the version gate sit on every route. See docs/dioxus-overrides.md.
         dioxus::serve(|| async {
             Ok(dioxus::server::router(app)
+                .route(
+                    &format!("{}{{token}}", api::app_version::ONE_CLICK_UNSUBSCRIBE),
+                    api::server::mail::one_click_route(),
+                )
                 .layer(dioxus::server::axum::middleware::from_fn(reject_outdated_clients)))
         });
     }

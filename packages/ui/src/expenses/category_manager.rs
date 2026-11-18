@@ -9,11 +9,11 @@ use uuid::Uuid;
 
 use crate::categories::custom::{apply_edit, new_custom_id, CategoryEdit, CategoryError, Summary, MAX_CUSTOM, MAX_NAME_CHARS, OTHER};
 use crate::categories::{category_label, parent_emoji, ProjectCategories, CHART_CATEGORIES};
-use crate::common::{error_message, haptic, read_from_ls, update_project_fresh, ConfirmDialog, DialogAction, EmojiGrid, Haptic, ProjectKey};
+use crate::common::{error_message, haptic, read_from_ls, update_project_fresh, ConfirmDialog, DialogAction, EmojiGrid, Haptic, ProjectKey, SheetBar, SheetFooter, SHEET_TITLE};
 use crate::crypto::{decrypt_json, encrypt_padded_json};
 use crate::expenses::helpers::project_data::ProjectData;
 use crate::expenses::hooks::use_project_store::ProjectStore;
-use crate::icons::{ChevronRightIcon, CloseIcon, ICON_HEADER, ICON_INLINE};
+use crate::icons::{ChevronRightIcon, ICON_INLINE};
 use crate::recurring::store::RecurringData;
 use crate::tid;
 
@@ -214,19 +214,12 @@ pub fn CategoryManager(
             aria_modal: "true",
             aria_labelledby: "category-manager-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md p-0",
-                div { class: "flex flex-col gap-3 px-6 pt-5 pb-6",
-                div { class: "flex items-center gap-2",
-                    h2 { id: "category-manager-title", class: "flex-1 font-bold text-lg font-display", {tid!("categories-title")} }
-                    span { id: "category-manager-counter", class: "badge badge-ghost", "{custom_count} / {MAX_CUSTOM}" }
-                    button {
-                        r#type: "button",
-                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                        aria_label: tid!("close"),
-                        onclick: move |_| on_close.call(()),
-                        CloseIcon { size: ICON_HEADER }
-                    }
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar { close_id: "category-manager-close", on_close,
+                    h2 { id: "category-manager-title", class: SHEET_TITLE, {tid!("categories-title")} }
+                    span { id: "category-manager-counter", class: "badge badge-ghost shrink-0", "{custom_count} / {MAX_CUSTOM}" }
                 }
+                div { class: "flex-1 overflow-y-auto flex flex-col gap-3 px-5 pt-1 pb-6",
                 if let Some(message) = error().filter(|_| editing().is_none()) {
                     div { role: "alert", class: "alert alert-error text-sm", "{message}" }
                 }
@@ -484,6 +477,19 @@ fn CategoryEditSheet(
     let submit_target = target.clone();
     let submit_default = default_label.clone();
 
+    let delete_button = matches!(target, Target::Custom(_)).then(|| {
+        rsx! {
+            button {
+                id: "category-delete",
+                r#type: "button",
+                class: "btn btn-ghost text-error",
+                disabled: saving,
+                onclick: move |_| on_delete.call(()),
+                {tid!("delete")}
+            }
+        }
+    });
+
     rsx! {
         div {
             id: "category-edit-sheet",
@@ -492,18 +498,11 @@ fn CategoryEditSheet(
             aria_modal: "true",
             aria_labelledby: "category-edit-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md p-0",
-                div { class: "flex flex-col gap-4 px-6 pt-5 pb-6",
-                div { class: "flex items-center gap-2",
-                    h2 { id: "category-edit-title", class: "flex-1 font-bold text-lg font-display", "{title}" }
-                    button {
-                        r#type: "button",
-                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                        aria_label: tid!("close"),
-                        onclick: move |_| on_close.call(()),
-                        CloseIcon { size: ICON_HEADER }
-                    }
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar { close_id: "category-edit-close", task: true, on_close,
+                    h2 { id: "category-edit-title", class: SHEET_TITLE, "{title}" }
                 }
+                div { class: "flex-1 overflow-y-auto flex flex-col gap-4 px-5 pt-1 pb-4",
                 div { class: "flex flex-col gap-1.5",
                     div { class: "flex justify-between text-sm",
                         label { class: "font-medium", r#for: "category-name", {tid!("field-name")} }
@@ -579,21 +578,14 @@ fn CategoryEditSheet(
                 if let Some(message) = error {
                     div { role: "alert", class: "alert alert-error text-sm", "{message}" }
                 }
-                div { class: "flex gap-2.5",
-                    if matches!(target, Target::Custom(_)) {
-                        button {
-                            id: "category-delete",
-                            r#type: "button",
-                            class: "btn btn-ghost text-error rounded-full",
-                            disabled: saving,
-                            onclick: move |_| on_delete.call(()),
-                            {tid!("delete")}
-                        }
-                    }
+                }
+                SheetFooter {
+                    secondary: delete_button,
+                    on_cancel: on_close,
                     button {
                         id: "category-save",
                         r#type: "button",
-                        class: "btn btn-primary flex-1 rounded-full",
+                        class: "btn btn-primary",
                         disabled: saving || (builtin.is_none() && name().trim().is_empty()),
                         onclick: move |_| {
                             let edit = edit_for(&submit_target, new_custom_id(), &name(), emoji(), parent(), hidden(), &submit_default);
@@ -607,7 +599,6 @@ fn CategoryEditSheet(
                         }
                         if matches!(target, Target::New) { {tid!("categories-create")} } else { {tid!("save")} }
                     }
-                }
                 }
             }
             div { class: "modal-backdrop", onclick: move |_| on_close.call(()) }

@@ -55,6 +55,7 @@ const coverage: Record<string, Coverage> = {
   'POST /api/v1/friends/requests/{id}/accept': { tested: ['A1', 'A2'] },
   'DELETE /api/v1/friends/requests/{id}': { tested: ['A1', 'A2'] },
   'DELETE /api/v1/friends/{id}': { tested: ['A1'] },
+  'POST /api/v1/mail/unsubscribe': { tested: ['A9'] },
 
   'POST /api/v1/projects/{project_id}/invitations': { tested: ['A8'] },
   'POST /api/v1/projects/{project_id}/invitations/batch': { tested: ['A8'] },

@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use crate::common::{
     error_message, haptic, identity_locked, project_initial, update_ls, update_project_fresh, write_queue,
-    Avatar, DiscardConfirm, EmojiGrid, Flash, FormSheetBar, Haptic, InviteRetry, LocalStorageState, OpKind, ProjectEdit, ProjectKey, ProjectTile,
+    Avatar, DiscardConfirm, EmojiGrid, Flash, Haptic, SheetBar, SheetFooter, SHEET_TITLE, InviteRetry, LocalStorageState, OpKind, ProjectEdit, ProjectKey, ProjectTile,
     QueuedOp, SizeClass,
 };
 use std::collections::HashSet;
@@ -338,7 +338,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                 .collect();
             if !invitees.is_empty() {
                 let from = account.as_ref().zip(account_key).and_then(|(a, ak)| sender(a, &ak, &ls_ctx.peek()));
-                let unsent = invite_each(ls_ctx, project_id, &invitees, from, &key).await;
+                let unsent = invite_each(project_id, &invitees, from, &key).await;
                 if !unsent.is_empty() {
                     invite_retry.set(Some(InviteRetry { project_id, unsent }));
                 }
@@ -477,14 +477,13 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             aria_labelledby: "edit-project-modal-title",
             tabindex: "-1",
             div { class: "modal-box max-w-md p-0 flex flex-col",
-                div { class: "px-4 pt-3 pb-3 border-b border-base-200 flex-shrink-0",
-                    FormSheetBar {
-                        close_id: "edit-project-close",
-                        on_close: move |_| request_close(),
-                        h2 { id: "edit-project-modal-title", class: "flex-1 min-w-0 truncate font-bold text-lg font-display sheet-bar-title", {tid!("edit-project-title")} }
-                    }
+                SheetBar {
+                    close_id: "edit-project-close",
+                    task: true,
+                    on_close: move |_| request_close(),
+                    h2 { id: "edit-project-modal-title", class: SHEET_TITLE, {tid!("edit-project-title")} }
                 }
-                div { class: "flex-1 overflow-y-auto px-6 py-4",
+                div { class: "flex-1 overflow-y-auto px-5 pt-1 pb-4",
                 div { class: "flex flex-col gap-5",
                     div { class: "flex flex-col gap-3",
                         div { class: "flex items-end gap-3",
@@ -721,13 +720,8 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                     }
                 } // end flex flex-col gap-5
                 } // end scrollable body
-                div { class: "flex justify-end gap-2 px-6 py-4 border-t border-base-200 flex-shrink-0",
-                        button {
-                            r#type: "button",
-                            class: "btn btn-ghost",
-                            onclick: move |_| request_close(),
-                            {tid!("cancel")}
-                        }
+                SheetFooter {
+                        on_cancel: move |_| request_close(),
                         button {
                             id: "edit-project-save",
                             r#type: "button",

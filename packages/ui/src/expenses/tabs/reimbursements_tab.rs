@@ -5,7 +5,7 @@ use shared::{PaymentMethod, ProjectStatus, ReimbursementSuggestion, User};
 use crate::{
     common::{
         copy_text, haptic, initials, user_color_class, Avatar, Flash, Haptic, Mascot, MascotPose,
-        ProjectKey,
+        ProjectKey, SheetBar, SHEET_TITLE,
     },
     decrypted::{decrypt_user, DecryptedUser},
     icons::RightArrowIcon,
@@ -200,13 +200,13 @@ fn PayMethodsSheet(pay: PayButtonProps, on_close: EventHandler<()>) -> Element {
                 aria_labelledby: "pay-methods-title",
                 tabindex: "-1",
                 div { class: "modal-box max-w-sm p-0 flex flex-col",
-                    div { class: "px-6 pt-5 pb-4 border-b border-base-200",
-                        h2 { id: "pay-methods-title", class: "font-bold text-lg font-display",
+                    SheetBar { close_id: "pay-methods-close", on_close,
+                        h2 { id: "pay-methods-title", class: SHEET_TITLE,
                             {tid!("reimbursement-pay-title", name: pay.creditor_name.clone())}
                         }
-                        p { class: "text-2xl font-bold text-primary", "{pay.amount}" }
                     }
-                    div { class: "px-6 py-4 flex flex-col gap-3",
+                    div { class: "flex-1 overflow-y-auto px-5 pt-1 pb-6 flex flex-col gap-3",
+                        p { class: "text-2xl font-bold text-primary", "{pay.amount}" }
                         div { role: "alert", class: "alert alert-warning alert-soft text-sm",
                             {tid!("reimbursement-pay-shared-by", name: pay.shared_by.clone())}
                         }
@@ -248,14 +248,6 @@ fn PayMethodsSheet(pay: PayButtonProps, on_close: EventHandler<()>) -> Element {
                                     }
                                 }
                             }
-                        }
-                    }
-                    div { class: "flex justify-end px-6 py-4 border-t border-base-200",
-                        button {
-                            r#type: "button",
-                            class: "btn",
-                            onclick: move |_| on_close.call(()),
-                            {tid!("close")}
                         }
                     }
                 }

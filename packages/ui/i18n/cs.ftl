@@ -286,7 +286,6 @@ counted-groups-intro = Tvůj podíl v těchto skupinách se přičítá k Moje v
 counted-groups-converted = { $from }, převedeno na { $to }
 counted-groups-encrypted = Tato volba je šifrována tvým účtem a následuje tě na tvých zařízeních.
 counted-groups-empty = Na tomto zařízení zatím není žádná skupina.
-counted-groups-done = OK
 counted-save-failed = Tuto volbu se nepodařilo uložit. Zkus to znovu.
 tab-budget = Rozpočet
 budget-title = Rozpočty
@@ -728,6 +727,7 @@ help-encryption-see = Podrobnosti najdeš v
 help-forgot-password-q = Co se stane, když zapomenu heslo?
 help-forgot-password-warning = Nikdo ho za tebe nemůže obnovit.
 help-forgot-password-a = Tvoje heslo chrání tvé šifrovací klíče a nikdy se k nám neposílá: nikdo - ani my - tvoje projekty za tebe nedešifruje. Uchovej ho v bezpečí, ideálně ve správci hesel.
+help-forgot-password-recovery = S klíčem pro obnovení z Nastavení si zvolíš nové heslo a dostaneš všechno zpět. Bez klíče pro obnovení smaže zapomenuté heslo tvé předvolby, platební údaje a kódy přátel.
 help-archive-delete-q = Jak projekt archivuji nebo smažu?
 help-archive-delete-a = Na obrazovce projektu otevři menu a zvol
 help-archive-delete-b = a projekt se skryje, ale zůstane zachován. Projekt je trvale smazán, jakmile ho opustí poslední člen.
@@ -777,22 +777,9 @@ friends-notify = Dát vědět zprávou
 friends-notify-message = Přecházím na Counted kvůli našim společným výdajům. Registrace zdarma na https://counted.fr s adresou { $email }: čeká tam moje žádost o přátelství.
 friends-notify-copied = Zpráva zkopírována
 friends-notify-copy-failed = Zprávu se nepodařilo zkopírovat
-guests-hint-title =
-    { $count ->
-        [one] { $count } účastník se ještě nepřipojil k projektu
-        [few] { $count } účastníci se ještě nepřipojili k projektu
-        [many] { $count } účastníka se ještě nepřipojilo k projektu
-       *[other] { $count } účastníků se ještě nepřipojilo k projektu
-    }
 guests-hint-later = Později
-guests-hint-send = Pozvi je
-guests-send-title = Poslat projekt účastníkům
-guests-send-friend = Pozvat přítele z Countedu
-guests-send-friend-badge = Bez odkazu
-guests-send-friend-hint = Pokud už má účet, dostane šifrovanou pozvánku; nic neprochází tvou aplikací na zprávy.
-guests-send-link = Sdílet odkaz na projekt
-guests-send-link-hint = Pro ty, kdo nemají účet. Projekt otevřou jedním klepnutím.
-guests-send-link-warning = Kdokoli s tímto odkazem může projekt číst a upravovat. Tvá aplikace na zprávy ho vidí také.
+first-key-hint-title = Změň klíč tohoto projektu
+first-key-hint-body = Pořád používá svůj první klíč, který mohl být odeslán v pozvánce z doby před postkvantovým šifrováním. Nový klíč ho ochrání před kvantovými počítači.
 invite-friends-title = Pozvat přátele
 invite-friends-hint = Klíč projektu se na tomto zařízení šifruje pro každého přítele. Server ho nikdy nevidí.
 invite-friends-empty = Zatím žádní přátelé k pozvání.
@@ -1109,6 +1096,14 @@ error-rotation-expired = Změna klíče trvala příliš dlouho a byla zrušena.
 error-rotation-rows-changed = Projekt se během změny klíče změnil. Začni znovu.
 project-rotated-title = K tomuto projektu už nemáš přístup
 project-rotated-body = Klíč tohoto projektu byl změněn. Požádej admina projektu o nový odkaz.
+store-locked-title = Tvoje uložená data jsou zamčená
+store-locked-body = Counted nedokázal otevřít data uložená v tomto telefonu. Odemkni telefon a zkus to znovu.
+store-lost-title = Tento telefon ztratil klíč ke svým datům
+store-lost-body = Counted už nedokáže otevřít data uložená v tomto telefonu. Obnov ho a začni znovu: projekty uložené ve tvém účtu se vrátí, až se přihlásíš.
+store-retry = Zkusit znovu
+store-reset = Obnovit tento telefon
+store-reset-warning = Projekty, které nejsou uložené v účtu, budou navždy ztracené.
+store-reset-confirm = Obnovit a přijít o ně
 project-rotated-open-link = Otevřít odkaz
 rotation-remove-title = Odebrat { $name } z projektu?
 rotation-rotate-title = Změnit klíč projektu?
@@ -1154,7 +1149,6 @@ rotation-new-link =
        *[other] Nový odkaz k odeslání · { $count } lidí bez účtu
     }
 rotation-link-renewed = Odkaz byl úspěšně obnoven.
-rotation-done = Hotovo
 history-key-changed = Klíč projektu změněn
 history-member-removed = { $name } už není součástí projektu
 project-rotated-row-hint = Klíč byl změněn. Požádej o nový odkaz.
@@ -1207,7 +1201,16 @@ friends-decline-label = Odmítnout žádost od { $email }
 friends-add-hint-short = Tato osoba uvidí tvou žádost, pokud má účet. Jinak jí dej vědět.
 friends-send = Odeslat
 friends-sent-hint = Ještě nemá účet? Dej jí vědět: zpráva ji pozve k registraci s touto adresou.
-friends-done = Hotovo
+friends-mail-checkbox = Poslat také pozvánku e-mailem
+friends-mail-helper = E-mail není šifrovaný end-to-end: tvoje adresa i adresa té osoby projdou přes našeho poskytovatele e-mailu a ta osoba uvidí tvou adresu. Adresu pečlivě zkontroluj.
+friends-mail-learn-more = Zjistit víc
+friends-sent-mail-hint = Counted na tuto adresu pošle e-mail, pokud na ni nedávno nepřišla pozvánka a neodhlásila se.
+friends-sent-private-hint = Nic neopustilo šifrování.
+friends-add-another = Přidat další osobu
+unsubscribe-title = Pozvánky e-mailem
+unsubscribe-body = Zastavit všechny pozvánky e-mailem z Counted na tuto adresu? Přátelé tě i tak mohou pozvat v aplikaci.
+unsubscribe-confirm = Nikdy mi neposílat pozvánky e-mailem
+unsubscribe-done = Hotovo. Counted už na tuto adresu nepošle žádné pozvánky e-mailem.
 friends-their-code = Jeho bezpečnostní kód
 friends-code-compare-hint = Přečtěte si ho spolu. Musí vidět stejný kód nahoře na své stránce Přátelé.
 friends-no-key-hint = Zatím není připraveno: jeho klíč se vytvoří, až příště otevře Counted. Do té doby ho nemůžeš pozvat.

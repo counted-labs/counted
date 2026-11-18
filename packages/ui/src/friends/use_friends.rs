@@ -16,6 +16,10 @@ pub struct Friends {
     pub error: Signal<Option<String>>,
     /// The address of the request just sent, offered "Let them know by message" until the next one.
     pub sent_to: Signal<Option<String>>,
+    /// "Also email them an invitation", remembered on the device once changed.
+    pub send_mail: Signal<bool>,
+    /// For the request just sent, whether the box was ticked; `None` when the server mails nothing.
+    pub sent_mail: Signal<Option<bool>>,
     version: Signal<u64>,
     auth_ctx: Signal<Option<Account>>,
     account_key: Signal<Option<[u8; 32]>>,
@@ -41,6 +45,8 @@ pub fn use_friends() -> Friends {
     let busy = use_signal(|| false);
     let error = use_signal(|| None);
     let sent_to = use_signal(|| None);
+    let send_mail = use_signal(|| !ls_ctx.peek().invite_mail_off);
+    let sent_mail = use_signal(|| None);
 
     // Not `auth_ctx()`: every write to the account (a preference saved, a refill) would reload the
     // lists. The keypair is all `load` reads from it.
@@ -60,16 +66,17 @@ pub fn use_friends() -> Friends {
     });
 
     // What the last account typed or was told must not greet the next one.
-    let mut drafts = (email, error, sent_to);
+    let mut drafts = (email, error, sent_to, sent_mail);
     use_effect(move || {
         let _ = identity();
         drafts.0.set(String::new());
         drafts.1.set(None);
         drafts.2.set(None);
+        drafts.3.set(None);
     });
 
     let owner = dioxus::core::current_scope_id();
-    Friends { lists, email, busy, error, sent_to, version, auth_ctx, account_key, flash, ls_ctx, owner }
+    Friends { lists, email, busy, error, sent_to, send_mail, sent_mail, version, auth_ctx, account_key, flash, ls_ctx, owner }
 }
 
 impl Friends {
@@ -114,17 +121,33 @@ impl Friends {
             self.error.set(Some(tid!("friends-no-account-key")));
             return;
         };
+        let invite_mail = self.current().is_some_and(|lists| lists.invite_mail);
+        let send_mail = invite_mail && (self.send_mail)();
+        let lang = crate::i18n::current_lang();
         self.email.set(String::new());
         self.sent_to.set(None);
-        let mut sent_to = self.sent_to;
+        let (mut sent_to, mut sent_mail) = (self.sent_to, self.sent_mail);
         self.run(
             async move {
-                friends_service::add_by_email(&email, &key).await?;
+                friends_service::add_by_email(&email, &key, send_mail, lang).await?;
+                sent_mail.set(invite_mail.then_some(send_mail));
                 sent_to.set(Some(email));
                 Ok(())
             },
             None,
         );
+    }
+
+    pub fn set_send_mail(mut self, on: bool) {
+        self.send_mail.set(on);
+        crate::common::update_ls_if_changed(self.ls_ctx, |state| state.invite_mail_off = !on);
+    }
+
+    /// Back to the empty form in the same sheet, the checkbox as it was.
+    pub fn add_another(mut self) {
+        haptic(Haptic::Light);
+        self.sent_to.set(None);
+        self.sent_mail.set(None);
     }
 
     /// Hands the user's own messaging app a note to the address: the site and the address to sign

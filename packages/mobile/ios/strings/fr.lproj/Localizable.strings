@@ -1,4 +1,5 @@
 "push.title" = "Counted";
+"push.generic" = "Du nouveau dans Counted";
 "push.friend_request" = "Nouvelle demande d'ami";
 "push.friend_accepted" = "Votre demande d'ami a été acceptée";
 "push.project_invitation" = "Vous êtes invité à rejoindre un projet";

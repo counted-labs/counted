@@ -138,6 +138,7 @@ pub fn HelpPage() -> Element {
                             strong { {tid!("help-forgot-password-warning")} }
                         }
                         p { class: "mt-2", {tid!("help-forgot-password-a")} }
+                        p { class: "mt-2", {tid!("help-forgot-password-recovery")} }
                     },
                 }
 

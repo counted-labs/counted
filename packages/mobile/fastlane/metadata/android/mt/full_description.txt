@@ -1,0 +1,45 @@
+Counted hija l-app biex taqsam l-ispejjeż mal-ħbieb: 100% Ewropea u mfassla għall-privatezza. Btala, appartament maqsum, weekend, rigal tal-grupp: niżżel l-ispejjeż tiegħek u Counted jgħidlek min għandu jagħti kemm lil min, bl-inqas trasferimenti possibbli.
+
+🔗 L-ebda kont meħtieġ
+Oħloq proġett, ibgħat il-link. Dak kollox. Il-ħbieb tiegħek jingħaqdu u jieħdu sehem mingħajr ma jirreġistraw. Kont? Qatt obbligatorju. Iservi biex issib il-proġetti tiegħek fuq apparat ieħor, tistieden ħbieb mill-app u taqsam id-dettalji tal-ħlas tiegħek.
+
+🔒 Kriptat fuq it-telefon tiegħek
+Ismijiet, ammonti, proġetti, storja: kollox jiġi kriptat fuq it-telefon tiegħek. Int biss għandek iċ-ċavetta. Ħadd ma jista' jaqra l-kontijiet tiegħek, lanqas aħna. Anki l-password tiegħek qatt ma titlaq mit-telefon.
+
+📷 Skennjar tal-irċevuti, fuq it-telefon
+Ħu ritratt tal-irċevuta: l-ammont, id-data u l-kategorija jimtlew waħedhom. Kollox isir fuq it-telefon tiegħek. Ir-ritratt ma jinżammx.
+
+🇪🇺 100% Ewropew
+Servers fil-Ġermanja, emails mibgħuta minn Franza. Il-proġetti tiegħek qatt ma joħorġu mill-Unjoni Ewropea.
+
+💸 B'xejn, tassew
+B'xejn, mingħajr reklami, mingħajr trackers u mingħajr limitu fuq l-ispejjeż jew il-parteċipanti. Dak kollu deskritt hawn huwa b'xejn u jibqa' b'xejn. Ma niġbru xejn, ma nbigħux id-data tiegħek. Dak mhux il-mudell tagħna.
+
+✨ Kollox għall-ispejjeż maqsuma
+• Spejjeż, trasferimenti u dħul, b'diversi persuni li jħallsu u diversi benefiċjarji
+• Qsim indaqs, skont l-ishma jew b'ammont eżatt, ivverifikat sal-aħħar ċenteżmu
+• L-inqas trasferimenti possibbli biex il-kontijiet tal-grupp jiġu saldati
+• Spejjeż rikorrenti bħall-kera jew l-abbonamenti: imdaħħla darba, miżjuda kull meta jkunu dovuti
+• Aktar minn 150 munita, maqluba bir-rata ta' kull xahar tal-Kummissjoni Ewropea
+• Statistika skont il-kategorija, skont il-persuna u xahar b'xahar
+• Il-kategoriji tiegħek, kull waħda bl-emoji tagħha, u emoji għal kull proġett
+• Storja ta' min żied, editja jew ħassar xiex
+• Tfittxija skont l-isem, in-nota jew il-kategorija, li ssir fuq l-apparat tiegħek
+• B'kont, proġett personali “L-infiq tiegħi”: dak li tonfoq waħdek flimkien mas-sehem tiegħek fil-gruppi, xahar b'xahar
+• Mexxi spiża minn proġett għal ieħor
+• Baġits ta' kull xahar għal kull kategorija fuq is-sehem reali tiegħek, b'twissija fit-80% ikkalkulata fuq l-apparat tiegħek
+• Fuq l-iskrin ewlieni, kemm għandek tieħu u kemm għandek tagħti fil-proġetti kollha, ikkalkulat fuq l-apparat tiegħek
+• Shortcut “Nefqa personali” meta żżomm l-ikona tal-app magħfusa
+• Offline: ara u daħħal spejjeż anke mingħajr konnessjoni
+• Esportazzjoni CSV u JSON b'mess wieħed
+• Dettalji tal-ħlas (IBAN, PayPal, Wero, Lydia, Revolut…) kriptati bħal kull ħaġa oħra
+• Biddel il-password mingħajr ma titlef xejn; jekk tinsieha, ċavetta ta' rkupru ġġiblek kollox lura
+• Password żvelata jew telefon mitluf: ċwievet ġodda għall-kont, l-apparati l-oħra kollha jiġu skonnettjati
+• Amministraturi tal-proġett: meta tneħħi lil xi ħadd tinbidel iċ-ċavetta tal-proġett, u l-link il-qadim tiegħu ma jiftaħ xejn aktar
+• Il-membri b'kont jirċievu ċ-ċavetta l-ġdida awtomatikament, b'kriptaġġ post-kwantistiku; l-oħrajn jirċievu link ġdid
+• Importazzjoni minn Tricount: waħħal il-link tal-qsim, u kollox jgħaddi
+• Web, Android u iOS: l-istess proġett kullimkien, bl-istess link
+• 32 lingwa, inklużi l-24 lingwa uffiċjali kollha tal-UE
+
+Kif jaħdem, eżattament? counted.fr/en/encryption
+Ivverifika int stess il-kodiċi li tħaddem: counted.fr/en/verify

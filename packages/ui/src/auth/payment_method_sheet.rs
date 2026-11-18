@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use shared::{Account, PaymentMethod};
 use uuid::Uuid;
 
-use crate::common::{ConfirmModal, DiscardConfirm, Flash, FormSheetBar};
+use crate::common::{ConfirmModal, DiscardConfirm, Flash, SheetBar, SheetFooter, SHEET_TITLE};
 use crate::payment_methods::{
     method_display_name, method_kind_name, save_payment_methods, validate_method, with_method, without_method,
     writable_methods, SaveFailure, DEFAULT_KIND, KNOWN_KINDS, MAX_METHODS, OTHER_KIND,
@@ -167,6 +167,19 @@ pub fn PaymentMethodSheet(
     let label_value = current.label.clone().unwrap_or_default();
     let delete_name = original.as_ref().map(method_display_name).unwrap_or_default();
 
+    let delete_button = original.is_some().then(|| {
+        rsx! {
+            button {
+                id: "payment-method-delete",
+                r#type: "button",
+                class: "btn btn-ghost text-error",
+                disabled: busy() || !online,
+                onclick: move |_| deleting.set(true),
+                {tid!("delete")}
+            }
+        }
+    });
+
     rsx! {
         div {
             id: "payment-method-sheet",
@@ -176,23 +189,21 @@ pub fn PaymentMethodSheet(
             aria_modal: "true",
             aria_labelledby: "payment-method-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md p-0",
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar {
+                    close_id: "payment-method-close",
+                    task: true,
+                    on_close: move |_| request_close(),
+                    h2 { id: "payment-method-title", class: SHEET_TITLE, "{title}" }
+                }
                 form {
                     id: "payment-method-form",
-                    class: "flex flex-col gap-4 px-6 pt-4 pb-6",
+                    class: "flex flex-col flex-1 min-h-0",
                     onsubmit: move |e| {
                         e.prevent_default();
                         save(());
                     },
-                    FormSheetBar {
-                        close_id: "payment-method-close",
-                        confirm_id: "payment-method-save",
-                        confirm_label: tid!("save"),
-                        form: "payment-method-form",
-                        disabled: busy() || !dirty || !online,
-                        on_close: move |_| request_close(),
-                        h2 { id: "payment-method-title", class: "w-full text-center font-display font-bold text-lg truncate", "{title}" }
-                    }
+                    div { class: "flex-1 overflow-y-auto px-5 pt-1 pb-4 flex flex-col gap-4",
                     if !online {
                         div { id: "payment-method-offline", role: "status", class: "alert alert-warning alert-soft text-sm",
                             {tid!("payment-methods-offline")}
@@ -273,14 +284,16 @@ pub fn PaymentMethodSheet(
                             }
                         }
                     }
-                    if original.is_some() {
+                    }
+                    SheetFooter {
+                        on_cancel: move |_| request_close(),
+                        secondary: delete_button,
                         button {
-                            id: "payment-method-delete",
-                            r#type: "button",
-                            class: "btn btn-ghost text-error",
-                            disabled: busy() || !online,
-                            onclick: move |_| deleting.set(true),
-                            {tid!("delete")}
+                            id: "payment-method-save",
+                            r#type: "submit",
+                            class: "btn btn-primary",
+                            disabled: busy() || !dirty || !online,
+                            {tid!("save")}
                         }
                     }
                 }

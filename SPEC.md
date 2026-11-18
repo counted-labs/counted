@@ -47,11 +47,11 @@ dates or descriptions, nor who owes whom. One exception: in projects last saved 
 than mobile 3.2.5 or web v1.24.1 (2026-10-18) and not reopened since, the server still sees which participants are in each expense and
 who entered it ([SECURITY.md](SECURITY.md) section 5.1). A server that does not hold an account's
 password cannot read that account's display name, preferences, payment details or escrowed keys,
-but it can guess the password offline at one Argon2id per guess (section 4), and passwords need only
-be 8 bytes long. A server cannot forge a row that a member accepts, **unless it holds the project
+but it can guess the password offline at one Argon2id per guess (section 4), and a password set before
+the 12-byte minimum may be 8 bytes long. A server cannot forge a row that a member accepts, **unless it holds the project
 key**. Section 9.1 lists the cases in which an active server can still make an account holder's
-device switch to a key the server chose, if its user accepts a forged invitation: on clients up to
-mobile 3.2.7 and web v1.24.3; on current clients only with a friend's public key substituted before
+device switch to a key the server chose, if its user accepts a forged invitation: on installs older
+than 3.2.8 (14.4); on current clients only with a friend's public key substituted before
 the device first saw that friend (section 9.2), which comparing codes detects, and only for a project the device holds no key for, or holds a key it has
 never seen open and its user then confirms the switch (section 6). From then on the server reads that device's new writes to the project and can forge
 rows that device accepts. It still cannot read the rows written under the genuine key. A key
@@ -92,10 +92,10 @@ account key hold against it, except through two paths:
 
 - Classical invitation boxes and the public keys they were made with are stored by the server: a
   future quantum adversary with the database or a backup recovers every project key sent in one,
-  and through it every row of those projects written before the project's next rotation. They are
-  written until `MIN_APP_VERSION` reaches 3.2.10; hybrid invitations (9.1) are not exposed, and
-  after that floor no device that has seen it writes a classical box (one the server never shows
-  the floor to still does, 14.3). Rotation boxes (8.6) are not exposed either:
+  and through it every row of those projects written before the project's next rotation. They were
+  written until `MIN_APP_VERSION` reached 3.2.10; hybrid invitations (9.1) are not exposed, and
+  from 3.3.0 no build writes or opens a classical box (a 3.2.10 install the server never shows the
+  floor to still does, 14.3). Rotation boxes (8.6) are not exposed either:
   their key needs the ML-KEM-768 shared secret as well as the X25519 one. An account member whose
   account has no ML-KEM key yet (no current client has started on it) gets no box, and the new key
   only through the new link.
@@ -106,7 +106,7 @@ account key hold against it, except through two paths:
   go through `reqwest` on `rustls`, which takes the process-wide provider when one is installed,
   and the app installs aws-lc's before building its client (`install_tls_provider` in
   [`packages/mobile/src/main.rs`](packages/mobile/src/main.rs)), which offers `X25519MLKEM768`
-  first. Mobile installs up to 3.2.7 used reqwest's fallback, ring, which offers no ML-KEM group, so
+  first. Mobile installs older than 3.2.8 use reqwest's fallback, ring, which offers no ML-KEM group, so
   they negotiate X25519 alone.
 
 ## 4. Keys and their encodings
@@ -341,7 +341,7 @@ counted://projects/<uuid>#<base64url(project_key)>          (app deep link)
   Both rows are the server's word: the check stops a wrong link given to an honest server, and the
   question stops a hostile server that chose the candidate and serves a row encrypted under it,
   since nothing replaces the held key without a link or invitation the user opened and then a
-  second, explicit yes. Clients up to mobile 3.2.7 and web v1.24.3 checked every candidate against
+  second, explicit yes. Installs older than 3.2.8 check every candidate against
   the served row only (section 9.1); clients built before 2026-11-06 replaced an unproven held key
   without asking.
 
@@ -405,7 +405,7 @@ write every wrap typed, the private key's included at keypair creation (`wrap_ke
 at session start and on the projects page (`typed_rewrap` in
 [`credentials.rs`](packages/ui/src/auth/credentials.rs), `to_push` in
 [`account_sync.rs`](packages/ui/src/common/account_sync.rs)). `Account.typed_wraps`, which the
-server sets, is no longer read. Clients up to mobile 3.2.7 and web v1.24.3 wrote typed wraps only
+server set, is gone since 3.3.0. Clients up to mobile 3.2.7 and web v1.24.3 wrote typed wraps only
 while the server reported it true.
 
 A device records each account for which it has opened a typed wrap
@@ -756,14 +756,16 @@ served public key (as in 9.1).
 
 An account holder can send a project key to a friend's account, in one of two boxes. Which one is
 the floor's choice (`HYBRID_INVITATIONS_FROM` in [`packages/shared/src/lib.rs`](packages/shared/src/lib.rs)):
-a 3.2.9 reader requires the classical `key`, so the server accepts only the classical box until
-`MIN_APP_VERSION` reaches 3.2.10, and only the hybrid one from then on (`one_form_for_the_floor`;
-the table's CHECK holds exactly one well-formed form per row). A device that has seen the floor
-(`Account.hybrid_invitations`), sent a hybrid box or opened one records it
-(`LocalStorageState.hybrid_invitations`) and never writes a classical box again, so a server cannot
-turn it back. It can still withhold the floor from a device that never saw it, and a recipient
-still opens a classical box (14.3). From the floor, a friend whose account has no ML-KEM key yet gets no invitation, and
-the sender is told that friend has to open Counted once; never a classical box in its place.
+a 3.2.9 reader required the classical `key`, so the server accepted only the classical box until
+`MIN_APP_VERSION` reached 3.2.10, and only the hybrid one from then on. From 3.3.0 the server takes
+the hybrid box only, whatever `MIN_APP_VERSION` says, refuses to start below 3.2.10 and always
+reports `Account.hybrid_invitations` (`hybrid_only`; the table's CHECK holds exactly one
+well-formed form per row), and a client, web included, writes and opens the hybrid box only,
+whatever the server reports, so a server cannot turn it back. A 3.2.10 install pins the floor once
+it sees `Account.hybrid_invitations`, sends a hybrid box or opens one, and before that writes and
+opens classical boxes on the server's word (14.3).
+A friend whose account has no ML-KEM key yet gets no invitation, and the sender is told that
+friend has to open Counted once; never a classical box in its place.
 
 **Hybrid box** (from 3.2.10; `seal_auth`/`open_auth` in [`hybrid.rs`](packages/ui/src/hybrid.rs)).
 Sender static `sk_s`/`pk_s`; recipient `pk_r` and `ek_r`, both the keys this device pinned (9.2):
@@ -838,7 +840,7 @@ Properties of the classical box, and of both where they say so:
   would yield one of at most 8 shared secrets and leak the sender's reduced private scalar mod 8.
   Other points on the twist are not refused: X25519 maps them to a shared secret on the twist, which `crypto_box`
   uses as is. Serving one is a form of the key substitution of 9.2, and fingerprints catch it the
-  same way. Clients up to mobile 3.2.7 and web v1.24.3 checked only the length.
+  same way. Installs older than 3.2.8 check only the length.
 - Before showing Accept, the client checks that the unboxed key decrypts the project row, when the
   server returns one (`opened_invitation` in [`friends_service.rs`](packages/ui/src/friends/friends_service.rs)).
   Accepting stores the key through `adopt_project_key` (section 6). The project row is served by
@@ -857,8 +859,8 @@ Properties of the classical box, and of both where they say so:
     by a key whose served row names it in `rotatedFrom` (8.5), which the server cannot build
     without a holder of that key.
 
-  Clients up to mobile 3.2.7 and web v1.24.3 opened a box with whatever sender key the server served
-  and checked a candidate against the served row only, so on them a server could replace a held,
+  Installs older than 3.2.8 open a box with whatever sender key the server serves
+  and check a candidate against the served row only, so on them a server can replace a held,
   genuine key with no substitution that codes would show. Clients built before 2026-11-06 replaced
   a held key that had never opened P without asking. Accepting an invitation for a project whose
   held key is kept, by the rule or by Cancel, leaves that key in place; the invitation is deleted
@@ -929,12 +931,25 @@ does not hide, and the number of occurrences written per call over time reveals 
 
 ## 11. On the device
 
-- **Keys at rest are not encrypted.** Project keys and the account key sit in the local store as
-  base64url, next to the cache of encrypted rows: `localStorage` on the web, a JSON file in the app's
-  private directory on mobile ([`local_storage.rs`](packages/ui/src/common/local_storage.rs)).
-  Anyone who can copy that storage can read every project the device holds, and so can a browser
-  extension with access to counted.fr. The creator secrets (8.4) and, after a rotation, each
-  project's previous keys (8.5) sit there in clear too.
+- **Keys at rest are not encrypted on the web.** Project keys and the account key sit in the local
+  store as base64url, next to the cache of encrypted rows, in `localStorage`
+  ([`local_storage.rs`](packages/ui/src/common/local_storage.rs)). Anyone who can copy that storage
+  can read every project the browser holds, and so can a browser extension with access to
+  counted.fr. The creator secrets (8.4) and, after a rotation, each project's previous keys (8.5)
+  sit there in clear too. So did the mobile store until 3.3.1.
+- **On mobile from 3.3.1, every store file is sealed** ([`store_seal.rs`](packages/ui/src/common/store_seal.rs)):
+  the local store, the offline queue, the theme, the exchange-rate cache and the session cookie jar
+  are `CNTS` + version + a 24-byte nonce + XChaCha20-Poly1305, associated data
+  `counted/store/v1/<store>`, under a 32-byte store key per install. Android keeps that key wrapped
+  by an AES-256-GCM key that never leaves the Keystore (StrongBox when present), associated data
+  `counted/store-key/v1`; iOS keeps it as a Keychain item, `AfterFirstUnlockThisDeviceOnly`, never
+  synchronised. A plain store is adopted only on the launch that makes the key, a sealed file on
+  disk forbids making one, and a key that cannot be used blocks the app on a screen that offers to
+  try again or to reset, never an empty session that would write over the store. This makes a copy
+  of the files alone unreadable. It does not stop code running as the app (root can use the
+  Keystore as the app's user), someone holding the unlocked phone, or rolling one store back to an
+  older sealed copy of itself. The push token files stay plain: the push service reads them where
+  Rust may not run.
 - The mobile store is excluded from backups: on Android from cloud backup and device-to-device
   transfer, through `allowBackup="false"` and [`data_extraction_rules.xml`](packages/mobile/android-res/xml/data_extraction_rules.xml)
   (patched into the manifest by [`android.mk`](packages/mobile/android.mk)); on iOS from iCloud and
@@ -1048,8 +1063,8 @@ them.
 - **A rotation does not take back what a former member read or saved** (8.5).
 - **Escrow is mandatory** for account holders (7.4): the database and a guessed password reveal
   every project key the account holds.
-- **Keys at rest are not encrypted** (section 11), and the account key stays on the device for the
-  session.
+- **Keys at rest are not encrypted on the web** (section 11), and the account key stays on the
+  device for the session. On mobile they are sealed from 3.3.1 against a copy of the files only.
 
 ### 14.2 Fixed by format v2 (section 15)
 
@@ -1060,7 +1075,7 @@ them.
   methods and friend labels can be served in another's slot. v2 leaves the same first-sight gap as
   typed wraps: a device that has never opened the account flag accepts v1 (15.5, 15.7).
 - **The AEADs are not key-committing** (5.1), while key adoption, escrow and invitations treat "opens
-  under K" as proof of K. Fixed only if the commitment of 15.8 is adopted.
+  under K" as proof of K. Fixed by the key commitment of 15.8, adopted for v2 and not built.
 
 ### 14.3 Open
 
@@ -1077,13 +1092,16 @@ them.
   server chose for a project it holds no key for, or, if its user confirms the switch, one it holds
   an unproven key for (9.1).
 - **Classical invitation boxes fall to a quantum adversary** (3.1), and with them every project key
-  sent in one, until that project rotates; they are written until the 3.2.10 floor. Hybrid
-  invitation boxes and rotation boxes do not (9.1, 8.6). After that floor, admins of projects that
-  ever received a classical invitation should rotate them.
-- **The hybrid floor is the server's word** (9.1): a server can withhold
-  `Account.hybrid_invitations` from a fresh install, an erased device or a web session, which then
-  writes classical boxes the server stores, and recipients still open them. A build released after
-  the floor will write and accept only the hybrid box, whatever the server reports.
+  sent in one, until that project rotates; they were written until the 3.2.10 floor. Hybrid
+  invitation boxes and rotation boxes do not (9.1, 8.6). An accepted invitation leaves no row, so
+  no one can tell which projects got one: from 3.3.0 an admin is asked to change the key of every
+  project still on its first key (`key_epoch` 0) that another account holds a participant in, once
+  per device, and the project stays exposed until someone does.
+- **The hybrid floor is the server's word for 3.2.10 installs** (9.1): a server can withhold
+  `Account.hybrid_invitations` from a fresh or erased 3.2.10 install, which then writes classical
+  boxes the server stores, and other 3.2.10 installs open them. 3.3.0 and the web build that ships
+  with it write and open only the hybrid box; the gap closes when `MIN_APP_VERSION` reaches 3.3.0.
+  A classical invitation still pending when a recipient updates to 3.3.0 can only be declined.
 - **Invitations carry no key epoch** (9.1): a server can serve an old invitation again after the
   project rotated, and a device holding no key for that project adopts the old key, as with a
   classical invitation or an old share link.
@@ -1100,11 +1118,11 @@ them.
 
 ### 14.4 Legacy clients and legacy data
 
-- **Mobile installs up to 3.2.7 negotiate X25519 alone over TLS** (3.1): a recorded login can be
+- **Mobile installs older than 3.2.8 negotiate X25519 alone over TLS** (3.1): a recorded login can be
   broken later to start the offline password search.
-- **Clients up to mobile 3.2.7 and web v1.24.3** open an invitation with any key the server serves,
+- **Installs older than 3.2.8** open an invitation with any key the server serves,
   check a candidate key against the served row only, and accept small-order public keys (6, 9.1).
-  The server's version floor refuses old mobile builds, but the attacker here is the server, which
+  The version floor (3.2.10) refuses them, but the attacker here is the server, which
   need not apply it: an install that never updates stays exposed. On the web a hostile server can
   serve an old build anyway (14.1).
 - **Data written by older clients keeps its old form**: participant links in clear until the project
@@ -1248,23 +1266,38 @@ Each new plaintext column gets its row in the list of what the server sees befor
 - **The conversion flag is itself a payload.** A server that keeps serving a project's last v1 rows
   to a device that has never seen the converted project row leaves that device reading v1.
 - **Members.** A key holder can still write any slot.
-- **Key commitment**, unless the proposal below is adopted.
 
-### 15.8 Open questions for reviewers
+### 15.8 Questions answered
 
-- **Manifest instead of per-row `rev`.** A per-project manifest MACed under the project key, with a
-  monotonic epoch pinned on each device, would also cover deletion. Is it worth its cost over 15.4?
-- **Invitation construction, built.** The hybrid box of 9.1: the box of 8.6 with the sender's
-  static X25519 share as a third combiner input and `pk_s` in the info, the typed plaintext of
-  15.2, opened only with a friend's pinned key. Is the sender binding right: `pk_s` in the info
-  rather than the ikm, and the order `ss_k || ss_e || ss_s`? Sender authentication stays classical
-  until invitations are signed (format v2). It does nothing for the classical boxes already stored
-  (3.1): only a rotation of those projects closes that.
-- **Key commitment.** Store `commit = SHA-256("counted/v2/commit" || K || nonce)` in each pair and
-  check it before decrypting, so that "opens under K" proves K?
-- **Bound project and account ids.** Client-drawn project and account UUIDs would let the AAD bind
-  them too. Does that add anything once the key scopes them?
-- **An unproven held key, answered (2026-11-06).** A held key the device has never seen open the
+Answered from the decisions of 2026-11-04 and the review that followed (the roadmap's wave 2),
+except the invitation binding, still open. None of it is built.
+
+- **Manifest: adopted, then superseded.** Each project gets a manifest listing every live entity id
+  with its `rev`, MACed under a key derived from K by HKDF with its own label, so the key that
+  seals rows never MACs. It carries a monotonic epoch that each device pins per project. It covers
+  deletion and withholding (15.7) for a device that has seen a later manifest; a fresh device
+  accepts the first one it is served. Every key holder can compute the MAC, so it stops the
+  server, not a member. Signed roster heads replace it once rows are signed.
+- **Key commitment: adopted.** `commit = SHA-256("counted/v2/commit" || K || nonce)` is stored in
+  each v2 pair and checked before decrypting, so "opens under K" means "was written under K"
+  (14.2). It commits to the key only (CMT-1), not to the context: the slot and ids are bound by the
+  AAD (15.2). It is left out of the signed message, so a rotation's byte-for-byte reseal keeps
+  every signature.
+- **Client-drawn project ids: required.** A signature must bind its project, or a member of two
+  projects could reseal a signed row from one into the other; the AAD binds the project id too.
+  Account ids stay drawn by the server, which enforces their uniqueness at registration: authorship
+  is proven by the device key the account identity key certifies, not by the id, so a client-drawn
+  account id would bind nothing more (proposed, for reviewers).
+- **Invitation construction: open.** The hybrid box of 9.1 is built: the box of 8.6 with the
+  sender's static X25519 share as a third combiner input and `pk_s` in the info, the typed
+  plaintext of 15.2, opened only with a friend's pinned key. Whether `pk_s` belongs in the info
+  rather than the ikm, and the order `ss_k || ss_e || ss_s`, is a computational question: the
+  symbolic model of the box (ProVerif, which treats the KDF as a hash) cannot settle it, so it is
+  argued from the KEM-combiner literature before the audit. Sender authentication stays classical
+  until invitations are signed, and a compromised recipient X25519 key can forge a
+  box from any sender (key-compromise impersonation). It does nothing for the classical boxes
+  already stored (3.1): only a rotation of those projects closes that.
+- **An unproven held key: answered (2026-11-06).** A held key the device has never seen open the
   project is kept, cached row or not, and replaced only when the user confirms the new key
   (15.3, section 6). That closes the silent case of 9.1, and a wrong link stays correctable at the
   cost of one question.

@@ -154,7 +154,7 @@ test.describe('A - account boundaries', () => {
     await anon.dispose();
   });
 
-  test('A8 an invitation carries exactly one key box, the one the floor allows', async ({ account, project }) => {
+  test('A8 an invitation carries exactly one key box, the hybrid one', async ({ account, project }) => {
     const a = await account();
     const b = await account();
     for (const { api } of [a, b]) {
@@ -173,16 +173,16 @@ test.describe('A - account boundaries', () => {
     );
 
     const { hybridInvitations } = await json<{ hybridInvitations: boolean }>(await a.api.get('/api/v1/auth/me'), 'me');
+    expect(hybridInvitations, 'served true: a 3.2.10 app picks its box from it').toBe(true);
     const classical = { key: pair(48) };
     const hybrid = { hybrid: { ephemeral: bytes(32), kemCt: bytes(KEM_CIPHERTEXT_LENGTH), nonce: bytes(24), ct: bytes(80) } };
-    const [allowed, other] = hybridInvitations ? [hybrid, classical] : [classical, hybrid];
     const invite = (box: object) =>
       a.api.post(`/api/v1/projects/${p.id}/invitations`, { ...p.withKey, data: { toAccountId: b.id, ...box } });
     const pending = async () => (await json<unknown[]>(await b.api.get('/api/v1/projects/invitations'), 'B invitations')).length;
 
     expect((await invite({ ...classical, ...hybrid })).status(), 'both boxes').toBe(400);
     expect((await invite({})).status(), 'no box').toBe(400);
-    expect((await invite(other)).status(), hybridInvitations ? 'a classical box from the floor' : 'a hybrid box before the floor').toBe(400);
+    expect((await invite(classical)).status(), 'a classical box, whatever the floor').toBe(400);
     const batch = await a.api.post(`/api/v1/projects/${p.id}/invitations/batch`, {
       ...p.withKey,
       data: [{ toAccountId: b.id, ...classical, ...hybrid }],
@@ -190,8 +190,22 @@ test.describe('A - account boundaries', () => {
     expect(await json<string[]>(batch, 'batch with both boxes'), 'the batch refuses it too').toEqual([b.id]);
     expect(await pending(), 'nothing refused reached B').toBe(0);
 
-    expect((await invite(allowed)).ok(), 'the box the floor allows').toBe(true);
+    expect((await invite(hybrid)).ok(), 'the hybrid box').toBe(true);
     const [received] = await json<{ key?: unknown; hybrid?: unknown }[]>(await b.api.get('/api/v1/projects/invitations'), 'B invitations');
-    expect([received.key !== undefined, received.hybrid !== undefined], 'B receives that box alone').toEqual([!hybridInvitations, hybridInvitations]);
+    expect([received.key !== undefined, received.hybrid !== undefined], 'B receives that box alone').toEqual([false, true]);
+  });
+
+  test('A9 asking to mail an invitation answers alike whether or not the address has an account', async ({ account, anon }) => {
+    const a = await account();
+    const b = await account();
+    const ask = (email: string) =>
+      a.api.post('/api/v1/friends/requests', { data: { email, label: pair(32), sendMail: true, lang: 'en' } });
+    const known = await ask(b.email);
+    const unknown = await ask(uniqueEmail());
+    expect([known.status(), await known.text()]).toEqual([unknown.status(), await unknown.text()]);
+
+    const forged = 'ab'.repeat(64);
+    expect((await anon.post(`/api/v1/mail/unsubscribe/${forged}`, { data: 'List-Unsubscribe=One-Click' })).status()).toBe(400);
+    expect(isRefused((await anon.post('/api/v1/mail/unsubscribe', { data: { token: forged } })).status())).toBe(true);
   });
 });

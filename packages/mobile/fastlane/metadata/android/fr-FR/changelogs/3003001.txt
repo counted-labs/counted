@@ -1,0 +1,2 @@
+• Les données enregistrées sur votre téléphone sont chiffrées sous une clé que le téléphone garde : une copie de ses fichiers ne se lit plus
+• Petites corrections et améliorations

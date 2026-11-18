@@ -1,0 +1,2 @@
+• What Counted saves on your phone is encrypted under a key the phone keeps: a copy of its files can no longer be read
+• Small fixes and improvements

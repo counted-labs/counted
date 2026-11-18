@@ -4,9 +4,8 @@ use dioxus::prelude::*;
 use crate::tid;
 use shared::{Account as AccountData, UpsertAccountProject};
 
-use crate::common::{adopt_project_key, parse_share_link, LocalStorageState, NativeClipboardReader};
+use crate::common::{adopt_project_key, parse_share_link, LocalStorageState, NativeClipboardReader, SheetBar, SheetFooter, SHEET_TITLE};
 use crate::crypto::{claim_token, wrap_key, WrapUse};
-use crate::icons::{CloseIcon, ICON_HEADER};
 use crate::route::Route;
 
 /// Brings a shared project link into the app by hand - the counterpart of the native deep link,
@@ -108,18 +107,11 @@ pub fn JoinProjectModal(props: JoinProjectModalProps) -> Element {
             aria_labelledby: "join-project-modal-title",
             tabindex: "-1",
             div { class: "modal-box max-w-sm p-0 flex flex-col",
-                div { class: "flex items-center justify-between px-6 pt-5 pb-4 border-b border-base-200 flex-shrink-0",
-                    h2 { id: "join-project-modal-title", class: "font-bold text-lg font-display", {tid!("projects-join")} }
-                    button {
-                        r#type: "button",
-                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                        aria_label: tid!("close"),
-                        onclick: move |_| on_close.call(()),
-                        CloseIcon { size: ICON_HEADER }
-                    }
+                SheetBar { close_id: "join-project-close", task: true, on_close,
+                    h2 { id: "join-project-modal-title", class: SHEET_TITLE, {tid!("projects-join")} }
                 }
                 form { class: "flex flex-col flex-1 overflow-hidden", onsubmit: on_submit,
-                    div { class: "flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4",
+                    div { class: "flex-1 overflow-y-auto px-5 pt-1 pb-4 flex flex-col gap-4",
                         if let Some(err) = error_msg() {
                             div { role: "alert", class: "alert alert-error text-sm", "{err}" }
                         }
@@ -184,13 +176,8 @@ pub fn JoinProjectModal(props: JoinProjectModalProps) -> Element {
                             }
                         }
                     }
-                    div { class: "flex justify-end gap-2 px-6 py-4 border-t border-base-200 flex-shrink-0",
-                        button {
-                            r#type: "button",
-                            class: "btn",
-                            onclick: move |_| props.on_close.call(()),
-                            {tid!("cancel")}
-                        }
+                    SheetFooter {
+                        on_cancel: props.on_close,
                         button {
                             id: "join-submit",
                             r#type: "submit",

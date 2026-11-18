@@ -1,0 +1,45 @@
+Counted ir lietotne izdevumu dalīšanai ar draugiem: 100 % eiropeiska un privāta pēc būtības. Atvaļinājums, kopīgs dzīvoklis, nedēļas nogale, kopīga dāvana: ieraksti izdevumus, un Counted tev pateiks, kurš kuram cik ir parādā, ar pēc iespējas mazāk pārskaitījumiem.
+
+🔗 Konts nav vajadzīgs
+Izveido projektu, nosūti saiti. Tas arī viss. Tavi draugi pievienojas un piedalās bez reģistrēšanās. Konts? Nekad nav obligāts. Tas ļauj atrast tavus projektus citā ierīcē, uzaicināt draugus no lietotnes un kopīgot tavus maksājumu datus.
+
+🔒 Šifrēts tavā tālrunī
+Vārdi, summas, projekti, vēsture: viss tiek šifrēts tavā tālrunī. Atslēga ir tikai tev. Neviens nevar lasīt tavus rēķinus, pat ne mēs. Arī tava parole nekad neatstāj tavu tālruni.
+
+📷 Čeku skenēšana tavā tālrunī
+Nofotografē čeku: summa, datums un kategorija aizpildās paši. Viss notiek tavā tālrunī. Foto netiek saglabāts.
+
+🇪🇺 100 % eiropeisks
+Serveri Vācijā, e-pasti tiek sūtīti no Francijas. Tavi projekti nekad neatstāj Eiropas Savienību.
+
+💸 Tiešām bez maksas
+Bez maksas, bez reklāmām, bez izsekotājiem un bez izdevumu vai dalībnieku skaita ierobežojuma. Viss, kas šeit aprakstīts, ir bez maksas un tāds arī paliks. Mēs neko nevācam un nepārdodam tavus datus. Tas nav mūsu modelis.
+
+✨ Viss kopīgiem izdevumiem
+• Izdevumi, pārskaitījumi un ieņēmumi, ko maksā vairāki un dala starp vairākiem
+• Dalīšana vienādi, pēc daļām vai precīzās summās, pārbaudīta līdz centam
+• Pēc iespējas mazāk pārskaitījumu, lai grupa norēķinātos
+• Regulārie izdevumi, piemēram, īre vai abonementi: ievadīti vienreiz, pievienoti katru reizi, kad pienāk termiņš
+• Vairāk nekā 150 valūtas, kas konvertētas pēc Eiropas Komisijas mēneša kursa
+• Statistika pa kategorijām, pa personām un mēnesi pa mēnesim
+• Savas kategorijas, katra ar savu emocijzīmi, un emocijzīme katram projektam
+• Vēsture par to, kurš ko pievienoja, rediģēja vai dzēsa
+• Meklēšana pēc nosaukuma, piezīmes vai kategorijas, tieši tavā ierīcē
+• Ja tev ir konts, personīgais projekts “Mani izdevumi”: tavi personīgie tēriņi plus tava daļa grupās, mēnesi pa mēnesim
+• Izdevuma pārvietošana no viena projekta uz citu
+• Mēneša budžeti pa kategorijām, rēķināti no tavas reālās daļas, ar brīdinājumu pie 80 %, ko aprēķina tavā ierīcē
+• Sākuma ekrānā: cik citi tev ir parādā un cik tu esi parādā visos projektos, aprēķināts tavā ierīcē
+• Īsceļš “Personīgs izdevums”, ilgi turot lietotnes ikonu
+• Bezsaistē: pārlūko un ievadi bez tīkla
+• CSV un JSON eksports ar vienu pieskārienu
+• Maksājumu dati (IBAN, PayPal, Wero, Lydia, Revolut…) šifrēti tāpat kā viss pārējais
+• Paroles maiņa, neko nezaudējot; ja to aizmirsīsi, atkopšanas atslēga visu atjaunos
+• Paroles noplūde vai pazaudēts tālrunis: jaunas konta atslēgas, visas pārējās ierīces izrakstītas
+• Projekta administratori: kāda dalībnieka noņemšana nomaina projekta atslēgu, un šī cilvēka vecā saite vairs neko neatver
+• Dalībnieki ar kontu jauno atslēgu saņem paši, ar pēckvantu šifrēšanu; pārējie saņem jaunu saiti
+• Tricount imports: ielīmē kopīgošanas saiti, un viss tiek pārnests
+• Tīmeklī, Android un iOS: viens un tas pats projekts visur, ar to pašu saiti
+• 32 valodas, ieskaitot visas 24 ES oficiālās valodas
+
+Kā tas īsti darbojas? (angliski) counted.fr/en/encryption
+Pārbaudi savām acīm kodu, ko palaid: counted.fr/en/verify

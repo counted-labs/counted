@@ -1,0 +1,45 @@
+A Counted kiadásmegosztó alkalmazás barátoknak: 100%-ban európai, és a magánszféra védelme már a tervezésébe be van építve. Nyaralás, lakótársak, hétvége, közös ajándék: rögzítsd a kiadásokat, és a Counted megmondja, ki kinek mennyivel tartozik, a lehető legkevesebb átutalással.
+
+🔗 Nem kell fiók
+Hozz létre egy projektet, küldd el a linket. Ennyi. A barátaid regisztráció nélkül csatlakoznak és vesznek részt. Fiók? Soha nem kötelező. Arra való, hogy másik eszközön is megtaláld a projektjeidet, meghívd a barátaidat az alkalmazásból, és megoszd a fizetési adataidat.
+
+🔒 Titkosítva a telefonodon
+Nevek, összegek, projektek, előzmények: minden a telefonodon titkosítódik. Egyedül nálad van a kulcs. Senki sem olvashatja el az elszámolásaidat, még mi sem. A jelszavad sem hagyja el soha a telefonodat.
+
+📷 Nyugtaszkennelés, a telefonodon
+Fotózd le a nyugtát: az összeg, a dátum és a kategória magától kitöltődik. Minden a telefonodon történik. A fotót nem őrizzük meg.
+
+🇪🇺 100% európai
+Szerverek Németországban, e-mailek Franciaországból. A projektjeid soha nem hagyják el az Európai Uniót.
+
+💸 Tényleg ingyenes
+Ingyenes, reklámok és nyomkövetők nélkül, korlátlan számú kiadással és résztvevővel. Minden, ami itt szerepel, ingyenes, és az is marad. Semmit sem gyűjtünk, nem adjuk el az adataidat. Nem ez az üzleti modellünk.
+
+✨ Minden a közös kiadásokhoz
+• Kiadások, átutalások és bevételek, több fizetővel és több kedvezményezettel
+• Elosztás egyenlően, részarány szerint vagy pontos összeggel, fillérre pontosan ellenőrizve
+• A lehető legkevesebb átutalás a csoport elszámolásához
+• Ismétlődő kiadások, például lakbér vagy előfizetések: egyszer rögzíted, és minden esedékességkor bekerülnek
+• Több mint 150 pénznem, az Európai Bizottság havi árfolyamán átváltva
+• Statisztika kategóriánként, személyenként és hónapról hónapra
+• Saját kategóriák, mindegyik a maga emojijával, és minden projekthez egy emoji
+• Előzmények arról, ki mit adott hozzá, módosított vagy törölt
+• Keresés név, megjegyzés vagy kategória szerint, az eszközödön
+• Fiókkal egy személyes „Saját kiadások” projekt: amit egyedül költesz, plusz a részed a csoportjaidból, hónapról hónapra
+• Kiadás áthelyezése egyik projektből a másikba
+• Havi költségkeretek kategóriánként a valódi részedre, 80%-os figyelmeztetéssel, amelyet az eszközöd számol ki
+• A kezdőképernyőn: mennyivel tartoznak neked és mennyivel tartozol te az összes projektben, az eszközödön kiszámolva
+• „Saját kiadás” parancsikon az alkalmazás ikonjának hosszú megnyomására
+• Offline: böngészés és rögzítés hálózat nélkül
+• CSV- és JSON-exportálás egy koppintással
+• Fizetési adatok (IBAN, PayPal, Wero, Lydia, Revolut…) ugyanúgy titkosítva, mint minden más
+• Jelszócsere úgy, hogy semmit sem veszítesz; ha elfelejted, a helyreállítási kulcs mindent visszahoz
+• Kiszivárgott jelszó vagy elveszett telefon: új fiókkulcsok, és minden más eszközödön kijelentkezel
+• Projektadminok: ha eltávolítasz valakit, megváltozik a projektkulcs, és a régi linkje többé semmit sem nyit meg
+• A fiókkal rendelkező tagok maguktól megkapják az új kulcsot, poszt-kvantum titkosítással; a többiek új linket kapnak
+• Tricount-importálás: illeszd be a megosztási linket, és minden átkerül
+• Web, Android és iOS: ugyanaz a projekt mindenhol, ugyanazzal a linkkel
+• 32 nyelv, köztük az EU mind a 24 hivatalos nyelve
+
+Hogyan működik pontosan? counted.fr/en/encryption
+Ellenőrizd te magad a kódot, amelyet futtatsz: counted.fr/en/verify

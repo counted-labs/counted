@@ -593,10 +593,6 @@ pub struct Account {
     /// The matching private key, encrypted with the account key. Same contract as `preferences`.
     #[serde(default)]
     pub private_key: Option<EncryptedPair>,
-    /// Every build older than [`TYPED_WRAPS_FROM`] is refused, so keys and friend labels are
-    /// written typed and the private key is re-wrapped. Set by the server from `MIN_APP_VERSION`.
-    #[serde(default)]
-    pub typed_wraps: bool,
     /// How many times the account master key changed. At 0 the master key is the password-derived
     /// key itself (docs/plans/key-lifecycle.md §3).
     #[serde(default)]
@@ -609,8 +605,8 @@ pub struct Account {
     /// password change, recovery key and key rotation are offered. Set by the server.
     #[serde(default)]
     pub key_lifecycle: bool,
-    /// Every build older than [`HYBRID_INVITATIONS_FROM`] is refused, so invitations are sealed in
-    /// the hybrid box and a classical one is refused. Set by the server.
+    /// Always true: the server refuses to start below [`HYBRID_INVITATIONS_FROM`] and takes only the
+    /// hybrid box. A 3.2.10 app picks its box from it, so it stays until the floor is above 3.2.10.
     #[serde(default)]
     pub hybrid_invitations: bool,
     /// ML-KEM-768 encapsulation key, the post-quantum half of the account's hybrid keypair. `None`
@@ -931,6 +927,15 @@ pub const MAX_FRIEND_REQUESTS_PER_DAY: i64 = 50;
 /// Ceiling on the invitations waiting for one account, and on the ones one project has out.
 pub const MAX_PENDING_PROJECT_INVITATIONS: i64 = 100;
 pub const MAX_FRIEND_LABEL_LENGTH: usize = 1024;
+/// Requests of the last 24 hours, this one included, up to which a sender's request may mail.
+pub const MAX_INVITE_MAILS_PER_DAY: i64 = 10;
+
+/// `POST /mail/unsubscribe`: the token of an invitation mail's link.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct UnsubscribePayload {
+    pub token: String,
+}
 
 /// `POST /friends/requests`. The address travels in clear for the `accounts` lookup and is stored
 /// as a hash; `label` is what the requester calls this person, ciphertext under their account key.
@@ -943,6 +948,13 @@ pub struct FriendRequestByEmail {
     /// value reads as 0, so an older client is refused once the account has left epoch 0.
     #[serde(default)]
     pub amk_epoch: Option<i32>,
+    /// Also mail the address an invitation (docs/plans/invite-emails.md). An older client sends
+    /// nothing and nothing is mailed.
+    #[serde(default)]
+    pub send_mail: bool,
+    /// The sender's interface language, one of [`UI_LANGS`]: picks the mail's texts and links.
+    #[serde(default)]
+    pub lang: Option<String>,
 }
 
 /// `POST /friends/requests/from-project`: the claimed participant `user_id` of a project the caller
@@ -996,6 +1008,9 @@ pub struct FriendsView {
     pub friends: Vec<Friend>,
     pub incoming: Vec<IncomingFriendRequest>,
     pub outgoing: Vec<OutgoingFriendRequest>,
+    /// The server mails invitations (`INVITE_MAIL=1`): the add sheet offers the checkbox only then.
+    #[serde(default)]
+    pub invite_mail: bool,
 }
 
 /// `POST /projects/{id}/invitations`: the project key boxed to `to_account_id`'s public keys, in
@@ -1444,9 +1459,6 @@ pub const CLAIM_TOKEN_LENGTH: usize = 32;
 /// one adds its use and project id (about 160 chars); a claim label is one display name. Bounded
 /// per field so the row cannot be used as free storage.
 pub const MAX_WRAPPED_KEY_LENGTH: usize = 256;
-/// The first build that reads typed key wraps. Clients write them once `MIN_APP_VERSION` is at
-/// least this (audit 2026-10-19 L1).
-pub const TYPED_WRAPS_FROM: &str = "3.2.6";
 pub const MAX_CLAIM_LABEL_LENGTH: usize = 4096;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

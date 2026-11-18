@@ -884,7 +884,7 @@ mod tests {
         #[test]
         fn plural_messages_cover_the_language_cardinal_categories() {
             use intl_pluralrules::{PluralCategory, PluralRuleType, PluralRules};
-            let plural_ids = ["offline-pending", "charts-expense-count", "charts-my-share-skipped", "invite-sent", "expenses-search-summary", "move-members", "my-spending-search-summary", "expense-people", "guests-hint-title"];
+            let plural_ids = ["offline-pending", "charts-expense-count", "charts-my-share-skipped", "invite-sent", "expenses-search-summary", "move-members", "my-spending-search-summary", "expense-people"];
             for (code, _) in SUPPORTED {
                 let rules = PluralRules::create(langid_of(code), PluralRuleType::CARDINAL)
                     .unwrap_or_else(|e| panic!("no plural rules for {code}: {e}"));

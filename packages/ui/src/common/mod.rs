@@ -93,6 +93,9 @@ mod callout;
 pub use callout::*;
 
 pub mod persist;
+pub mod store_seal;
+mod store_locked;
+pub use store_locked::StoreLocked;
 
 pub mod fx_cache;
 pub use fx_cache::CachedFx;
@@ -204,7 +207,7 @@ pub use language_picker::LanguagePicker;
 
 mod theme;
 pub use theme::{
-    apply_theme, data_theme, set_native_theme, stored_theme, theme_color, NativeTheme, Theme, BOOT_JS, BOOT_JS_INTEGRITY, BOOT_JS_SOURCE, NATIVE_FEEL_CSS,
+    apply_theme, data_theme, set_native_theme, store_theme, stored_theme, theme_color, NativeTheme, Theme, BOOT_JS, BOOT_JS_INTEGRITY, BOOT_JS_SOURCE, NATIVE_FEEL_CSS,
 };
 
 mod theme_picker;
@@ -212,8 +215,10 @@ pub use theme_picker::ThemePicker;
 
 mod currency_picker;
 pub use currency_picker::CurrencyPicker;
-mod form_sheet_bar;
-pub use form_sheet_bar::FormSheetBar;
+mod sheet_bar;
+mod sheet_footer;
+pub use sheet_bar::{SheetBar, SHEET_TITLE};
+pub use sheet_footer::SheetFooter;
 
 pub mod offline_queue;
 pub use offline_queue::{

@@ -1,0 +1,5 @@
+• Clé de récupération : retrouvez tout après un mot de passe oublié
+• Changez votre mot de passe, et la clé d’un projet pour en retirer quelqu’un
+• Les invitations entre amis passent au chiffrement post-quantique
+• Counted propose aux admins de changer la première clé d’un projet
+• Petites corrections et améliorations

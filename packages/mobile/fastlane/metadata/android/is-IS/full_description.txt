@@ -1,0 +1,45 @@
+Counted er appið til að skipta útgjöldum með vinum: 100% evrópskt og hannað með persónuvernd að leiðarljósi. Frí, meðleigjendur, helgarferð, sameiginleg gjöf: skráðu útgjöldin og Counted segir þér hver skuldar hverjum hversu mikið, með sem fæstum millifærslum.
+
+🔗 Enginn aðgangur nauðsynlegur
+Búðu til verkefni og sendu hlekkinn. Það er allt og sumt. Vinir þínir taka þátt án þess að skrá sig. Aðgangur? Aldrei skylda. Hann nýtist til að finna verkefnin þín í öðru tæki, bjóða vinum úr appinu og deila greiðsluupplýsingunum þínum.
+
+🔒 Dulkóðað í símanum þínum
+Nöfn, upphæðir, verkefni, saga: allt er dulkóðað í símanum þínum. Aðeins þú ert með lykilinn. Enginn getur lesið bókhaldið þitt, ekki einu sinni við. Lykilorðið þitt fer heldur aldrei úr símanum þínum.
+
+📷 Kvittanaskönnun, í símanum
+Taktu mynd af kvittuninni: upphæð, dagsetning og flokkur fyllast út sjálfkrafa. Allt gerist í símanum þínum. Myndin er ekki geymd.
+
+🇪🇺 100% evrópskt
+Netþjónar í Þýskalandi, tölvupóstur sendur frá Frakklandi. Verkefnin þín fara aldrei út fyrir Evrópusambandið.
+
+💸 Í alvöru ókeypis
+Ókeypis, án auglýsinga, án rekjara og án hámarks á fjölda útgjalda eða þátttakenda. Allt sem hér er lýst er ókeypis og verður það áfram. Við söfnum engu og seljum ekki gögnin þín. Það er ekki okkar viðskiptalíkan.
+
+✨ Allt fyrir sameiginleg útgjöld
+• Útgjöld, millifærslur og innkoma, með mörgum greiðendum og mörgum njótendum
+• Skipt jafnt, eftir hlutum eða eftir nákvæmum upphæðum, sannreynt upp á eyri
+• Sem fæstar millifærslur til að gera upp innan hópsins
+• Endurtekinn kostnaður eins og leiga eða áskriftir: skráður einu sinni og bætt við í hvert sinn sem hann fellur á gjalddaga
+• Yfir 150 gjaldmiðlar, umreiknaðir á mánaðargengi framkvæmdastjórnar ESB
+• Tölfræði eftir flokkum, eftir einstaklingum og mánuð fyrir mánuð
+• Þínir eigin flokkar, hver með sínu tjákni, og tjákn fyrir hvert verkefni
+• Saga um hver bætti við, breytti eða eyddi hverju
+• Leit eftir nafni, athugasemd eða flokki, beint í tækinu þínu
+• Með aðgangi færðu persónulegt verkefni, „Mín útgjöld“: það sem þú eyðir á eigin vegum auk hlutar þíns í hópunum, mánuð fyrir mánuð
+• Færðu útgjöld úr einu verkefni í annað
+• Mánaðarlegar fjárhagsáætlanir eftir flokkum miðað við raunverulegan hlut þinn, með viðvörun við 80%, allt reiknað í tækinu þínu
+• Á heimaskjánum: hvað þú átt inni og hvað þú skuldar í öllum verkefnum, reiknað í tækinu þínu
+• Flýtileiðin „Eigin útgjöld“ þegar þú heldur fingri á tákni appsins
+• Án nettengingar: skoðaðu og skráðu þótt ekkert netsamband sé
+• Útflutningur í CSV og JSON með einum smelli
+• Greiðsluupplýsingar (IBAN, PayPal, Wero, Lydia, Revolut…) dulkóðaðar eins og allt annað
+• Breyttu lykilorðinu án þess að tapa neinu; ef þú gleymir því færðu allt aftur með endurheimtarlykli
+• Lykilorðið lak eða síminn týndist: nýir aðgangslyklar, öll önnur tæki skráð út
+• Stjórnendur verkefna: þegar þú fjarlægir einhvern breytist lykill verkefnisins og gamli hlekkur viðkomandi opnar ekkert lengur
+• Meðlimir með aðgang fá nýja lykilinn sjálfkrafa, varinn skammtaþolinni dulkóðun; hinir fá nýjan hlekk
+• Innflutningur úr Tricount: límdu deilitengilinn og allt flyst yfir
+• Vefur, Android og iOS: sama verkefnið alls staðar, með sama hlekknum
+• 32 tungumál, þar á meðal öll 24 opinber tungumál ESB
+
+Hvernig virkar þetta nákvæmlega? counted.fr/en/encryption
+Sannreyndu með eigin augum kóðann sem þú keyrir: counted.fr/en/verify

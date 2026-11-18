@@ -1,0 +1,45 @@
+Counted je aplikácia na delenie výdavkov s priateľmi: 100 % európska a súkromná už zo svojej podstaty. Dovolenka, spolubývanie, víkend, spoločný darček: zapisuj výdavky a Counted ti povie, kto komu koľko dlhuje, s čo najmenším počtom prevodov.
+
+🔗 Účet netreba
+Vytvor projekt, pošli odkaz. To je všetko. Tvoji priatelia sa pridajú a zapoja bez registrácie. Účet? Nikdy nie je povinný. Slúži na nájdenie tvojich projektov na inom zariadení, pozývanie priateľov z aplikácie a zdieľanie tvojich platobných údajov.
+
+🔒 Šifrované v tvojom telefóne
+Mená, sumy, projekty, história: všetko sa šifruje v tvojom telefóne. Kľúč máš len ty. Nikto nemôže čítať tvoje vyúčtovania, ani my. Ani tvoje heslo nikdy neopustí tvoj telefón.
+
+📷 Skenovanie účteniek priamo v telefóne
+Odfoť účtenku: suma, dátum a kategória sa vyplnia samy. Všetko prebieha v tvojom telefóne. Fotka sa neukladá.
+
+🇪🇺 100 % európske
+Servery v Nemecku, e-maily odosielané z Francúzska. Tvoje projekty nikdy neopustia Európsku úniu.
+
+💸 Naozaj zadarmo
+Zadarmo, bez reklám, bez sledovania a bez obmedzenia počtu výdavkov či účastníkov. Všetko, čo je tu opísané, je zadarmo a zadarmo aj zostane. Nič nezbierame, tvoje údaje nepredávame. To nie je náš model.
+
+✨ Všetko pre spoločné výdavky
+• Výdavky, prevody a príjmy, s viacerými platiteľmi a pre viacerých ľudí
+• Delenie rovným dielom, podľa podielov alebo presnou sumou, skontrolované na cent
+• Čo najmenej prevodov na vyrovnanie skupiny
+• Opakované výdavky ako nájom alebo predplatné: zadáš ich raz a pridajú sa vždy, keď sú splatné
+• Viac ako 150 mien, prepočítaných mesačným kurzom Európskej komisie
+• Štatistiky podľa kategórií, podľa ľudí a mesiac po mesiaci
+• Vlastné kategórie, každá s vlastným emoji, a emoji pre každý projekt
+• História toho, kto čo pridal, upravil alebo zmazal
+• Vyhľadávanie podľa názvu, poznámky alebo kategórie, priamo v tvojom zariadení
+• S účtom osobný projekt „Moje výdavky“: čo míňaš len na seba plus tvoj podiel v skupinách, mesiac po mesiaci
+• Presun výdavku z jedného projektu do iného
+• Mesačné rozpočty podľa kategórií z tvojho skutočného podielu, s upozornením pri 80 % počítaným v tvojom zariadení
+• Na domovskej obrazovke: koľko ti dlhujú a koľko dlhuješ vo všetkých projektoch, počítané v tvojom zariadení
+• Skratka „Osobný výdavok“ dlhým podržaním ikony aplikácie
+• Offline: prezeraj a zadávaj aj bez pripojenia
+• Export do CSV a JSON jedným ťuknutím
+• Platobné údaje (IBAN, PayPal, Wero, Lydia, Revolut…) šifrované ako všetko ostatné
+• Zmena hesla bez straty čohokoľvek; keď ho zabudneš, kľúč na obnovenie ti vráti všetko
+• Uniknuté heslo alebo stratený telefón: nové kľúče účtu, všetky ostatné zariadenia odhlásené
+• Správcovia projektu: odobratie člena zmení kľúč projektu a jeho starý odkaz už nič neotvorí
+• Členovia s účtom dostanú nový kľúč sami, s postkvantovým šifrovaním; ostatní dostanú nový odkaz
+• Import z Tricountu: vlož odkaz na zdieľanie a všetko sa prenesie
+• Web, Android a iOS: rovnaký projekt všade, s rovnakým odkazom
+• 32 jazykov vrátane všetkých 24 úradných jazykov EÚ
+
+Ako to presne funguje? (po anglicky) counted.fr/en/encryption
+Over si na vlastné oči kód, ktorý spúšťaš: counted.fr/en/verify

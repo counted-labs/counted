@@ -3,7 +3,7 @@ use crate::tid;
 use shared::{ProjectDto, User};
 
 use crate::common::creator_proof::holds_creator_secret;
-use crate::common::LocalStorageState;
+use crate::common::{LocalStorageState, SheetBar};
 use crate::crypto::decrypt_json;
 use crate::decrypted::user_name;
 use crate::icons::{EyeOffIcon, KeyIcon, LockIcon, ShieldIcon, UserMinusIcon, ICON_HEADER, ICON_INLINE};
@@ -377,14 +377,15 @@ pub fn MemberSheet(
             aria_modal: "true",
             aria_labelledby: "member-sheet-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md flex flex-col gap-3",
-                div { class: "flex items-center gap-3",
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar { close_id: "member-sheet-close", on_close,
                     crate::common::Avatar { initials: crate::participants::participants_service::initial(&name), size: crate::common::SizeClass::W9, guest }
                     div { class: "flex flex-col min-w-0",
                         h2 { id: "member-sheet-title", class: "font-bold text-lg font-display truncate", "{name}" }
-                        span { class: "text-sm text-base-content/70", "{subtitle}" }
+                        span { class: "text-sm text-base-content/70 truncate", "{subtitle}" }
                     }
                 }
+                div { class: "flex-1 overflow-y-auto flex flex-col gap-3 px-5 pt-1 pb-6",
                 if !actions.is_empty() {
                     div { class: "bg-base-200 rounded-box overflow-hidden divide-y divide-base-300",
                         for action in actions {
@@ -415,7 +416,7 @@ pub fn MemberSheet(
                         }
                     }
                 }
-                button { r#type: "button", class: "btn", onclick: move |_| on_close.call(()), {tid!("close")} }
+                }
             }
             div { class: "modal-backdrop", onclick: move |_| on_close.call(()) }
         }

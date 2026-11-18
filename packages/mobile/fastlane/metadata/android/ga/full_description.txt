@@ -1,0 +1,45 @@
+Aip chun costais a roinnt le cairde is ea Counted: 100% Eorpach agus príobháideach ó bhonn. Saoire, árasán roinnte, deireadh seachtaine, bronntanas grúpa: cláraigh do chostais agus insíonn Counted duit cé atá i bhfiacha le cé agus cé mhéad, leis an líon is lú aistrithe.
+
+🔗 Níl cuntas ag teastáil
+Cruthaigh tionscadal, seol an nasc. Sin é. Tagann do chairde isteach agus glacann siad páirt gan clárú. Cuntas? Ní bhíonn gá leis riamh. Is le do thionscadail a aimsiú ar ghléas eile, cairde a thabhairt isteach ón aip agus do shonraí íocaíochta a roinnt é.
+
+🔒 Criptithe ar do ghuthán
+Ainmneacha, suimeanna, tionscadail, stair: criptítear gach rud ar do ghuthán. Is agatsa amháin atá an eochair. Ní féidir le duine ar bith do chuntais a léamh, fiú muidne. Ní fhágann do phasfhocal do ghuthán riamh ach oiread.
+
+📷 Scanadh admhálacha, ar do ghuthán
+Tóg grianghraf den admháil: líontar an tsuim, an dáta agus an chatagóir go huathoibríoch. Tarlaíonn gach rud ar do ghuthán. Ní choinnítear an grianghraf.
+
+🇪🇺 100% Eorpach
+Freastalaithe sa Ghearmáin, ríomhphoist seolta ón bhFrainc. Ní fhágann do thionscadail an tAontas Eorpach riamh.
+
+💸 Saor in aisce, i ndáiríre
+Saor in aisce, gan fógraí, gan rianairí agus gan teorainn ar chostais ná ar rannpháirtithe. Tá gach rud a bhfuil cur síos air anseo saor in aisce agus fanfaidh sé saor in aisce. Ní bhailímid faic, ní dhíolaimid do shonraí. Ní hé sin ár múnla.
+
+✨ Gach rud do chostais roinnte
+• Costais, aistrithe agus ioncam, le roinnt íocóirí agus roinnt tairbhithe
+• Roinn go cothrom, de réir scaireanna nó de réir suime cruinne, seiceáilte go dtí an cent
+• An líon is lú aistrithe chun an grúpa a shocrú suas
+• Costais athfhillteacha ar nós cíosa nó síntiús: iontráilte uair amháin, curtha leis gach uair a bhíonn siad dlite
+• Os cionn 150 airgeadra, aistrithe de réir ráta míosúil an Choimisiúin Eorpaigh
+• Staitisticí de réir catagóire, de réir duine agus mí ar mhí
+• Do chatagóirí féin, gach ceann acu lena emoji féin, agus emoji do gach tionscadal
+• Stair: cé a chuir rud leis, a chuir in eagar é nó a scrios é
+• Cuardach de réir ainm, nóta nó catagóire, ar do ghléas féin
+• Le cuntas, tionscadal pearsanta “Mo chostais”: an méid a chaitheann tú leat féin móide do sciar de do ghrúpaí, mí ar mhí
+• Bog costas ó thionscadal amháin go tionscadal eile
+• Buiséid mhíosúla de réir catagóire ar do sciar iarbhír, le rabhadh ag 80% a ríomhtar ar do ghléas
+• Ar an scáileán baile, an méid atá ag dul duit agus an méid atá ort i ngach tionscadal, ríomhta ar do ghléas
+• Aicearra “Costas pearsanta” le brú fada ar dheilbhín na haipe
+• As líne: féach ar do chostais agus cuir costais isteach gan líonra
+• Easpórtáil CSV agus JSON le tapáil amháin
+• Sonraí íocaíochta (IBAN, PayPal, Wero, Lydia, Revolut…) criptithe cosúil le gach rud eile
+• Athraigh do phasfhocal gan faic a chailleadh; má dhéanann tú dearmad air, tugann eochair athshlánaithe gach rud ar ais duit
+• Pasfhocal sceite nó guthán caillte: eochracha nua cuntais, gach gléas eile logáilte amach
+• Riarthóirí tionscadail: nuair a bhaintear duine amach, athraíonn eochair an tionscadail, agus ní osclaíonn a shean-nasc faic níos mó
+• Faigheann baill a bhfuil cuntas acu an eochair nua go huathoibríoch, faoi chriptiú iarchandamach; faigheann na daoine eile nasc nua
+• Iompórtáil ó Tricount: greamaigh an nasc comhroinnte, tagann gach rud trasna
+• Gréasán, Android agus iOS: an tionscadal céanna i ngach áit, leis an nasc céanna
+• 32 teanga, lena n-áirítear na 24 theanga oifigiúla go léir de chuid an AE
+
+Conas a oibríonn sé, go díreach? counted.fr/en/encryption
+Fíoraigh féin an cód a ritheann tú: counted.fr/en/verify

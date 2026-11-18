@@ -1,7 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::icons::CloseIcon;
-use crate::tid;
+use crate::common::{SheetBar, SHEET_TITLE};
 
 /// A list row's actions as a bottom sheet: what a long press on the row opens (boot.js), and what
 /// its visually hidden actions button opens for a screen reader or a keyboard. The children are
@@ -17,23 +16,11 @@ pub fn RowActionsSheet(title: String, on_close: EventHandler<()>, children: Elem
             aria_modal: "true",
             aria_labelledby: "row-actions-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md p-0",
-                div { class: "flex flex-col gap-4 px-6 pt-5 pb-6",
-                    div { class: "flex items-center gap-2",
-                        h2 {
-                            id: "row-actions-title",
-                            class: "flex-1 min-w-0 truncate font-bold text-lg font-display",
-                            "{title}"
-                        }
-                        button {
-                            id: "row-actions-close",
-                            r#type: "button",
-                            class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                            aria_label: tid!("close"),
-                            onclick: move |_| on_close.call(()),
-                            CloseIcon {}
-                        }
-                    }
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar { close_id: "row-actions-close", on_close,
+                    h2 { id: "row-actions-title", class: SHEET_TITLE, "{title}" }
+                }
+                div { class: "flex-1 overflow-y-auto px-5 pt-1 pb-6",
                     div { class: "bg-base-200 rounded-box overflow-hidden divide-y divide-base-300", {children} }
                 }
             }

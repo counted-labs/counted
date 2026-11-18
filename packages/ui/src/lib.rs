@@ -27,6 +27,7 @@ pub mod recurring;
 pub mod rotation;
 pub mod rotation_flow;
 pub mod route;
+pub mod unsubscribe;
 pub mod welcome;
 
 #[cfg(fuzzing)]

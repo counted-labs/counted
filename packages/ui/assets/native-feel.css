@@ -715,10 +715,10 @@ html[data-plat="android"] .confirm-actions .confirm-cancel {
   color: var(--color-primary);
 }
 
-/* The form sheet bar (form_sheet_bar.rs): close leading, confirm trailing. Each button holds an
-   icon and its text; the text is visually hidden while the icon shows, so it stays the accessible
-   name. iOS 26 and the web: an xmark and a tinted checkmark. iOS 16-18: "Cancel" and a bold
-   confirm as text buttons. Android: the xmark and a text confirm, the M3 full-screen dialog bar. */
+/* The sheet bar (sheet_bar.rs): close leading, the title after it, a spacer trailing so an iOS title
+   centres. The close holds an icon and its text; the text is visually hidden while the icon shows,
+   so it stays the accessible name. iOS 26, Android and the web: an xmark. iOS 16-18: "Cancel" as a
+   text button, the spacer as wide as it. */
 .sheet-bar-text {
   position: absolute;
   width: 1px;
@@ -732,10 +732,11 @@ html[data-plat="ios"] .sheet-bar-title {
   text-align: center;
 }
 
-html[data-plat="ios"]:is([data-ios="16"], [data-ios="17"], [data-ios="18"]) .sheet-bar :is(.sheet-bar-close, .sheet-bar-confirm),
-html[data-plat="android"] .sheet-bar .sheet-bar-confirm {
+html[data-plat="ios"]:is([data-ios="16"], [data-ios="17"], [data-ios="18"]) .sheet-bar .sheet-bar-close {
   width: auto;
-  padding-inline: 0.5rem;
+  min-width: 4.5rem;
+  justify-content: flex-start;
+  padding-inline: 0.25rem;
   border-radius: var(--radius-field);
   background-color: transparent;
   box-shadow: none;
@@ -744,28 +745,15 @@ html[data-plat="android"] .sheet-bar .sheet-bar-confirm {
   font-weight: 400;
 }
 
-html[data-plat="ios"]:is([data-ios="16"], [data-ios="17"], [data-ios="18"]) .sheet-bar .sheet-bar-confirm {
-  font-weight: 600;
+html[data-plat="ios"]:is([data-ios="16"], [data-ios="17"], [data-ios="18"]) .sheet-bar .sheet-bar-spacer {
+  width: 4.5rem;
 }
 
-html[data-plat="android"] .sheet-bar .sheet-bar-confirm {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-html[data-plat="ios"]:is([data-ios="16"], [data-ios="17"], [data-ios="18"]) .sheet-bar :is(.sheet-bar-close, .sheet-bar-confirm):disabled,
-html[data-plat="android"] .sheet-bar .sheet-bar-confirm:disabled {
-  color: var(--color-base-content);
-  opacity: 0.3;
-}
-
-html[data-plat="ios"]:is([data-ios="16"], [data-ios="17"], [data-ios="18"]) .sheet-bar :is(.sheet-bar-close, .sheet-bar-confirm) .sheet-bar-icon,
-html[data-plat="android"] .sheet-bar .sheet-bar-confirm .sheet-bar-icon {
+html[data-plat="ios"]:is([data-ios="16"], [data-ios="17"], [data-ios="18"]) .sheet-bar .sheet-bar-close .sheet-bar-icon {
   display: none;
 }
 
-html[data-plat="ios"]:is([data-ios="16"], [data-ios="17"], [data-ios="18"]) .sheet-bar :is(.sheet-bar-close, .sheet-bar-confirm) .sheet-bar-text,
-html[data-plat="android"] .sheet-bar .sheet-bar-confirm .sheet-bar-text {
+html[data-plat="ios"]:is([data-ios="16"], [data-ios="17"], [data-ios="18"]) .sheet-bar .sheet-bar-close .sheet-bar-text {
   position: static;
   width: auto;
   height: auto;

@@ -159,7 +159,6 @@ mod tests {
             payment_methods: None,
             public_key: Some(public_key_of(sk)),
             private_key: wrap_key(sk_key, WrapUse::PrivateKey, sk),
-            typed_wraps: true,
             amk_epoch: epoch,
             amk_wrap,
             key_lifecycle: true,

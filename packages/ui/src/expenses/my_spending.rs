@@ -6,7 +6,7 @@ use dioxus::prelude::*;
 use std::collections::HashSet;
 use uuid::Uuid;
 
-use crate::common::{month_title, ProjectTile};
+use crate::common::{month_title, ProjectTile, SheetBar, SHEET_TITLE};
 use crate::expenses::helpers::my_spending::{shift_month, GroupLedger, MonthTotals};
 
 /// A group as the R5 sheet lists it.
@@ -24,7 +24,7 @@ impl From<&GroupLedger> for CountedGroup {
         Self { project_id: l.project_id, name: l.name.clone(), emoji: l.emoji.clone(), members: l.members, currency: l.data.currency.clone() }
     }
 }
-use crate::icons::{BackArrowIcon, ChevronRightIcon, CloseIcon, LockIcon, SearchIcon, ICON_HEADER};
+use crate::icons::{BackArrowIcon, ChevronRightIcon, LockIcon, SearchIcon};
 use crate::tid;
 
 fn month_label(month: NaiveDate) -> String {
@@ -137,18 +137,12 @@ pub fn CountedGroupsSheet(
             aria_modal: "true",
             aria_labelledby: "counted-groups-title",
             tabindex: "-1",
-            div { class: "modal-box max-w-md flex flex-col gap-4",
-                div { class: "flex items-center gap-2",
-                    h2 { id: "counted-groups-title", class: "flex-1 min-w-0 truncate font-display font-bold text-lg", {tid!("counted-groups")} }
-                    button {
-                        r#type: "button",
-                        class: "btn btn-circle size-11 min-h-11 border-0 bg-base-200 text-base-content/80",
-                        aria_label: tid!("close"),
-                        onclick: move |_| on_close.call(()),
-                        CloseIcon { size: ICON_HEADER }
-                    }
+            div { class: "modal-box max-w-md p-0 flex flex-col",
+                SheetBar { close_id: "counted-groups-close", on_close,
+                    h2 { id: "counted-groups-title", class: SHEET_TITLE, {tid!("counted-groups")} }
                 }
-                p { class: "-mt-2 text-sm text-base-content/70", {tid!("counted-groups-intro")} }
+                div { class: "flex-1 overflow-y-auto flex flex-col gap-4 px-5 pt-1 pb-6",
+                p { class: "text-sm text-base-content/70", {tid!("counted-groups-intro")} }
                 if groups.is_empty() {
                     p { class: "text-sm text-base-content/70", {tid!("counted-groups-empty")} }
                 }
@@ -192,12 +186,6 @@ pub fn CountedGroupsSheet(
                     span { class: "shrink-0 flex", LockIcon { size: 15 } }
                     {tid!("counted-groups-encrypted")}
                 }
-                button {
-                    id: "counted-groups-done",
-                    r#type: "button",
-                    class: "btn btn-primary w-full",
-                    onclick: move |_| on_close.call(()),
-                    {tid!("counted-groups-done")}
                 }
             }
             div { class: "modal-backdrop", onclick: move |_| on_close.call(()) }
