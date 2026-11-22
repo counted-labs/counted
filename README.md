@@ -1,15 +1,43 @@
-# Counted - client source
+# Counted
 
-The web and mobile clients of [counted.fr](https://counted.fr), a zero-knowledge expense-splitting
-app: every name, amount and project is encrypted on your device, and the server stores ciphertext
-it cannot read.
+**Split expenses with friends. End-to-end encrypted, post-quantum, and you can rebuild what the
+site serves.**
 
-Use it in the browser at [counted.fr](https://counted.fr), or install the app from the
+[![Rebuild](https://github.com/counted-labs/counted/actions/workflows/rebuild.yml/badge.svg)](https://github.com/counted-labs/counted/actions/workflows/rebuild.yml)
+[![Monitor](https://github.com/counted-labs/counted/actions/workflows/monitor.yml/badge.svg)](https://github.com/counted-labs/counted/actions/workflows/monitor.yml)
+[![F-Droid](https://img.shields.io/f-droid/v/fr.counted.app)](https://f-droid.org/packages/fr.counted.app/)
+[![License: AGPL-3.0-only](https://img.shields.io/badge/license-AGPL--3.0--only-blue)](LICENSE)
+
+<p>
+<img src="packages/mobile/fastlane/metadata/android/en-US/images/phoneScreenshots/p1-settle.jpg" width="200" alt="A trip group: who owes whom, with a Settle button on each reimbursement">
+<img src="packages/mobile/fastlane/metadata/android/en-US/images/phoneScreenshots/p2-link.jpg" width="200" alt="The project list: friends join a group from one link, without an account">
+<img src="packages/mobile/fastlane/metadata/android/en-US/images/phoneScreenshots/p4-shares.jpg" width="200" alt="Adding an expense split by shares between five people">
+<img src="packages/mobile/fastlane/metadata/android/en-US/images/phoneScreenshots/p3-private.jpg" width="200" alt="The expense list of a group, encrypted on the device">
+</p>
+
+Every name, amount and project is encrypted on your device; the server stores ciphertext it cannot
+read. Use it in the browser at [counted.fr](https://counted.fr), or install the app from the
 [App Store](https://apps.apple.com/app/id6772807915),
 [Google Play](https://play.google.com/store/apps/details?id=fr.counted.app) or
 [F-Droid](https://f-droid.org/packages/fr.counted.app/).
 
-This repository exists so that claim can be **checked rather than believed**. The WASM bundle
+- **Zero access.** No project key or account password is ever sent to the server: a project key
+  travels in the share link's fragment or wrapped under the account key. What the server can still
+  learn is listed in [SPEC.md section 12](SPEC.md#12-what-the-server-learns).
+- **Post-quantum.** Keys sent between accounts travel in hybrid X25519 + ML-KEM-768 (FIPS 203)
+  boxes, data is sealed with XChaCha20-Poly1305 under 256-bit keys, and counted.fr offers the
+  `X25519MLKEM768` TLS key exchange first. The remaining exposures are in
+  [SPEC.md section 3.1](SPEC.md#31-quantum-adversary).
+- **Verifiable.** Reproducible builds, signed with Sigstore, rebuilt on every release by a public
+  workflow, and checked against the live site every six hours.
+- **For people, not only for cryptographers.** No account needed to join a group, no ads, no
+  trackers, works offline, receipt OCR on the device, 32 languages.
+- **One Rust codebase.** [Dioxus](https://dioxuslabs.com) 0.7 compiles the same `packages/ui` crate
+  to WebAssembly for the web and runs it natively in a WebView on Android and iOS.
+
+## Why this repository exists
+
+It exists so that those claims can be **checked rather than believed**. The WASM bundle
 counted.fr serves is built from exactly these files, reproducibly, and its hashes are published at
 [counted.fr/verify](https://counted.fr/verify) and at `https://counted.fr/SHA256SUMS.txt`.
 

@@ -39,12 +39,12 @@ const MIN_LINE_CONFIDENCE: f32 = 0.5;
 /// Blocking and CPU-bound for one to three seconds - the caller must keep it off the platform UI
 /// thread, which on both phones is also the Dioxus event loop.
 #[cfg(feature = "models")]
-pub fn scan(jpeg: &[u8]) -> Result<Receipt, OcrError> {
+pub fn scan(jpeg: &[u8], today: shared::time::Date) -> Result<Receipt, OcrError> {
     let lines = text_lines(jpeg)?;
     if lines.is_empty() {
         return Err(OcrError::Empty);
     }
-    Ok(parse_receipt(&lines, chrono::Local::now().date_naive()))
+    Ok(parse_receipt(&lines, today))
 }
 
 /// Everything the parser sees, before it sees it.

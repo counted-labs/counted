@@ -349,8 +349,8 @@ pub fn derive_login_proof(auth_version: i16, password: &str, salt: &[u8]) -> Res
 
 #[cfg(test)]
 mod tests {
+    use shared::time::DateTime;
     use super::*;
-    use chrono::NaiveDateTime;
     use shared::UserPayload;
     use uuid::Uuid;
 
@@ -361,7 +361,7 @@ mod tests {
             id: Uuid::nil(),
             email: "jonathan@example.com".into(),
             display_name: encrypt_json(account_key, &name.to_string()).unwrap(),
-            created_at: NaiveDateTime::default(),
+            created_at: DateTime::default(),
             email_verified: true,
             kdf_salt: vec![0u8; 16],
             kdf_version: 1,
@@ -546,7 +546,7 @@ mod tests {
     #[test]
     fn encrypt_json_decrypt_json_roundtrip() {
         let key = test_key();
-        let payload = UserPayload { name: "Alice".to_string(), removed: false };
+        let payload = UserPayload { name: "Alice".to_string(), removed: false, extra: Default::default() };
         let pair = encrypt_json(&key, &payload).unwrap();
         let decoded: UserPayload = decrypt_json(&key, &pair).unwrap();
         assert_eq!(decoded.name, "Alice");
@@ -555,7 +555,7 @@ mod tests {
     #[test]
     fn encrypt_json_wrong_key_fails() {
         let key = test_key();
-        let pair = encrypt_json(&key, &UserPayload { name: "Bob".to_string(), removed: false }).unwrap();
+        let pair = encrypt_json(&key, &UserPayload { name: "Bob".to_string(), removed: false, extra: Default::default() }).unwrap();
         let mut bad = key;
         bad[0] ^= 0xFF;
         assert!(decrypt_json::<UserPayload>(&bad, &pair).is_err());
@@ -764,7 +764,7 @@ mod tests {
     fn a_participant_payload_does_not_tell_its_name_length_or_its_removal() {
         let key = test_key();
         let sealed = |name: &str, removed: bool| {
-            encrypt_padded_json(&key, &UserPayload { name: name.into(), removed }).unwrap()
+            encrypt_padded_json(&key, &UserPayload { name: name.into(), removed, extra: Default::default() }).unwrap()
         };
         let lengths = [sealed("Al", false), sealed("Alexandrine-Marie", false), sealed("Al", true)]
             .map(|p| STANDARD.decode(p.ct).unwrap().len());

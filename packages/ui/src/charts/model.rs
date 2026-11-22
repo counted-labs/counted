@@ -1,5 +1,5 @@
-use chrono::{Datelike, Duration, Months, NaiveDate};
 use shared::ExpenseType;
+use shared::time::Date;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
@@ -50,8 +50,8 @@ fn is_expense(e: &DecryptedExpense) -> bool {
     e.expense_type == ExpenseType::Expense
 }
 
-fn parse_date(date: &str) -> Option<NaiveDate> {
-    NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()
+fn parse_date(date: &str) -> Option<Date> {
+    Date::parse_ymd(date)
 }
 
 fn sort_desc<K>(data: &mut [(K, f64)]) {
@@ -76,8 +76,8 @@ pub fn per_person(total: f64, participants: usize) -> f64 {
 
 pub fn filter_by_date_range(
     expenses: &[DecryptedExpense],
-    from: Option<NaiveDate>,
-    to: Option<NaiveDate>,
+    from: Option<Date>,
+    to: Option<Date>,
 ) -> Vec<DecryptedExpense> {
     if from.is_none() && to.is_none() {
         return expenses.to_vec();
@@ -268,8 +268,8 @@ pub fn paid_vs_share(expenses: &[DecryptedExpense], payments: &[DecryptedPayment
     rows
 }
 
-pub fn auto_bucket(from: NaiveDate, to: NaiveDate) -> Bucket {
-    let days = (to - from).num_days() + 1;
+pub fn auto_bucket(from: Date, to: Date) -> Bucket {
+    let days = to.days_since(from) + 1;
     if days <= 31 {
         Bucket::Day
     } else if days <= 183 {
@@ -279,30 +279,30 @@ pub fn auto_bucket(from: NaiveDate, to: NaiveDate) -> Bucket {
     }
 }
 
-pub fn bucket_start(date: NaiveDate, bucket: Bucket) -> NaiveDate {
+pub fn bucket_start(date: Date, bucket: Bucket) -> Date {
     match bucket {
         Bucket::Day => date,
-        Bucket::Week => date.checked_sub_signed(Duration::days(date.weekday().num_days_from_monday() as i64)).unwrap_or(NaiveDate::MIN),
+        Bucket::Week => date.checked_sub_days(date.weekday().to_monday_zero_offset() as i64).unwrap_or(Date::MIN),
         Bucket::Month => date.with_day(1).unwrap_or(date),
     }
 }
 
-fn previous_bucket(start: NaiveDate, bucket: Bucket) -> Option<NaiveDate> {
+fn previous_bucket(start: Date, bucket: Bucket) -> Option<Date> {
     match bucket {
-        Bucket::Day => start.checked_sub_signed(Duration::days(1)),
-        Bucket::Week => start.checked_sub_signed(Duration::days(7)),
-        Bucket::Month => start.checked_sub_months(Months::new(1)),
+        Bucket::Day => start.checked_sub_days(1),
+        Bucket::Week => start.checked_sub_days(7),
+        Bucket::Month => start.checked_sub_months(1),
     }
 }
 
 /// Arithmetic, not by walking: a tampered date in year 1 must not spin a loop.
-pub fn bucket_count(from: NaiveDate, to: NaiveDate, bucket: Bucket) -> usize {
+pub fn bucket_count(from: Date, to: Date, bucket: Bucket) -> usize {
     if from > to {
         return 0;
     }
     let n = match bucket {
-        Bucket::Day => (to - from).num_days() + 1,
-        Bucket::Week => (bucket_start(to, bucket) - bucket_start(from, bucket)).num_days() / 7 + 1,
+        Bucket::Day => to.days_since(from) + 1,
+        Bucket::Week => bucket_start(to, bucket).days_since(bucket_start(from, bucket)) / 7 + 1,
         Bucket::Month => {
             (to.year() - from.year()) as i64 * 12 + to.month() as i64 - from.month() as i64 + 1
         }
@@ -311,7 +311,7 @@ pub fn bucket_count(from: NaiveDate, to: NaiveDate, bucket: Bucket) -> usize {
 }
 
 /// Every bucket start covering `from..=to`, the latest `MAX_BUCKETS` of them.
-pub fn bucket_starts(from: NaiveDate, to: NaiveDate, bucket: Bucket) -> Vec<NaiveDate> {
+pub fn bucket_starts(from: Date, to: Date, bucket: Bucket) -> Vec<Date> {
     if from > to {
         return vec![];
     }
@@ -329,8 +329,8 @@ pub fn bucket_starts(from: NaiveDate, to: NaiveDate, bucket: Bucket) -> Vec<Naiv
     out
 }
 
-pub fn sum_by_bucket(expenses: &[DecryptedExpense], starts: &[NaiveDate], bucket: Bucket) -> Vec<f64> {
-    let index: HashMap<NaiveDate, usize> = starts.iter().enumerate().map(|(i, d)| (*d, i)).collect();
+pub fn sum_by_bucket(expenses: &[DecryptedExpense], starts: &[Date], bucket: Bucket) -> Vec<f64> {
+    let index: HashMap<Date, usize> = starts.iter().enumerate().map(|(i, d)| (*d, i)).collect();
     let mut out = vec![0.0; starts.len()];
     for e in expenses.iter().filter(|e| is_expense(e)) {
         if let Some(i) = parse_date(&e.date).and_then(|d| index.get(&bucket_start(d, bucket))) {
@@ -364,12 +364,12 @@ pub fn balance_by_bucket(
     expenses: &[DecryptedExpense],
     payments: &[DecryptedPayment],
     user_id: i32,
-    starts: &[NaiveDate],
+    starts: &[Date],
     bucket: Bucket,
 ) -> Vec<f64> {
-    let dates: HashMap<i32, NaiveDate> =
+    let dates: HashMap<i32, Date> =
         expenses.iter().filter_map(|e| parse_date(&e.date).map(|d| (e.id, bucket_start(d, bucket)))).collect();
-    let deltas: Vec<(NaiveDate, f64)> = payments
+    let deltas: Vec<(Date, f64)> = payments
         .iter()
         .filter(|p| p.user_id == user_id)
         .filter_map(|p| dates.get(&p.expense_id).map(|d| (*d, if p.is_debt { -p.amount } else { p.amount })))
@@ -453,15 +453,15 @@ pub fn percent(part: f64, whole: f64) -> i64 {
 
 #[cfg(test)]
 mod tests {
+    use shared::time::DateTime;
     use super::*;
-    use chrono::NaiveDateTime;
 
     fn expense(id: i32, amount: f64, date: &str, category: &str) -> DecryptedExpense {
         DecryptedExpense {
             id,
             author_id: Some(1),
             project_id: Uuid::nil(),
-            created_at: NaiveDateTime::default(),
+            created_at: DateTime::default(),
             name: format!("e{id}"),
             description: None,
             amount,
@@ -477,10 +477,10 @@ mod tests {
     }
 
     fn payment(expense_id: i32, user_id: i32, is_debt: bool, amount: f64) -> DecryptedPayment {
-        DecryptedPayment { id: 0, expense_id, user_id, is_debt, amount, created_at: NaiveDateTime::default() }
+        DecryptedPayment { id: 0, expense_id, user_id, is_debt, amount, created_at: DateTime::default() }
     }
 
-    fn day(d: &str) -> NaiveDate {
+    fn day(d: &str) -> Date {
         parse_date(d).unwrap()
     }
 
@@ -715,5 +715,35 @@ mod tests {
         assert_eq!(running_total(&[1.0, 2.0, 3.0]), [1.0, 3.0, 6.0]);
         assert_eq!(average(&[]), 0.0);
         assert_eq!(average(&[2.0, 4.0]), 3.0);
+    }
+
+    #[test]
+    fn chart_buckets_match_golden() {
+        use crate::time_golden::{app_date, date_text, dates_text, Rng};
+        use std::fmt::Write;
+        let mut rng = Rng::new(0x5EED_C4A0_0000_0003);
+        let mut out = String::new();
+        for _ in 0..1500 {
+            let from = app_date(&mut rng, 9990);
+            let to = match rng.next() % 4 {
+                0 => from,
+                1 => from.checked_add_days(rng.range(0, 40)).unwrap(),
+                2 => from.checked_add_days(rng.range(0, 800)).unwrap(),
+                _ => app_date(&mut rng, 9990),
+            };
+            write!(out, "buckets\t{}\t{}\t{:?}", date_text(from), date_text(to), auto_bucket(from, to)).unwrap();
+            for bucket in [Bucket::Day, Bucket::Week, Bucket::Month] {
+                write!(
+                    out,
+                    "\t{}|{}|{}",
+                    date_text(bucket_start(from, bucket)),
+                    bucket_count(from, to, bucket),
+                    dates_text(bucket_starts(from, to, bucket)),
+                )
+                .unwrap();
+            }
+            out.push('\n');
+        }
+        crate::time_golden::check_golden("charts.tsv", &out);
     }
 }

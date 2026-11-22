@@ -135,6 +135,9 @@ pub const ACCOUNT_KEY_CHANGED: &str = "The account key changed on another device
 pub const ROTATION_INCOMPLETE: &str = "The account changed while its key was being rotated";
 /// A password that was this account's until a reset in the last 30 days: the reset can be undone.
 pub const RESET_UNDOABLE: &str = "This password was replaced by a recent reset";
+/// A creation under an id a stored row holds, or for a project, one a deleted project held (SPEC
+/// 15.9.1).
+pub const ID_TAKEN: &str = "This id is already in use";
 
 // -------- 429 --------
 pub const RESEND_COOLDOWN: &str = "Veuillez attendre 60 secondes avant de renvoyer l'email.";

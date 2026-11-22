@@ -1,0 +1,49 @@
+use chrono::{Datelike, NaiveDate, NaiveDateTime, Timelike};
+
+fn date_text(d: NaiveDate) -> String {
+    format!("{}/{}/{}", d.year(), d.month(), d.day())
+}
+
+fn dt_text(t: NaiveDateTime) -> String {
+    let (second, nanos) = if t.nanosecond() >= 1_000_000_000 { (59, 999_999_999) } else { (t.second(), t.nanosecond()) };
+    format!("{} {}:{}:{}.{:09}", date_text(t.date()), t.hour(), t.minute(), second, nanos)
+}
+
+fn main() {
+    let spaces = [" ", "\t", "\n", "\u{a0}", "\u{3000}", "\u{2028}", "\u{85}", "  "];
+    let date_holes = ["{s}2024-03-05", "2024{s}-03-05", "2024-{s}03-05", "2024-03{s}-05", "2024-03-{s}05", "2024-03-05{s}", "-{s}0001-01-01", "+{s}2024-03-05"];
+    let dt_holes = [
+        "{s}2024-03-05T07:08:09",
+        "2024{s}-03-05T07:08:09",
+        "2024-03-05{s}T07:08:09",
+        "2024-03-05T{s}07:08:09",
+        "2024-03-05T07{s}:08:09",
+        "2024-03-05T07:{s}08:09",
+        "2024-03-05T07:08{s}:09",
+        "2024-03-05T07:08:{s}09",
+        "2024-03-05T07:08:09{s}.5",
+        "2024-03-05T07:08:09.{s}5",
+        "2024-03-05T07:08:09.5{s}",
+        "2024-03-05T07:08:09{s}",
+        "2024-03-05T23:59:{s}60",
+    ];
+    for space in spaces {
+        for hole in date_holes.iter().chain(dt_holes.iter()) {
+            let s = hole.replace("{s}", space);
+            let json = serde_json::to_string(&s).unwrap();
+            let date = serde_json::from_str::<NaiveDate>(&json).map(date_text).unwrap_or_else(|_| "err".into());
+            let dt = serde_json::from_str::<NaiveDateTime>(&json).map(dt_text).unwrap_or_else(|_| "err".into());
+            let ymd = NaiveDate::parse_from_str(&s, "%Y-%m-%d").map(date_text).unwrap_or_else(|_| "none".into());
+            println!("space\t{json}\t{date}\t{dt}\t{ymd}");
+        }
+    }
+    let fmt = |d: Option<NaiveDate>| d.filter(|d| (-9999..=9999).contains(&d.year())).map(date_text).unwrap_or_else(|| "none".into());
+    for (y, m, d) in [(-9999, 1, 1), (-9999, 1, 31), (-9999, 12, 31), (9999, 12, 31), (9999, 1, 31), (2024, 1, 31), (2024, 2, 29)] {
+        let anchor = NaiveDate::from_ymd_opt(y, m, d).unwrap();
+        for n in [0u32, 1, 11, 12, 13, 119_987, 119_988, 119_999, 239_975, 239_976, 239_977, 239_980, 239_986, 239_987, 239_988, 239_999, 240_000, 2_147_483_647, 2_147_483_648, 4_294_967_295] {
+            let add = fmt(anchor.checked_add_months(chrono::Months::new(n)));
+            let sub = fmt(anchor.checked_sub_months(chrono::Months::new(n)));
+            println!("months\t{}\t{n}\t{add}\t{sub}", date_text(anchor));
+        }
+    }
+}

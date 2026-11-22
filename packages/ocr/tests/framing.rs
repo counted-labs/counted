@@ -133,7 +133,7 @@ fn background_above_the_receipt_does_not_lose_the_title() {
     let base = fixture();
     for fraction in [0.3_f32, 0.5, 0.8] {
         let jpeg = to_jpeg(&pad_top(&base, fraction), QUALITY);
-        let title = ocr::scan(&jpeg).ok().and_then(|r| r.title);
+        let title = ocr::scan(&jpeg, shared::time::DateTime::now_utc().date()).ok().and_then(|r| r.title);
         assert_eq!(
             title.as_deref(),
             Some("Carrefour Market"),
@@ -150,7 +150,7 @@ fn a_tilted_receipt_does_not_lose_the_title() {
     let base = fixture();
     for degrees in [3.0_f32, 5.0, 10.0] {
         let jpeg = to_jpeg(&rotate(&base, degrees), QUALITY);
-        let title = ocr::scan(&jpeg).ok().and_then(|r| r.title);
+        let title = ocr::scan(&jpeg, shared::time::DateTime::now_utc().date()).ok().and_then(|r| r.title);
         assert_eq!(title.as_deref(), Some("Carrefour Market"), "{degrees} degrees lost the title");
     }
 }
@@ -177,7 +177,7 @@ fn which_transform_loses_the_title() {
         let quality = if name == "jpeg q50" { 50 } else { QUALITY };
         let jpeg = to_jpeg(img, quality);
         let lines = ocr::text_lines(&jpeg).unwrap_or_default();
-        let title = ocr::scan(&jpeg).ok().and_then(|r| r.title);
+        let title = ocr::scan(&jpeg, shared::time::DateTime::now_utc().date()).ok().and_then(|r| r.title);
 
         println!(
             "\n=== {name} ({}x{}) -> title {:?}",

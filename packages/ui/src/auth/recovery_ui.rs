@@ -1,8 +1,7 @@
 //! The recovery key in settings, and the banner a pending reset shows (docs/plans/key-lifecycle.md
 //! §6). Every flow lives in `account_rotation` and `recovery_flow`; this only renders and calls.
-
-use chrono::{Local, NaiveDateTime, TimeZone, Utc};
 use dioxus::prelude::*;
+use shared::time::DateTime;
 use shared::Account;
 
 use crate::auth::account_key::remember;
@@ -14,9 +13,9 @@ use crate::icons::{KeyIcon, UndoIcon};
 use crate::tid;
 
 /// A server time (UTC) as the device's local date and time.
-pub fn format_moment(at: NaiveDateTime) -> String {
-    let local = Utc.from_utc_datetime(&at).with_timezone(&Local);
-    format!("{} {}", format_date(local.date_naive()), local.format("%H:%M"))
+pub fn format_moment(at: DateTime) -> String {
+    let local = crate::common::local_time::to_local(at);
+    format!("{} {}", format_date(local.date()), local.hm())
 }
 
 /// Which group of the key the confirmation asks for: one the user cannot skip by reading the first.

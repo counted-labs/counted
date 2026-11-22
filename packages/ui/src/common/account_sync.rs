@@ -53,16 +53,20 @@ pub fn left_elsewhere(
 }
 
 /// Forgets what [`left_elsewhere`] found, except a project a rotation removed this account from
-/// (`rotated`, or already marked): that one keeps a row opening T10 (D14).
-pub fn forget_left(state: &mut LocalStorageState, left: &[Uuid], rotated: &[Uuid]) {
+/// (`rotated`, or already marked): that one keeps a row opening T10 (D14). Answers the projects
+/// forgotten, whose queued ops have no key left to go out under.
+pub fn forget_left(state: &mut LocalStorageState, left: &[Uuid], rotated: &[Uuid]) -> Vec<Uuid> {
+    let mut forgotten = Vec::new();
     for project_id in left {
         let marked = state.projects.iter().any(|p| p.project_id == *project_id && p.key_rotated);
         if marked || rotated.contains(project_id) {
             crate::rotation_flow::mark_rotated(state, *project_id);
         } else {
             remove_project(state, *project_id);
+            forgotten.push(*project_id);
         }
     }
+    forgotten
 }
 
 /// What this device should send up, given what the server already has.
@@ -215,6 +219,7 @@ pub fn apply_pull(
 
 #[cfg(test)]
 mod tests {
+    use shared::time::DateTime;
     use super::*;
     use crate::common::local_storage::LocalStorageProject;
     use crate::crypto::{generate_key, key_to_fragment, wrap_key_untyped};
@@ -225,6 +230,18 @@ mod tests {
 
     fn state(projects: Vec<LocalStorageProject>) -> LocalStorageState {
         LocalStorageState { projects, ..Default::default() }
+    }
+
+    /// I12, SPEC §15.9.5 Q5: a pull leaves a held project's previous keys as they are.
+    #[test]
+    fn a_pull_keeps_the_previous_keys_of_a_held_project() {
+        let id = Uuid::new_v4();
+        let account_key = generate_key();
+        let held = LocalStorageProject { previous_keys: vec![(0, "k0".into())], ..local(id, Some(1), Some(key_to_fragment(&generate_key()))) };
+        let mut s = state(vec![held]);
+        let wrapped = crate::crypto::wrap_key(&account_key, crate::crypto::WrapUse::Escrow(id), &generate_key());
+        apply_pull(&mut s, &[remote(id, Some(2), wrapped)], Some(&account_key), Uuid::new_v4(), None);
+        assert_eq!(s.projects[0].previous_keys, vec![(0, "k0".to_string())]);
     }
 
     /// A server row for a project whose verifier is already seeded and whose payment-methods copy
@@ -569,8 +586,8 @@ mod tests {
 
         let gone = left_elsewhere(&device, &[], account);
         assert_eq!(gone, vec![removed, left]);
-        forget_left(&mut device, &gone, &[removed]);
-        forget_left(&mut adopted_first, &gone, &[]);
+        assert_eq!(forget_left(&mut device, &gone, &[removed]), vec![left], "only the project left is forgotten");
+        assert_eq!(forget_left(&mut adopted_first, &gone, &[]), vec![left]);
 
         for device in [device, adopted_first] {
             assert_eq!(device.projects.len(), 1, "the project left elsewhere is forgotten");
@@ -598,7 +615,7 @@ mod tests {
                 id: Uuid::new_v4(),
                 email: "a@b.c".into(),
                 display_name: shared::EncryptedPair::default(),
-                created_at: chrono::NaiveDateTime::default(),
+                created_at: DateTime::default(),
                 email_verified: true,
                 kdf_salt: vec![0; 16],
                 kdf_version: 1,

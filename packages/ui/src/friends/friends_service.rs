@@ -596,7 +596,7 @@ pub(crate) fn open_hostile(raw: bool, data: &[u8]) -> Option<[u8; 32]> {
         from_public_key: from_public.clone(),
         key: None,
         hybrid: Some(sealed),
-        created_at: chrono::NaiveDateTime::default(),
+        created_at: shared::time::DateTime::default(),
         user_id: None,
     };
     let friend = Friend { id: Uuid::nil(), account_id: HOSTILE_FROM, email: String::new(), public_key: Some(from_public), kem_public_key: None };
@@ -606,6 +606,7 @@ pub(crate) fn open_hostile(raw: bool, data: &[u8]) -> Option<[u8; 32]> {
 
 #[cfg(test)]
 mod tests {
+    use shared::time::DateTime;
     use super::*;
 
     #[test]
@@ -625,7 +626,6 @@ mod tests {
         }
     }
     use crate::crypto::{encrypt, generate_key, generate_keypair};
-    use chrono::NaiveDateTime;
     use shared::{EncryptedPair, OutgoingFriendRequest};
 
     fn friend(public_key: Option<Vec<u8>>) -> Friend {
@@ -678,7 +678,7 @@ mod tests {
             outgoing: vec![OutgoingFriendRequest {
                 id: Uuid::new_v4(),
                 label: encrypt(&account_key, "carol@x.io").unwrap(),
-                created_at: NaiveDateTime::default(),
+                created_at: DateTime::default(),
             }],
             invite_mail: false,
         };
@@ -757,7 +757,7 @@ mod tests {
             id: Uuid::nil(),
             email: "me@x.io".into(),
             display_name: EncryptedPair { ct: String::new(), iv: String::new() },
-            created_at: NaiveDateTime::default(),
+            created_at: DateTime::default(),
             email_verified: true,
             kdf_salt: vec![0; 16],
             kdf_version: 1,
@@ -965,7 +965,7 @@ mod tests {
             from_public_key: vec![],
             key: Some(EncryptedPair { ct: String::new(), iv: String::new() }),
             hybrid: None,
-            created_at: NaiveDateTime::default(),
+            created_at: DateTime::default(),
             user_id: None,
         }
     }
@@ -999,7 +999,7 @@ mod tests {
             id,
             payload: crate::crypto::encrypt_json(key, &payload).unwrap(),
             status: shared::ProjectStatus::Ongoing,
-            created_at: NaiveDateTime::default(),
+            created_at: DateTime::default(),
             has_admin: false,
             key_lifecycle: false,
             key_epoch: 0,
@@ -1035,7 +1035,7 @@ mod tests {
             id: Uuid::nil(),
             email: "me@x.io".into(),
             display_name: EncryptedPair { ct: String::new(), iv: String::new() },
-            created_at: NaiveDateTime::default(),
+            created_at: DateTime::default(),
             email_verified: true,
             kdf_salt: vec![0; 16],
             kdf_version: 1,
@@ -1084,7 +1084,7 @@ mod tests {
             from_public_key: from.friend.public_key.clone().unwrap(),
             key: None,
             hybrid: Some(sealed),
-            created_at: NaiveDateTime::default(),
+            created_at: DateTime::default(),
             user_id: None,
         }
     }

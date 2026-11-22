@@ -1057,11 +1057,11 @@ fn install_scanner() {
     use ui::common::{NativeScan, ScanError, ScanFields};
 
     ui::common::set_native_scan(NativeScan {
-        recognise: Arc::new(|jpeg: Vec<u8>| match ocr::scan(&jpeg) {
+        recognise: Arc::new(|jpeg: Vec<u8>| match ocr::scan(&jpeg, ui::common::local_time::today()) {
             Ok(receipt) => Ok(ScanFields {
                 title: receipt.title,
                 amount: receipt.amount,
-                date: receipt.date.map(|d| d.format("%Y-%m-%d").to_string()),
+                date: receipt.date.map(|d| d.ymd()),
                 amount_confident: receipt.amount_confident,
             }),
             // Every failure reads the same to the user: nothing usable on that photo. The

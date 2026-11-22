@@ -38,6 +38,8 @@ const accountScoped: Call[] = [
   { name: 'GET /projects/{id}/invitations/sent', send: (api) => api.get(`/api/v1/projects/${someId}/invitations/sent`) },
   { name: 'PUT /auth/preferences', send: (api) => api.put('/api/v1/auth/preferences', { data: pair(64) }) },
   { name: 'PUT /auth/payment-methods', send: (api) => api.put('/api/v1/auth/payment-methods', { data: { ...pair(64), shared: [] } }) },
+  { name: 'POST /distinctions/sign', send: (api) => api.post('/api/v1/distinctions/sign', { data: { badge: 1 } }) },
+  { name: 'PUT /distinctions', send: (api) => api.put('/api/v1/distinctions', { data: { copies: [] } }) },
   { name: 'PUT /auth/keypair', send: (api) => api.put('/api/v1/auth/keypair', { data: { publicKey: bytes(32), privateKey: pair(48) } }) },
 ];
 

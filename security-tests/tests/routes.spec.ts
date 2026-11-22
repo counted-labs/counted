@@ -57,6 +57,10 @@ const coverage: Record<string, Coverage> = {
   'DELETE /api/v1/friends/{id}': { tested: ['A1'] },
   'POST /api/v1/mail/unsubscribe': { tested: ['A9'] },
 
+  'GET /api/v1/distinctions/keys': { publicByDesign: 'the public verification keys, same answer for everyone' },
+  'POST /api/v1/distinctions/sign': { tested: ['A1'] },
+  'PUT /api/v1/distinctions': { tested: ['A1'] },
+
   'POST /api/v1/projects/{project_id}/invitations': { tested: ['A8'] },
   'POST /api/v1/projects/{project_id}/invitations/batch': { tested: ['A8'] },
   'GET /api/v1/projects/invitations': { tested: ['A1', 'A8'] },
@@ -73,7 +77,7 @@ const coverage: Record<string, Coverage> = {
 
   'GET /api/v1/projects/{project_id}': { tested: ['B5'] },
   'POST /api/v1/projects/batch': { pending: 'B5 on the batched read' },
-  'POST /api/v1/projects': { tested: ['C3', 'D1'] },
+  'POST /api/v1/projects': { tested: ['B7', 'C3', 'D1'] },
   'PUT /api/v1/projects': { pending: 'B4: refused on a read-only or demo project' },
   'POST /api/v1/projects/convert': { tested: ['B3'] },
   'POST /api/v1/projects/members': { publicByDesign: 'anonymous membership, idempotent (projects_controller.rs)' },

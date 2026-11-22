@@ -167,7 +167,9 @@ pub async fn adopt_project_key(
     };
     if let Some(served) = served.filter(|s| crate::rotation::may_switch(&held, &candidate, s, chain_seen)) {
         let opened = crate::rotation::chain_len(&candidate, &served);
-        update_ls(ls_ctx, |state| crate::rotation_flow::switch_local(state, project_id, &held, &candidate, served.key_epoch, opened));
+        update_ls(ls_ctx, |state| {
+            crate::rotation_flow::switch_local(state, project_id, &held, &candidate, served.key_epoch, opened);
+        });
         return true;
     }
     match decision {
@@ -183,6 +185,9 @@ pub const LEAVE_CONFIRM_TITLE: &str = "leave-project-title";
 /// One wording for both outcomes - the client cannot know whether it is the last member without
 /// asking the server, and that round trip would buy nothing.
 pub const LEAVE_CONFIRM_MESSAGE: &str = "leave-project-message";
+
+/// Appended to the message while changes for the project are still queued: leaving drops them.
+pub const LEAVE_UNSENT: &str = "leave-project-unsent";
 
 /// Whether the server accepted the identity this device believes it is.
 ///
@@ -276,12 +281,14 @@ pub fn identity_locked(user: &DecryptedUser, my_user_id: Option<i32>) -> bool {
     user.claimed && Some(user.id) != my_user_id
 }
 
-/// Leaves the project and drops every local trace of it.
+/// Leaves the project and drops every local trace of it, its queued ops and the ops that wait on
+/// them included: with the key gone, none of them can be sent.
 ///
 /// Local state is cleared only on success: forgetting the `member_id` while the server still
 /// holds the row would leave a member nobody can remove, and the project could never be deleted.
 pub async fn leave_project_and_forget(
     ls_ctx: Signal<LocalStorageState>,
+    pending_ops: Signal<super::Queue>,
     project_id: Uuid,
 ) -> Result<(), String> {
     let member_id = read_from_ls()
@@ -300,6 +307,7 @@ pub async fn leave_project_and_forget(
     }
 
     update_ls(ls_ctx, |state| remove_project(state, project_id));
+    super::offline_queue::forget_project(pending_ops, project_id);
 
     Ok(())
 }
@@ -310,7 +318,7 @@ mod key_guard {
     #[test]
     fn leave_confirm_keys_are_known_messages() {
         let known = crate::i18n::locale_ids(crate::i18n::FALLBACK);
-        for key in [super::LEAVE_CONFIRM_TITLE, super::LEAVE_CONFIRM_MESSAGE] {
+        for key in [super::LEAVE_CONFIRM_TITLE, super::LEAVE_CONFIRM_MESSAGE, super::LEAVE_UNSENT] {
             assert!(known.contains(key), "{key} is not defined in the fallback locale");
         }
     }
@@ -414,6 +422,15 @@ mod tests {
         assert!(take_offer(&mut state, &offer));
         assert_eq!(key_of(&state.projects[0]), Some(GOOD));
         assert_eq!(state.projects[0].chain_seen, 0);
+    }
+
+    /// I12, SPEC §15.9.5 Q5: a key taken in place of the held one keeps the previous keys.
+    #[test]
+    fn a_confirmed_key_keeps_the_previous_keys() {
+        let (mut state, offer) = holding(&WRONG, false);
+        state.projects[0].previous_keys = vec![(0, "k0".into())];
+        assert!(take_offer(&mut state, &offer));
+        assert_eq!(state.projects[0].previous_keys, vec![(0, "k0".to_string())]);
     }
 
     /// The answer lands after the question: a held key that changed or opened the project in

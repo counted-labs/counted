@@ -1,0 +1,4 @@
+• Mes badges : une collection de 15 badges, calculés sur votre appareil. Personne d’autre ne les voit
+• Badge affiché : choisissez un badge visible par les autres membres de vos projets partagés. Aucun par défaut
+• Hors ligne : vos changements en attente sont envoyés de façon plus sûre
+• Petites corrections et améliorations

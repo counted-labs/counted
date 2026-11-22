@@ -1,11 +1,11 @@
 //! Getting back into an account (docs/plans/key-lifecycle.md §6): with the recovery key, without it
 //! after a delay, cancelling a reset, and undoing one with the old password.
 
+use shared::time::DateTime;
 use api::auth::auth_controller::{
     cancel_reset as post_cancel_reset, complete_recovery, forgot_password, login_salt, recovery_start, recovery_wrap,
     request_reset as post_request_reset, retired_generation, undo_reset as post_undo_reset,
 };
-use chrono::NaiveDateTime;
 use dioxus::fullstack::Json;
 use dioxus::prelude::ServerFnError;
 use shared::{
@@ -76,7 +76,7 @@ pub async fn recover_with_key(
 
 /// Plan §6.3: a fresh account - new master key, new hybrid keypair, the name given here - that takes
 /// effect 72 hours from now unless the owner cancels it. Returns when.
-pub async fn request_reset(token: String, start: &RecoveryStart, name: &str, new_password: &str) -> Result<NaiveDateTime, ServerFnError> {
+pub async fn request_reset(token: String, start: &RecoveryStart, name: &str, new_password: &str) -> Result<DateTime, ServerFnError> {
     let new_password = nfc(new_password);
     let new_kdf_salt = generate_kdf_salt();
     let pw_key = account_key(&new_password, new_kdf_salt.to_vec()).await?;

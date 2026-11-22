@@ -1,5 +1,5 @@
 use api::recurring::recurring_controller::{delete_recurring_expense, edit_recurring_expense};
-use chrono::NaiveDate;
+use shared::time::Date;
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use shared::{DeleteRecurringExpenseRequest, HistoryAction};
@@ -15,17 +15,17 @@ pub fn paused(p: &RecurringPayload) -> RecurringPayload {
     RecurringPayload { paused: true, ..p.clone() }
 }
 
-pub fn resumed(p: &RecurringPayload, today: NaiveDate) -> RecurringPayload {
+pub fn resumed(p: &RecurringPayload, today: Date) -> RecurringPayload {
     RecurringPayload { paused: false, next: resume_index(&p.rule, p.next, today), ..p.clone() }
 }
 
-/// The date of the last occurrence already written, which a re-anchored rule must stay after:
-/// its `client_op_id` would collide and abort every later materialization.
-pub fn last_written(p: &RecurringPayload) -> Option<NaiveDate> {
+/// The date of the last occurrence already written, which a re-anchored rule must stay after: an
+/// occurrence on a date already written has its `client_op_id` taken, and the server leaves it out.
+pub fn last_written(p: &RecurringPayload) -> Option<Date> {
     p.next.checked_sub(1).and_then(|n| nth_date(&p.rule, n))
 }
 
-pub fn next_on_is_valid(p: &RecurringPayload, next_on: NaiveDate) -> bool {
+pub fn next_on_is_valid(p: &RecurringPayload, next_on: Date) -> bool {
     last_written(p).is_none_or(|last| next_on > last)
 }
 
@@ -118,8 +118,8 @@ mod tests {
     use super::*;
     use crate::recurring::model::{Ends, Freq, Rule};
 
-    fn d(y: i32, m: u32, day: u32) -> NaiveDate {
-        NaiveDate::from_ymd_opt(y, m, day).unwrap()
+    fn d(y: i32, m: u32, day: u32) -> Date {
+        Date::from_ymd_opt(y, m, day).unwrap()
     }
 
     fn payload(next: u32) -> RecurringPayload {

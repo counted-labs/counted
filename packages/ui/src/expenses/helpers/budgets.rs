@@ -1,8 +1,7 @@
 //! The personal project's monthly budgets (designs P2, P3, R3): what each category's share of the
 //! month comes to, measured against its ceiling. Everything here runs on the device.
-
-use chrono::NaiveDate;
 use shared::{Budgets, ExpenseType};
+use shared::time::Date;
 use std::collections::{BTreeMap, HashMap};
 
 use crate::categories::{ProjectCategories, ShownCategory};
@@ -13,7 +12,7 @@ use crate::expenses::helpers::project_data::RowExpense;
 /// currency. A custom category counts for itself and for its parent; a group's share counts for the
 /// parent alone, its custom categories being that group's. A share with no rate is left out, as it is
 /// from the month's total.
-pub fn spent_by_category(own: &[RowExpense], shares: &[ShareRow], month: NaiveDate) -> HashMap<String, f64> {
+pub fn spent_by_category(own: &[RowExpense], shares: &[ShareRow], month: Date) -> HashMap<String, f64> {
     let mut spent: HashMap<String, f64> = HashMap::new();
     for r in own.iter().filter(|r| r.expense.expense_type == ExpenseType::Expense && in_month(r.date, month)) {
         *spent.entry(r.category.parent.to_string()).or_default() += r.expense.amount;
@@ -30,7 +29,7 @@ pub fn spent_by_category(own: &[RowExpense], shares: &[ShareRow], month: NaiveDa
 }
 
 /// The average of the three months before `month`, shown next to each ceiling while it is set.
-pub fn average_by_category(own: &[RowExpense], shares: &[ShareRow], month: NaiveDate) -> HashMap<String, f64> {
+pub fn average_by_category(own: &[RowExpense], shares: &[ShareRow], month: Date) -> HashMap<String, f64> {
     let mut sum: HashMap<String, f64> = HashMap::new();
     for back in 1..=3 {
         for (category, amount) in spent_by_category(own, shares, shift_month(month, -back)) {
@@ -122,8 +121,8 @@ mod tests {
     use crate::common::test_fixtures::{make_expense, test_key};
     use crate::decrypted::decrypt_expense;
 
-    fn day(s: &str) -> NaiveDate {
-        NaiveDate::parse_from_str(s, "%Y-%m-%d").unwrap()
+    fn day(s: &str) -> Date {
+        Date::parse_ymd(s).unwrap()
     }
 
     fn own(id: i32, name: &str, amount: f64, kind: ExpenseType, date: &str) -> RowExpense {

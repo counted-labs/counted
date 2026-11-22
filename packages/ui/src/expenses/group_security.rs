@@ -436,7 +436,7 @@ mod tests {
     fn user(key: &[u8; 32], id: i32, name: &str, claimed: bool, admin: bool, label: Option<&str>) -> User {
         User {
             id,
-            payload: encrypt_json(key, &UserPayload { name: name.into(), removed: false }).unwrap(),
+            payload: encrypt_json(key, &UserPayload { name: name.into(), removed: false, extra: Default::default() }).unwrap(),
             claimed,
             admin,
             claim_label: label.map(|l| encrypt_json(key, &l.to_string()).unwrap()),

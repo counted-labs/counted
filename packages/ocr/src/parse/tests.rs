@@ -1,10 +1,10 @@
 use super::*;
 
-fn day(y: i32, m: u32, d: u32) -> NaiveDate {
-    NaiveDate::from_ymd_opt(y, m, d).unwrap()
+fn day(y: i32, m: u32, d: u32) -> Date {
+    Date::from_ymd_opt(y, m, d).unwrap()
 }
 
-fn today() -> NaiveDate {
+fn today() -> Date {
     day(2026, 9, 4)
 }
 

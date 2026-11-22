@@ -9,6 +9,7 @@
 //! user never causes a fetch, of either kind.
 
 use serde::{Deserialize, Serialize};
+use shared::time::DateTime;
 use std::collections::HashMap;
 
 use super::persist;
@@ -20,7 +21,7 @@ const LABEL: &str = "fx rates";
 /// month; a day is what keeps the month rollover from lagging noticeably on a device.
 const MAX_AGE_SECONDS: i64 = 24 * 60 * 60;
 
-/// `fetched_at` is a Unix timestamp in seconds, not a `NaiveDateTime`: it is only ever compared
+/// `fetched_at` is a Unix timestamp in seconds, not a `DateTime`: it is only ever compared
 /// against "now" for an age, and a plain integer survives a clock format change.
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq)]
 #[serde(default)]
@@ -46,9 +47,9 @@ pub fn clear_fx() {
     persist::remove_store(KEY);
 }
 
-/// Seconds since the Unix epoch. `chrono::Utc::now` works on wasm and native alike.
+/// Seconds since the Unix epoch, on wasm and native alike.
 pub fn now_seconds() -> i64 {
-    chrono::Utc::now().timestamp()
+    DateTime::now_utc().unix_secs()
 }
 
 /// True when the table is recent enough to use without asking the server.

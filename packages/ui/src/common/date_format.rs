@@ -1,12 +1,12 @@
-use chrono::Datelike;
 use crate::tid;
+use shared::time::{Date, DateTime};
 
 /// A date as a reader of the active language expects it: `24 août 2026`, `August 24, 2026`.
 ///
 /// The field *order* lives in the `.ftl` (`date-long`), not here - only the locale file knows
 /// whether the month comes first. `chrono`'s `%B` is English-only, and `fluent-rs` ships no CLDR
 /// data, so its `DATETIME` builtin cannot do this either; the month names are ordinary messages.
-pub fn format_date(date: chrono::NaiveDate) -> String {
+pub fn format_date(date: Date) -> String {
     tid!(
         "date-long",
         day: date.day() as i64,
@@ -19,17 +19,17 @@ pub fn format_date(date: chrono::NaiveDate) -> String {
 /// string: a date that fails to parse means a tampered or outdated writer, and showing it as-is
 /// beats hiding it or panicking on the render path.
 pub fn format_date_str(date: &str) -> String {
-    chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
+    Date::parse_ymd(date)
         .map(format_date)
-        .unwrap_or_else(|_| date.to_string())
+        .unwrap_or_else(|| date.to_string())
 }
 
 /// `septembre 2026` / `September 2026`, from any `%Y-%m-%d` date in that month - what the rate
 /// hint shows for a table valid for a calendar month. Same raw-string fallback as above.
 pub fn format_month_str(date: &str) -> String {
-    chrono::NaiveDate::parse_from_str(date, "%Y-%m-%d")
+    Date::parse_ymd(date)
         .map(|d| format!("{} {}", month_name(d.month0() as usize), d.year()))
-        .unwrap_or_else(|_| date.to_string())
+        .unwrap_or_else(|| date.to_string())
 }
 
 /// Full month name, `month0` indexed (0 = January).
@@ -90,34 +90,36 @@ const MONTH_SHORT_KEYS: [MonthKey; 12] = [
     MonthKey(|| tid!("month-short-12")),
 ];
 
-pub fn local_today() -> chrono::NaiveDate {
-    chrono::Local::now().date_naive()
+pub fn local_today() -> Date {
+    crate::common::local_time::today()
 }
 
 pub fn today_iso() -> String {
-    day_iso(&chrono::Local::now(), 0)
+    let now = DateTime::now_utc();
+    day_iso(now, crate::common::local_time::offset_at(now), 0)
 }
 
 pub fn yesterday_iso() -> String {
-    day_iso(&chrono::Local::now(), 1)
+    let now = DateTime::now_utc();
+    day_iso(now, crate::common::local_time::offset_at(now), 1)
 }
 
-fn day_iso<Tz: chrono::TimeZone>(now: &chrono::DateTime<Tz>, days_back: i64) -> String {
-    (now.date_naive() - chrono::Duration::days(days_back)).format("%Y-%m-%d").to_string()
+fn day_iso(utc: DateTime, offset: i32, days_back: i64) -> String {
+    let day = utc.checked_add_seconds(offset as i64).unwrap_or(utc).date();
+    day.checked_sub_days(days_back).unwrap_or(day).ymd()
 }
 
 #[cfg(test)]
 mod tests {
-    use chrono::{NaiveDate, TimeZone};
 
     use super::*;
 
     #[test]
     fn the_day_is_the_one_on_the_wall_clock() {
-        let paris = chrono::FixedOffset::east_opt(3600).unwrap();
-        let just_after_midnight = paris.with_ymd_and_hms(2026, 11, 5, 0, 30, 0).unwrap();
-        assert_eq!(day_iso(&just_after_midnight, 0), "2026-11-05");
-        assert_eq!(day_iso(&just_after_midnight, 1), "2026-11-04");
+        let paris = 3600;
+        let just_after_midnight = Date::from_ymd_opt(2026, 11, 4).unwrap().and_hms_opt(23, 30, 0).unwrap();
+        assert_eq!(day_iso(just_after_midnight, paris, 0), "2026-11-05");
+        assert_eq!(day_iso(just_after_midnight, paris, 1), "2026-11-04");
     }
 
     /// Rendering needs an i18n context, which a plain unit test has no runtime for. What is
@@ -156,6 +158,6 @@ mod tests {
             let _ = MONTH_KEYS[m].0;
             let _ = MONTH_SHORT_KEYS[m].0;
         }
-        assert_eq!(NaiveDate::from_ymd_opt(2026, 8, 24).unwrap().month0(), 7);
+        assert_eq!(Date::from_ymd_opt(2026, 8, 24).unwrap().month0(), 7);
     }
 }

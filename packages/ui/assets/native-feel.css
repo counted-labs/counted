@@ -266,6 +266,18 @@ html[data-plat="android"] {
   position: relative;
 }
 
+/* Same trap in a sheet's scrolling body: its cards are `overflow-hidden`. */
+.modal-box > .overflow-y-auto.flex-col > * {
+  flex-shrink: 0;
+}
+
+/* A `tabindex="-1"` element is focused by script only (the page heading after a navigation, a
+   dialog on open) and is not in the tab order, so it gets no ring; WebKit drew one after some
+   taps. */
+[tabindex="-1"]:focus {
+  outline: none;
+}
+
 .list-group > :not(:first-child, .modal)::before {
   content: "";
   position: absolute;

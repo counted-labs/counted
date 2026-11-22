@@ -1,5 +1,5 @@
-use chrono::{Datelike, Days, Months, NaiveDate};
 use sha2::{Digest, Sha256};
+use shared::time::{Date, Weekday};
 use uuid::Uuid;
 
 use super::model::{Ends, Freq, Rule};
@@ -9,16 +9,16 @@ const MAX_INDEX: u32 = 10_000;
 
 /// The `n`th date of the rule, always counted from the anchor so a rule on the 31st lands on the
 /// last day of shorter months and returns to the 31st afterwards.
-pub fn nth_date(rule: &Rule, n: u32) -> Option<NaiveDate> {
+pub fn nth_date(rule: &Rule, n: u32) -> Option<Date> {
     let steps = n.checked_mul(rule.interval.max(1))?;
     match rule.freq {
-        Freq::Weekly => rule.anchor.checked_add_days(Days::new(7 * steps as u64)),
-        Freq::Monthly => rule.anchor.checked_add_months(Months::new(steps)),
-        Freq::Yearly => rule.anchor.checked_add_months(Months::new(steps.checked_mul(12)?)),
+        Freq::Weekly => rule.anchor.checked_add_days(7 * steps as i64),
+        Freq::Monthly => rule.anchor.checked_add_months(steps),
+        Freq::Yearly => rule.anchor.checked_add_months(steps.checked_mul(12)?),
     }
 }
 
-fn in_bounds(rule: &Rule, n: u32, date: NaiveDate) -> bool {
+fn in_bounds(rule: &Rule, n: u32, date: Date) -> bool {
     match rule.ends {
         Ends::Never => true,
         Ends::On(last) => date <= last,
@@ -27,7 +27,7 @@ fn in_bounds(rule: &Rule, n: u32, date: NaiveDate) -> bool {
 }
 
 /// The occurrences from `next` up to `today`, at most `limit` of them.
-pub fn due(rule: &Rule, next: u32, today: NaiveDate, limit: usize) -> Vec<(u32, NaiveDate)> {
+pub fn due(rule: &Rule, next: u32, today: Date, limit: usize) -> Vec<(u32, Date)> {
     let mut out = Vec::new();
     let mut n = next;
     while out.len() < limit && n < MAX_INDEX {
@@ -41,7 +41,7 @@ pub fn due(rule: &Rule, next: u32, today: NaiveDate, limit: usize) -> Vec<(u32, 
     out
 }
 
-pub fn upcoming(rule: &Rule, next: u32, count: usize) -> Vec<NaiveDate> {
+pub fn upcoming(rule: &Rule, next: u32, count: usize) -> Vec<Date> {
     (next..next.saturating_add(count as u32))
         .map_while(|n| nth_date(rule, n).filter(|d| in_bounds(rule, n, *d)))
         .collect()
@@ -53,7 +53,7 @@ pub fn is_finished(rule: &Rule, next: u32) -> bool {
 
 /// Where a resumed rule picks up: the first occurrence on or after `today`. The ones missed while
 /// paused are skipped, never backfilled.
-pub fn resume_index(rule: &Rule, next: u32, today: NaiveDate) -> u32 {
+pub fn resume_index(rule: &Rule, next: u32, today: Date) -> u32 {
     (next..MAX_INDEX)
         .find(|n| nth_date(rule, *n).is_none_or(|d| d >= today))
         .unwrap_or(next)
@@ -73,7 +73,7 @@ pub fn total(rule: &Rule) -> Option<u32> {
 }
 
 /// The date of the last occurrence, when the rule ends.
-pub fn last_date(rule: &Rule) -> Option<NaiveDate> {
+pub fn last_date(rule: &Rule) -> Option<Date> {
     total(rule).filter(|t| *t > 0).and_then(|t| nth_date(rule, t - 1))
 }
 
@@ -88,10 +88,10 @@ pub fn per_month(rule: &Rule) -> f64 {
 
 /// Deterministic per (rule, date), so the server's unique index refuses a second write of the same
 /// occurrence. Keyed by the secret seed: without it the server cannot test candidate dates.
-pub fn occurrence_id(seed: Uuid, date: NaiveDate) -> Uuid {
+pub fn occurrence_id(seed: Uuid, date: Date) -> Uuid {
     let mut hasher = Sha256::new();
     hasher.update(seed.as_bytes());
-    hasher.update(date.format("%Y-%m-%d").to_string().as_bytes());
+    hasher.update(date.ymd().as_bytes());
     let digest = hasher.finalize();
     let mut bytes = [0u8; 16];
     bytes.copy_from_slice(&digest[..16]);
@@ -100,7 +100,7 @@ pub fn occurrence_id(seed: Uuid, date: NaiveDate) -> Uuid {
     Uuid::from_bytes(bytes)
 }
 
-pub fn weekday(date: NaiveDate) -> chrono::Weekday {
+pub fn weekday(date: Date) -> Weekday {
     date.weekday()
 }
 
@@ -108,11 +108,11 @@ pub fn weekday(date: NaiveDate) -> chrono::Weekday {
 mod tests {
     use super::*;
 
-    fn d(y: i32, m: u32, day: u32) -> NaiveDate {
-        NaiveDate::from_ymd_opt(y, m, day).unwrap()
+    fn d(y: i32, m: u32, day: u32) -> Date {
+        Date::from_ymd_opt(y, m, day).unwrap()
     }
 
-    fn rule(freq: Freq, interval: u32, anchor: NaiveDate, ends: Ends) -> Rule {
+    fn rule(freq: Freq, interval: u32, anchor: Date, ends: Ends) -> Rule {
         Rule { freq, interval, anchor, ends }
     }
 

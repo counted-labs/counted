@@ -1,9 +1,8 @@
 //! What the projects page (J1, J3, P4) shows of the money: my balance in each group, the people
 //! I owe or who owe me, and the two totals. Everything comes from the ledgers Mes dépenses
 //! already decrypts on the device; nothing here reaches the server.
-
-use chrono::NaiveDate;
 use shared::ProjectStatus;
+use shared::time::Date;
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -21,7 +20,7 @@ pub struct ProjectGlance {
     /// Repayments still open in the group, mine or between the others.
     pub pending: usize,
     pub currency: String,
-    pub last_activity: Option<NaiveDate>,
+    pub last_activity: Option<Date>,
 }
 
 /// One line of "Voir le détail": what one person and I owe each other in one group.

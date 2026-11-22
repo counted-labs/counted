@@ -6,16 +6,16 @@
 //! `docs/plans/expenses-tab-performance.md`.
 
 use api::payments::payments_controller::sync_project_data;
+use shared::time::DateTime;
 use dioxus::prelude::*;
 use crate::tid;
 use shared::{Account, ProjectSync, NO_CACHED_VERSION};
-use std::collections::VecDeque;
 use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::common::{
     adopt_project_key, ensure_membership, mark_key_opened, project_key, queued_expenses, read_from_ls, set_project_cache,
-    update_ls_if_changed, ClaimOutcome, Flash, LocalStorageState, ProjectKey, QueuedOp,
+    update_ls_if_changed, ClaimOutcome, Flash, LocalStorageState, ProjectKey, Queue,
 };
 use crate::expenses::helpers::expenses_page_helpers::{
     cached_data_version, decide, key_for_project, For, Outcome,
@@ -35,10 +35,10 @@ fn url_fragment() -> Option<String> {
     {
         let hash = web_sys::window().and_then(|w| w.location().hash().ok()).unwrap_or_default();
         let frag = hash.trim_start_matches('#').to_string();
-        return (!frag.is_empty()).then_some(frag);
+        (!frag.is_empty()).then_some(frag)
     }
     #[cfg(not(target_arch = "wasm32"))]
-    return None;
+    None
 }
 
 /// Everything the project pages read. All `Copy` handles: the context is created once.
@@ -89,9 +89,11 @@ pub fn use_project_store() -> ProjectStore {
     let resource_version = use_context::<Signal<u64>>();
     let auth_ctx = use_context::<Signal<Option<Account>>>();
     let account_key_ctx = use_context::<Signal<Option<[u8; 32]>>>();
+    let auth_answered = use_context::<Signal<crate::common::MeAnswered>>();
+    let me_retry = use_context::<Signal<crate::common::MeRetry>>();
     let is_online = use_context::<Signal<bool>>();
     let flash_ctx = use_context::<Signal<Option<Flash>>>();
-    let pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
+    let pending_ops = use_context::<Signal<Queue>>();
 
     // The context signal must start `None`: the URL fragment never reaches the server, so resolving
     // it during the first render is a hydration mismatch that crashes the interpreter.
@@ -236,15 +238,19 @@ pub fn use_project_store() -> ProjectStore {
         let mut synced = sync_project_data(id, known).await;
         // The key changed: switch through the account's escrow or a rotation box when one passes
         // §8.4, then sync again under the new key; otherwise the page reads its cache, read-only.
+        // Until `me()` answers nothing is known, so the page stays on its cache or skeleton.
         if synced.as_ref().err().is_some_and(crate::rotation_flow::is_key_rotated) {
-            let account = auth_ctx.peek().clone();
-            let account_key = *account_key_ctx.peek();
-            if crate::rotation_flow::adopt(ls_ctx, id, account, account_key).await == crate::rotation_flow::Adopted::Switched {
-                if let Some(k) = project_key(id) {
-                    key_ctx.set(Some(k));
+            let holder = crate::rotation_flow::Holder::current(auth_answered, auth_ctx, account_key_ctx, me_retry);
+            match crate::rotation_flow::adopt(ls_ctx, id, &holder).await {
+                crate::rotation_flow::Adopted::Switched => {
+                    if let Some(k) = project_key(id) {
+                        key_ctx.set(Some(k));
+                    }
+                    crate::common::project_token::scope(id);
+                    synced = sync_project_data(id, NO_CACHED_VERSION).await;
                 }
-                crate::common::project_token::scope(id);
-                synced = sync_project_data(id, NO_CACHED_VERSION).await;
+                crate::rotation_flow::Adopted::Deferred => return None,
+                crate::rotation_flow::Adopted::NoKey => {}
             }
         }
         Some(synced.map(|s| (id, s)))
@@ -274,7 +280,7 @@ pub fn use_project_store() -> ProjectStore {
                     project_id: id,
                     rules: s.recurring.clone().unwrap_or_default(),
                     server_date: s.server_date,
-                    member_day: recurring_store::member_day(s.server_time, s.server_date, &chrono::Local),
+                    member_day: recurring_store::member_day(s.server_time, s.server_date, crate::common::local_time::offset_at),
                 });
             // `peek`: this effect writes `live` below.
             let live = live.peek();
@@ -387,7 +393,7 @@ pub fn use_project_store() -> ProjectStore {
         let personal = ls_ctx.peek().personal_project;
         let queued = live
             .as_ref()
-            .map(|l| queued_expenses(&pending_ops.read(), l.project_id, chrono::Utc::now().naive_utc()))
+            .map(|l| queued_expenses(&pending_ops.read(), l.project_id, DateTime::now_utc()))
             .unwrap_or_default();
         Arc::new(match live.as_ref() {
             Some(l) if !queued.is_empty() => {

@@ -1004,3 +1004,76 @@ mod tests {
         assert_eq!(rem(ICON_INLINE), "1rem");
     }
 }
+
+#[component]
+pub fn PlaneIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg { xmlns: "http://www.w3.org/2000/svg", "aria-hidden": "true", width: rem(size), height: rem(size), view_box: "0 0 24 24", fill: "none", stroke: "currentColor", stroke_width: "1.75", stroke_linecap: "round", stroke_linejoin: "round",
+            path { d: "M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" }
+        }
+    }
+}
+
+#[component]
+pub fn CloudOffIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg { xmlns: "http://www.w3.org/2000/svg", "aria-hidden": "true", width: rem(size), height: rem(size), view_box: "0 0 24 24", fill: "none", stroke: "currentColor", stroke_width: "1.75", stroke_linecap: "round", stroke_linejoin: "round",
+            path { d: "m2 2 20 20" }
+            path { d: "M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193" }
+            path { d: "M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07" }
+        }
+    }
+}
+
+#[component]
+pub fn TagIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg { xmlns: "http://www.w3.org/2000/svg", "aria-hidden": "true", width: rem(size), height: rem(size), view_box: "0 0 24 24", fill: "none", stroke: "currentColor", stroke_width: "1.75", stroke_linecap: "round", stroke_linejoin: "round",
+            path { d: "M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z" }
+            circle { cx: "7.5", cy: "7.5", r: ".5", fill: "currentColor" }
+        }
+    }
+}
+
+#[component]
+pub fn PieChartIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg { xmlns: "http://www.w3.org/2000/svg", "aria-hidden": "true", width: rem(size), height: rem(size), view_box: "0 0 24 24", fill: "none", stroke: "currentColor", stroke_width: "1.75", stroke_linecap: "round", stroke_linejoin: "round",
+            path { d: "M21 12c.552 0 1.005-.449.95-.998a10 10 0 0 0-8.953-8.951c-.55-.055-.998.398-.998.95v8a1 1 0 0 0 1 1z" }
+            path { d: "M21.21 15.89A10 10 0 1 1 8 2.83" }
+        }
+    }
+}
+
+#[component]
+pub fn TargetIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg { xmlns: "http://www.w3.org/2000/svg", "aria-hidden": "true", width: rem(size), height: rem(size), view_box: "0 0 24 24", fill: "none", stroke: "currentColor", stroke_width: "1.75", stroke_linecap: "round", stroke_linejoin: "round",
+            circle { cx: "12", cy: "12", r: "10" }
+            circle { cx: "12", cy: "12", r: "6" }
+            circle { cx: "12", cy: "12", r: "2" }
+        }
+    }
+}
+
+#[component]
+pub fn AwardIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg { xmlns: "http://www.w3.org/2000/svg", "aria-hidden": "true", width: rem(size), height: rem(size), view_box: "0 0 24 24", fill: "none", stroke: "currentColor", stroke_width: "1.75", stroke_linecap: "round", stroke_linejoin: "round",
+            path { d: "m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526" }
+            circle { cx: "12", cy: "8", r: "6" }
+        }
+    }
+}
+
+#[component]
+pub fn RefreshIcon(#[props(default = ICON_ACTION)] size: u32) -> Element {
+    rsx! {
+        svg { xmlns: "http://www.w3.org/2000/svg", "aria-hidden": "true", width: rem(size), height: rem(size), view_box: "0 0 24 24", fill: "none", stroke: "currentColor", stroke_width: "1.75", stroke_linecap: "round", stroke_linejoin: "round",
+            path { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" }
+            path { d: "M21 3v5h-5" }
+            path { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" }
+            path { d: "M8 16H3v5" }
+        }
+    }
+}

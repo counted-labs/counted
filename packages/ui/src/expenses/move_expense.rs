@@ -4,11 +4,10 @@
 
 use dioxus::prelude::*;
 use shared::{ExpensePayload, ExpenseType, ProjectDto, ProjectPayload, ProjectStatus};
-use std::collections::VecDeque;
 use uuid::Uuid;
 
 use crate::common::{
-    key_of, write_queue, Flash, LocalStorageState, OpKind, ProjectTile, QueuedOp, SheetBar, SHEET_TITLE,
+    key_of, LocalStorageState, OpKind, ProjectTile, QueuedOp, SheetBar, SHEET_TITLE,
 };
 use crate::categories::ProjectCategories;
 use crate::crypto::decrypt_json;
@@ -214,15 +213,10 @@ fn destination_detail(d: &Destination, from_currency: &str) -> String {
     }
 }
 
-/// Once the destination has queued the expense (`add_op`): delete it here, with this project's key
-/// and identity. The delete queues behind the add and waits on it, so the replay keeps the order and
-/// an add the server drops takes the delete with it.
-pub fn finish_move(
-    draft: &MoveDraft,
-    add_op: Uuid,
-    mut pending_ops: Signal<VecDeque<QueuedOp>>,
-    mut flash: Signal<Option<Flash>>,
-) {
+/// The delete here, with this project's key and identity, of the expense the destination adds as
+/// `add_op`. It names the add in `after` and is written with it, first (SPEC §15.9.5 Q2d), so the
+/// replay sends it only once the add landed, and an add that leaves takes the delete with it.
+pub fn move_delete(draft: &MoveDraft, add_op: Uuid) -> QueuedOp {
     let req = delete_expense_request(
         &draft.from_key,
         draft.expense_id,
@@ -230,13 +224,7 @@ pub fn finish_move(
         tid!("history-expense-moved", name: draft.payload.name.clone()),
         draft.from_user_id.unwrap_or(0),
     );
-    let delete = QueuedOp {
-        after: Some(add_op),
-        ..QueuedOp::new(Uuid::new_v4(), &draft.payload.name, OpKind::DeleteExpense(req))
-    };
-    pending_ops.write().push_back(delete);
-    write_queue(&pending_ops.read());
-    flash.set(Some(Flash::ok(tid!("move-done", project: draft.to_name.clone()))));
+    QueuedOp { after: Some(add_op), ..QueuedOp::new(Uuid::new_v4(), &draft.payload.name, OpKind::DeleteExpense(req)) }
 }
 
 #[cfg(test)]

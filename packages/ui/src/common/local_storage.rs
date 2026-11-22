@@ -7,7 +7,7 @@ use super::persist::{read_json, write_json};
 use crate::crypto::key_from_fragment;
 use crate::decrypted::decrypt_project;
 
-const LS_KEY: &str = "counted_local_storage";
+pub const LS_KEY: &str = "counted_local_storage";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct LocalStorageState {
@@ -64,6 +64,24 @@ pub struct LocalStorageState {
     /// matches, an absent membership means a reset retired it, not a leave elsewhere.
     #[serde(default)]
     pub membership_epochs: std::collections::BTreeMap<Uuid, i32>,
+    /// Project creations sent whose outcome this device does not know yet (`project_create`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pending_creations: Vec<PendingCreation>,
+}
+
+/// A creation that may have landed: its id, its key as `encryption_key` holds one, the creator
+/// secret of a creator without an account, the account it was sent under (`None` without one) and
+/// when it was last sent, in Unix milliseconds. Kept in this store, as the project keys are.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PendingCreation {
+    pub project_id: Uuid,
+    pub key: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub creator_secret: Option<String>,
+    #[serde(default)]
+    pub account: Option<Uuid>,
+    #[serde(default)]
+    pub sent_at: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -135,7 +153,7 @@ pub fn use_device_cache<T: Default + 'static>(read: impl Fn() -> T + Copy + 'sta
 pub fn is_mobile() -> bool {
     #[cfg(target_arch = "wasm32")]
     {
-        return web_sys::window()
+        web_sys::window()
             .and_then(|w| w.navigator().user_agent().ok())
             .map(|ua| {
                 let ua = ua.to_lowercase();
@@ -144,7 +162,7 @@ pub fn is_mobile() -> bool {
                     || ua.contains("ipad")
                     || ua.contains("mobile")
             })
-            .unwrap_or(false);
+            .unwrap_or(false)
     }
     #[cfg(any(target_os = "android", target_os = "ios"))]
     return true;
@@ -265,6 +283,14 @@ pub fn write_to_ls(state: &LocalStorageState) -> bool {
     let mut lean = state.clone();
     drop_caches(&mut lean);
     write_json(LS_KEY, "local storage without caches", &lean)
+}
+
+/// Frees what the server can give back, so a write that hit the quota can be tried once more
+/// (SPEC §15.9.5 Q2c).
+pub fn free_caches() {
+    let mut state = read_from_ls();
+    drop_caches(&mut state);
+    write_json(LS_KEY, "local storage without caches", &state);
 }
 
 fn drop_caches(state: &mut LocalStorageState) {
@@ -418,6 +444,10 @@ pub fn key_of(entry: &LocalStorageProject) -> Option<[u8; 32]> {
     entry.encryption_key.as_ref().and_then(|k| key_from_fragment(k).ok())
 }
 
+pub fn previous_keys_of(entry: &LocalStorageProject) -> Vec<[u8; 32]> {
+    entry.previous_keys.iter().filter_map(|(_, k)| key_from_fragment(k).ok()).collect()
+}
+
 /// Same, looked up by id. Prefer [`key_of`] when the caller already holds a `read_from_ls()`
 /// result - this reads the whole store again.
 pub fn project_key(project_id: Uuid) -> Option<[u8; 32]> {
@@ -493,6 +523,7 @@ pub fn initials(name: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use shared::time::DateTime;
     use super::*;
 
     // What survives a full store is exactly what cannot be fetched again.
@@ -528,6 +559,40 @@ mod tests {
             }
         );
         assert!(state.cached_projects_list.is_none());
+    }
+
+    /// I12, SPEC §15.9.5 Q5: the replay reseals a queued entry from the project's previous keys, so
+    /// no writer of a project's record may drop them while the device holds the project.
+    #[test]
+    fn every_writer_of_a_project_keeps_its_previous_keys() {
+        let id = Uuid::new_v4();
+        let previous = vec![(0, "k0".to_string()), (1, "k1".to_string())];
+        let fresh = || LocalStorageState {
+            projects: vec![LocalStorageProject { project_id: id, encryption_key: Some("k2".into()), previous_keys: previous.clone(), ..Default::default() }],
+            ..Default::default()
+        };
+        let row = ProjectDto { id, ..crate::common::test_fixtures::make_project(&[7; 32], id, "Trip", "EUR") };
+        type Writer = Box<dyn Fn(&mut LocalStorageState)>;
+        let writers: Vec<(&str, Writer)> = vec![
+            ("upsert_project", Box::new(move |s| upsert_project(s, id, Some(4)))),
+            ("upsert_project_key, same key", Box::new(move |s| upsert_project_key(s, id, "k2".into()))),
+            ("upsert_project_key, another key", Box::new(move |s| upsert_project_key(s, id, "k3".into()))),
+            ("set_anon_member_id", Box::new(move |s| set_anon_member_id(s, id, Uuid::nil()))),
+            ("clear_user_id", Box::new(move |s| clear_user_id(s, id))),
+            ("mark_synced", Box::new(move |s| mark_synced(s, &[id], Uuid::nil()))),
+            ("mark_converted", Box::new(move |s| mark_converted(s, id))),
+            ("mark_key_opened", Box::new(move |s| mark_key_opened(s, id, &row))),
+            ("set_project_cache", Box::new(move |s| set_project_cache(s, id, ProjectDto { id, ..crate::common::test_fixtures::make_project(&[7; 32], id, "Trip", "EUR") }, vec![], vec![], vec![], Some(1)))),
+            ("set_cached_projects_list", Box::new(|s| set_cached_projects_list(s, vec![]))),
+            ("drop_caches", Box::new(drop_caches)),
+            ("mark_rotated", Box::new(move |s| crate::rotation_flow::mark_rotated(s, id))),
+            ("a round trip through JSON", Box::new(|s| *s = serde_json::from_str(&serde_json::to_string(s).unwrap()).unwrap())),
+        ];
+        for (name, writer) in writers {
+            let mut state = fresh();
+            writer(&mut state);
+            assert_eq!(state.projects[0].previous_keys, previous, "{name}");
+        }
     }
 
     #[test]
@@ -591,7 +656,7 @@ mod tests {
                 id,
                 payload: EncryptedPair { ct: "ct".into(), iv: "iv".into() },
                 status: ProjectStatus::Ongoing,
-                created_at: chrono::DateTime::UNIX_EPOCH.naive_utc(),
+                created_at: DateTime::EPOCH,
                 has_admin: false,
                 key_lifecycle: false,
                 key_epoch: 0,
@@ -608,7 +673,7 @@ mod tests {
                 id,
                 author_id: Some(1),
                 project_id: Uuid::nil(),
-                created_at: chrono::DateTime::UNIX_EPOCH.naive_utc(),
+                created_at: DateTime::EPOCH,
                 payload: EncryptedPair { ct: "ct".into(), iv: "iv".into() },
             }
         }
@@ -619,7 +684,7 @@ mod tests {
                 expense_id,
                 user_id: 1,
                 payload: EncryptedPair { ct: "ct".into(), iv: "iv".into() },
-                created_at: chrono::DateTime::UNIX_EPOCH.naive_utc(),
+                created_at: DateTime::EPOCH,
             }
         }
 

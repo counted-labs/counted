@@ -1,5 +1,5 @@
 use crate::User;
-use chrono::NaiveDateTime;
+use crate::time::DateTime;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -8,7 +8,7 @@ pub struct UsersProject {
     pub id: Uuid,
     pub name: String,
     pub users: Vec<User>,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime,
     pub currency: String,
     pub description: Option<String>,
 }

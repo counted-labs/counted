@@ -6,7 +6,7 @@ use crate::common::{haptic, status_transitions, Haptic, SheetBar, SHEET_TITLE};
 use crate::expenses::group_security::{GroupSecurity, GroupSecuritySection};
 use crate::icons::{
     ArchiveIcon, DownloadIcon, HistoryIcon, LockIcon, LogOutIcon, MoreIcon, PencilIcon,
-    RepeatIcon, ShareIcon, SmartphoneIcon, UndoIcon, UserPlusIcon, WalletIcon, ICON_HEADER,
+    RepeatIcon, ShareIcon, SmartphoneIcon, UndoIcon, UserPlusIcon, UsersIcon, WalletIcon, ICON_HEADER,
 };
 
 #[derive(PartialEq, Props, Clone)]
@@ -34,6 +34,8 @@ pub struct ProjectActionsSheetProps {
     /// R5, on the personal project: the groups it counts.
     #[props(default)]
     pub on_counted_groups: Option<EventHandler<()>>,
+    #[props(default)]
+    pub on_members: Option<EventHandler<()>>,
     /// The admin actions (docs/plans/key-lifecycle.md §8.7), in whichever state applies.
     #[props(default)]
     pub security: Option<GroupSecurity>,
@@ -81,6 +83,14 @@ pub fn ProjectActionsSheet(props: ProjectActionsSheetProps) -> Element {
                             label: tid!("project-sheet-invite"),
                             onclick: pick(on_invite),
                             UserPlusIcon { size: 24 }
+                        }
+                    }
+                    if let Some(on_members) = props.on_members {
+                        Tile {
+                            id: "project-members-btn",
+                            label: tid!("members-title"),
+                            onclick: pick(on_members),
+                            UsersIcon { size: 24 }
                         }
                     }
                     Tile {

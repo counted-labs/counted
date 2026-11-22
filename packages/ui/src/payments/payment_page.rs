@@ -1,12 +1,12 @@
 use dioxus::prelude::*;
+use shared::time::Date;
 use crate::tid;
 use shared::{ExpenseType, Payment};
-use std::collections::VecDeque;
 use uuid::Uuid;
 
 use crate::common::{
     format_date, format_date_str, initials, pending, read_from_ls, user_color_class, AppHeader,
-    Avatar, Flash, ProjectKey, PullToRefresh, QueuedOp,
+    Avatar, Flash, ProjectKey, PullToRefresh, Queue,
 };
 use crate::decrypted::DecryptedPayment;
 use crate::expenses::helpers::delete_expense_action::{
@@ -118,7 +118,7 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
 
     let store = use_context::<ProjectStore>();
     let key_ctx = use_context::<ProjectKey>().0;
-    let pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
+    let pending_ops = use_context::<Signal<Queue>>();
     let flash = use_context::<Signal<Option<Flash>>>();
     let on_expenses_changed = store.on_expenses_changed;
 
@@ -180,7 +180,7 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                             let confirm_name = exp_name.clone();
                             let delete_name = exp_name.clone();
                             let rules = store.recurring_for(project_id);
-                            let origin_next: Option<Option<chrono::NaiveDate>> = expense
+                            let origin_next: Option<Option<Date>> = expense
                                 .recurring_id
                                 .and_then(|id| rules.as_ref()?.rule(id))
                                 .map(|r| next_date(&r.payload));
@@ -410,7 +410,7 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                                 let payload = store.live.read().as_ref()
                                                     .filter(|l| l.project_id == project_id)
                                                     .and_then(|l| l.expenses.iter().find(|e| e.id == expense_id).cloned())
-                                                    .and_then(|e| crate::crypto::decrypt_json::<shared::ExpensePayload>(&k, &e.payload).ok());
+                                                    .and_then(|e| crate::entity_ids::decrypt_row::<shared::ExpensePayload>(&k, &e.payload).ok());
                                                 let Some(payload) = payload else { return };
                                                 let (amount, typed_currency) = typed_amount(&payload, &currency);
                                                 let mut pending_move = store.pending_move;
@@ -445,12 +445,7 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                         on_cancel: move |_| show_delete_confirm.set(false),
                                         on_delete: move |stop: bool| {
                                             show_delete_confirm.set(false);
-                                            if let Some(rule) = live_rule.as_ref().filter(|_| stop) {
-                                                stop_rule(k, project_id, rule, stored_user_id, flash, move || {
-                                                    let mut sync = store.sync;
-                                                    sync.restart();
-                                                });
-                                            }
+                                            let rule = live_rule.clone().filter(|_| stop);
                                             let name = delete_name.clone();
                                             let req = delete_expense_request(
                                                 &k,
@@ -468,6 +463,12 @@ pub fn PaymentPage(project_id: Uuid, expense_id: i32) -> Element {
                                                     // one route up still shows the deleted row.
                                                     on_expenses_changed
                                                         .call(ExpenseMutation::Deleted(expense_id));
+                                                    if let Some(rule) = rule {
+                                                        stop_rule(k, project_id, &rule, stored_user_id, flash, move || {
+                                                            let mut sync = store.sync;
+                                                            sync.restart();
+                                                        });
+                                                    }
                                                     nav.push(Route::ExpensesPage { project_id });
                                                 },
                                             );

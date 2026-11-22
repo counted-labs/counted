@@ -4,7 +4,7 @@
 //! `--no-default-features`. This is where the feature is won or lost: the OCR either reads a
 //! receipt or it does not, but *which* of the twenty numbers on it is the total is decided here.
 
-use chrono::NaiveDate;
+use shared::time::Date;
 
 /// One recognised line, with its geometry as **fractions of the source image** so the parser is
 /// resolution-independent and its fixtures are hand-writable.
@@ -25,14 +25,14 @@ pub struct TextLine {
 pub struct Receipt {
     pub title: Option<String>,
     pub amount: Option<f64>,
-    pub date: Option<NaiveDate>,
+    pub date: Option<Date>,
     /// False when `amount` came from the bottom-of-page fallback rather than a keyword anchor.
     /// The form surfaces this as "check the total".
     pub amount_confident: bool,
 }
 
 /// `today` is injected rather than read here so the plausibility window is testable.
-pub fn parse_receipt(lines: &[TextLine], today: NaiveDate) -> Receipt {
+pub fn parse_receipt(lines: &[TextLine], today: Date) -> Receipt {
     let (amount, amount_confident) = match find_amount(lines) {
         Some((value, confident)) => (Some(value), confident),
         None => (None, false),
@@ -408,7 +408,7 @@ const MONTHS: &[(&str, u32)] = &[
     ("dezembro", 12), ("dec", 12), ("dez", 12), ("dic", 12),
 ];
 
-fn find_date(lines: &[TextLine], today: NaiveDate) -> Option<NaiveDate> {
+fn find_date(lines: &[TextLine], today: Date) -> Option<Date> {
     lines.iter().find_map(|line| {
         numeric_date(&line.text)
             .or_else(|| named_date(&fold(&line.text)))
@@ -416,8 +416,8 @@ fn find_date(lines: &[TextLine], today: NaiveDate) -> Option<NaiveDate> {
     })
 }
 
-fn plausible(date: NaiveDate, today: NaiveDate) -> bool {
-    date <= today && (today - date).num_days() <= MAX_AGE_DAYS
+fn plausible(date: Date, today: Date) -> bool {
+    date <= today && today.days_since(date) <= MAX_AGE_DAYS
 }
 
 /// Up to four digits. `bounded` rejects a run that continues into another digit, which is what
@@ -434,14 +434,14 @@ fn take_digits(b: &[u8], at: usize, bounded: bool) -> Option<(u32, usize)> {
     Some((value, len))
 }
 
-fn numeric_date(s: &str) -> Option<NaiveDate> {
+fn numeric_date(s: &str) -> Option<Date> {
     let b = s.as_bytes();
     (0..b.len())
         .filter(|i| is_digit(b[*i]) && i.checked_sub(1).is_none_or(|p| !is_digit(b[p])))
         .find_map(|i| numeric_date_at(b, i))
 }
 
-fn numeric_date_at(b: &[u8], i: usize) -> Option<NaiveDate> {
+fn numeric_date_at(b: &[u8], i: usize) -> Option<Date> {
     let (first, flen) = take_digits(b, i, true)?;
     let sep = *b.get(i + flen)?;
     if !matches!(sep, b'/' | b'.' | b'-') {
@@ -459,7 +459,7 @@ fn numeric_date_at(b: &[u8], i: usize) -> Option<NaiveDate> {
 
     // ISO: a four-digit leading field can only be a year.
     if flen == 4 {
-        return NaiveDate::from_ymd_opt(first as i32, second, third);
+        return Date::from_ymd_opt(first as i32, second, third);
     }
     let year = match tlen {
         4 => third as i32,
@@ -469,14 +469,14 @@ fn numeric_date_at(b: &[u8], i: usize) -> Option<NaiveDate> {
     // Day-first by default: five of the seven shipped locales write it that way and the bundle's
     // development region is fr_FR. A day over twelve settles it either way.
     let (day, month) = if first <= 12 && second > 12 { (second, first) } else { (first, second) };
-    NaiveDate::from_ymd_opt(year, month, day)
+    Date::from_ymd_opt(year, month, day)
 }
 
 fn month_number(token: &str) -> Option<u32> {
     MONTHS.iter().find(|(name, _)| *name == token).map(|(_, m)| *m)
 }
 
-fn named_date(folded: &str) -> Option<NaiveDate> {
+fn named_date(folded: &str) -> Option<Date> {
     let tokens: Vec<&str> = folded.split_whitespace().collect();
     tokens.windows(3).find_map(|w| {
         let (day, month, year) = match (w[0].parse::<u32>(), month_number(w[1])) {
@@ -485,7 +485,7 @@ fn named_date(folded: &str) -> Option<NaiveDate> {
             // september 4 2026 - the comma is already gone, folding removed it
             _ => (w[1].parse::<u32>().ok()?, month_number(w[0])?, w[2].parse::<i32>().ok()?),
         };
-        NaiveDate::from_ymd_opt(year, month, day)
+        Date::from_ymd_opt(year, month, day)
     })
 }
 

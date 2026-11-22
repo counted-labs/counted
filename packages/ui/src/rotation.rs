@@ -129,13 +129,7 @@ pub fn open_box(
 pub fn rekey_value(value: &mut Value, k1: &[u8; 32], k2: &[u8; 32]) {
     match value {
         Value::Object(map) => {
-            let pair = match (map.get("ct"), map.get("iv")) {
-                (Some(Value::String(ct)), Some(Value::String(iv))) if map.len() == 2 => {
-                    Some(EncryptedPair { ct: ct.clone(), iv: iv.clone() })
-                }
-                _ => None,
-            };
-            match pair.and_then(|p| reseal(k1, k2, &p)) {
+            match pair_in(map).and_then(|p| reseal(k1, k2, &p)) {
                 Some(new) => {
                     map.insert("ct".into(), Value::String(new.ct));
                     map.insert("iv".into(), Value::String(new.iv));
@@ -148,16 +142,48 @@ pub fn rekey_value(value: &mut Value, k1: &[u8; 32], k2: &[u8; 32]) {
     }
 }
 
+fn pair_in(map: &serde_json::Map<String, Value>) -> Option<EncryptedPair> {
+    match (map.get("ct"), map.get("iv")) {
+        (Some(Value::String(ct)), Some(Value::String(iv))) if map.len() == 2 => Some(EncryptedPair { ct: ct.clone(), iv: iv.clone() }),
+        _ => None,
+    }
+}
+
+/// Every sealed pair inside a queued op under `current`, a pair under one of `previous` re-sealed.
+/// False when a pair opens under none of them.
+pub fn rekey_to_current(value: &mut Value, current: &[u8; 32], previous: &[[u8; 32]]) -> bool {
+    match value {
+        Value::Object(map) => match pair_in(map) {
+            Some(pair) if decrypt_bytes(current, &pair).is_ok() => true,
+            Some(pair) => match previous.iter().find_map(|k| reseal(k, current, &pair)) {
+                Some(new) => {
+                    map.insert("ct".into(), Value::String(new.ct));
+                    map.insert("iv".into(), Value::String(new.iv));
+                    true
+                }
+                None => false,
+            },
+            None => map.values_mut().all(|v| rekey_to_current(v, current, previous)),
+        },
+        Value::Array(items) => items.iter_mut().all(|v| rekey_to_current(v, current, previous)),
+        _ => true,
+    }
+}
+
 /// D13: the participant row of someone removed from the project, hidden under the new key, every
-/// other field kept. `None` when it does not open under the old key or is no JSON object.
+/// other field kept. `None` when it does not open under the old key, is unreadable (SPEC 15.9.2 R1,
+/// R2) or is no JSON object.
 pub fn reseal_removed(k1: &[u8; 32], k2: &[u8; 32], pair: &EncryptedPair) -> Option<EncryptedPair> {
-    let mut payload: Value = serde_json::from_str(&decrypt(k1, pair).ok()?).ok()?;
+    let plain = decrypt(k1, pair).ok()?;
+    shared::entity::read(&plain, shared::entity::Slot::Participant).ok()?;
+    let mut payload: Value = serde_json::from_str(&plain).ok()?;
     payload.as_object_mut()?.insert("removed".into(), Value::Bool(true));
     encrypt(k2, &shared::pad_json(serde_json::to_string(&payload).ok()?)).ok()
 }
 
 /// What a row is staged as: re-sealed byte for byte, except the participant row a removal hides.
-/// That one falls back to the byte-exact re-seal when it is no object, so it is never set aside.
+/// That one falls back to the byte-exact re-seal when it is unreadable or no object, so it is
+/// never set aside and never rewritten.
 pub fn restage(table: &str, id: &str, hidden: Option<i32>, k1: &[u8; 32], k2: &[u8; 32], pair: &EncryptedPair) -> Option<EncryptedPair> {
     let hides = table == "users" && hidden.is_some_and(|h| h.to_string() == id);
     match hides {
@@ -168,16 +194,16 @@ pub fn restage(table: &str, id: &str, hidden: Option<i32>, k1: &[u8; 32], k2: &[
 
 #[cfg(test)]
 mod tests {
+    use shared::time::DateTime;
     use super::*;
     use crate::crypto::{encrypt_padded_json, generate_key};
-    use chrono::NaiveDateTime;
 
     fn project(key: &[u8; 32], plaintext: &str) -> ProjectDto {
         ProjectDto {
             id: Uuid::nil(),
             payload: encrypt(key, plaintext).unwrap(),
             status: shared::ProjectStatus::Ongoing,
-            created_at: NaiveDateTime::default(),
+            created_at: DateTime::default(),
             has_admin: true,
             key_lifecycle: true,
             read_only: false,
@@ -329,6 +355,27 @@ mod tests {
         let kept: Value = crate::crypto::decrypt_json(&k2, &reseal_removed(&k1, &k2, &row).unwrap()).unwrap();
         assert_eq!(kept["futureField"], 3);
         assert!(reseal_removed(&k2, &k1, &row).is_none(), "a row the old key does not open");
+    }
+
+    #[test]
+    fn hiding_a_removed_participant_keeps_both_keys_and_an_unreadable_one_is_resealed_byte_for_byte() {
+        use shared::entity::{read, Slot};
+        let (k1, k2) = (generate_key(), generate_key());
+        let eid = Uuid::new_v4();
+        let row = encrypt_padded_json(&k1, &serde_json::json!({"name": "Léa", "eid": eid, "slot": "participant"})).unwrap();
+        let hidden = crate::crypto::decrypt(&k2, &restage("users", "7", Some(7), &k1, &k2, &row).unwrap()).unwrap();
+        assert_eq!(read(&hidden, Slot::Participant), Ok(Some(eid)));
+        assert!(hidden.contains(r#""removed":true"#));
+
+        for plain in [
+            format!(r#"{{"name":"Léa","eid":"{eid}","slot":"expense"}}"#),
+            format!(r#"{{"name":"Léa","eid":"{eid}","slot":"participant","eid":"{eid}"}}"#),
+        ] {
+            let unreadable = encrypt(&k1, &plain).unwrap();
+            assert!(reseal_removed(&k1, &k2, &unreadable).is_none());
+            let staged = restage("users", "7", Some(7), &k1, &k2, &unreadable).unwrap();
+            assert_eq!(decrypt_bytes(&k2, &staged).unwrap(), plain.as_bytes(), "{plain}");
+        }
     }
 
     #[test]

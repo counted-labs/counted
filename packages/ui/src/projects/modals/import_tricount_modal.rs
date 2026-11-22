@@ -1,23 +1,24 @@
 use api::account_projects::account_projects_controller::upsert_account_project;
 use api::expenses::expenses_controller::batch_add_expenses;
-use api::projects::projects_controller::add_project;
 use api::tricount::tricount_controller::fetch_tricount_registry;
 use api::tricount::tricount_models::TricountImportRequest;
-use api::users::users_controller::add_user;
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use crate::tid;
 use shared::{
     round_currency, sums_to_total, Account as AccountData, CreatableExpense, CreatableProject,
-    CreatableUser, CreatableUserBatch, EncryptedPair, ExpensePayload, ExpenseType, ProjectPayload,
-    UpsertAccountProject, User, UserPayload,
+    CreatableUser, EncryptedPair, ExpensePayload, ExpenseType, ProjectPayload,
+    UpsertAccountProject, User,
 };
-use std::collections::{HashMap, HashSet};
 
-use crate::common::creator_proof::{keep_creator_secret, new_creator_proof};
-use crate::common::{error_message, update_ls, upsert_project, upsert_project_key, LocalStorageState, NativeClipboardReader, SheetBar, SheetFooter, SHEET_TITLE};
+use crate::entity_ids::{add_participants, new_expense, new_participant};
+use std::collections::{HashMap, HashSet};
+use uuid::Uuid;
+
+use crate::common::creator_proof::new_creator_proof;
+use crate::common::{add_project_fresh, error_message, LocalStorageState, NativeClipboardReader, SheetBar, SheetFooter, SHEET_TITLE};
 use crate::crypto::{
-    claim_token, claim_verifier, encrypt_padded_json, generate_key, key_to_fragment,
+    claim_token, claim_verifier, encrypt_padded_json, generate_key,
     wrap_key, WrapUse,
 };
 use crate::expenses::helpers::expense_modal_helpers::with_shares;
@@ -34,6 +35,8 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
     let mut tricount_key = use_signal(String::new);
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
     let mut loading = use_signal(|| false);
+    // The creation a press left unknown, which the next press settles before anything else.
+    let unsent: Signal<Option<uuid::Uuid>> = use_signal(|| None);
 
     // WebView only: a native paste (long-press → Coller) never reaches oninput there. On web
     // oninput already fires on paste, and this listener would need eval - CSP-blocked
@@ -105,61 +108,43 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                 }
             };
 
-            let enc_key = generate_key();
-            let key_fragment = key_to_fragment(&enc_key);
-
-            let project_payload = match encrypt_padded_json(&enc_key, &ProjectPayload {
-                name: registry.title.clone(),
-                currency: registry.currency.clone(),
-                description: None,
-                status: Some(shared::ProjectStatus::Ongoing),
-                extra: Default::default(),
-            }) {
-                Ok(p) => p,
-                Err(_) => {
-                    error_msg.set(Some(tid!("import-tricount-encryption-failed")));
-                    loading.set(false);
-                    return;
-                }
-            };
+            let fresh_key = generate_key();
 
             let demo = crate::common::persist::is_demo();
             let (creator_secret, creator_verifier) = new_creator_proof(!is_auth && !demo);
-            let project = match add_project(Json(CreatableProject {
-                payload: project_payload,
-                claim_verifier: Some(claim_verifier(&enc_key).to_vec()),
-                demo,
-                creator_verifier,
-            }))
-            .await
-            {
-                Ok(p) => p,
+            let seal = |id, key: &[u8; 32]| {
+                let payload = encrypt_padded_json(key, &ProjectPayload {
+                    name: registry.title.clone(),
+                    currency: registry.currency.clone(),
+                    description: None,
+                    status: Some(shared::ProjectStatus::Ongoing),
+                    extra: Default::default(),
+                })
+                .map_err(|_| tid!("import-tricount-encryption-failed"))?;
+                Ok(CreatableProject {
+                    id: Some(id),
+                    payload,
+                    claim_verifier: Some(claim_verifier(key).to_vec()),
+                    demo,
+                    creator_verifier: creator_verifier.clone(),
+                })
+            };
+            // Stored the moment the project exists (`add_project_fresh`), not after the last request:
+            // a failure in the participants or expenses step used to leave a project nobody could
+            // ever decrypt. A partial import now stays in the list, openable and leavable.
+            let made = match add_project_fresh(ls_ctx, Some(unsent), &fresh_key, creator_secret, seal).await {
+                Ok(made) => made,
                 Err(e) => {
-                    error_msg.set(Some(error_message(&e)));
+                    error_msg.set(Some(e.message()));
                     loading.set(false);
                     return;
                 }
             };
-            // Stored the moment the project exists, not after the last request: a failure in the
-            // participants or expenses step used to leave a project nobody could ever decrypt. A
-            // partial import now stays in the list, openable and leavable.
-            update_ls(ls_ctx, |state| {
-                upsert_project(state, project.id, None);
-                upsert_project_key(state, project.id, key_fragment);
-                keep_creator_secret(state, project.id, creator_secret);
-            });
+            let (project, enc_key) = (made.project, made.key);
 
             let creatables: Vec<CreatableUser> = match members
                 .iter()
-                .map(|m| {
-                    Ok(CreatableUser {
-                        payload: encrypt_padded_json(&enc_key, &UserPayload {
-                            name: m.alias.display_name.clone(),
-                            removed: false,
-                        })?,
-                        project_id: project.id,
-                    })
-                })
+                .map(|m| new_participant(&enc_key, project.id, m.alias.display_name.clone()))
                 .collect::<Result<Vec<_>, String>>()
             {
                 Ok(v) => v,
@@ -175,8 +160,7 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
             let created_users = if creatables.is_empty() {
                 vec![]
             } else {
-                crate::common::project_token::scope_key(Some(&enc_key));
-                match add_user(Json(CreatableUserBatch::Multiple(creatables))).await {
+                match add_participants(&enc_key, creatables).await {
                     Ok(u) => u,
                     Err(e) => {
                         error_msg.set(Some(error_message(&e)));
@@ -201,44 +185,8 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                     return;
                 };
 
-                let expense_type =
-                    if entry.transfer { ExpenseType::Transfer } else { ExpenseType::Expense };
-
-                // No conversion: the imported project adopts the Tricount registry's own currency,
-                // so every amount is already in the project currency.
-                let expense_payload = ExpensePayload {
-                    name: entry.name.to_string(),
-                    amount: entry.total,
-                    expense_type: expense_type.as_str().to_string(),
-                    date: entry.date.to_string(),
-                    description: None,
-                    category: None,
-                    source_currency: None,
-                    source_amount: None,
-                    rate: None,
-                    recurring_id: None,
-                    estimate: false,
-                    author_id: None,
-                    shares: None,
-                    extra: Default::default(),
-                };
-                let expense_payload = with_shares(
-                    expense_payload,
-                    Some(payer_id),
-                    &[(payer_id, entry.total)],
-                    &debtor_ids,
-                );
-                let Ok(payload) = encrypt_padded_json(&enc_key, &expense_payload) else { continue };
-
-                expenses_batch.push(CreatableExpense {
-                    payload,
-                    project_id: project.id,
-                    author_id: None,
-                    payers: Vec::new(),
-                    debtors: Vec::new(),
-                    history: None,
-                    client_op_id: None,
-                });
+                let Ok(expense) = imported_expense(&enc_key, project.id, entry, payer_id, &debtor_ids) else { continue };
+                expenses_batch.push(expense);
             }
 
             if !expenses_batch.is_empty() {
@@ -265,6 +213,7 @@ pub fn ImportTricountModal(props: ImportTricountModalProps) -> Element {
                 crate::auth::account_key::note(&escrowed);
             }
 
+            crate::badges::award(crate::badges::DEMENAGEMENT);
             props.on_close.call(());
             nav.push(Route::ExpensesPage { project_id: project.id });
         });
@@ -436,6 +385,36 @@ fn plan_entries<'a>(
     }
 }
 
+/// No conversion: the imported project adopts the Tricount registry's own currency, so every amount
+/// is already in the project currency.
+fn imported_expense(
+    key: &[u8; 32],
+    project_id: Uuid,
+    entry: &PlannedEntry,
+    payer_id: i32,
+    debtor_ids: &[(i32, f64)],
+) -> Result<CreatableExpense, String> {
+    let expense_type = if entry.transfer { ExpenseType::Transfer } else { ExpenseType::Expense };
+    let payload = ExpensePayload {
+        name: entry.name.to_string(),
+        amount: entry.total,
+        expense_type: expense_type.as_str().to_string(),
+        date: entry.date.to_string(),
+        description: None,
+        category: None,
+        source_currency: None,
+        source_amount: None,
+        rate: None,
+        recurring_id: None,
+        estimate: false,
+        author_id: None,
+        shares: None,
+        extra: Default::default(),
+    };
+    let payload = with_shares(payload, Some(payer_id), &[(payer_id, entry.total)], debtor_ids);
+    new_expense(key, project_id, Uuid::new_v4(), payload, None)
+}
+
 /// Makes the debtors sum to the total exactly. A lone debtor owes the whole total whatever its
 /// allocation says. Several absorb at most a cent each of rounding, pushed onto the last one; a
 /// larger gap is bad data, and absorbing it silently moved someone's debt onto someone else.
@@ -469,10 +448,22 @@ fn ids_by_member(sent: &[(String, EncryptedPair)], created: &[User]) -> HashMap<
 
 #[cfg(test)]
 mod tests {
-    use super::{balance_allocations, ids_by_member, plan_entries, PlannedEntry};
+    use super::{balance_allocations, ids_by_member, imported_expense, plan_entries, PlannedEntry};
     use serde_json::{json, Value};
     use shared::{sums_to_total, EncryptedPair, User};
     use std::collections::HashSet;
+
+    #[test]
+    fn every_imported_expense_seals_the_id_it_sends_in_clear() {
+        use crate::common::test_fixtures::TEST_KEY;
+        use shared::entity::{read, Slot};
+        let entry = PlannedEntry { name: "Dinner", date: "2026-09-01", total: 30.0, transfer: false, payer: "a", debtors: vec![] };
+        let created = imported_expense(&TEST_KEY, uuid::Uuid::nil(), &entry, 1, &[(1, 15.0), (2, 15.0)]).unwrap();
+        let eid = created.client_op_id.expect("an id in clear");
+        assert_eq!(read(&crate::crypto::decrypt(&TEST_KEY, &created.payload).unwrap(), Slot::Expense), Ok(Some(eid)));
+        let again = imported_expense(&TEST_KEY, uuid::Uuid::nil(), &entry, 1, &[(1, 15.0), (2, 15.0)]).unwrap();
+        assert_ne!(again.client_op_id, Some(eid), "one id per row");
+    }
 
     fn pair(iv: &str) -> EncryptedPair {
         EncryptedPair { ct: "same-alias".into(), iv: iv.into() }

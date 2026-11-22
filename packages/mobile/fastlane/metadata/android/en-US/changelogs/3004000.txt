@@ -1,0 +1,4 @@
+• My badges: a collection of 15, worked out on your device. Nobody else sees them
+• Badge shown: pick one badge the other members of your shared projects can see. None by default
+• Offline: your pending changes are sent more reliably
+• Small fixes and improvements

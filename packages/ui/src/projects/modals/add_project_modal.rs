@@ -1,21 +1,20 @@
 use api::account_projects::account_projects_controller::upsert_account_project;
-use api::projects::projects_controller::add_project;
-use api::users::users_controller::add_user;
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use crate::tid;
 use shared::{
-    Account as AccountData, CreatableProject, CreatableUser, CreatableUserBatch, ProjectPayload,
-    UpsertAccountProject, UserPayload,
+    Account as AccountData, CreatableProject, ProjectPayload, UpsertAccountProject, UserPayload,
 };
 
-use crate::common::creator_proof::{keep_creator_secret, new_creator_proof};
+use crate::entity_ids::{add_participants, decrypt_row, new_participant};
+
+use crate::common::creator_proof::new_creator_proof;
 use crate::common::{
-    error_message, haptic, project_initial, tile_class, tile_text, update_ls, CurrencyPicker, DiscardConfirm, EmojiGrid, Haptic, SheetBar, SheetFooter, SHEET_TITLE,
-    upsert_project, upsert_project_key, InviteRetry, LocalStorageState,
+    add_project_fresh, error_message, haptic, project_initial, tile_class, tile_text, update_ls, CurrencyPicker, DiscardConfirm, EmojiGrid, Haptic, SheetBar, SheetFooter, SHEET_TITLE,
+    upsert_project, InviteRetry, LocalStorageState,
 };
 use crate::crypto::{
-    claim_token, claim_verifier, decrypt_json, encrypt_padded_json, generate_key, key_to_fragment,
+    claim_token, claim_verifier, encrypt_padded_json, generate_key,
     wrap_key, WrapUse,
 };
 use crate::friends::friends_service::{invite_each, sender, Invitee};
@@ -68,6 +67,8 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
     // Set once the project row exists, so a retry after a failed participants step finishes this
     // project instead of creating a second one.
     let mut created: Signal<Option<(Uuid, [u8; 32])>> = use_signal(|| None);
+    // The creation a press left unknown, which the next press settles before anything else.
+    let unsent: Signal<Option<Uuid>> = use_signal(|| None);
 
     let friend_list = use_friend_list();
     let nav = use_navigator();
@@ -121,58 +122,49 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
         let account = auth_ctx();
         let account_key = account_key_ctx();
         let resumed = created();
-        let key = resumed.map(|(_, k)| k).unwrap_or_else(generate_key);
+        let key = generate_key();
 
         spawn(async move {
-            // Encrypt all project fields as a single JSON blob
-            let payload = match encrypt_padded_json(&key, &new_project_payload(&name_val, &currency_val, &desc_val, emoji_val.as_deref())) {
-                Ok(v) => v,
-                Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
-            };
-
             // Step A - create project
             // Born with its verifier, so no one holding only the UUID can ever seed one.
-            let project_id = match resumed {
-                Some((id, _)) => id,
+            // The key is stored the moment the project exists (`add_project_fresh`): it used to
+            // wait for the participants, and a failure there left a project nobody could decrypt.
+            let (project_id, key) = match resumed {
+                Some(made) => made,
                 None => {
-                    let claim_verifier = Some(claim_verifier(&key).to_vec());
                     let demo = crate::common::persist::is_demo();
                     let (creator_secret, creator_verifier) = new_creator_proof(account.is_none() && !demo);
-                    let project =
-                        match add_project(Json(CreatableProject { payload, claim_verifier, demo, creator_verifier })).await {
-                            Ok(p) => p,
-                            Err(e) => {
-                                error_msg.set(Some(error_message(&e)));
-                                loading.set(false);
-                                return;
-                            }
-                        };
-                    // The key is stored the moment the project exists: it used to wait for the
-                    // participants, and a failure there left a project nobody could ever decrypt.
-                    update_ls(ls_ctx, |state| {
-                        upsert_project(state, project.id, None);
-                        upsert_project_key(state, project.id, key_to_fragment(&key));
-                        keep_creator_secret(state, project.id, creator_secret);
-                    });
-                    created.set(Some((project.id, key)));
-                    project.id
+                    let seal = |id, key: &[u8; 32]| {
+                        Ok(CreatableProject {
+                            id: Some(id),
+                            payload: encrypt_padded_json(key, &new_project_payload(&name_val, &currency_val, &desc_val, emoji_val.as_deref()))?,
+                            claim_verifier: Some(claim_verifier(key).to_vec()),
+                            demo,
+                            creator_verifier: creator_verifier.clone(),
+                        })
+                    };
+                    let made = match add_project_fresh(ls_ctx, Some(unsent), &key, creator_secret, seal).await {
+                        Ok(made) => made,
+                        Err(e) => {
+                            error_msg.set(Some(e.message()));
+                            loading.set(false);
+                            return;
+                        }
+                    };
+                    created.set(Some((made.project.id, made.key)));
+                    (made.project.id, made.key)
                 }
             };
 
             // Step B - create encrypted users, you first
             let names: Vec<String> =
                 std::iter::once(me_val.clone()).chain(others.iter().map(|d| d.name.clone())).collect();
-            let mut creatables: Vec<CreatableUser> = Vec::new();
-            for user_name in &names {
-                let payload = match encrypt_padded_json(&key, &UserPayload { name: user_name.clone(), removed: false }) {
-                    Ok(v) => v,
-                    Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
-                };
-                creatables.push(CreatableUser { payload, project_id });
-            }
+            let creatables = match names.iter().map(|n| new_participant(&key, project_id, n.clone())).collect::<Result<Vec<_>, _>>() {
+                Ok(v) => v,
+                Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
+            };
 
-            crate::common::project_token::scope_key(Some(&key));
-            let created_users = match add_user(Json(CreatableUserBatch::Multiple(creatables))).await
+            let created_users = match add_participants(&key, creatables).await
             {
                 Ok(u) => u,
                 Err(e) => {
@@ -188,7 +180,7 @@ pub fn AddProjectModal(props: AddProjectModalProps) -> Element {
                 created_users
                     .iter()
                     .find(|u| {
-                        decrypt_json::<UserPayload>(&key, &u.payload)
+                        decrypt_row::<UserPayload>(&key, &u.payload)
                             .map(|p| same_name(&p.name, name))
                             .unwrap_or(false)
                     })
@@ -464,6 +456,7 @@ mod tests {
         currency: &str,
     ) -> Result<CreatableProject, String> {
         Ok(CreatableProject {
+            id: Some(Uuid::new_v4()),
             payload: encrypt_json(key, &ProjectPayload {
                 name: name.to_string(),
                 currency: currency.to_string(),
@@ -477,17 +470,6 @@ mod tests {
         })
     }
 
-    fn make_creatable_user(
-        key: &[u8; 32],
-        name: &str,
-        project_id: Uuid,
-    ) -> Result<CreatableUser, String> {
-        Ok(CreatableUser {
-            payload: encrypt_json(key, &UserPayload { name: name.to_string(), removed: false })?,
-            project_id,
-        })
-    }
-
     fn test_key() -> [u8; 32] {
         [0x42u8; 32]
     }
@@ -495,7 +477,7 @@ mod tests {
     fn make_user(key: &[u8; 32], id: i32, name: &str) -> User {
         User {
             id,
-            payload: encrypt_json(key, &UserPayload { name: name.to_string(), removed: false }).unwrap(),
+            payload: encrypt_json(key, &UserPayload { name: name.to_string(), removed: false, extra: Default::default() }).unwrap(),
             ..Default::default()
         }
     }
@@ -548,7 +530,7 @@ mod tests {
     fn user_name_roundtrip() {
         let key = test_key();
         let pid = Uuid::nil();
-        let cu = make_creatable_user(&key, "Alice", pid).unwrap();
+        let cu = crate::entity_ids::new_participant(&key, pid, "Alice".into()).unwrap();
         let up: UserPayload = decrypt_json(&key, &cu.payload).unwrap();
         assert_eq!(up.name, "Alice");
         assert_eq!(cu.project_id, pid);
@@ -557,7 +539,7 @@ mod tests {
     #[test]
     fn user_wrong_key_fails() {
         let key = test_key();
-        let cu = make_creatable_user(&key, "Alice", Uuid::nil()).unwrap();
+        let cu = crate::entity_ids::new_participant(&key, Uuid::nil(), "Alice".into()).unwrap();
         let mut bad = key;
         bad[1] ^= 0xAB;
         assert!(decrypt_json::<UserPayload>(&bad, &cu.payload).is_err());

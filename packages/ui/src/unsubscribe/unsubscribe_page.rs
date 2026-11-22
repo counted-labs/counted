@@ -4,6 +4,7 @@ use api::mail::mail_controller::unsubscribe;
 use shared::UnsubscribePayload;
 
 use crate::common::error_message;
+use crate::route::Route;
 use crate::tid;
 
 #[derive(Clone, PartialEq)]
@@ -46,6 +47,11 @@ pub fn UnsubscribePage(token: String) -> Element {
                 },
                 current => rsx! {
                     p { class: "text-base-content/70", {tid!("unsubscribe-body")} }
+                    p { id: "unsubscribe-kept", class: "text-sm text-base-content/60",
+                        {tid!("unsubscribe-kept")}
+                        " "
+                        Link { class: "link", to: Route::PrivacyPage {}, {tid!("nav-privacy")} }
+                    }
                     button {
                         id: "unsubscribe-confirm",
                         r#type: "button",

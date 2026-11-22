@@ -1,9 +1,9 @@
-use chrono::{NaiveDate, NaiveDateTime};
 use serde::{Deserialize, Serialize};
+use shared::time::{Date, DateTime};
 use shared::{ExpenseType, RecurringExpense};
 use uuid::Uuid;
 
-use crate::crypto::decrypt_json;
+use crate::entity_ids::decrypt_row;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -17,7 +17,7 @@ pub enum Freq {
 #[serde(rename_all = "camelCase", tag = "kind", content = "value")]
 pub enum Ends {
     Never,
-    On(NaiveDate),
+    On(Date),
     After(u32),
 }
 
@@ -26,7 +26,7 @@ pub enum Ends {
 pub struct Rule {
     pub freq: Freq,
     pub interval: u32,
-    pub anchor: NaiveDate,
+    pub anchor: Date,
     pub ends: Ends,
 }
 
@@ -114,7 +114,7 @@ pub struct DecryptedRule {
     pub id: Uuid,
     pub version: i64,
     pub author_id: Option<i32>,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime,
     pub payload: RecurringPayload,
 }
 
@@ -123,7 +123,7 @@ pub fn decrypt_rules(key: &[u8; 32], rules: &[RecurringExpense]) -> Vec<Decrypte
     rules
         .iter()
         .filter_map(|r| {
-            let payload = decrypt_json::<RecurringPayload>(key, &r.payload).ok()?;
+            let payload = decrypt_row::<RecurringPayload>(key, &r.payload).ok()?;
             Some(DecryptedRule {
                 id: r.id,
                 version: r.version,
@@ -166,7 +166,7 @@ mod tests {
             rule: Rule {
                 freq: Freq::Monthly,
                 interval: 1,
-                anchor: NaiveDate::from_ymd_opt(2026, 8, 1).unwrap(),
+                anchor: Date::from_ymd_opt(2026, 8, 1).unwrap(),
                 ends: Ends::After(12),
             },
             next: 2,
@@ -181,7 +181,7 @@ mod tests {
             author_id: Some(1),
             payload: encrypt_json(&key, &payload).unwrap(),
             version: 3,
-            created_at: NaiveDateTime::default(),
+            created_at: DateTime::default(),
             listed_participants: false,
         };
         let rules = decrypt_rules(&key, &[row]);
@@ -199,10 +199,41 @@ mod tests {
             author_id: None,
             payload,
             version: 0,
-            created_at: NaiveDateTime::default(),
+            created_at: DateTime::default(),
             listed_participants: false,
         };
         assert!(decrypt_rules(&test_key(), &[row]).is_empty());
+    }
+
+    #[test]
+    fn a_rule_that_fails_r1_or_r2_is_dropped_and_a_bound_one_kept() {
+        let key = test_key();
+        let row = |slot: &str, eid: String| {
+            let mut payload = RecurringPayload {
+                template: template(),
+                rule: Rule { freq: Freq::Weekly, interval: 1, anchor: Date::from_ymd_opt(2026, 8, 1).unwrap(), ends: Ends::Never },
+                next: 0,
+                paused: false,
+                seed: Uuid::new_v4(),
+                author_id: None,
+                extra: Default::default(),
+            };
+            payload.extra.insert("eid".into(), eid.into());
+            payload.extra.insert("slot".into(), slot.into());
+            RecurringExpense {
+                id: Uuid::new_v4(),
+                project_id: Uuid::nil(),
+                author_id: None,
+                payload: encrypt_json(&key, &payload).unwrap(),
+                version: 0,
+                created_at: DateTime::default(),
+                listed_participants: false,
+            }
+        };
+        let id = Uuid::new_v4().to_string();
+        assert_eq!(decrypt_rules(&key, &[row("rule", id.clone())]).len(), 1);
+        assert!(decrypt_rules(&key, &[row("expense", id.clone())]).is_empty(), "R1");
+        assert!(decrypt_rules(&key, &[row("rule", id.to_uppercase())]).is_empty(), "R2");
     }
 
     #[test]

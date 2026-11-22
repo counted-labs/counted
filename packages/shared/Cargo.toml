@@ -7,13 +7,17 @@ publish = false
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 uuid = { version = "1.6", features = ["v4", "serde", "js"] }
-chrono = { version = "0.4", features = ["serde"] }
+jiff = { version = "0.2.39", default-features = false, features = ["std"] }
+jiff-sqlx = { version = "0.1.1", features = ["postgres"], optional = true }
 serde_json = "1.0"
-sqlx = { version = "0.8.6", features = ["runtime-tokio", "postgres", "uuid", "chrono", "rust_decimal", "derive"], optional = true }
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "postgres", "uuid", "rust_decimal", "derive"], optional = true }
 
 [dev-dependencies]
 proptest = { version = "1", default-features = false, features = ["std"] }
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+jiff = { version = "0.2.39", default-features = false, features = ["std", "js"] }
+
 [features]
 default = []
-server = ["sqlx"]
+server = ["sqlx", "jiff-sqlx"]

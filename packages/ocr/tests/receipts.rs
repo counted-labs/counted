@@ -65,7 +65,7 @@ fn receipts_are_read_correctly() {
     // Loading 31 MB of weights is a one-off the user pays once per app launch; every scan after it
     // pays only inference. Reporting them together would hide which one is the problem.
     let warmup = std::time::Instant::now();
-    let _ = ocr::scan(&std::fs::read(&files[0]).unwrap());
+    let _ = ocr::scan(&std::fs::read(&files[0]).unwrap(), shared::time::DateTime::now_utc().date());
     println!("first scan (includes model load): {:?}", warmup.elapsed());
 
     let (mut amounts, mut dates, mut titles) = (0, 0, 0);
@@ -81,7 +81,7 @@ fn receipts_are_read_correctly() {
         );
 
         let started = std::time::Instant::now();
-        let scanned = ocr::scan(&jpeg);
+        let scanned = ocr::scan(&jpeg, shared::time::DateTime::now_utc().date());
         let elapsed = started.elapsed();
         let receipt = match scanned {
             Ok(r) => r,

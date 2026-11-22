@@ -170,6 +170,7 @@ pub fn BudgetSheet(
                 return;
             }
         };
+        let any_ceiling = typed.values().any(|v| *v > 0.0);
         let shown = shown.clone();
         let alert = alert();
         saving.set(true);
@@ -188,7 +189,12 @@ pub fn BudgetSheet(
                 })
             };
             match update_project_fresh(project_id, edit).await {
-                Ok(_) => on_saved.call(()),
+                Ok(_) => {
+                    if any_ceiling {
+                        crate::badges::award(crate::badges::PREMIER_BUDGET);
+                    }
+                    on_saved.call(());
+                }
                 Err(e) => {
                     error_msg.set(Some(error_message(&e)));
                     saving.set(false);

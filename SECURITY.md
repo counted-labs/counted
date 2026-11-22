@@ -178,6 +178,12 @@ Each statement has one label:
   key. A daily sweep deletes expired sessions, accounts never verified after 24 hours, and projects
   with no member left after 24 hours. Deleted data stays in backups until those age out.
   **[Commitment]**
+- A deleted project's id is kept for good, alone, so that nobody can create a project under it
+  again. Two limits: the id of a project deleted before the release that brought this is kept
+  only when an account's retired key copy, which lasts 30 days, still names it; and a restore
+  from a backup frees the ids of the projects deleted or created after that backup, unless the
+  database it replaces can still be read and its ids are copied over.
+  **[Not independently verified]**
 
 ### 5.4 What the server enforces
 
@@ -185,9 +191,13 @@ Each statement has one label:
   it. **[Not independently verified]**
 - Rate limits: sign-in, registration and verification-mail requests are limited to 5 per minute per
   IP address. Each password guess also costs the guesser an Argon2id computation on their side,
-  because the server only checks the login proof. **[Not independently verified]**
+  because the server only checks the login proof. Project creation is limited to 6 per minute
+  per IPv4 address, after a burst of 30. counted.fr is not served over IPv6 today; a key per IPv6
+  /64 is configured for the day it is, and is not in force. **[Not independently verified]**
 - Every request on an expense, payment, participant, recurring-expense or history row is scoped to the project
   it names: holding one project's id gives nothing in another. **[Not independently verified]**
+- A project id names one project for good: a creation under the id of a project that exists or
+  was deleted is refused, with the same answer for both. **[Not independently verified]**
 - Every request about a project carries a token derived from its key. Once the server no longer
   accepts app versions before 3.2.9, it refuses a request without the right token, on every project
   that has a key check, and only an admin can change a project's key. **[Not independently

@@ -1,8 +1,7 @@
 //! The projects page's money (J1, J3, P4): "On vous doit / Vous devez" with the people behind it,
 //! and what each group row says under and beside its name.
-
-use chrono::{Datelike, NaiveDate};
 use dioxus::prelude::*;
+use shared::time::Date;
 use uuid::Uuid;
 
 use crate::common::{amount, initials, month_abbrev, signed_amount, user_color_class, Avatar};
@@ -110,8 +109,8 @@ fn DebtRow(debt: Debt, on_pay: EventHandler<Uuid>, on_remind: EventHandler<Debt>
 }
 
 /// "Aujourd'hui", "Hier", or "2 oct.".
-pub fn activity_label(date: NaiveDate, today: NaiveDate) -> String {
-    match (today - date).num_days() {
+pub fn activity_label(date: Date, today: Date) -> String {
+    match today.days_since(date) {
         0 => tid!("date-today"),
         1 => tid!("date-yesterday"),
         _ => format!("{} {}", date.day(), month_abbrev(date.month0() as usize)),
@@ -119,7 +118,7 @@ pub fn activity_label(date: NaiveDate, today: NaiveDate) -> String {
 }
 
 /// The line under a group's name: last activity and member count, as far as this device knows them.
-pub fn row_subtitle(glance: &ProjectGlance, today: NaiveDate) -> String {
+pub fn row_subtitle(glance: &ProjectGlance, today: Date) -> String {
     let mut parts = Vec::new();
     if let Some(date) = glance.last_activity {
         parts.push(activity_label(date, today));

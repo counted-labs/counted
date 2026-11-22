@@ -1,16 +1,15 @@
-use api::recurring::recurring_controller::add_recurring_expense;
-use dioxus::fullstack::Json;
+use shared::time::{Date, DateTime};
 use dioxus::prelude::*;
 use crate::tid;
 use shared::{
-    CreatableExpense, Expense, ExpensePayload, ExpenseType, HistoryAction, HistoryContext,
+    CreatableExpense, Expense, ExpensePayload, ExpenseType, HistoryAction,
     HistoryEntity, HistoryPayload, User,
 };
-use std::collections::VecDeque;
+use crate::entity_ids::{add_rule, new_expense, sealed_history};
 use uuid::Uuid;
 
 use crate::common::{
-    error_message, fx_cache, queued_expenses, today_iso, write_queue, OpKind, ProjectKey, QueuedOp,
+    enqueue_all, error_message, fx_cache, queued_expense, today_iso, OpKind, ProjectKey, Queue, QueuedOp,
 };
 
 use super::expense_form::{ExpenseForm, RepeatSlot};
@@ -25,7 +24,6 @@ use super::super::helpers::expense_modal_helpers::{
 };
 use crate::icons::{RightArrowIcon, WalletIcon};
 use super::super::hooks::use_fx_rates::use_fx_rates;
-use crate::crypto::encrypt_padded_json;
 use crate::decrypted::user_names;
 
 /// An add as queued: listed under a pending id until the replay brings the server's row.
@@ -76,6 +74,10 @@ pub struct AddExpenseModalProps {
     /// "From A to B": the form is moving an expense here, so it says so and offers no repeat.
     #[props(default)]
     pub move_banner: Option<String>,
+    /// A move's delete at the source, given the add's id: written with the add, before it, in the
+    /// same handler (SPEC §15.9.5 Q2d).
+    #[props(default)]
+    pub move_delete: Option<Callback<Uuid, QueuedOp>>,
 }
 
 #[component]
@@ -125,7 +127,7 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
     let mut loading = use_signal(|| false);
     let is_online = use_context::<Signal<bool>>();
-    let mut pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
+    let pending_ops = use_context::<Signal<Queue>>();
     let repeat: Signal<Option<Repeat>> = use_signal(|| None);
     let store = use_context::<ProjectStore>();
     let today = store
@@ -151,6 +153,7 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
     let users_for_author = props.users.clone();
     let currency_for_submit = props.currency.clone();
     let on_created = props.on_created;
+    let move_delete = props.move_delete;
     let on_close_submit = props.on_close;
     let carried = props.carried.clone();
 
@@ -195,6 +198,7 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
             error_msg.set(Some(e.message()));
             return;
         }
+        let foreign = conversion.is_some();
 
         let name_val = form.name.clone();
         let author_id =
@@ -205,7 +209,7 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
                 error_msg.set(Some(tid!("repeat-offline")));
                 return;
             }
-            let Ok(anchor) = chrono::NaiveDate::parse_from_str(&form.date, "%Y-%m-%d") else {
+            let Some(anchor) = Date::parse_ymd(&form.date) else {
                 error_msg.set(Some(tid!("expense-invalid-date")));
                 return;
             };
@@ -230,11 +234,14 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
             loading.set(true);
             error_msg.set(None);
             spawn(async move {
-                crate::common::project_token::scope(req.project_id);
-                match add_recurring_expense(Json(req)).await {
+                match add_rule(&key, req).await {
                     Ok(_) => {
                         // The rule is the server's to list: the sync brings it, and the materializer
                         // writes its due occurrences from there.
+                        crate::badges::award(crate::badges::RECURRENT);
+                        if foreign {
+                            crate::badges::award(crate::badges::TOURISTE);
+                        }
                         let mut sync = store.sync;
                         sync.restart();
                         on_created.call(None);
@@ -249,8 +256,13 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
             return;
         }
 
-        let mut payload = match build_creatable_expense(
+        // Online or not, the add goes through the queue and the sheet closes now: the row is listed
+        // as pending until the replay lands it. The op's id is the expense's entity id, sealed in
+        // the payload and sent as `client_op_id`, so every replay of it names the same write.
+        let op_id = Uuid::new_v4();
+        let payload = match build_creatable_expense(
             &key,
+            op_id,
             &form,
             &expense_type(),
             category(),
@@ -266,15 +278,18 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
                 return;
             }
         };
-
-        // Online or not, the add goes through the queue and the sheet closes now: the row is listed
-        // as pending until the replay lands it. The op's id rides inside the payload so every
-        // replay of it names the same write.
-        let op_id = Uuid::new_v4();
-        payload.client_op_id = Some(op_id);
-        pending_ops.write().push_back(QueuedOp::new(op_id, &name_val, OpKind::AddExpense(payload)));
-        write_queue(&pending_ops.read());
-        let row = queued_expenses(&pending_ops.read(), project_id, chrono::Utc::now().naive_utc()).pop();
+        let add = QueuedOp::new(op_id, &name_val, OpKind::AddExpense(payload));
+        let ops = match move_delete {
+            Some(delete) => vec![QueuedOp { after: Some(op_id), ..delete.call(op_id) }, add],
+            None => vec![add],
+        };
+        if !enqueue_all(pending_ops, ops) {
+            return;
+        }
+        if foreign {
+            crate::badges::award(crate::badges::TOURISTE);
+        }
+        let row = queued_expense(&pending_ops.read(), op_id, DateTime::now_utc());
         on_created.call(row.map(|row| QueuedAdd { op_id, row }));
         on_close_submit.call(());
     };
@@ -336,6 +351,7 @@ pub fn AddExpenseModal(props: AddExpenseModalProps) -> Element {
 #[allow(clippy::too_many_arguments)]
 fn build_creatable_expense(
     key: &[u8; 32],
+    eid: Uuid,
     form: &ValidatedExpense,
     expense_type: &ExpenseType,
     category: Option<String>,
@@ -355,27 +371,18 @@ fn build_creatable_expense(
         payload.extra = c.extra.clone();
     }
     let payload = with_shares(payload, Some(author_id), &form.payers, &form.debtors);
-    Ok(CreatableExpense {
-        payload: encrypt_padded_json(key, &payload)?,
-        project_id,
-        author_id: None,
-        payers: Vec::new(),
-        debtors: Vec::new(),
-        history: Some(HistoryContext {
-            actor_user_id: None,
-            payload: encrypt_padded_json(
-                key,
-                &HistoryPayload {
-                    summary: history_summary,
-                    actor_user_id: Some(author_id),
-                    action: Some(HistoryAction::Created),
-                    entity: Some(HistoryEntity::Expense),
-                    entity_id: None,
-                },
-            )?,
-        }),
-        client_op_id: None,
-    })
+    let history = sealed_history(
+        key,
+        HistoryPayload {
+            summary: history_summary,
+            actor_user_id: Some(author_id),
+            action: Some(HistoryAction::Created),
+            entity: Some(HistoryEntity::Expense),
+            entity_id: None,
+            extra: Default::default(),
+        },
+    )?;
+    new_expense(key, project_id, eid, payload, Some(history))
 }
 
 /// The project's own categories for the picker, when its data is the one loaded.
@@ -430,6 +437,7 @@ mod tests {
     ) -> CreatableExpense {
         build_creatable_expense(
             &test_key(),
+            Uuid::new_v4(),
             &validated(name, amount, payers, debtors),
             &ExpenseType::Expense,
             None,
@@ -451,6 +459,7 @@ mod tests {
         carried.extra.insert("tags".into(), serde_json::json!(["work"]));
         let ce = build_creatable_expense(
             &test_key(),
+            Uuid::new_v4(),
             &validated("Hotel", 92.0, &[(1, 92.0)], &[(1, 92.0)]),
             &ExpenseType::Expense,
             None,
@@ -468,6 +477,47 @@ mod tests {
         assert!(ep.estimate);
         assert_eq!(ep.extra["tags"], serde_json::json!(["work"]));
         assert_eq!(ep.recurring_id, None, "a moved occurrence leaves its rule behind");
+    }
+
+    #[test]
+    fn a_moved_expense_takes_its_own_eid_never_the_sources() {
+        use shared::entity::{self, Slot};
+        let source_eid = Uuid::new_v4();
+        let mut carried: ExpensePayload = decrypt_json(&test_key(), &build("x", 1.0, &[(1, 1.0)], &[(1, 1.0)]).payload).unwrap();
+        entity::bind(&mut carried.extra, Slot::Expense, source_eid);
+        let eid = Uuid::new_v4();
+        let ce = build_creatable_expense(
+            &test_key(),
+            eid,
+            &validated("Hotel", 92.0, &[(1, 92.0)], &[(1, 92.0)]),
+            &ExpenseType::Expense,
+            None,
+            Uuid::nil(),
+            1,
+            "added".into(),
+            None,
+            Some(&carried),
+        )
+        .unwrap();
+        let plain = crate::crypto::decrypt(&test_key(), &ce.payload).unwrap();
+        assert_eq!(entity::read(&plain, Slot::Expense), Ok(Some(eid)));
+        assert_ne!(eid, source_eid);
+        assert_eq!(ce.client_op_id, Some(eid), "the id sealed is the id sent in clear");
+        assert!(!plain.contains(&source_eid.to_string()));
+    }
+
+    #[test]
+    fn a_new_expense_seals_the_id_it_sends_in_clear_and_its_history_has_its_own() {
+        use shared::entity::{self, Slot};
+        let ce = build("Dîner", 45.0, &[(1, 45.0)], &[(2, 45.0)]);
+        let eid = ce.client_op_id.expect("an id in clear");
+        let plain = crate::crypto::decrypt(&test_key(), &ce.payload).unwrap();
+        assert_eq!(entity::read(&plain, Slot::Expense), Ok(Some(eid)));
+        assert!(plain.len() >= 256 && plain.len().is_power_of_two(), "padded");
+        let history = ce.history.unwrap();
+        assert!(history.eid.is_some() && history.eid != Some(eid));
+        let plain = crate::crypto::decrypt(&test_key(), &history.payload).unwrap();
+        assert_eq!(entity::read(&plain, Slot::History), Ok(history.eid));
     }
 
     #[test]
@@ -505,6 +555,7 @@ mod tests {
         let pid = Uuid::parse_str("550e8400-e29b-41d4-a716-446655440000").unwrap();
         let ce = build_creatable_expense(
             &test_key(),
+            Uuid::new_v4(),
             &validated("x", 10.0, &[(1, 10.0)], &[(2, 10.0)]),
             &ExpenseType::Expense,
             None,

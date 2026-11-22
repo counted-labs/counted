@@ -10,7 +10,6 @@ mod memory_cache;
 
 use std::time::Duration;
 
-use chrono::Utc;
 pub use config::*;
 pub use freshness::*;
 
@@ -68,7 +67,7 @@ impl IncrementalRenderer {
         route: String,
         html: impl Into<Vec<u8>>,
     ) -> Result<RenderFreshness, IncrementalRendererError> {
-        let timestamp = Utc::now();
+        let timestamp = std::time::SystemTime::now();
         let html = html.into();
         #[cfg(not(target_arch = "wasm32"))]
         self.file_system_cache

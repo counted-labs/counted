@@ -2,15 +2,25 @@
 //! controls, and run through the same checks as the `hostile_payloads` property tests, so a crash
 //! found here is a panic every member of a project would hit.
 
-use chrono::{NaiveDate, NaiveDateTime};
+use serde_json::Value;
+use shared::time::{Date, DateTime};
 use shared::{
     Budgets, Expense, ExpensePayload, ExpenseShare, HistoryAction, HistoryEntity, HistoryEntry, HistoryPayload, Payment,
     PaymentMethod, PaymentMethods, PaymentPayload, User, UserPayload,
 };
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use uuid::Uuid;
 
+use crate::badges::BadgeState;
+use crate::common::fx_cache::{read_fx, CachedFx};
+use crate::common::local_storage::{cached_project_row, key_of, read_from_ls, LocalStorageState};
+use crate::common::offline_queue::{queued_edit_ids, queued_expenses, read_queue};
+use crate::common::persist::{file_for, read_json, read_raw};
+use crate::common::store_seal::{self, open, seal, StoreKey};
 use crate::common::test_fixtures::TEST_KEY;
+use crate::common::{stored_theme, Theme};
 use crate::crypto::{encrypt, encrypt_json};
 use crate::recurring::model::{Ends, Freq, RecurringPayload, Rule, Side, Template};
 
@@ -111,20 +121,20 @@ impl Input<'_> {
         }
     }
 
-    fn date(&mut self) -> NaiveDate {
+    fn date(&mut self) -> Date {
         match self.byte() % 4 {
-            0 => NaiveDate::MIN,
-            1 => NaiveDate::MAX,
-            2 => NaiveDate::from_num_days_from_ce_opt(i32::from_le_bytes(self.bytes())).unwrap_or_default(),
-            _ => NaiveDate::from_ymd_opt(2025, 1, 1).unwrap() + chrono::Duration::days((u16::from_le_bytes(self.bytes()) % 2000) as i64),
+            0 => Date::MIN,
+            1 => Date::MAX,
+            2 => Date::from_num_days_from_ce_opt(i32::from_le_bytes(self.bytes())).unwrap_or_default(),
+            _ => Date::from_ymd_opt(2025, 1, 1).unwrap().checked_add_days((u16::from_le_bytes(self.bytes()) % 2000) as i64).unwrap(),
         }
     }
 
-    fn timestamp(&mut self) -> NaiveDateTime {
+    fn timestamp(&mut self) -> DateTime {
         match self.byte() % 3 {
-            0 => NaiveDateTime::MIN,
-            1 => NaiveDateTime::MAX,
-            _ => self.date().and_time(Default::default()),
+            0 => DateTime::MIN,
+            1 => DateTime::MAX,
+            _ => self.date().at_midnight(),
         }
     }
 
@@ -152,7 +162,7 @@ impl Input<'_> {
             recurring_id: self.option(|i| Uuid::from_u128((i.byte() % 3) as u128)),
             estimate: self.bool(),
             author_id: self.option(Self::id),
-            shares: self.option(|i| i.vec(8, |i| ExpenseShare { user_id: i.id(), amount: i.amount(), is_debt: i.bool() })),
+            shares: self.option(|i| i.vec(8, |i| ExpenseShare { user_id: i.id(), amount: i.amount(), is_debt: i.bool(), extra: Default::default() })),
             extra: Default::default(),
         }
     }
@@ -173,7 +183,7 @@ impl Input<'_> {
             expense_id: i.id(),
             user_id: i.id(),
             payload: encrypt_json(&TEST_KEY, &PaymentPayload { amount: i.amount(), is_debt: i.bool() }).unwrap(),
-            created_at: NaiveDateTime::default(),
+            created_at: DateTime::default(),
         })
     }
 
@@ -198,7 +208,7 @@ impl Input<'_> {
     fn users(&mut self) -> Vec<User> {
         self.vec(5, |i| User {
             id: i.id(),
-            payload: encrypt_json(&TEST_KEY, &UserPayload { name: i.string(), removed: i.bool() }).unwrap(),
+            payload: encrypt_json(&TEST_KEY, &UserPayload { name: i.string(), removed: i.bool(), extra: Default::default() }).unwrap(),
             claimed: i.bool(),
             claim_label: i.option(|i| i.blob(Self::string)),
             payment_methods: i.option(|i| i.blob(|i| PaymentMethods { methods: i.vec(4, Self::payment_method) })),
@@ -268,6 +278,7 @@ impl Input<'_> {
             action: i.option(Self::action),
             entity: Some(HistoryEntity::Expense),
             entity_id: i.option(Self::id),
+            extra: Default::default(),
         });
         HistoryEntry {
             id: 0,
@@ -348,4 +359,238 @@ impl Input<'_> {
 pub fn hybrid(data: &[u8]) {
     let Some((&mode, rest)) = data.split_first() else { return };
     crate::friends::friends_service::open_hostile(mode % 2 == 0, rest);
+}
+
+pub fn store(data: &[u8]) {
+    static SETUP: std::sync::Once = std::sync::Once::new();
+    SETUP.call_once(|| {
+        let dir = std::env::temp_dir().join("counted-fuzz-store");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::env::set_var("COUNTED_DATA_DIR", &dir);
+        install_store_key();
+    });
+    store_entry(data);
+}
+
+const STORE_KEY: [u8; 32] = [0x53; 32];
+static CREATED: AtomicBool = AtomicBool::new(false);
+
+fn install_store_key() {
+    store_seal::install(Arc::new(|_| StoreKey::Ready { key: STORE_KEY, created: CREATED.load(Ordering::Relaxed) }));
+}
+
+struct Store {
+    name: &'static str,
+    read: fn() -> Value,
+    /// What `read` returns once this plaintext opened, `None` when it does not parse.
+    take: fn(&[u8]) -> Option<Value>,
+    empty: fn() -> Value,
+}
+
+fn value(v: impl serde::Serialize) -> Value {
+    serde_json::to_value(v).unwrap()
+}
+
+fn parsed<T: serde::de::DeserializeOwned + serde::Serialize>(plain: &[u8]) -> Option<Value> {
+    serde_json::from_slice::<T>(plain).ok().map(value)
+}
+
+/// The queue as the app shows it, read from both of its files, and what the pages build from it.
+fn read_queue_views() {
+    let queue = read_queue();
+    for project in queue.iter().filter_map(|entry| entry.project) {
+        let _ = (queued_expenses(&queue, project, DateTime::default()), queued_edit_ids(&queue, project));
+    }
+}
+
+const STORES: [Store; 7] = [
+    Store {
+        name: "counted_local_storage",
+        read: || {
+            let ls = read_from_ls();
+            for p in &ls.projects {
+                let _ = (key_of(p), cached_project_row(&ls, p.project_id));
+            }
+            value(ls)
+        },
+        take: parsed::<LocalStorageState>,
+        empty: || value(LocalStorageState::default()),
+    },
+    Store {
+        name: "counted_offline_queue",
+        read: || {
+            read_queue_views();
+            read_json::<Value>("counted_offline_queue")
+        },
+        take: parsed::<Value>,
+        empty: || Value::Null,
+    },
+    Store { name: "counted_theme", read: || value(stored_theme()), take: parsed::<Theme>, empty: || value(Theme::default()) },
+    Store {
+        name: "counted_fx_rates",
+        read: || value(read_fx()),
+        take: |plain| serde_json::from_slice::<CachedFx>(plain).ok().map(|c| value((!c.rates.is_empty()).then_some(c))),
+        empty: || Value::Null,
+    },
+    Store {
+        name: "counted_badges",
+        read: || {
+            let badges = crate::badges::read_store();
+            let _ = badges.count();
+            value(badges)
+        },
+        take: parsed::<BadgeState>,
+        empty: || value(BadgeState::default()),
+    },
+    Store { name: "counted_cookies", read: || value(read_raw("counted_cookies")), take: |plain| Some(value(plain)), empty: || Value::Null },
+    Store {
+        name: "counted_q",
+        read: || {
+            read_queue_views();
+            value(read_json::<BTreeMap<String, Value>>("counted_q"))
+        },
+        take: parsed::<BTreeMap<String, Value>>,
+        empty: || value(BTreeMap::<String, Value>::new()),
+    },
+];
+
+/// The bytes as one entry of the sealed store, read by the app's own reader for it under a fixed
+/// store key. The first byte picks the store and how the entry reaches the disk: sealed as the app
+/// seals it, plain on the launch that made the key, as raw file bytes, sealed under another name or
+/// key, or sealed then cut or flipped; the rest is the plaintext. The reader returns the entry or
+/// starts empty, and loses nothing: what it does not take is kept beside the store, sealed.
+/// True when the reader took the entry.
+pub(crate) fn store_entry(data: &[u8]) -> bool {
+    let Some((&mode, rest)) = data.split_first() else { return false };
+    let (store, layer) = (&STORES[mode as usize % STORES.len()], mode as usize / STORES.len() % 5);
+    let (path, aside) = (file_for(store.name), file_for(store.name).with_extension("json.corrupt"));
+    CREATED.store(layer == 1, Ordering::Relaxed);
+    store_seal::retry();
+    let on_disk = match layer {
+        0 => seal(&STORE_KEY, store.name, rest).unwrap(),
+        1 | 2 => rest.to_vec(),
+        3 => misnamed(store.name, rest),
+        _ => altered(store.name, rest),
+    };
+    let opens_to = match store_seal::is_sealed(&on_disk) {
+        true => open(&STORE_KEY, store.name, &on_disk),
+        false => (layer == 1).then(|| on_disk.clone()),
+    };
+    std::fs::write(&path, &on_disk).unwrap();
+
+    let read = (store.read)();
+    let taken = opens_to.as_deref().and_then(store.take);
+    let accepted = taken.is_some();
+    assert_eq!(read, taken.unwrap_or_else(store.empty));
+    if accepted {
+        let now = std::fs::read(&path).unwrap();
+        assert_eq!(open(&STORE_KEY, store.name, &now), opens_to, "the store still holds the entry, sealed");
+        assert!(!store_seal::is_sealed(&on_disk) || now == on_disk, "a sealed entry read is not rewritten");
+        assert!(!aside.exists());
+    } else {
+        let kept = std::fs::read(&aside).unwrap();
+        match store_seal::is_sealed(&on_disk) {
+            true => assert_eq!(kept, on_disk, "a sealed entry is set aside as it was"),
+            false => assert_eq!(open(&STORE_KEY, &format!("{}.corrupt", store.name), &kept), Some(on_disk), "a plain one is sealed aside"),
+        }
+        assert!(!path.exists(), "the next write cannot reach what was set aside");
+    }
+    assert!(!path.with_extension("json.tmp").exists());
+    let _ = (std::fs::remove_file(&path), std::fs::remove_file(&aside));
+    accepted
+}
+
+fn misnamed(name: &str, rest: &[u8]) -> Vec<u8> {
+    let (&pick, plain) = rest.split_first().unwrap_or((&0, &[]));
+    let other = STORES[pick as usize / 3 % STORES.len()].name;
+    match pick % 3 {
+        0 if other != name => seal(&STORE_KEY, other, plain),
+        1 => seal(&STORE_KEY, &format!("{name}.corrupt"), plain),
+        _ => seal(&[0x54; 32], name, plain),
+    }
+    .unwrap()
+}
+
+fn altered(name: &str, rest: &[u8]) -> Vec<u8> {
+    let (&pick, plain) = rest.split_first().unwrap_or((&0, &[]));
+    let mut sealed = seal(&STORE_KEY, name, plain).unwrap();
+    let at = pick as usize / 2 % sealed.len();
+    match pick % 2 {
+        0 => sealed.truncate(at),
+        _ => sealed[at] ^= 1,
+    }
+    sealed
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    struct Installed;
+
+    impl Drop for Installed {
+        fn drop(&mut self) {
+            store_seal::uninstall();
+        }
+    }
+
+    fn in_store<T>(f: impl FnOnce() -> T) -> T {
+        crate::common::test_fixtures::with_data_dir("fuzz_store", |_| {
+            install_store_key();
+            let _installed = Installed;
+            f()
+        })
+    }
+
+    const SEEDS: [&[u8]; 7] = [
+        include_bytes!("../fuzz/seeds/store/local_storage"),
+        include_bytes!("../fuzz/seeds/store/local_storage_plain"),
+        include_bytes!("../fuzz/seeds/store/offline_queue"),
+        include_bytes!("../fuzz/seeds/store/theme"),
+        include_bytes!("../fuzz/seeds/store/fx_rates"),
+        include_bytes!("../fuzz/seeds/store/badges"),
+        include_bytes!("../fuzz/seeds/store/queue_keys"),
+    ];
+
+    #[test]
+    fn each_seed_is_read_sealed_or_plain_on_the_launch_that_made_the_key_and_set_aside_otherwise() {
+        in_store(|| {
+            for seed in SEEDS {
+                for layer in 0..5u8 {
+                    let mode = seed[0] % STORES.len() as u8 + layer * STORES.len() as u8;
+                    let entry = [&[mode][..], &seed[1..]].concat();
+                    assert_eq!(store_entry(&entry), layer < 2, "{} at layer {layer}", STORES[mode as usize % STORES.len()].name);
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn a_plaintext_that_does_not_parse_is_set_aside_sealed_and_the_store_reads_empty() {
+        in_store(|| {
+            for (i, store) in STORES.iter().enumerate().take(5) {
+                assert!(!store_entry(&[&[i as u8][..], b"{\"projects\":"].concat()), "{}", store.name);
+            }
+        });
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(256))]
+
+        #[test]
+        fn any_store_entry_is_read_or_kept_aside(data in prop::collection::vec(any::<u8>(), 0..600)) {
+            in_store(|| store_entry(&data));
+        }
+
+        #[test]
+        fn any_seed_with_one_byte_changed_is_read_or_kept_aside(seed in 0..SEEDS.len(), mode in any::<u8>(), at in any::<usize>(), byte in any::<u8>()) {
+            let mut data = SEEDS[seed].to_vec();
+            let at = at % data.len();
+            data[at] = byte;
+            data[0] = mode;
+            in_store(|| store_entry(&data));
+        }
+    }
 }

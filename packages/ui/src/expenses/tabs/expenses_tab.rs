@@ -1,13 +1,14 @@
 use dioxus::prelude::*;
+use shared::time::Date;
 use crate::tid;
 use shared::{Expense, ExpenseType, ExpenseWithPayments, Payment, ProjectStatus};
-use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::common::{
     format_date, haptic, is_pending_expense, queued_edit_ids, Flash, Haptic, Mascot, MascotPose, ProjectKey,
-    QueuedOp, ScanSource, SpeedDialAction,
+    Queue, ScanSource, SpeedDialAction,
 };
 use crate::decrypted::{payments_are_inconsistent, pickable_users, DecryptedExpense, DecryptedPayment};
 use crate::expenses::helpers::delete_expense_action::{
@@ -15,7 +16,7 @@ use crate::expenses::helpers::delete_expense_action::{
 };
 use crate::categories::{ProjectCategories, ShownCategory};
 use crate::expenses::expense_search::{ExpenseSearchField, SearchToggle};
-use crate::expenses::move_expense::finish_move;
+use crate::expenses::move_expense::move_delete;
 use crate::expenses::helpers::expense_query::{mark_segments_hit, ExpenseFilter, ExpenseQuery};
 use crate::expenses::budget_panel::{sheet_categories, BudgetPanel, BudgetSheet};
 use crate::expenses::helpers::budgets::{average_by_category, budget_lines, crossed, spent_by_category, Meter};
@@ -39,6 +40,7 @@ use crate::route::Route;
 
 #[cfg(test)]
 mod tests {
+    use shared::time::DateTime;
     use super::*;
 
     fn de(id: i32, amount: f64) -> DecryptedExpense {
@@ -46,7 +48,7 @@ mod tests {
             id,
             author_id: Some(1),
             project_id: Uuid::nil(),
-            created_at: chrono::NaiveDateTime::default(),
+            created_at: DateTime::default(),
             name: format!("expense {id}"),
             description: None,
             amount,
@@ -68,7 +70,7 @@ mod tests {
             user_id: 0,
             is_debt,
             amount,
-            created_at: chrono::NaiveDateTime::default(),
+            created_at: DateTime::default(),
         }
     }
 
@@ -570,7 +572,7 @@ pub(crate) fn my_debt_by_expense(
     by_expense
 }
 
-type Groups = Vec<(chrono::NaiveDate, Vec<RowExpense>)>;
+type Groups = Vec<(Date, Vec<RowExpense>)>;
 
 /// Date descending, each day by id descending. Reads the page's single decryption pass and the
 /// date already parsed on [`RowExpense`], so a filter tap costs no crypto and no parsing.
@@ -580,20 +582,23 @@ fn group_expenses(data: &ProjectData, query: &ExpenseQuery, stored_user_id: Opti
 }
 
 fn group_rows(rows: Vec<&RowExpense>) -> Groups {
-    let mut map: BTreeMap<chrono::NaiveDate, Vec<RowExpense>> = BTreeMap::new();
+    let mut map: BTreeMap<Date, Vec<RowExpense>> = BTreeMap::new();
     for r in rows {
         map.entry(r.date).or_default().push(r.clone());
     }
     let mut groups: Groups = map.into_iter().rev().collect();
     for (_, group) in &mut groups {
-        group.sort_by_key(|r| std::cmp::Reverse((is_pending_expense(r.expense.id), r.expense.id.unsigned_abs())));
+        group.sort_by_key(|r| {
+            let pending = is_pending_expense(r.expense.id);
+            std::cmp::Reverse((pending, if pending { r.expense.created_at.unix_millis() } else { 0 }, r.expense.id.unsigned_abs()))
+        });
     }
     groups
 }
 
 /// The day-groups covering the first `limit` rows, plus how many rows that came to. A day is never
 /// split across the boundary: the divider and its rows arrive together or not at all.
-fn take_rows(groups: &[(chrono::NaiveDate, Vec<RowExpense>)], limit: usize) -> (Groups, usize) {
+fn take_rows(groups: &[(Date, Vec<RowExpense>)], limit: usize) -> (Groups, usize) {
     let mut out = Vec::new();
     let mut taken = 0;
     for (date, group) in groups {
@@ -674,7 +679,7 @@ pub(crate) fn apply_mutation(
 #[derive(Clone)]
 struct BudgetWatch {
     on: bool,
-    month: chrono::NaiveDate,
+    month: Date,
     lines: Vec<crate::expenses::helpers::budgets::BudgetLine>,
     categories: ProjectCategories,
 }
@@ -726,7 +731,7 @@ pub struct ExpensesTabProps {
 pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
     let key_ctx = use_context::<ProjectKey>().0;
     let nav = use_navigator();
-    let pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
+    let pending_ops = use_context::<Signal<Queue>>();
     let edit_queued = queued_edit_ids(&pending_ops.read(), props.project_id);
     let flash = use_context::<Signal<Option<Flash>>>();
     let store = use_context::<ProjectStore>();
@@ -1237,6 +1242,9 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                     },
                     on_created: move |queued: Option<QueuedAdd>| {
                         show_add_expense.set(false);
+                        if queued.is_some() && scan.prefill.peek().is_some() {
+                            crate::badges::award(crate::badges::PREMIER_TICKET);
+                        }
                         scan.prefill.set(None);
                         if let (Some(q), Some(k)) = (queued.as_ref(), key_ctx()) {
                             warn_on_budget(&k, &q.row, &budget_watch, flash);
@@ -1266,14 +1274,19 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                         pending_move.set(None);
                     },
                     on_created: {
-                        let draft = draft.clone();
+                        let to_name = draft.to_name.clone();
                         move |queued: Option<QueuedAdd>| {
-                            if let Some(q) = queued {
-                                finish_move(&draft, q.op_id, pending_ops, flash);
+                            if queued.is_some() {
+                                let mut flash = flash;
+                                flash.set(Some(Flash::ok(tid!("move-done", project: to_name.clone()))));
                             }
                             let mut pending_move = store.pending_move;
                             pending_move.set(None);
                         }
+                    },
+                    move_delete: {
+                        let draft = draft.clone();
+                        Some(Callback::new(move |add_op: Uuid| move_delete(&draft, add_op)))
                     },
                     project_id: props.project_id,
                     users: pickable_users(key_ctx().as_ref(), &data.users, &[]),
@@ -1332,14 +1345,9 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                     on_delete: move |stop: bool| {
                         confirming_delete.set(None);
                         let Some(k) = key_ctx() else { return };
-                        if stop {
-                            if let Some(rule) = live_rule_of(&props.data.read(), del_id, store.recurring_for(project_id).as_ref()) {
-                                stop_rule(k, project_id, &rule, props.stored_user_id, flash, move || {
-                                    let mut sync = store.sync;
-                                    sync.restart();
-                                });
-                            }
-                        }
+                        let rule = stop
+                            .then(|| live_rule_of(&props.data.read(), del_id, store.recurring_for(project_id).as_ref()))
+                            .flatten();
                         let req = delete_expense_request(
                             &k,
                             del_id,
@@ -1348,8 +1356,15 @@ pub fn ExpensesTab(props: ExpensesTabProps) -> Element {
                             props.stored_user_id.unwrap_or(0),
                         );
                         let on_changed = props.on_expenses_changed;
+                        let stored_user_id = props.stored_user_id;
                         run_delete_expense(req, del_name.clone(), pending_ops, move || {
-                            on_changed.call(ExpenseMutation::Deleted(del_id))
+                            on_changed.call(ExpenseMutation::Deleted(del_id));
+                            if let Some(rule) = rule {
+                                stop_rule(k, project_id, &rule, stored_user_id, flash, move || {
+                                    let mut sync = store.sync;
+                                    sync.restart();
+                                });
+                            }
                         });
                     },
                 }

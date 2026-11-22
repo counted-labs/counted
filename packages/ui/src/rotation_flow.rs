@@ -17,13 +17,14 @@ use shared::{
 use uuid::Uuid;
 
 use crate::common::local_storage::{key_of, read_from_ls, LocalStorageState};
-use crate::common::offline_queue::{read_queue, write_queue};
+use crate::common::{MeAnswered, MeRetry};
 use crate::common::project_token::{scope, scope_key};
 use crate::common::{update_ls, upsert_project_key};
 use crate::crypto::{
-    claim_token, claim_verifier, decrypt, encrypt, encrypt_padded_json, generate_key, key_to_fragment, open_wrap, wrap_key,
+    claim_token, claim_verifier, decrypt, encrypt, generate_key, key_to_fragment, open_wrap, wrap_key,
     WrapUse,
 };
+use crate::entity_ids::sealed_history;
 use crate::decrypted::{pickable_users, user_name};
 use crate::friends::friends_service::own_keys;
 use crate::rotation::{chained_payload, member_key_entry, may_switch, open_box, recipient_keys, restage, seal_box};
@@ -299,18 +300,18 @@ pub async fn rotate(
         Some(r) => tid!("history-member-removed", name: r.name.clone()),
         None => tid!("history-key-changed"),
     };
-    let history = encrypt_padded_json(
+    let history = sealed_history(
         &scan.k2,
-        &HistoryPayload {
+        HistoryPayload {
             summary,
             actor_user_id: my_user_id,
             action: Some(HistoryAction::Updated),
             entity: Some(HistoryEntity::Project),
             entity_id: None,
+            extra: Default::default(),
         },
     )
-    .ok()
-    .map(|payload| HistoryContext { actor_user_id: None, payload });
+    .ok();
     match commit(ls_ctx, &scan, k1, account, account_key, remove, history).await {
         Ok(boxed) => Ok(Rotated { k2: scan.k2, boxed }),
         Err(e) => {
@@ -320,11 +321,16 @@ pub async fn rotate(
     }
 }
 
-/// Moves this device to `k2`: the old key to `previous_keys`, the caches (K1 ciphertext) dropped,
-/// queued ops re-sealed so they replay under the new key (§8.6). `chain_seen` is the length of the
+/// Moves this device to `k2`: the old key to `previous_keys`, the caches (K1 ciphertext) dropped.
+/// Nothing is written to the write queue: the replay reseals what it sends from `previous_keys`
+/// (SPEC §15.9.5 Q5), which is why they are never dropped. `chain_seen` is the length of the
 /// chain the new key opened (L1). The member-key mark is cleared: the entry for the new epoch is
-/// written by the next project open, or by `commit` when it sent one.
-pub fn switch_local(state: &mut LocalStorageState, project_id: Uuid, k1: &[u8; 32], k2: &[u8; 32], key_epoch: i32, chain_seen: usize) {
+/// written by the next project open, or by `commit` when it sent one. Nothing changes, and false
+/// is answered, once `k1` is no longer the key held: another adoption got there first.
+pub fn switch_local(state: &mut LocalStorageState, project_id: Uuid, k1: &[u8; 32], k2: &[u8; 32], key_epoch: i32, chain_seen: usize) -> bool {
+    if !holds(state, project_id, k1) {
+        return false;
+    }
     upsert_project_key(state, project_id, key_to_fragment(k2));
     if let Some(entry) = state.projects.iter_mut().find(|p| p.project_id == project_id) {
         entry.previous_keys.push((key_epoch - 1, key_to_fragment(k1)));
@@ -339,39 +345,72 @@ pub fn switch_local(state: &mut LocalStorageState, project_id: Uuid, k1: &[u8; 3
         entry.cached_payments = None;
         entry.cached_data_version = None;
     }
-    let mut queue = read_queue();
-    for op in queue.iter_mut().filter(|op| op.op.project_id() == project_id) {
-        if let Ok(mut value) = serde_json::to_value(&*op) {
-            crate::rotation::rekey_value(&mut value, k1, k2);
-            if let Ok(rekeyed) = serde_json::from_value(value) {
-                *op = rekeyed;
-            }
-        }
-    }
-    write_queue(&queue);
+    true
+}
+
+fn holds(state: &LocalStorageState, project_id: Uuid, key: &[u8; 32]) -> bool {
+    state.projects.iter().find(|p| p.project_id == project_id).and_then(key_of) == Some(*key)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Adopted {
+    /// The held key changed, here or by another adoption since the read: sync again.
     Switched,
     /// No box and no escrow passes §8.4: the device keeps its cache, read-only.
     NoKey,
+    /// The account is not known yet: nothing was tried and nothing marked.
+    Deferred,
+}
+
+/// Who opens the boxes. `Unknown` until `me()` answers: the boxes of an account still loading are
+/// out of sight, which is no proof that no key reached this device.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Holder {
+    Unknown,
+    SignedOut,
+    Account(Box<Account>, Option<[u8; 32]>),
+}
+
+impl Holder {
+    pub fn of(answered: bool, account: Option<Account>, account_key: Option<[u8; 32]>) -> Self {
+        match (account, answered) {
+            (Some(account), _) => Holder::Account(Box::new(account), account_key),
+            (None, true) => Holder::SignedOut,
+            (None, false) => Holder::Unknown,
+        }
+    }
+
+    /// While unknown, subscribes the calling resource to sign-in, so it runs again once `me()`
+    /// answers or a login sets the account, and asks for `me()` again in case the boot call failed.
+    pub fn current(
+        answered: Signal<MeAnswered>,
+        auth: Signal<Option<Account>>,
+        account_key: Signal<Option<[u8; 32]>>,
+        mut retry: Signal<MeRetry>,
+    ) -> Self {
+        let holder = Self::of(answered.peek().0, auth.peek().clone(), *account_key.peek());
+        if holder == Holder::Unknown {
+            let _ = (answered.read(), auth.read());
+            retry.write().0 += 1;
+        }
+        holder
+    }
 }
 
 /// After a `PROJECT_KEY_ROTATED`: the account's own escrow and its rotation boxes are the only
 /// candidates, and each must pass `may_switch` against the row the server serves under it. A box
 /// never fills an empty slot: with no key held, nothing is taken from one.
-pub async fn adopt(
-    ls_ctx: Signal<LocalStorageState>,
-    project_id: Uuid,
-    account: Option<Account>,
-    account_key: Option<[u8; 32]>,
-) -> Adopted {
+pub async fn adopt(ls_ctx: Signal<LocalStorageState>, project_id: Uuid, holder: &Holder) -> Adopted {
+    let (account, account_key) = match holder {
+        Holder::Unknown => return Adopted::Deferred,
+        Holder::SignedOut => (None, None),
+        Holder::Account(account, account_key) => (Some(&**account), *account_key),
+    };
     let Some(held) = read_from_ls().projects.iter().find(|p| p.project_id == project_id).and_then(key_of) else {
         return Adopted::NoKey;
     };
     let mut candidates: Vec<([u8; 32], bool)> = Vec::new();
-    if let (Some(account), Some(ak)) = (account.as_ref(), account_key) {
+    if let (Some(account), Some(ak)) = (account, account_key) {
         if let Ok(rows) = get_account_projects().await {
             let escrowed = rows
                 .iter()
@@ -395,8 +434,9 @@ pub async fn adopt(
             continue;
         }
         let opened = crate::rotation::chain_len(&candidate, &served);
-        update_ls(ls_ctx, |state| switch_local(state, project_id, &held, &candidate, served.key_epoch, opened));
-        if let (true, Some(account), Some(ak)) = (from_box, account.as_ref(), account_key) {
+        let mut switched = false;
+        update_ls(ls_ctx, |state| switched = switch_local(state, project_id, &held, &candidate, served.key_epoch, opened));
+        if let (true, true, Some(account), Some(ak)) = (switched, from_box, account, account_key) {
             let user_id = read_from_ls().projects.iter().find(|p| p.project_id == project_id).and_then(|p| p.user_id);
             scope_key(Some(&candidate));
             let written = upsert_account_project(Json(UpsertAccountProject {
@@ -415,8 +455,21 @@ pub async fn adopt(
     }
     // Nothing of the project stays on screen or on disk for a device the new key did not reach. The
     // held key stays: it is what a new link's row must name to replace it (§8.4).
-    update_ls(ls_ctx, |state| mark_rotated(state, project_id));
-    Adopted::NoKey
+    let mut marked = false;
+    update_ls(ls_ctx, |state| marked = mark_lost(state, project_id, &held));
+    if marked {
+        Adopted::NoKey
+    } else {
+        Adopted::Switched
+    }
+}
+
+fn mark_lost(state: &mut LocalStorageState, project_id: Uuid, held: &[u8; 32]) -> bool {
+    let still = holds(state, project_id, held);
+    if still {
+        mark_rotated(state, project_id);
+    }
+    still
 }
 
 /// A project whose new key did not reach this device: its caches go, its held key and its row on
@@ -507,15 +560,10 @@ pub fn lost_projects(state: &LocalStorageState, listed: &[Uuid]) -> Vec<Uuid> {
 
 /// D17: every rotated project switched through a box or the escrow when one passes §8.4. True
 /// when any did, so the list syncs again under the new keys.
-pub async fn adopt_all(
-    ls_ctx: Signal<LocalStorageState>,
-    ids: &[Uuid],
-    account: Option<Account>,
-    account_key: Option<[u8; 32]>,
-) -> bool {
+pub async fn adopt_all(ls_ctx: Signal<LocalStorageState>, ids: &[Uuid], holder: &Holder) -> bool {
     let mut switched = false;
     for id in ids {
-        switched |= adopt(ls_ctx, *id, account.clone(), account_key).await == Adopted::Switched;
+        switched |= adopt(ls_ctx, *id, holder).await == Adopted::Switched;
     }
     switched
 }
@@ -540,8 +588,26 @@ mod tests {
         }
     }
 
+    /// I12, SPEC §15.9.5 Q5: a switch adds the old key to the previous ones and drops none.
+    #[test]
+    fn a_switch_adds_the_old_key_and_keeps_the_earlier_ones() {
+        let project_id = Uuid::new_v4();
+        let (k0, k1, k2) = (generate_key(), generate_key(), generate_key());
+        let mut state = LocalStorageState {
+            projects: vec![LocalStorageProject {
+                project_id,
+                encryption_key: Some(key_to_fragment(&k1)),
+                previous_keys: vec![(0, key_to_fragment(&k0))],
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        switch_local(&mut state, project_id, &k1, &k2, 2, 2);
+        assert_eq!(state.projects[0].previous_keys, vec![(0, key_to_fragment(&k0)), (1, key_to_fragment(&k1))]);
+    }
+
     fn hidden(k1: &[u8; 32], id: i32, name: &str) -> User {
-        User { id, payload: encrypt_json(k1, &UserPayload { name: name.into(), removed: true }).unwrap(), ..Default::default() }
+        User { id, payload: encrypt_json(k1, &UserPayload { name: name.into(), removed: true, extra: Default::default() }).unwrap(), ..Default::default() }
     }
 
     #[test]
@@ -625,6 +691,27 @@ mod tests {
         assert!(entry.key_opened);
     }
 
+    /// Two adoptions of one rotation (the list and the page, or two tabs) each read K1 before their
+    /// requests; the one that lands second must find K2 held and leave it alone.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn an_adoption_that_read_a_key_since_replaced_changes_nothing() {
+        crate::common::test_fixtures::with_data_dir("stale_adoption", |_| {
+            let (k1, k2) = (generate_key(), generate_key());
+            let id = Uuid::new_v4();
+            let mut state = LocalStorageState::default();
+            state.projects.push(LocalStorageProject { project_id: id, encryption_key: Some(key_to_fragment(&k1)), ..Default::default() });
+            switch_local(&mut state, id, &k1, &k2, 2, 1);
+            state.projects[0].cached_data_version = Some(5);
+            let switched = state.clone();
+
+            switch_local(&mut state, id, &k1, &k2, 2, 1);
+            assert_eq!(state.projects, switched.projects, "a second switch from K1");
+            mark_lost(&mut state, id, &k1);
+            assert_eq!(state.projects, switched.projects, "a no-key verdict reached under K1");
+        });
+    }
+
     #[test]
     fn a_member_whose_entry_does_not_check_gets_the_link() {
         let k1 = generate_key();
@@ -659,6 +746,63 @@ mod tests {
         let (staged, quarantine) = restage_page("expenses", vec![row("1", &k1), row("2", &other)], None, me, &k1, &k2).unwrap();
         assert_eq!((staged.len(), quarantine), (1, vec![QuarantinedRow { table: "expenses".into(), id: "2".into() }]));
         assert!(restage_page("projects", vec![row("p", &other)], None, me, &k1, &k2).is_err(), "a wrong key stops the scan");
+    }
+
+    #[test]
+    fn signed_out_is_an_answer_and_no_account_yet_is_not() {
+        let account = Account { id: Uuid::from_u128(7), ..Default::default() };
+        let key = Some(generate_key());
+        assert_eq!(Holder::of(false, None, key), Holder::Unknown, "me() in flight or failed");
+        assert_eq!(Holder::of(true, None, key), Holder::SignedOut, "me() answered: no session");
+        assert_eq!(Holder::of(true, Some(account.clone()), key), Holder::Account(Box::new(account.clone()), key));
+        assert_eq!(Holder::of(false, Some(account.clone()), key), Holder::Account(Box::new(account), key), "a login sets the account before me() answers");
+    }
+
+    /// The race of 2026-11-20: the list's sync answered `rotated` before `me()` had, and the
+    /// device was marked T10 with its box unopened. Unknown leaves the entry as it was; signed out
+    /// marks it as before. An account's escrow and boxes need the server: key-lifecycle.spec.ts.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn a_device_is_marked_rotated_only_once_it_is_known_to_hold_no_account() {
+        use crate::common::test_fixtures::with_data_dir;
+        use crate::common::write_to_ls;
+        use std::cell::Cell;
+        use std::future::Future;
+        use std::rc::Rc;
+        use std::task::{Context, Poll, Waker};
+
+        type Seen = Option<(Adopted, bool, Option<i64>)>;
+
+        #[component]
+        fn Harness(holder: Holder, project: Uuid, out: Rc<Cell<Seen>>) -> Element {
+            let ls_ctx = use_context_provider(|| Signal::new(read_from_ls()));
+            let mut adopting = std::pin::pin!(adopt(ls_ctx, project, &holder));
+            let Poll::Ready(adopted) = adopting.as_mut().poll(&mut Context::from_waker(Waker::noop())) else {
+                panic!("no request may be sent without an account");
+            };
+            let entry = read_from_ls().projects.into_iter().find(|p| p.project_id == project).unwrap();
+            out.set(Some((adopted, entry.key_rotated, entry.cached_data_version)));
+            rsx! {}
+        }
+
+        let run = |holder: Holder| {
+            with_data_dir("adopt_holder", |_| {
+                let project = Uuid::from_u128(42);
+                let mut state = LocalStorageState::default();
+                state.projects.push(LocalStorageProject {
+                    project_id: project,
+                    encryption_key: Some(key_to_fragment(&generate_key())),
+                    cached_data_version: Some(3),
+                    ..Default::default()
+                });
+                write_to_ls(&state);
+                let out = Rc::new(Cell::new(None));
+                VirtualDom::new_with_props(Harness, HarnessProps { holder, project, out: out.clone() }).rebuild_in_place();
+                out.get()
+            })
+        };
+        assert_eq!(run(Holder::Unknown), Some((Adopted::Deferred, false, Some(3))), "nothing marked, nothing dropped");
+        assert_eq!(run(Holder::SignedOut), Some((Adopted::NoKey, true, None)), "a link-only device still lands on T10");
     }
 
     #[test]

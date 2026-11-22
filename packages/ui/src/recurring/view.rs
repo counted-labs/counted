@@ -1,5 +1,5 @@
-use chrono::NaiveDate;
 use shared::ExpenseType;
+use shared::time::Date;
 use uuid::Uuid;
 
 use super::model::{DecryptedRule, Ends, Freq, RecurringPayload, Rule, Side, Template};
@@ -24,7 +24,7 @@ impl Repeat {
         Self { freq: Freq::Monthly, interval: 1, ends: Ends::Never, variable: false }
     }
 
-    pub fn rule(&self, anchor: NaiveDate) -> Rule {
+    pub fn rule(&self, anchor: Date) -> Rule {
         Rule { freq: self.freq, interval: self.interval.max(1), anchor, ends: self.ends }
     }
 }
@@ -46,7 +46,7 @@ pub fn state(p: &RecurringPayload) -> RuleState {
     }
 }
 
-pub fn next_date(p: &RecurringPayload) -> Option<NaiveDate> {
+pub fn next_date(p: &RecurringPayload) -> Option<Date> {
     upcoming(&p.rule, p.next, 1).first().copied()
 }
 
@@ -124,7 +124,7 @@ pub fn template_from_form(
     }
 }
 
-pub fn new_payload(template: Template, repeat: Repeat, anchor: NaiveDate) -> RecurringPayload {
+pub fn new_payload(template: Template, repeat: Repeat, anchor: Date) -> RecurringPayload {
     RecurringPayload { template, rule: repeat.rule(anchor), next: 0, paused: false, seed: Uuid::new_v4(), author_id: None, extra: Default::default() }
 }
 
@@ -135,7 +135,7 @@ pub fn edited_payload(
     old: &RecurringPayload,
     template: Template,
     repeat: Repeat,
-    next_on: NaiveDate,
+    next_on: Date,
 ) -> RecurringPayload {
     let template = Template { extra: old.template.extra.clone(), ..template };
     let unchanged = old.rule.freq == repeat.freq
@@ -158,24 +158,24 @@ pub fn repeat_of(p: &RecurringPayload) -> Repeat {
 }
 
 /// How many occurrences saving a rule anchored in the past writes at once.
-pub fn backfill_count(repeat: Repeat, anchor: NaiveDate, today: NaiveDate) -> usize {
+pub fn backfill_count(repeat: Repeat, anchor: Date, today: Date) -> usize {
     if anchor >= today {
         return 0;
     }
     super::schedule::due(&repeat.rule(anchor), 0, today, 10_000).len()
 }
 
-pub fn date_of(rule: &Rule, n: u32) -> Option<NaiveDate> {
+pub fn date_of(rule: &Rule, n: u32) -> Option<Date> {
     nth_date(rule, n)
 }
 
 #[cfg(test)]
 mod tests {
+    use shared::time::DateTime;
     use super::*;
-    use chrono::NaiveDateTime;
 
-    fn d(y: i32, m: u32, day: u32) -> NaiveDate {
-        NaiveDate::from_ymd_opt(y, m, day).unwrap()
+    fn d(y: i32, m: u32, day: u32) -> Date {
+        Date::from_ymd_opt(y, m, day).unwrap()
     }
 
     fn t(amount: f64, rate: Option<f64>) -> Template {
@@ -202,7 +202,7 @@ mod tests {
             id: Uuid::new_v4(),
             version: 0,
             author_id: Some(1),
-            created_at: NaiveDateTime::default(),
+            created_at: DateTime::default(),
             payload: RecurringPayload {
                 template,
                 rule: Rule { freq, interval: 1, anchor: d(2026, 10, 1), ends },

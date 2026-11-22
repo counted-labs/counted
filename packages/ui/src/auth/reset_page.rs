@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use shared::time::DateTime;
 use shared::Account;
 
 use crate::auth::account_key::remember;
@@ -130,7 +131,7 @@ fn WithoutKeyForm(token: String, info: shared::RecoveryStart) -> Element {
     let confirm = use_signal(String::new);
     let mut error: Signal<Option<String>> = use_signal(|| None);
     let mut busy = use_signal(|| false);
-    let mut done: Signal<Option<chrono::NaiveDateTime>> = use_signal(|| None);
+    let mut done: Signal<Option<DateTime>> = use_signal(|| None);
 
     let on_submit = move |e: FormEvent| {
         e.prevent_default();

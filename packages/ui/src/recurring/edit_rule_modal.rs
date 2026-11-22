@@ -1,5 +1,5 @@
-use chrono::NaiveDate;
 use dioxus::prelude::*;
+use shared::time::Date;
 use shared::User;
 use uuid::Uuid;
 
@@ -47,7 +47,7 @@ pub fn EditRuleModal(
     users: Vec<User>,
     project_id: Uuid,
     currency: String,
-    today: NaiveDate,
+    today: Date,
     actor: Option<i32>,
     on_close: EventHandler<()>,
     on_saved: EventHandler<()>,
@@ -62,7 +62,7 @@ pub fn EditRuleModal(
     let rotation = rule.payload.next;
 
     let expense_name = use_signal(|| t.name.clone());
-    let date_str = use_signal(|| next.format("%Y-%m-%d").to_string());
+    let date_str = use_signal(|| next.ymd());
     let total_amount = use_signal(|| t.amount);
     let expense_type = use_signal(|| t.expense_type());
     let category = use_signal(|| t.category.clone());
@@ -121,7 +121,7 @@ pub fn EditRuleModal(
         let Some(r) = repeat() else {
             return error_msg.set(Some(tid!("recurring-use-stop")));
         };
-        let Ok(next_on) = NaiveDate::parse_from_str(&form.date, "%Y-%m-%d") else {
+        let Some(next_on) = Date::parse_ymd(&form.date) else {
             return error_msg.set(Some(tid!("expense-invalid-date")));
         };
         if !next_on_is_valid(&rule.payload, next_on) {

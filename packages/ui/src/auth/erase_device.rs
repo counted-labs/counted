@@ -1,10 +1,12 @@
 use api::account_projects::account_projects_controller::{batch_upsert_account_projects, get_account_projects};
 use dioxus::fullstack::Json;
+use dioxus::prelude::Signal;
 use shared::{Account, AccountProject};
 use uuid::Uuid;
 
 use crate::common::fx_cache::clear_fx;
-use crate::common::offline_queue::clear_queue;
+use crate::common::offline_queue::erase_queue;
+use crate::common::project_create::still_confirming;
 use crate::common::{
     key_of, left_elsewhere, read_from_ls, remove_quarantined_ls, to_push, write_to_ls, LocalStorageState,
 };
@@ -14,10 +16,24 @@ use crate::decrypted::decrypt_project;
 #[derive(Clone, PartialEq, Debug)]
 pub enum EraseCheck {
     Checking,
+    /// Queued changes not sent yet.
     Pending(usize),
+    /// Entries that will never send by themselves (SPEC §15.9.5 Q9): only a discard clears them.
+    Unsent(usize),
+    /// A creation that may still commit: it settles within two minutes.
+    Confirming,
     Unreachable,
-    /// Names of the projects whose key the account's escrow cannot give back: erasing loses them.
-    Ready(Vec<String>),
+    /// `at_risk` names the projects whose key the account's escrow cannot give back: erasing loses
+    /// them, as it loses any creation still unconfirmed.
+    Ready { at_risk: Vec<String>, unconfirmed: Unconfirmed },
+}
+
+/// Creations the server never confirmed, left after settling: if one landed, only this device holds
+/// its key. `other_account` when one waits for an account other than the one signed in.
+#[derive(Clone, PartialEq, Debug, Default)]
+pub struct Unconfirmed {
+    pub count: usize,
+    pub other_account: bool,
 }
 
 /// Projects this device holds a key for that no other device can recover after the erase.
@@ -61,12 +77,41 @@ pub fn erased(state: &LocalStorageState) -> LocalStorageState {
     LocalStorageState { language: state.language.clone(), ..Default::default() }
 }
 
-/// Pushes what the escrow lacks first, as the projects page does, so that only a project the push
-/// could not save is reported. Projects left on another device are not pushed back.
-pub async fn check_erase(account: Account, account_key: Option<[u8; 32]>, pending: usize) -> EraseCheck {
-    if pending > 0 {
-        return EraseCheck::Pending(pending);
+/// What the queue in storage holds that an erase would lose, counted when the sheet opens and again
+/// when the erase is confirmed, since another tab can queue in between. `None` when it is empty.
+pub fn queue_check(queue: &[crate::common::Entry], state: &LocalStorageState, refused: &std::collections::BTreeMap<Uuid, String>) -> Option<EraseCheck> {
+    let unsent = crate::common::unsent(queue, state, refused).len();
+    match (unsent, queue.len()) {
+        (0, 0) => None,
+        (0, pending) => Some(EraseCheck::Pending(pending)),
+        (unsent, _) => Some(EraseCheck::Unsent(unsent)),
     }
+}
+
+/// What stops an erase, or what it loses, once the pending creations were settled. An erase is never
+/// refused for good: a creation that may still commit holds it back for two minutes at most.
+pub fn held_back(queued: Option<EraseCheck>, state: &LocalStorageState, account: Uuid, now_ms: i64) -> Result<Unconfirmed, EraseCheck> {
+    if let Some(queued) = queued {
+        return Err(queued);
+    }
+    let records = &state.pending_creations;
+    if records.iter().any(|p| still_confirming(p, now_ms)) {
+        return Err(EraseCheck::Confirming);
+    }
+    Ok(Unconfirmed { count: records.len(), other_account: records.iter().any(|p| p.account.is_some_and(|a| a != account)) })
+}
+
+/// Settles the pending creations and pushes what the escrow lacks first, as the projects page does,
+/// so that only a project the push could not save is reported. Projects left on another device are
+/// not pushed back.
+pub async fn check_erase(ls_ctx: Signal<LocalStorageState>, account: Account, account_key: Option<[u8; 32]>, queued: Option<EraseCheck>) -> EraseCheck {
+    if queued.is_none() {
+        crate::common::resolve_pending(ls_ctx).await;
+    }
+    let unconfirmed = match held_back(queued, &read_from_ls(), account.id, crate::common::project_create::now_ms()) {
+        Ok(unconfirmed) => unconfirmed,
+        Err(check) => return check,
+    };
     let Ok(server) = get_account_projects().await else {
         return EraseCheck::Unreachable;
     };
@@ -90,13 +135,17 @@ pub async fn check_erase(account: Account, account_key: Option<[u8; 32]>, pendin
         };
         server
     };
-    EraseCheck::Ready(project_names(&state, &unescrowed(&state, &server, account_key.as_ref())))
+    EraseCheck::Ready { at_risk: project_names(&state, &unescrowed(&state, &server, account_key.as_ref())), unconfirmed }
 }
 
+/// The device state without its project keys goes first (SPEC §15.9.5 Q3): a tab that has not seen
+/// the erase yet then makes no entry, and the queue's `z` key ends what it holds.
 pub fn erase_device_stores() {
     let (kept, theme) = (erased(&read_from_ls()), crate::common::stored_theme());
+    write_to_ls(&kept);
+    erase_queue();
     remove_quarantined_ls();
-    clear_queue();
+    crate::badges::clear_store();
     clear_fx();
     crate::common::store_seal::erase();
     write_to_ls(&kept);
@@ -126,6 +175,27 @@ mod tests {
             history_has_actors: None,
             admin: false,
         }
+    }
+
+    /// An entry that will never send by itself points at the Unsent row, not at the network.
+    #[test]
+    fn the_erase_check_tells_unsent_from_pending() {
+        let project = Uuid::from_u128(5);
+        let state = LocalStorageState { projects: vec![holding(project, &generate_key())], ..Default::default() };
+        let entry = |project_id: Uuid| {
+            crate::common::Entry::new(crate::common::QueuedOp {
+                id: Uuid::new_v4(),
+                label: String::new(),
+                sealed_label: None,
+                after: None,
+                queued_at: None,
+                op: crate::common::OpKind::DeleteExpense(shared::DeleteExpenseRequest { id: 3, project_id, history: None }),
+            })
+        };
+        let none = std::collections::BTreeMap::new();
+        assert_eq!(queue_check(&[], &state, &none), None);
+        assert_eq!(queue_check(&[entry(project)], &state, &none), Some(EraseCheck::Pending(1)));
+        assert_eq!(queue_check(&[entry(project), entry(Uuid::from_u128(6))], &state, &none), Some(EraseCheck::Unsent(1)), "no key held here opens it");
     }
 
     #[test]
@@ -186,6 +256,28 @@ mod tests {
         assert_eq!(project_names(&state, &[id]), vec![id.to_string()]);
     }
 
+    fn creation(account: Option<Uuid>, sent_at: i64) -> crate::common::PendingCreation {
+        crate::common::PendingCreation { project_id: Uuid::new_v4(), key: "k".into(), creator_secret: None, account, sent_at }
+    }
+
+    /// A of the confirmation pass: a device must never be impossible to erase.
+    #[test]
+    fn an_unconfirmed_creation_holds_the_erase_back_two_minutes_at_most_then_is_named() {
+        let (me, other, now) = (Uuid::new_v4(), Uuid::new_v4(), 10_000_000);
+        let mut state = LocalStorageState::default();
+        assert_eq!(held_back(None, &state, me, now), Ok(Unconfirmed::default()));
+
+        state.pending_creations.push(creation(Some(me), now - 1_000));
+        assert_eq!(held_back(None, &state, me, now), Err(EraseCheck::Confirming));
+        assert_eq!(held_back(Some(EraseCheck::Pending(2)), &state, me, now), Err(EraseCheck::Pending(2)), "queued changes keep their own count");
+
+        let later = now + 120_000;
+        assert_eq!(held_back(None, &state, me, later), Ok(Unconfirmed { count: 1, other_account: false }));
+        state.pending_creations.push(creation(Some(other), now - 1_000));
+        state.pending_creations.push(creation(None, now - 1_000));
+        assert_eq!(held_back(None, &state, me, later), Ok(Unconfirmed { count: 3, other_account: true }));
+    }
+
     #[test]
     fn erasing_keeps_the_language_and_nothing_else() {
         let account = Uuid::new_v4();
@@ -206,6 +298,7 @@ mod tests {
             amk_epoch_pins: [(account, 1)].into(),
             previous_account_keys: [(account, vec![crate::common::local_storage::PreviousAccountKey { key: "k0".into(), epoch: 0 }])].into(),
             membership_epochs: [(account, 1)].into(),
+            pending_creations: vec![crate::common::PendingCreation { project_id: Uuid::new_v4(), key: "k".into(), creator_secret: None, account: None, sent_at: 0 }],
         };
 
         assert_eq!(erased(&state), LocalStorageState { language: Some("fr".into()), ..Default::default() });

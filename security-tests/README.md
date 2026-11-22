@@ -26,6 +26,7 @@ It does not prove that nothing else is broken.
 | B3 | Claiming a participant, or converting a project, needs proof of the project key |
 | B5 | What a project serves is ciphertext plus the fields documented in SECURITY.md |
 | B6 | Below the `KEY_LIFECYCLE_FROM` floor, by design, an id holder without the key can write rows (SECURITY.md 5.6); from it, the id alone, or a made-up token, reads and writes nothing |
+| B7 | A creation under the id of a stored project is refused with 409 and the bare message `This id is already in use`, the same for any taken id, and the project is unchanged; the all-zero id and an id in another form than the canonical one are refused; a fresh id is stored as sent |
 | C2 | Failed passwords count, but do not lock the owner out |
 | C3 | Payloads over 64 KiB, nonces that are not 24 bytes, and batches over 500 are refused, and nothing of a refused batch is written |
 | D1 | Malformed bodies are refused with a 4xx and no internal detail; unknown fields have no effect |

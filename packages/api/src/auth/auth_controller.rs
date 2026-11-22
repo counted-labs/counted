@@ -171,7 +171,7 @@ pub async fn complete_recovery(Json(payload): Json<shared::CompleteRecovery>) ->
 
 /// A reset without the recovery key, in effect 72 hours later. Returns when.
 #[post("/api/v1/auth/reset/request")]
-pub async fn request_reset(Json(payload): Json<shared::RequestReset>) -> Result<chrono::NaiveDateTime, ServerFnError> {
+pub async fn request_reset(Json(payload): Json<shared::RequestReset>) -> Result<shared::time::DateTime, ServerFnError> {
     crate::server::auth::recovery::request_reset(payload).await
 }
 

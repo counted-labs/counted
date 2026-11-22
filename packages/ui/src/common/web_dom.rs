@@ -508,3 +508,138 @@ pub fn focus_field(id: &str) {
     options.set_prevent_scroll(true);
     let _ = el.unchecked_ref::<web_sys::HtmlElement>().focus_with_options(&options);
 }
+
+/// Resolves the promise a granted Web Lock waits on, which releases the lock: at the end of the
+/// work, or when the future holding it is dropped before.
+pub struct LockRelease(js_sys::Function);
+
+impl Drop for LockRelease {
+    fn drop(&mut self) {
+        let _ = self.0.call0(&JsValue::NULL);
+    }
+}
+
+/// `navigator.locks.request(name, () => held)` once granted. `None` where the browser has no Web
+/// Locks or refuses the request, so the caller can fall back on a rule of its own.
+pub async fn acquire_lock(name: &str) -> Option<LockRelease> {
+    let locks = js_sys::Reflect::get(&web_sys::window()?.navigator(), &JsValue::from_str("locks")).ok().filter(JsValue::is_object)?;
+    let request: js_sys::Function = js_sys::Reflect::get(&locks, &JsValue::from_str("request")).ok()?.dyn_into().ok()?;
+    let mut release = None;
+    let held = js_sys::Promise::new(&mut |resolve, _| release = Some(resolve));
+    let release = LockRelease(release?);
+    let mut grant = None;
+    let granted = js_sys::Promise::new(&mut |resolve, _| grant = Some(resolve));
+    let grant = grant?;
+    let on_grant = {
+        let grant = grant.clone();
+        wasm_bindgen::closure::Closure::once_into_js(move |_lock: JsValue| -> JsValue {
+            let _ = grant.call1(&JsValue::NULL, &JsValue::TRUE);
+            held.into()
+        })
+    };
+    let requested = request.call2(&locks, &JsValue::from_str(name), &on_grant).ok()?;
+    let on_refused = wasm_bindgen::closure::Closure::once_into_js(move |_e: JsValue| {
+        let _ = grant.call1(&JsValue::NULL, &JsValue::FALSE);
+    });
+    if let Some(catch) = js_sys::Reflect::get(&requested, &JsValue::from_str("catch")).ok().and_then(|c| c.dyn_into::<js_sys::Function>().ok()) {
+        let _ = catch.call1(&requested, &on_refused);
+    }
+    let answer = JsFuture::from(granted).await.ok()?;
+    (answer.as_bool() == Some(true)).then_some(release)
+}
+
+thread_local! {
+    static PAGE_GONE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    static LOCK_EPOCH: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+    static ON_PAGE_HIDE: std::cell::RefCell<Option<js_sys::Function>> = const { std::cell::RefCell::new(None) };
+    static WATCHING_PAGE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// True from `pagehide` until a `pageshow` brings the page back from the back-forward cache.
+pub fn page_gone() -> bool {
+    PAGE_GONE.with(|g| g.get())
+}
+
+/// Moves on at every `pagehide`: a lock taken under an older epoch was let go, even if the page is
+/// shown again since, and its holder must take it again before it sends (SPEC §15.9.5 Q2e).
+pub fn lock_epoch() -> u64 {
+    LOCK_EPOCH.with(|e| e.get())
+}
+
+pub fn page_visible() -> bool {
+    document().is_some_and(|d| !d.hidden())
+}
+
+/// Lets `release`'s lock go on `pagehide` (SPEC §15.9.5 Q2e), marks the page gone and moves the
+/// lock epoch on, so that the session it was taken for sends nothing more.
+pub fn release_on_page_hide(release: &LockRelease) {
+    ON_PAGE_HIDE.with_borrow_mut(|f| *f = Some(release.0.clone()));
+    if WATCHING_PAGE.replace(true) {
+        return;
+    }
+    let Some(window) = web_sys::window() else { return };
+    let on_hide = wasm_bindgen::closure::Closure::<dyn Fn()>::new(|| {
+        PAGE_GONE.with(|g| g.set(true));
+        LOCK_EPOCH.with(|e| e.set(e.get() + 1));
+        if let Some(release) = ON_PAGE_HIDE.with_borrow_mut(Option::take) {
+            let _ = release.call0(&JsValue::NULL);
+        }
+    });
+    let on_show = wasm_bindgen::closure::Closure::<dyn Fn()>::new(|| PAGE_GONE.with(|g| g.set(false)));
+    let _ = window.add_event_listener_with_callback("pagehide", on_hide.as_ref().unchecked_ref());
+    let _ = window.add_event_listener_with_callback("pageshow", on_show.as_ref().unchecked_ref());
+    on_hide.forget();
+    on_show.forget();
+}
+
+/// Calls `on_show` when the page comes back from the back-forward cache (`pageshow` with
+/// `persisted`). Leaked like [`on_tab_visible`]: it belongs to the app shell.
+pub fn on_page_restored(on_show: impl Fn() + 'static) {
+    let Some(window) = web_sys::window() else { return };
+    let handler = wasm_bindgen::closure::Closure::<dyn Fn(JsValue)>::new(move |event: JsValue| {
+        if js_sys::Reflect::get(&event, &JsValue::from_str("persisted")).ok().and_then(|p| p.as_bool()) == Some(true) {
+            on_show();
+        }
+    });
+    let _ = window.add_event_listener_with_callback("pageshow", handler.as_ref().unchecked_ref());
+    handler.forget();
+}
+
+/// Calls `on_watched` with the new value of each `storage` event another tab raises for `watched`,
+/// as it arrives, `None` when the key was removed or storage cleared, and `on_change` once per burst
+/// of events for any key, `quiet_ms` after the first, with the key of each (`None` for a `clear()`).
+/// Leaked like [`on_tab_visible`]: it belongs to the app shell.
+pub fn on_storage(quiet_ms: i32, watched: &'static str, on_watched: impl Fn(Option<String>) + 'static, on_change: impl Fn(Vec<Option<String>>) + 'static) {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+    let Some(window) = web_sys::window() else { return };
+    let burst: Rc<RefCell<Option<Vec<Option<String>>>>> = Rc::new(RefCell::new(None));
+    let on_change: Rc<dyn Fn(Vec<Option<String>>)> = Rc::new(on_change);
+    let handler = wasm_bindgen::closure::Closure::<dyn Fn(JsValue)>::new(move |event: JsValue| {
+        let key = js_sys::Reflect::get(&event, &JsValue::from_str("key")).ok().and_then(|k| k.as_string());
+        match key.as_deref() {
+            Some(key) if key == watched => on_watched(js_sys::Reflect::get(&event, &JsValue::from_str("newValue")).ok().and_then(|v| v.as_string())),
+            Some(_) => {}
+            None => on_watched(None),
+        }
+        let first = {
+            let mut burst = burst.borrow_mut();
+            let first = burst.is_none();
+            burst.get_or_insert_with(Vec::new).push(key);
+            first
+        };
+        if !first {
+            return;
+        }
+        let (burst, on_change) = (burst.clone(), on_change.clone());
+        let flush = wasm_bindgen::closure::Closure::once_into_js(move || {
+            let keys = burst.borrow_mut().take().unwrap_or_default();
+            on_change(keys);
+        });
+        if let Some(window) = web_sys::window() {
+            let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(flush.unchecked_ref(), quiet_ms);
+        }
+    });
+    let _ = window.add_event_listener_with_callback("storage", handler.as_ref().unchecked_ref());
+    handler.forget();
+}

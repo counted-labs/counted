@@ -6,6 +6,30 @@ use uuid::Uuid;
 use super::friends_service::{self, FriendRow, FriendsLists};
 use crate::common::{copy_text, error_message, haptic, share_message, Flash, Haptic, LocalStorageState};
 
+/// Set by email verification, which then opens the projects list as always: once the list's own
+/// friends read answers, a waiting request (an invitation, typically) opens Amis instead.
+pub static AFTER_VERIFICATION: GlobalSignal<bool> = Signal::global(|| false);
+
+pub fn use_requests_after_verification(friends: Friends) {
+    let nav = use_navigator();
+    let mut flash = use_context::<Signal<Option<Flash>>>();
+    use_effect(move || {
+        if !AFTER_VERIFICATION() {
+            return;
+        }
+        let waiting = match &*friends.lists.read() {
+            Some(Ok(lists)) => !lists.incoming.is_empty(),
+            Some(Err(_)) => false,
+            None => return,
+        };
+        *AFTER_VERIFICATION.write() = false;
+        if waiting {
+            flash.set(Some(Flash::ok(tid!("verify-email-request-waiting"))));
+            nav.push(crate::route::Route::FriendsPage {});
+        }
+    });
+}
+
 /// The friends page's state and every action on it. The page renders what this holds and calls
 /// back into it; nothing on the page decides anything.
 #[derive(Clone, Copy)]
@@ -61,7 +85,11 @@ pub fn use_friends() -> Friends {
                 return Ok(FriendsLists::default());
             };
             let raw_ok = ls_ctx.peek().raw_wraps_ok(account.id);
-            friends_service::load(ls_ctx, key, account, raw_ok).await
+            let loaded = friends_service::load(ls_ctx, key, account, raw_ok).await;
+            if loaded.as_ref().is_ok_and(|l| !l.friends.is_empty()) {
+                crate::badges::award(crate::badges::PREMIER_AMI);
+            }
+            loaded
         }
     });
 
@@ -186,6 +214,7 @@ impl Friends {
         let Some(key) = row.new_key else { return };
         crate::common::update_ls_if_changed(self.ls_ctx, |state| friends_service::trust_key(state, row.account_id, &key, row.new_kem_key.as_deref()));
         self.flash.set(Some(Flash::ok(tid!("friends-code-trusted"))));
+        crate::badges::award(crate::badges::CODE_VERIFIE);
         self.reload();
     }
 

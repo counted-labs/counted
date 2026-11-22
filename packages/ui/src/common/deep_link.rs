@@ -21,6 +21,29 @@ pub struct NativeDeepLinkReader(pub std::sync::Arc<dyn Fn() -> Option<String> + 
 /// page opens the personal expense form once it knows whether there is a personal project.
 pub static QUICK_ADD: GlobalSignal<bool> = Signal::global(|| false);
 
+/// The address an invitation link carried into the app (mobile runs on MemoryHistory, so the
+/// register page has no fragment of its own to read).
+pub static INVITED_EMAIL: GlobalSignal<Option<String>> = Signal::global(|| None);
+
+/// The invited address, once: from the app's deep link on mobile, from the `#e=` fragment on the
+/// web, which then leaves the address bar. Call after hydration.
+pub fn take_invited_email() -> Option<String> {
+    if let Some(email) = INVITED_EMAIL.write().take() {
+        return Some(email);
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let hash = web_sys::window().and_then(|w| w.location().hash().ok()).unwrap_or_default();
+        let email = crate::common::invited_email_from_fragment(&hash);
+        if !hash.is_empty() {
+            crate::common::web_dom::clear_hash();
+        }
+        email
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    None
+}
+
 #[cfg_attr(not(any(target_os = "android", target_os = "ios")), allow(dead_code))]
 fn is_quick_add(url: &str) -> bool {
     url.split(['?', '#']).next().is_some_and(|u| u.trim_end_matches('/') == "counted://add")
@@ -81,7 +104,7 @@ fn take_deep_links() -> Vec<String> {
 #[cfg(any(target_os = "android", target_os = "ios"))]
 #[component]
 pub fn DeepLinkListener() -> Element {
-    use crate::common::{adopt_project_key, parse_share_link, parse_verify_email_link, LocalStorageState};
+    use crate::common::{adopt_project_key, parse_invite_link, parse_share_link, parse_verify_email_link, LocalStorageState};
     use crate::route::Route;
     use std::sync::atomic::Ordering;
 
@@ -93,6 +116,11 @@ pub fn DeepLinkListener() -> Element {
         for url in take_deep_links() {
             if let Some(token) = parse_verify_email_link(&url) {
                 nav.push(Route::VerifyEmailPage { token });
+                continue;
+            }
+            if let Some(email) = parse_invite_link(&url) {
+                *INVITED_EMAIL.write() = Some(email);
+                nav.push(Route::RegisterPage {});
                 continue;
             }
             if is_quick_add(&url) {
@@ -187,6 +215,11 @@ mod tests {
         let logged = loggable(&url);
         assert!(!logged.contains(&token), "{logged}");
         assert_eq!(logged, "https://counted.fr/verify-email/");
+    }
+
+    #[test]
+    fn an_invite_link_loses_its_address() {
+        assert_eq!(loggable("https://counted.fr/register#e=bob@y.io"), "https://counted.fr/register");
     }
 
     #[test]

@@ -1,11 +1,15 @@
 pub mod api;
 pub mod balances;
 pub mod emoji;
+pub mod entity;
 // The settlement before the 2026-10 rewrite, kept until no store serves it: a group on mixed
 // versions must see the same transfers (docs/plans/rust-correctness.md §2.4).
 #[cfg(test)]
 mod balances_v1;
+#[cfg(test)]
+mod time_golden;
 pub mod errors;
+pub mod time;
 pub mod view_models;
 
 pub use errors::{EMAIL_NOT_VERIFIED, PROJECT_NOT_FOUND};
@@ -15,7 +19,7 @@ use sqlx::FromRow;
 use std::collections::HashMap;
 use std::fmt;
 
-use chrono::{NaiveDate, NaiveDateTime};
+use crate::time::{Date, DateTime};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -304,6 +308,9 @@ pub struct HistoryPayload {
     pub entity: Option<HistoryEntity>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub entity_id: Option<i32>,
+    /// Keys this build does not know, `eid` and `slot` among them (SPEC 15.9.2 W5).
+    #[serde(flatten)]
+    pub extra: Unknown,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -415,6 +422,9 @@ pub struct UserPayload {
     /// leaves the pickers and keeps its name on past expenses.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub removed: bool,
+    /// Keys this build does not know, `eid` and `slot` among them (SPEC 15.9.2 W5).
+    #[serde(flatten)]
+    pub extra: Unknown,
 }
 
 /// One payer's or debtor's part of an expense, inside its payload. Replaces a `payments` row,
@@ -425,6 +435,9 @@ pub struct ExpenseShare {
     pub user_id: i32,
     pub amount: f64,
     pub is_debt: bool,
+    /// Kept by an edit for the same participant on the same side (`entity::keep_share_extras`).
+    #[serde(flatten)]
+    pub extra: Unknown,
 }
 
 /// `amount` is **always** in the project's currency, whatever currency the expense was entered in.
@@ -513,11 +526,11 @@ pub struct ProjectSync {
     pub recurring: Option<Vec<RecurringExpense>>,
     /// The server's UTC date: the one clock every member's materialization is measured against.
     #[serde(default)]
-    pub server_date: Option<NaiveDate>,
+    pub server_date: Option<Date>,
     /// The same clock as an instant, which each member reads in their own time zone for the day a
     /// rule is due on. Clients before it keep the UTC date.
     #[serde(default)]
-    pub server_time: Option<NaiveDateTime>,
+    pub server_time: Option<DateTime>,
     /// Set, with nothing else, for a project whose key changed since the token this device sent
     /// (D17): the device switches through a box or its escrow, or shows the project as lost.
     /// Clients before it find no `project` and skip the entry.
@@ -554,6 +567,20 @@ pub const MAX_PAYMENT_METHODS_LENGTH: usize = 32768;
 /// client pads up to it and no further.
 pub const MAX_PREFERENCES_LENGTH: usize = 4096;
 
+/// How a format v2 pair starts (mirror/SPEC.md §15.1).
+pub const V2_MARKER: &str = "v2:";
+
+/// The most a v2 `ct` is longer than the v1 `ct` of the same plaintext, in base64 characters: the
+/// marker, and the 32-byte key commitment (§15.8), which is 40 or 44 characters after its plaintext.
+pub const V2_CT_OVERHEAD: usize = V2_MARKER.len() + 44;
+
+/// Whether a blob the client pads up to `cap` base64 characters fits it. A v2 pair gets
+/// `V2_CT_OVERHEAD` more, so that a plaintext which fits as v1 still fits once converted.
+pub fn fits_padding_cap(pair: &EncryptedPair, cap: usize) -> bool {
+    let room = if pair.ct.starts_with(V2_MARKER) { cap + V2_CT_OVERHEAD } else { cap };
+    pair.ct.len() <= room && pair.iv.len() <= cap
+}
+
 /// Ceiling on how many projects one account may hold, and so on how many ids a client may ask
 /// about in one batch. A membership row keeps a project alive and there is no way for the real
 /// members to evict a stranger, so this bounds how much of other people's data one account can pin.
@@ -576,7 +603,7 @@ pub struct Account {
     pub id: Uuid,
     pub email: String,
     pub display_name: EncryptedPair,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime,
     pub email_verified: bool,
     pub kdf_salt: Vec<u8>,
     pub kdf_version: i16,
@@ -622,10 +649,10 @@ pub struct Account {
     /// When a requested recovery-key replacement takes effect. Until then the current key works,
     /// and cancels it.
     #[serde(default)]
-    pub recovery_pending_at: Option<NaiveDateTime>,
+    pub recovery_pending_at: Option<DateTime>,
     /// When a reset requested without the recovery key takes effect (plan §6.3).
     #[serde(default)]
-    pub pending_reset_at: Option<NaiveDateTime>,
+    pub pending_reset_at: Option<DateTime>,
     /// How many resets retired this account's memberships. A device that sees it move pushes its
     /// projects back rather than forgetting them as left elsewhere.
     #[serde(default)]
@@ -810,7 +837,7 @@ pub struct RecoveryStart {
     pub login_salt: Vec<u8>,
     pub amk_epoch: i32,
     pub has_recovery_key: bool,
-    pub pending_reset_at: Option<NaiveDateTime>,
+    pub pending_reset_at: Option<DateTime>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -989,7 +1016,7 @@ pub struct Friend {
 pub struct IncomingFriendRequest {
     pub id: Uuid,
     pub requester_email: String,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime,
 }
 
 /// No status and no account id, by design: rejected, unanswered and "no such account" must be one
@@ -999,7 +1026,7 @@ pub struct IncomingFriendRequest {
 pub struct OutgoingFriendRequest {
     pub id: Uuid,
     pub label: EncryptedPair,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
@@ -1040,7 +1067,7 @@ pub struct ProjectInvitation {
     pub key: Option<EncryptedPair>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hybrid: Option<HybridBox>,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime,
     #[serde(default)]
     pub user_id: Option<i32>,
 }
@@ -1141,8 +1168,32 @@ pub struct Preferences {
     /// key holder can write `kind: personal` into a shared payload (audit 2026-10-19 M3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub personal_project: Option<Uuid>,
+    /// Personal badges (docs/plans/gamification.md §3.2), merged in on every write rather than
+    /// written on their own, so no write follows the action that earned one.
+    #[serde(default, skip_serializing_if = "BadgePreferences::is_empty")]
+    pub badges: BadgePreferences,
     #[serde(flatten)]
     pub extra: Unknown,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct BadgePreferences {
+    /// Badge id to the ISO date it was earned. Ids are stable strings, never an enum: a badge added
+    /// by a newer build must not break an older one.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub earned: std::collections::BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub off: bool,
+    /// The one shown badge the holder chose (`premiere_heure`, `anniversaire`), or none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shown: Option<String>,
+}
+
+impl BadgePreferences {
+    pub fn is_empty(&self) -> bool {
+        self.earned.is_empty() && !self.off && self.shown.is_none()
+    }
 }
 
 /// One way the account holder can be paid back.
@@ -1334,7 +1385,7 @@ pub struct ProjectDto {
     pub id: Uuid,
     pub payload: EncryptedPair,
     pub status: ProjectStatus,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime,
     /// Whether an account member holds the admin role (docs/plans/key-lifecycle.md §8.7). A group
     /// without one cannot change its key: the actions say so instead of offering an account.
     #[serde(default)]
@@ -1358,6 +1409,10 @@ pub struct ProjectDto {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CreatableProject {
+    /// The project's entity id (SPEC 15.9.1), drawn by the client before anything is sealed. Builds
+    /// before 3.4.0 send none, and the server draws it. Read only in the canonical form.
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "entity::optional_canonical")]
+    pub id: Option<Uuid>,
     pub payload: EncryptedPair,
     /// `SHA-256(claim_token)`, so a project is born with its verifier and never has a window in
     /// which anyone holding the UUID could seed one. `default` for builds predating it.
@@ -1554,7 +1609,7 @@ pub struct LeaveProject {
 pub struct User {
     pub id: i32,
     pub payload: EncryptedPair,
-    pub created_at: Option<NaiveDateTime>,
+    pub created_at: Option<DateTime>,
     /// An account holds this participant as its identity in the project. Blocks anyone else from
     /// picking it - a coherence guarantee, not an authorisation one: `user_id` grants nothing
     /// server-side. See docs/project-membership.md.
@@ -1572,6 +1627,10 @@ pub struct User {
     /// The claimant administers the project, so the locked admin actions can name who to ask.
     #[serde(default)]
     pub admin: bool,
+    /// The claimant's shown badge (docs/plans/gamification.md §4): a server-signed [`Distinction`]
+    /// the claimant encrypted under the **project** key. `None` when it shows none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub distinctions: Option<EncryptedPair>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -1586,6 +1645,10 @@ pub enum CreatableUserBatch {
 pub struct CreatableUser {
     pub payload: EncryptedPair,
     pub project_id: Uuid,
+    /// The participant's entity id (SPEC 15.9.1), the `eid` sealed in its payload. Builds before
+    /// 3.4.0 send none. Unique among all participants: a taken one is refused with 409 `ID_TAKEN`.
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "entity::optional_canonical")]
+    pub eid: Option<Uuid>,
 }
 
 /// A participant's payload rewritten - renamed, or `removed` set or cleared.
@@ -1630,6 +1693,10 @@ pub struct HistoryContext {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub actor_user_id: Option<i32>,
     pub payload: EncryptedPair,
+    /// The entry's own entity id (SPEC 15.9.1), never the id of the row it is about. Unique per
+    /// project: an entry under a taken one is left out and the write it came with applied without it.
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "entity::optional_canonical")]
+    pub eid: Option<Uuid>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1647,7 +1714,7 @@ pub struct HistoryEntry {
     pub entity: HistoryEntity,
     pub entity_id: Option<i32>,
     pub payload: EncryptedPair,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -1660,7 +1727,7 @@ pub struct Expense {
     #[serde(default)]
     pub author_id: Option<i32>,
     pub project_id: Uuid,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime,
     pub payload: EncryptedPair,
 }
 
@@ -1720,9 +1787,9 @@ pub struct CreatableExpense {
     pub debtors: Vec<EncryptedUserAmount>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub history: Option<HistoryContext>,
-    /// Set only by the offline queue: the `QueuedOp.id`, sent on every replay. A replay whose
-    /// earlier attempt did commit gets that expense back instead of a duplicate. `None` online.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// The expense's entity id (SPEC 15.9.1): the `QueuedOp.id`, or an occurrence's derived id.
+    /// Unique per project: a send under a taken one gets the row stored under it back.
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "entity::optional_canonical")]
     pub client_op_id: Option<Uuid>,
 }
 
@@ -1765,7 +1832,7 @@ pub struct RecurringExpense {
     pub author_id: Option<i32>,
     pub payload: EncryptedPair,
     pub version: i64,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime,
     /// The server still lists the template's participants in clear: a rule written, or last
     /// edited, by a client before docs/plans/participant-links-encryption.md. What tells a client
     /// that the rule has still to be converted.
@@ -1779,6 +1846,10 @@ pub struct RecurringExpense {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CreatableRecurringExpense {
+    /// The rule's own id (SPEC 15.9.1), drawn by the client. Builds before 3.4.0 send none and the
+    /// server draws it. A taken one is refused with 409 `ID_TAKEN`.
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "entity::optional_canonical")]
+    pub id: Option<Uuid>,
     pub project_id: Uuid,
     #[serde(default)]
     pub author_id: Option<i32>,
@@ -1822,7 +1893,7 @@ pub struct MaterializeRecurringRequest {
     pub project_id: Uuid,
     pub expected_version: i64,
     pub payload: EncryptedPair,
-    pub due_through: NaiveDate,
+    pub due_through: Date,
     pub occurrences: Vec<CreatableExpense>,
 }
 
@@ -1880,7 +1951,7 @@ pub struct Payment {
     pub expense_id: i32,
     pub user_id: i32,
     pub payload: EncryptedPair,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1944,6 +2015,98 @@ mod tests {
         assert_eq!(verify.proof, vec![1]);
         let without: super::VerifyEmailPayload = serde_json::from_str(r#"{"token":"t"}"#).unwrap();
         assert!(without.proof.is_empty(), "refused as outdated, not as a decode failure");
+    }
+
+    const PAIR: &str = r#""payload":{"ct":"","iv":""}"#;
+
+    #[test]
+    fn a_project_creation_without_an_id_reads_as_before_and_sends_none() {
+        let older: super::CreatableProject = serde_json::from_str(&format!("{{{PAIR}}}")).unwrap();
+        assert_eq!(older.id, None);
+        let null: super::CreatableProject = serde_json::from_str(&format!(r#"{{"id":null,{PAIR}}}"#)).unwrap();
+        assert_eq!(null.id, None);
+        assert!(!serde_json::to_string(&older).unwrap().contains("\"id\""));
+    }
+
+    #[test]
+    fn a_project_creation_reads_its_id_in_the_canonical_form_only() {
+        let canonical = "0f8e2c4a-6b1d-4e3f-9a7b-5c2d1e0f3a4b";
+        let read: super::CreatableProject =
+            serde_json::from_str(&format!(r#"{{"id":"{canonical}",{PAIR}}}"#)).unwrap();
+        assert_eq!(read.id.unwrap().to_string(), canonical);
+        assert!(serde_json::to_string(&read).unwrap().contains(&format!(r#""id":"{canonical}""#)));
+
+        for other in [
+            "0F8E2C4A-6B1D-4E3F-9A7B-5C2D1E0F3A4B",
+            "0f8e2c4a6b1d4e3f9a7b5c2d1e0f3a4b",
+            "{0f8e2c4a-6b1d-4e3f-9a7b-5c2d1e0f3a4b}",
+            "urn:uuid:0f8e2c4a-6b1d-4e3f-9a7b-5c2d1e0f3a4b",
+            " 0f8e2c4a-6b1d-4e3f-9a7b-5c2d1e0f3a4b",
+        ] {
+            let refused = serde_json::from_str::<super::CreatableProject>(&format!(r#"{{"id":"{other}",{PAIR}}}"#));
+            assert!(refused.is_err(), "{other} was read");
+        }
+    }
+
+    const NON_CANONICAL: [&str; 4] = [
+        "0F8E2C4A-6B1D-4E3F-9A7B-5C2D1E0F3A4B",
+        "0f8e2c4a6b1d4e3f9a7b5c2d1e0f3a4b",
+        "{0f8e2c4a-6b1d-4e3f-9a7b-5c2d1e0f3a4b}",
+        "urn:uuid:0f8e2c4a-6b1d-4e3f-9a7b-5c2d1e0f3a4b",
+    ];
+
+    #[test]
+    fn creations_read_their_entity_id_in_the_canonical_form_only_and_send_none_without_one() {
+        use uuid::Uuid;
+        let canonical = "0f8e2c4a-6b1d-4e3f-9a7b-5c2d1e0f3a4b";
+        let pid = "11111111-2222-4333-8444-555555555555";
+        let pair = r#""payload":{"ct":"","iv":""}"#;
+        let user = |id: &str| format!(r#"{{{pair},"projectId":"{pid}"{id}}}"#);
+        let history = |id: &str| format!(r#"{{{pair}{id}}}"#);
+        let expense = |id: &str| format!(r#"{{"projectId":"{pid}",{pair}{id}}}"#);
+        let rule = |id: &str| format!(r#"{{"projectId":"{pid}",{pair}{id}}}"#);
+
+        let read_user = |id: &str| serde_json::from_str::<super::CreatableUser>(&user(id)).map(|u| u.eid);
+        let read_history = |id: &str| serde_json::from_str::<super::HistoryContext>(&history(id)).map(|h| h.eid);
+        let read_expense = |id: &str| serde_json::from_str::<super::CreatableExpense>(&expense(id)).map(|e| e.client_op_id);
+        let read_rule = |id: &str| serde_json::from_str::<super::CreatableRecurringExpense>(&rule(id)).map(|r| r.id);
+        let read_batch = |id: &str| match serde_json::from_str::<super::CreatableUserBatch>(&format!("[{}]", user(id))) {
+            Ok(super::CreatableUserBatch::Multiple(v)) => Ok(v[0].eid),
+            Ok(super::CreatableUserBatch::Single(u)) => Ok(u.eid),
+            Err(e) => Err(e),
+        };
+
+        let expected = Uuid::parse_str(canonical).unwrap();
+        for (key, read) in [
+            ("eid", &read_user as &dyn Fn(&str) -> serde_json::Result<Option<Uuid>>),
+            ("eid", &read_batch),
+            ("eid", &read_history),
+            ("clientOpId", &read_expense),
+            ("id", &read_rule),
+        ] {
+            assert_eq!(read("").unwrap(), None, "{key} absent");
+            assert_eq!(read(&format!(r#","{key}":null"#)).unwrap(), None, "{key} null");
+            assert_eq!(read(&format!(r#","{key}":"{canonical}""#)).unwrap(), Some(expected), "{key}");
+            for other in NON_CANONICAL {
+                assert!(read(&format!(r#","{key}":"{other}""#)).is_err(), "{key}: {other} was read");
+            }
+        }
+
+        let user = super::CreatableUser { payload: super::EncryptedPair::default(), project_id: Uuid::nil(), eid: None };
+        assert!(!serde_json::to_string(&user).unwrap().contains("eid"));
+        let with = super::CreatableUser { eid: Some(expected), ..user };
+        assert!(serde_json::to_string(&with).unwrap().contains(&format!(r#""eid":"{canonical}""#)));
+        let history = super::HistoryContext { actor_user_id: None, payload: super::EncryptedPair::default(), eid: None };
+        assert_eq!(serde_json::to_string(&history).unwrap(), r#"{"payload":{"ct":"","iv":""}}"#);
+        let rule = super::CreatableRecurringExpense {
+            id: None,
+            project_id: Uuid::nil(),
+            author_id: None,
+            participant_ids: vec![],
+            payload: super::EncryptedPair::default(),
+            history: None,
+        };
+        assert!(!serde_json::to_string(&rule).unwrap().contains(r#""id""#));
     }
 
     #[test]
@@ -2221,6 +2384,40 @@ mod tests {
         assert_eq!(pad_json("x".repeat(3000)).len(), 4096);
     }
 
+    fn b64_len(bytes: usize) -> usize {
+        bytes.div_ceil(3) * 4
+    }
+
+    #[test]
+    fn the_v2_overhead_covers_every_plaintext_length() {
+        let longest = (0..=70_000usize)
+            .map(|plaintext| super::V2_MARKER.len() + b64_len(32 + plaintext + 16) - b64_len(plaintext + 16))
+            .max()
+            .unwrap();
+        assert_eq!(longest, super::V2_CT_OVERHEAD);
+    }
+
+    #[test]
+    fn a_padding_cap_leaves_a_v2_pair_its_overhead_and_a_v1_pair_none() {
+        use super::{fits_padding_cap, EncryptedPair, V2_CT_OVERHEAD};
+        let cap = super::MAX_PREFERENCES_LENGTH;
+        let pair = |ct: String| EncryptedPair { ct, iv: "A".repeat(32) };
+        assert!(fits_padding_cap(&pair("A".repeat(cap)), cap));
+        assert!(!fits_padding_cap(&pair("A".repeat(cap + 1)), cap));
+        assert!(fits_padding_cap(&pair(format!("v2:{}", "A".repeat(cap + V2_CT_OVERHEAD - 3))), cap));
+        assert!(!fits_padding_cap(&pair(format!("v2:{}", "A".repeat(cap + V2_CT_OVERHEAD - 2))), cap));
+        assert!(!fits_padding_cap(&EncryptedPair { ct: "A".into(), iv: "A".repeat(cap + 1) }, cap));
+    }
+
+    #[test]
+    fn the_top_bucket_of_every_padding_cap_fits_as_v2() {
+        for cap in [super::MAX_PREFERENCES_LENGTH, super::MAX_PAYMENT_METHODS_LENGTH, super::MAX_FRIEND_LABEL_LENGTH] {
+            let top_bucket = cap / 4 * 3 - 16;
+            assert!(b64_len(top_bucket + 16) <= cap);
+            assert!(super::V2_MARKER.len() + b64_len(32 + top_bucket + 16) <= cap + super::V2_CT_OVERHEAD);
+        }
+    }
+
     #[test]
     fn a_padded_payload_parses() {
         let json = pad_json(r#"{"summary":"Edited","actorUserId":4}"#.to_string());
@@ -2237,6 +2434,7 @@ mod tests {
             action: Some(HistoryAction::Deleted),
             entity: Some(HistoryEntity::Expense),
             entity_id: Some(7),
+            extra: Default::default(),
         };
         assert_eq!(
             serde_json::to_string(&p).unwrap(),
@@ -2248,9 +2446,9 @@ mod tests {
     /// writes must stay byte-identical to the format every older client reads.
     #[test]
     fn payloads_without_the_new_fields_serialise_as_before() {
-        let user = serde_json::to_string(&UserPayload { name: "Ann".into(), removed: false }).unwrap();
+        let user = serde_json::to_string(&UserPayload { name: "Ann".into(), removed: false, extra: Default::default() }).unwrap();
         assert_eq!(user, r#"{"name":"Ann"}"#);
-        let history = serde_json::to_string(&HistoryPayload { summary: "s".into(), actor_user_id: None, action: None, entity: None, entity_id: None }).unwrap();
+        let history = serde_json::to_string(&HistoryPayload { summary: "s".into(), actor_user_id: None, action: None, entity: None, entity_id: None, extra: Default::default() }).unwrap();
         assert_eq!(history, r#"{"summary":"s"}"#);
         let project = ProjectPayload { name: "T".into(), currency: "EUR".into(), description: None, status: None, extra: Default::default() };
         assert_eq!(serde_json::to_string(&project).unwrap(), r#"{"name":"T","currency":"EUR"}"#);
@@ -2367,7 +2565,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(e.author_id, Some(3));
-        assert_eq!(e.shares, Some(vec![ExpenseShare { user_id: 3, amount: 2.0, is_debt: false }]));
+        assert_eq!(e.shares, Some(vec![ExpenseShare { user_id: 3, amount: 2.0, is_debt: false, extra: Default::default() }]));
     }
 }
 
@@ -2502,4 +2700,110 @@ pub struct ProjectRef {
 pub struct SetMemberKey {
     pub project_id: Uuid,
     pub member_key: EncryptedPair,
+}
+
+/// Shown badges (docs/plans/gamification.md §4). The server signs one per membership, with Ed25519
+/// and ML-DSA-65, both of which must verify; the holder publishes it under the project key.
+pub const DISTINCTION_CONTEXT: &[u8] = b"counted-distinction-v1";
+pub const SHOWN_PREMIERE_HEURE: u16 = 1;
+pub const SHOWN_ANNIVERSAIRE: u16 = 2;
+/// Accounts created before this day earn Première heure (owner, 2026-11-17).
+pub const PREMIERE_HEURE_BEFORE: (i32, u32, u32) = (2027, 1, 1);
+pub const ED25519_SIGNATURE_LEN: usize = 64;
+pub const ML_DSA_65_SIGNATURE_LEN: usize = 3309;
+/// badge (2) | years (1) | not_after (8) | Ed25519 signature | ML-DSA-65 signature: one length
+/// whatever the badge, so the ciphertext says that a badge is shown, never which.
+pub const DISTINCTION_LEN: usize = 11 + ED25519_SIGNATURE_LEN + ML_DSA_65_SIGNATURE_LEN;
+
+/// What both signatures cover: the badge, bound to one membership and a validity limit, so a copy
+/// into another row, another project or after `not_after` fails.
+pub fn distinction_message(badge: u16, years: u8, not_after: i64, project_id: Uuid, user_id: i32) -> Vec<u8> {
+    let mut m = Vec::with_capacity(DISTINCTION_CONTEXT.len() + 31);
+    m.extend_from_slice(DISTINCTION_CONTEXT);
+    m.extend_from_slice(&badge.to_be_bytes());
+    m.push(years);
+    m.extend_from_slice(&not_after.to_be_bytes());
+    m.extend_from_slice(project_id.as_bytes());
+    m.extend_from_slice(&user_id.to_be_bytes());
+    m
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Distinction {
+    pub badge: u16,
+    pub years: u8,
+    pub not_after: i64,
+    pub ed25519: Vec<u8>,
+    pub ml_dsa: Vec<u8>,
+}
+
+impl Distinction {
+    pub fn to_bytes(&self) -> Option<Vec<u8>> {
+        if self.ed25519.len() != ED25519_SIGNATURE_LEN || self.ml_dsa.len() != ML_DSA_65_SIGNATURE_LEN {
+            return None;
+        }
+        let mut b = Vec::with_capacity(DISTINCTION_LEN);
+        b.extend_from_slice(&self.badge.to_be_bytes());
+        b.push(self.years);
+        b.extend_from_slice(&self.not_after.to_be_bytes());
+        b.extend_from_slice(&self.ed25519);
+        b.extend_from_slice(&self.ml_dsa);
+        Some(b)
+    }
+
+    pub fn from_bytes(b: &[u8]) -> Option<Self> {
+        if b.len() != DISTINCTION_LEN {
+            return None;
+        }
+        Some(Self {
+            badge: u16::from_be_bytes([b[0], b[1]]),
+            years: b[2],
+            not_after: i64::from_be_bytes(b[3..11].try_into().ok()?),
+            ed25519: b[11..11 + ED25519_SIGNATURE_LEN].to_vec(),
+            ml_dsa: b[11 + ED25519_SIGNATURE_LEN..].to_vec(),
+        })
+    }
+}
+
+/// `GET /api/v1/distinctions/keys`: `None` while the server has no signing seed (badges off).
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DistinctionKeys {
+    pub ed25519: Vec<u8>,
+    pub ml_dsa: Vec<u8>,
+}
+
+/// `POST /api/v1/distinctions/sign`: one signature per membership where the account holds a name.
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SignDistinctions {
+    pub badge: u16,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SignedDistinction {
+    pub project_id: Uuid,
+    pub user_id: i32,
+    pub distinction: Distinction,
+}
+
+/// `PUT /api/v1/distinctions`: the holder's own copies. Every membership not listed is cleared, so
+/// an empty list takes the shown badge down everywhere.
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PublishDistinctions {
+    pub copies: Vec<DistinctionCopy>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DistinctionCopy {
+    pub project_id: Uuid,
+    pub pair: EncryptedPair,
+    /// The project's claim token, as on `ProjectPaymentMethods`: a copy whose token no longer opens the
+    /// project is dropped.
+    #[serde(default)]
+    pub token: Option<Vec<u8>>,
 }

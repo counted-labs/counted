@@ -1,6 +1,6 @@
 use api::projects::projects_controller::get_projects_by_ids;
+use shared::time::Date;
 use api::users::users_controller::get_users_by_project_id;
-use chrono::{Datelike, NaiveDate};
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use shared::{BatchProject, Expense, ExpenseType, Payment, ProjectDto, ProjectPayload, ProjectSync, NO_CACHED_VERSION};
@@ -95,10 +95,10 @@ const PERIODS: [(&str, &str); 5] = [
 /// `custom` alone leaves the dates alone: it means "whatever the two fields say".
 fn apply_period(
     value: &'static str,
-    mut date_from: Signal<Option<NaiveDate>>,
-    mut date_to: Signal<Option<NaiveDate>>,
+    mut date_from: Signal<Option<Date>>,
+    mut date_to: Signal<Option<Date>>,
     mut preset: Signal<&'static str>,
-    earliest: Option<NaiveDate>,
+    earliest: Option<Date>,
 ) {
     let now = crate::common::local_today();
     match value {
@@ -107,15 +107,15 @@ fn apply_period(
             date_to.set(Some(now));
         }
         "month" => {
-            date_from.set(NaiveDate::from_ymd_opt(now.year(), now.month(), 1));
+            date_from.set(Date::from_ymd_opt(now.year(), now.month(), 1));
             date_to.set(Some(now));
         }
         "3months" => {
-            date_from.set(Some(now - chrono::Duration::days(90)));
+            date_from.set(Some(now.checked_sub_days(90).unwrap_or(now)));
             date_to.set(Some(now));
         }
         "year" => {
-            date_from.set(NaiveDate::from_ymd_opt(now.year(), 1, 1));
+            date_from.set(Date::from_ymd_opt(now.year(), 1, 1));
             date_to.set(Some(now));
         }
         _ => {}
@@ -123,18 +123,18 @@ fn apply_period(
     preset.set(value);
 }
 
-fn earliest_date(expenses: &[DecryptedExpense]) -> Option<NaiveDate> {
-    expenses.iter().filter_map(|e| NaiveDate::parse_from_str(&e.date, "%Y-%m-%d").ok()).min()
+fn earliest_date(expenses: &[DecryptedExpense]) -> Option<Date> {
+    expenses.iter().filter_map(|e| Date::parse_ymd(&e.date)).min()
 }
 
-fn axis_label(start: NaiveDate, bucket: Bucket) -> String {
+fn axis_label(start: Date, bucket: Bucket) -> String {
     match bucket {
         Bucket::Day | Bucket::Week => start.day().to_string(),
         Bucket::Month => month_abbrev(start.month0() as usize).chars().next().map(|c| c.to_uppercase().collect()).unwrap_or_default(),
     }
 }
 
-fn axis_labels(starts: &[NaiveDate], bucket: Bucket) -> Vec<String> {
+fn axis_labels(starts: &[Date], bucket: Bucket) -> Vec<String> {
     let every = label_every(starts.len(), 12);
     starts
         .iter()
@@ -275,8 +275,8 @@ async fn load_users(project: Option<Uuid>) -> Vec<DecryptedUser> {
 pub fn ChartsPage() -> Element {
     let mut active_tab = use_signal(|| Tab::Categories);
     let mut selected_project: Signal<Option<Uuid>> = use_signal(|| None);
-    let mut date_from: Signal<Option<NaiveDate>> = use_signal(|| None);
-    let mut date_to: Signal<Option<NaiveDate>> = use_signal(|| None);
+    let mut date_from: Signal<Option<Date>> = use_signal(|| None);
+    let mut date_to: Signal<Option<Date>> = use_signal(|| None);
     let mut preset: Signal<&'static str> = use_signal(|| "all");
     let mut scope = use_signal(|| Scope::Me);
     let mut chosen_currency: Signal<Option<String>> = use_signal(|| None);
@@ -411,7 +411,7 @@ pub fn ChartsPage() -> Element {
                                         min: "{min_date}",
                                         max: if to_val.is_empty() { today_str.clone() } else { to_val.clone() },
                                         oninput: move |e| {
-                                            let d = NaiveDate::parse_from_str(&e.value(), "%Y-%m-%d").ok();
+                                            let d = Date::parse_ymd(&e.value());
                                             date_from.set(d);
                                             if let (Some(f), Some(t)) = (d, date_to()) {
                                                 if f > t {
@@ -432,7 +432,7 @@ pub fn ChartsPage() -> Element {
                                         min: if from_val.is_empty() { min_date.clone() } else { from_val.clone() },
                                         max: "{today_str}",
                                         oninput: move |e| {
-                                            date_to.set(NaiveDate::parse_from_str(&e.value(), "%Y-%m-%d").ok());
+                                            date_to.set(Date::parse_ymd(&e.value()));
                                             preset.set("custom");
                                         },
                                     }
@@ -608,13 +608,13 @@ pub fn ChartsPage() -> Element {
 }
 
 #[cfg(any(test, fuzzing))]
-pub(crate) fn exercise_hostile(expenses: Vec<Expense>, payments: Vec<shared::Payment>, users: Vec<shared::User>, me: i32, from: Option<NaiveDate>, to: Option<NaiveDate>, project: ProjectPayload) {
+pub(crate) fn exercise_hostile(expenses: Vec<Expense>, payments: Vec<shared::Payment>, users: Vec<shared::User>, me: i32, from: Option<Date>, to: Option<Date>, project: ProjectPayload) {
     use super::model::{aggregate_by_category, expenses_in_category, folded_category, percent};
     use crate::common::test_fixtures::TEST_KEY;
 
     let (expenses, payments) = decrypt_ledger(&TEST_KEY, &expenses, &payments);
     let users: Vec<DecryptedUser> = users.iter().filter_map(|u| decrypt_user(&TEST_KEY, u).ok()).collect();
-    let today = NaiveDate::from_ymd_opt(2026, 11, 1).unwrap();
+    let today = Date::from_ymd_opt(2026, 11, 1).unwrap();
     let group = in_projects(&filter_by_date_range(&expenses, from, to), &HashSet::from([Uuid::nil()]));
     let my_share = sum_by_expense(&payments, me, true);
     let my_paid = sum_by_expense(&payments, me, false);
@@ -660,10 +660,10 @@ pub(crate) fn exercise_hostile(expenses: Vec<Expense>, payments: Vec<shared::Pay
 
 #[cfg(test)]
 mod tests {
+    use shared::time::DateTime;
     use super::*;
     use crate::charts::model::aggregate_by_category;
     use crate::common::test_fixtures::{make_expense as make_row, make_payment, test_key};
-    use chrono::NaiveDateTime;
 
     fn cached(version: Option<i64>) -> LocalStorageProject {
         let key = test_key();
@@ -735,7 +735,7 @@ mod tests {
             id: 0,
             author_id,
             project_id: Uuid::nil(),
-            created_at: NaiveDateTime::default(),
+            created_at: DateTime::default(),
             name: name.to_string(),
             description: None,
             amount,
@@ -797,8 +797,8 @@ mod tests {
 
     #[test]
     fn axis_labels_thin_but_keep_the_last() {
-        let from = NaiveDate::from_ymd_opt(2026, 9, 1).unwrap();
-        let starts: Vec<NaiveDate> = (0..30).map(|i| from + chrono::Duration::days(i)).collect();
+        let from = Date::from_ymd_opt(2026, 9, 1).unwrap();
+        let starts: Vec<Date> = (0..30).map(|i| from.checked_add_days(i).unwrap()).collect();
         let labels = axis_labels(&starts, Bucket::Day);
         assert_eq!(labels[0], "1");
         assert_eq!(labels[1], "");
@@ -853,12 +853,22 @@ mod tests {
     #[test]
     fn an_expense_dated_at_the_calendar_floor_charts_by_week() {
         let key = test_key();
-        let expenses = vec![make_row(&key, 1, "x", 1.0, ExpenseType::Expense, "-262143-01-01")];
+        let expenses = vec![make_row(&key, 1, "x", 1.0, ExpenseType::Expense, "-9999-01-01")];
         let (expenses, _) = decrypt_ledger(&key, &expenses, &[]);
         let from = earliest_date(&expenses).expect("the date parses");
-        let to = NaiveDate::from_ymd_opt(2026, 11, 1).unwrap();
+        let to = Date::from_ymd_opt(2026, 11, 1).unwrap();
         assert!(bucket_count(from, to, Bucket::Week) > MAX_BUCKETS);
         assert!(bucket_starts(from, to, Bucket::Week).len() <= MAX_BUCKETS);
+    }
+
+    /// chrono's floor, below jiff's: unparseable now, so the chart starts from the other rows
+    /// (docs/plans/chrono-to-jiff.md D4).
+    #[test]
+    fn a_date_below_the_calendar_floor_is_left_unparsed() {
+        let key = test_key();
+        let expenses = vec![make_row(&key, 1, "x", 1.0, ExpenseType::Expense, "-262143-01-01")];
+        let (expenses, _) = decrypt_ledger(&key, &expenses, &[]);
+        assert_eq!(earliest_date(&expenses), None);
     }
 
     mod hostile_payloads {

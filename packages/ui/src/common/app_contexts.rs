@@ -1,11 +1,10 @@
 use api::auth::auth_controller::me;
 use dioxus::prelude::*;
 use shared::Account;
-use std::collections::VecDeque;
 use uuid::Uuid;
 
 use crate::friends::friends_service::Unsent;
-use super::{is_client_outdated_error, read_from_ls, read_queue, LocalStorageState, QueuedOp};
+use super::{is_client_outdated_error, read_from_ls, read_queue, LocalStorageState, Queue};
 use crate::crypto::key_from_fragment;
 use crate::i18n::{set_language, use_init_locale};
 
@@ -58,6 +57,16 @@ pub struct CheckFriend(pub Option<Uuid>);
 /// `Signal<bool>`: contexts are keyed by type and that one is already taken by `is_online`.
 #[derive(Clone, Copy, PartialEq)]
 pub struct AuthResolved(pub bool);
+
+/// `me()` answered in this run, so `Signal<Option<Account>>` says whether a session exists: unlike
+/// [`AuthResolved`], false after a failed call. Login and logout keep the account right from then on.
+#[derive(Clone, Copy, PartialEq)]
+pub struct MeAnswered(pub bool);
+
+/// Bumped by whoever cannot go on until `me()` answers (`rotation_flow::Holder::current`): after a
+/// failed boot call it asks again, once per bump, never on a timer.
+#[derive(Clone, Copy, PartialEq)]
+pub struct MeRetry(pub u32);
 
 /// The server answered the boot-time `me()` with a 426: this build is below its floor. Only a
 /// native app can end up here (web sends no version), and `UpdateRequiredScreen` covers the whole
@@ -118,6 +127,9 @@ pub fn use_app_contexts() {
     let auth: Signal<Option<Account>> = use_context_provider(|| Signal::new(None));
     let auth_resolved: Signal<AuthResolved> =
         use_context_provider(|| Signal::new(AuthResolved(false)));
+    let me_answered: Signal<MeAnswered> = use_context_provider(|| Signal::new(MeAnswered(false)));
+    let mut me_retry: Signal<MeRetry> = use_context_provider(|| Signal::new(MeRetry(0)));
+    let mut asking_me = use_signal(|| false);
     let update_required: Signal<UpdateRequired> =
         use_context_provider(|| Signal::new(UpdateRequired(false)));
     let account_enc_key: Signal<Option<[u8; 32]>> =
@@ -134,10 +146,13 @@ pub fn use_app_contexts() {
     let is_online: Signal<bool> = use_context_provider(|| Signal::new(true));
     // Write queue for every expense add, edit and delete - persisted to localStorage/file; drained at
     // once when online, on reconnect otherwise.
-    let _pending_ops: Signal<VecDeque<QueuedOp>> =
+    let _pending_ops: Signal<Queue> =
         use_context_provider(|| Signal::new(read_queue()));
     // Bumped after successful queue replay so child page resources re-execute.
     let _resource_version: Signal<u64> = use_context_provider(|| Signal::new(0u64));
+    // Personal badges (docs/plans/gamification.md): this device's copy, read once like the queue.
+    let badges: crate::badges::Badges =
+        use_context_provider(|| crate::badges::Badges(Signal::new(crate::badges::read_store())));
 
     // Language, post-mount. Comparing captured values rather than reading the locale signal keeps
     // this effect from re-running on its own write.
@@ -149,27 +164,27 @@ pub fn use_app_contexts() {
             if code != initial_lang {
                 set_language(code);
             }
-            return;
-        }
-        // Nothing chosen. On web the server inferred from `Accept-Language` and the first render is
-        // already right. Mobile and desktop had no request to infer from, so ask the WebView for the
-        // device language - and do not persist it, so it keeps following the device until the user
-        // picks something. `device_lang` returns None for a language we do not ship, which leaves
-        // the English fallback in place.
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let already = initial_lang.clone();
-            spawn(async move {
-                if let Some(code) = crate::i18n::device_lang().await {
-                    // Re-read rather than trusting the check above: `device_lang` awaits the
-                    // WebView, and `me()` can land first and adopt the account's language - which
-                    // `set_language` records here. Without this, signing in on a phone whose
-                    // system language differs would lose the account's choice to a race.
-                    if read_from_ls().language.is_none() && code != already {
-                        crate::i18n::apply_inferred_language(code);
+        } else {
+            // Nothing chosen. On web the server inferred from `Accept-Language` and the first render is
+            // already right. Mobile and desktop had no request to infer from, so ask the WebView for the
+            // device language - and do not persist it, so it keeps following the device until the user
+            // picks something. `device_lang` returns None for a language we do not ship, which leaves
+            // the English fallback in place.
+            #[cfg(not(target_arch = "wasm32"))]
+            {
+                let already = initial_lang.clone();
+                spawn(async move {
+                    if let Some(code) = crate::i18n::device_lang().await {
+                        // Re-read rather than trusting the check above: `device_lang` awaits the
+                        // WebView, and `me()` can land first and adopt the account's language - which
+                        // `set_language` records here. Without this, signing in on a phone whose
+                        // system language differs would lose the account's choice to a race.
+                        if read_from_ls().language.is_none() && code != already {
+                            crate::i18n::apply_inferred_language(code);
+                        }
                     }
-                }
-            });
+                });
+            }
         }
     });
 
@@ -183,14 +198,21 @@ pub fn use_app_contexts() {
     });
 
     use_effect(move || {
+        let asked = me_retry().0;
+        if *asking_me.peek() || me_answered.peek().0 {
+            return;
+        }
+        asking_me.set(true);
         let mut auth = auth;
         let mut auth_resolved = auth_resolved;
+        let mut me_answered = me_answered;
         let mut update_required = update_required;
         let mut account_enc_key = account_enc_key;
         spawn(async move {
             // The demo is anonymous whatever cookie the browser holds: an account would escrow the
             // throwaway project and sync the sandbox's store with the real one.
             if crate::common::persist::is_demo() {
+                me_answered.set(MeAnswered(true));
                 auth_resolved.set(AuthResolved(true));
                 return;
             }
@@ -211,6 +233,7 @@ pub fn use_app_contexts() {
                                 }
                                 Reconciled::Lost => {
                                     sign_out_stale(ls_ctx, account_enc_key, auth).await;
+                                    me_answered.set(MeAnswered(true));
                                     auth_resolved.set(AuthResolved(true));
                                     return;
                                 }
@@ -226,12 +249,14 @@ pub fn use_app_contexts() {
                                 crate::common::update_ls_if_changed(ls_ctx, |state| state.saw_typed_wrap(a.id));
                             }
                             let a = crate::preferences::sync_personal_project(a, key, ls_ctx).await;
+                            crate::badges::adopt(badges.0, &a, &key);
                             adopt_account_language(auth, &a, key);
                             Some(a)
                         }
                         (account, _) => account,
                     };
                     auth.set(account);
+                    me_answered.set(MeAnswered(true));
                 }
                 // Only the explicit refusal; offline and server failures leave the app usable.
                 Err(e) if is_client_outdated_error(&e) => update_required.set(UpdateRequired(true)),
@@ -239,7 +264,13 @@ pub fn use_app_contexts() {
             }
             // Set even when the call failed: the page has learned everything it is going to, and
             // leaving it false forever would leave a skeleton spinning behind an offline device.
-            auth_resolved.set(AuthResolved(true));
+            if !auth_resolved.peek().0 {
+                auth_resolved.set(AuthResolved(true));
+            }
+            asking_me.set(false);
+            if !me_answered.peek().0 && me_retry.peek().0 != asked {
+                me_retry.write().0 += 1;
+            }
         });
     });
 

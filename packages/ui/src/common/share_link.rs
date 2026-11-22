@@ -87,6 +87,44 @@ pub fn parse_verify_email_link(input: &str) -> Option<String> {
     }
 }
 
+fn percent_decode(s: &str) -> Option<String> {
+    let bytes = s.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' {
+            let hex = std::str::from_utf8(bytes.get(i + 1..i + 3)?).ok()?;
+            out.push(u8::from_str_radix(hex, 16).ok()?);
+            i += 3;
+        } else {
+            out.push(bytes[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8(out).ok()
+}
+
+/// The address an invitation mail's `/register#e=…` link carries. Anyone can craft such a link,
+/// so only a plausible address comes back, and it only fills a field the reader sees and edits.
+pub fn invited_email_from_fragment(fragment: &str) -> Option<String> {
+    let email = percent_decode(fragment.strip_prefix('#').unwrap_or(fragment).strip_prefix("e=")?)?;
+    let plausible = email.len() <= 254
+        && email.bytes().all(|b| b.is_ascii_graphic())
+        && email.split_once('@').is_some_and(|(local, domain)| !local.is_empty() && domain.contains('.') && !domain.contains('@'));
+    plausible.then_some(email)
+}
+
+/// An invitation link handed to the app by the OS: `https://counted.fr/register#e=…`.
+pub fn parse_invite_link(input: &str) -> Option<String> {
+    let input = input.trim();
+    let rest = input.strip_prefix("https://").or(input.strip_prefix("http://"))?;
+    let (path, fragment) = rest[rest.find('/')?..].split_once('#')?;
+    match Route::from_str(path.split('?').next()?).ok()? {
+        Route::RegisterPage {} => invited_email_from_fragment(fragment),
+        _ => None,
+    }
+}
+
 /// Accepts a path with or without its leading slash, and only when it is a project page.
 fn match_project(path: &str) -> Option<Uuid> {
     let path = if path.starts_with('/') { path.to_string() } else { format!("/{path}") };
@@ -413,6 +451,33 @@ mod tests {
         ] {
             assert_eq!(parse_verify_email_link(&input), None, "{input}");
         }
+    }
+
+    #[test]
+    fn an_invite_link_yields_its_address() {
+        assert_eq!(parse_invite_link("https://counted.fr/register#e=bob@y.io"), Some("bob@y.io".into()));
+        assert_eq!(parse_invite_link("https://counted.fr/register#e=o%27b%26r%25t@y.io"), Some("o'b&r%t@y.io".into()));
+        assert_eq!(invited_email_from_fragment("#e=bob@y.io"), Some("bob@y.io".into()));
+    }
+
+    #[test]
+    fn an_invite_link_rejects_anything_but_a_plausible_address() {
+        for input in [
+            "https://counted.fr/register",
+            "https://counted.fr/register#",
+            "https://counted.fr/register#bob@y.io",
+            "https://counted.fr/login#e=bob@y.io",
+            "https://counted.fr/register#e=bob",
+            "https://counted.fr/register#e=bob@localhost",
+            "https://counted.fr/register#e=a@b@y.io",
+            "https://counted.fr/register#e=bob%20x@y.io",
+            "https://counted.fr/register#e=%3Cb%3E@y.io%",
+            "https://counted.fr/register#e=%FF@y.io",
+            "counted://register#e=bob@y.io",
+        ] {
+            assert_eq!(parse_invite_link(input), None, "{input}");
+        }
+        assert_eq!(invited_email_from_fragment(&format!("e={}@y.io", "a".repeat(250))), None);
     }
 
     #[test]

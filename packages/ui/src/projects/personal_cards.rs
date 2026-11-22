@@ -2,22 +2,18 @@
 //! create it, the sheet that does, and the card it becomes once it exists.
 
 use api::account_projects::account_projects_controller::upsert_account_project;
-use api::projects::projects_controller::add_project;
-use api::users::users_controller::add_user;
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
-use shared::{
-    Account, CreatableProject, CreatableUser, CreatableUserBatch, ProjectDto, ProjectPayload,
-    UpsertAccountProject, UserPayload,
-};
+use shared::{Account, CreatableProject, ProjectDto, ProjectPayload, UpsertAccountProject};
 use uuid::Uuid;
 
+use crate::entity_ids::{add_participants, new_participant};
 use crate::common::{
-    error_message, key_of, month_title, update_ls, upsert_project, upsert_project_key,
+    add_project_fresh, error_message, key_of, month_title, update_ls, upsert_project,
     CurrencyPicker, LocalStorageState, SheetBar, SheetFooter, SHEET_TITLE,
 };
 use crate::crypto::{
-    claim_token, claim_verifier, decrypt_json, encrypt_padded_json, generate_key, key_to_fragment, wrap_key, WrapUse,
+    claim_token, claim_verifier, decrypt_json, encrypt_padded_json, generate_key, wrap_key, WrapUse,
 };
 use crate::common::fx_cache::read_fx;
 use crate::expenses::budget_panel::money;
@@ -44,31 +40,26 @@ async fn create_personal_project(
     account_key: Option<[u8; 32]>,
     ls_ctx: Signal<LocalStorageState>,
     mut auth: Signal<Option<Account>>,
+    unsent: Signal<Option<Uuid>>,
 ) -> Result<Uuid, String> {
-    let key = generate_key();
     let mut payload = ProjectPayload { name, currency, description: None, status: Some(shared::ProjectStatus::Ongoing), extra: Default::default() };
     payload.extra.insert("kind".into(), "personal".into());
-    let project = add_project(Json(CreatableProject {
-        payload: encrypt_padded_json(&key, &payload)?,
-        claim_verifier: Some(claim_verifier(&key).to_vec()),
-        demo: crate::common::persist::is_demo(),
-        creator_verifier: None,
-    }))
-    .await
-    .map_err(|e| error_message(&e))?;
-    update_ls(ls_ctx, |state| {
-        upsert_project(state, project.id, None);
-        upsert_project_key(state, project.id, key_to_fragment(&key));
-    });
+    let demo = crate::common::persist::is_demo();
+    let seal = |id, key: &[u8; 32]| {
+        Ok(CreatableProject {
+            id: Some(id),
+            payload: encrypt_padded_json(key, &payload)?,
+            claim_verifier: Some(claim_verifier(key).to_vec()),
+            demo,
+            creator_verifier: None,
+        })
+    };
+    let made = add_project_fresh(ls_ctx, Some(unsent), &generate_key(), None, seal).await.map_err(|e| e.message())?;
+    let (project, key) = (made.project, made.key);
 
-    let me_payload = encrypt_padded_json(&key, &UserPayload { name: me, removed: false })?;
-    crate::common::project_token::scope_key(Some(&key));
-    let users = add_user(Json(CreatableUserBatch::Multiple(vec![CreatableUser {
-        payload: me_payload,
-        project_id: project.id,
-    }])))
-    .await
-    .map_err(|e| error_message(&e))?;
+    let users = add_participants(&key, vec![new_participant(&key, project.id, me)?])
+        .await
+        .map_err(|e| error_message(&e))?;
     let user_id = users.first().map(|u| u.id);
     update_ls(ls_ctx, |state| {
         upsert_project(state, project.id, user_id);
@@ -140,6 +131,8 @@ pub fn PersonalCreateSheet(on_close: EventHandler<()>) -> Element {
     let mut currency = use_signal(|| "EUR".to_string());
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
     let mut loading = use_signal(|| false);
+    // The creation a press left unknown, which the next press settles before anything else.
+    let unsent: Signal<Option<Uuid>> = use_signal(|| None);
 
     let on_submit = move |e: FormEvent| {
         e.prevent_default();
@@ -158,7 +151,7 @@ pub fn PersonalCreateSheet(on_close: EventHandler<()>) -> Element {
         loading.set(true);
         error_msg.set(None);
         spawn(async move {
-            match create_personal_project(name_val, currency_val, me, account_key, ls_ctx, auth_ctx).await {
+            match create_personal_project(name_val, currency_val, me, account_key, ls_ctx, auth_ctx, unsent).await {
                 Ok(project_id) => {
                     on_close.call(());
                     nav.push(Route::ExpensesPage { project_id });
@@ -268,7 +261,7 @@ pub fn PersonalCard(project: ProjectDto, ledgers: Signal<Vec<GroupLedger>>) -> E
         month_glance(&ls_ctx.read(), project_id, &ledgers.read(), &uncounted, read_fx().as_ref(), today)
     });
     let (name, currency) = name.unwrap_or_default();
-    let month = month_title(chrono::Datelike::month0(&today) as usize);
+    let month = month_title(today.month0() as usize);
     rsx! {
         Link {
             id: "personal-card",
@@ -297,7 +290,7 @@ pub fn PersonalCard(project: ProjectDto, ledgers: Signal<Vec<GroupLedger>>) -> E
 mod tests {
     use super::*;
     use crate::common::test_fixtures::{make_project, test_key};
-    use crate::crypto::encrypt_json;
+    use crate::crypto::{encrypt_json, key_to_fragment};
     use crate::common::LocalStorageProject;
 
     fn held(p: &ProjectDto, k: &[u8; 32], expenses: Option<Vec<shared::Expense>>) -> LocalStorageProject {

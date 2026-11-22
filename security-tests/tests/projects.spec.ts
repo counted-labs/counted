@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { APIRequestContext } from '@playwright/test';
 import { bytes, claimToken, expect, isRefused, json, pair, test, type Project } from '../lib/api';
 
@@ -132,6 +133,30 @@ test.describe('B - project boundaries', () => {
     for (const row of [dto, expense, ...(await usersOf(anon, p))] as { payload: Record<string, unknown> }[]) {
       expect(keysOf(row.payload)).toEqual(['ct', 'iv']);
     }
+  });
+
+  test('B7 a creation under a taken project id is refused and tells the caller nothing but taken', async ({ anon, project }) => {
+    const [a, b] = [await project(), await project()];
+    const before = await json(await anon.get(`/api/v1/projects/${a.id}`, a.withKey), 'project');
+    const create = (id: string) => anon.post('/api/v1/projects', { data: { id, payload: pair(256), demo: false } });
+
+    const underA = await create(a.id);
+    const underB = await create(b.id);
+    const refusal = await underA.text();
+    expect(underA.status(), refusal).toBe(409);
+    expect(refusal).toContain('This id is already in use');
+    expect(refusal, 'nothing of the project').not.toContain(a.id);
+    expect(underB.status()).toBe(409);
+    expect(await underB.text(), 'the same answer for any taken id').toBe(refusal);
+    expect(await json(await anon.get(`/api/v1/projects/${a.id}`, a.withKey), 'project'), 'the project is unchanged').toEqual(before);
+
+    expect((await create('00000000-0000-0000-0000-000000000000')).status(), 'the all-zero id').toBe(400);
+    const upper = randomUUID();
+    expect(isRefused((await create(upper.toUpperCase())).status()), 'an id in another form').toBe(true);
+    expect((await anon.get(`/api/v1/projects/${upper}`)).status(), 'and nothing was stored under it').not.toBe(200);
+
+    const fresh = randomUUID();
+    expect((await json<{ id: string }>(await create(fresh), 'a fresh id')).id, 'stored as sent').toBe(fresh);
   });
 
   test('B6 an id holder without the key writes rows below the floor, and nothing once it is reached', async ({ anon, project }) => {

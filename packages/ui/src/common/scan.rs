@@ -5,7 +5,9 @@
 //! depend on it (31 MB of weights would land in the wasm bundle and the server binary). The
 //! platform half is installed by `packages/mobile/src/main.rs`.
 
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::{Arc, OnceLock};
+#[cfg(not(target_arch = "wasm32"))]
+use std::sync::Mutex;
 
 /// What OCR found, in the shapes the expense form takes. `date` is `%Y-%m-%d` because that is what
 /// `ExpenseForm`'s `date_str` signal holds.
@@ -84,16 +86,20 @@ pub fn scanner_available() -> bool {
 
 /// Base64 sent per message. The bridge is `window.ipc.postMessage`, and a whole 1600px JPEG is
 /// ~340-540 KB of base64 - a few messages rather than one very large one.
+#[cfg(not(target_arch = "wasm32"))]
 const CHUNK_BYTES: usize = 262_144;
 /// Ceiling on a reassembled capture. A bound, not a threat model: the page that produces these is
 /// ours, and the phone would run out of memory long before anything interesting happened.
+#[cfg(not(target_arch = "wasm32"))]
 const MAX_CAPTURE_BYTES: usize = 6 * 1024 * 1024;
 /// Long edge the photo is downscaled to before transport. The detector wants ~960, but recognition
 /// crops come off the source and receipt print is small.
+#[cfg(not(target_arch = "wasm32"))]
 const MAX_EDGE: u32 = 1600;
 /// Higher than a photo would need. Thermal receipt print is thin, low-contrast and exactly the
 /// spatial frequency JPEG ringing destroys, and the detector cannot recover a stroke the codec
 /// removed. The extra few hundred KB stay far inside `MAX_CAPTURE_BYTES`.
+#[cfg(not(target_arch = "wasm32"))]
 const JPEG_QUALITY: f32 = 0.92;
 
 /// Opens the camera or the picker and streams the photo back, base64 in chunks.
@@ -113,6 +119,7 @@ const JPEG_QUALITY: f32 = 0.92;
 ///
 /// Dioxus runs this as the body of an async function, so the top-level `await` is what suspends it -
 /// same contract as `sleep_js` and `copy_js`.
+#[cfg(not(target_arch = "wasm32"))]
 fn capture_js(source: ScanSource) -> String {
     let capture = match source {
         ScanSource::Camera => "input.capture = 'environment';",
@@ -181,6 +188,7 @@ fn capture_js(source: ScanSource) -> String {
     )
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, Clone, serde::Deserialize)]
 pub(crate) struct CaptureMsg {
     pub kind: String,
@@ -188,11 +196,13 @@ pub(crate) struct CaptureMsg {
 }
 
 /// Reassembles the chunk stream. Pure, so the protocol is testable without a WebView.
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Default)]
 pub(crate) struct Assembler {
     base64: String,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Assembler {
     /// `Some` once the stream terminates: the decoded JPEG, or why not.
     pub(crate) fn push(&mut self, msg: &CaptureMsg) -> Option<Result<Vec<u8>, ScanError>> {

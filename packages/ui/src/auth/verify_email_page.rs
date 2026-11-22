@@ -34,6 +34,7 @@ pub fn VerifyEmailPage(token: String) -> Element {
                     account_enc_key_ctx.set(Some(account_key));
                     auth_ctx.set(Some(account));
                     flash.set(Some(Flash::ok(tid!("verify-email-welcome"))));
+                    *crate::friends::AFTER_VERIFICATION.write() = true;
                     nav.push(Route::ProjectsPage {});
                 }
                 Err(e) => {

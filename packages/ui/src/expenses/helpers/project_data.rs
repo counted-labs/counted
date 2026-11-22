@@ -5,6 +5,7 @@
 //! the same ciphertext - once for the stats, once for the rows. Guard:
 //! `decrypt_count_is_linear`.
 
+use shared::time::Date;
 use shared::{
     balances::get_reimbursement_suggestions, Expense, ExpenseType, Payment, ProjectDto,
     ProjectStatus, User, UserBalance, UserSummary,
@@ -32,7 +33,7 @@ pub struct RowExpense {
     pub expense: DecryptedExpense,
     pub emoji: String,
     pub category: ShownCategory,
-    pub date: chrono::NaiveDate,
+    pub date: Date,
 }
 
 impl From<DecryptedExpense> for RowExpense {
@@ -47,8 +48,8 @@ impl RowExpense {
         let emoji = categories.row_emoji(&category, &expense.name);
         // `created_at` rather than dropping the row: an unparseable date is still an expense, and
         // vanishing unexplained is worse than being filed under the day it was entered.
-        let date = chrono::NaiveDate::parse_from_str(&expense.date, "%Y-%m-%d")
-            .unwrap_or_else(|_| expense.created_at.date());
+        let date = Date::parse_ymd(&expense.date)
+            .unwrap_or_else(|| expense.created_at.date());
         Self { expense, emoji, category, date }
     }
 }
@@ -296,6 +297,7 @@ pub fn summary_from_payments(payments: &[DecryptedPayment]) -> UserSummary {
 
 #[cfg(test)]
 mod tests {
+    use shared::time::DateTime;
     use super::*;
     use crate::common::test_fixtures::{
         large_project, make_expense, make_expense_with_category, make_payment, make_user, test_key,
@@ -694,7 +696,7 @@ mod tests {
             user_id,
             is_debt,
             amount,
-            created_at: chrono::NaiveDateTime::default(),
+            created_at: DateTime::default(),
         }
     }
 

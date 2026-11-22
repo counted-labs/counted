@@ -42,6 +42,7 @@ pub fn route_depth(route: &Route) -> u8 {
         Route::ExpensesPage { .. }
         | Route::FriendsPage {}
         | Route::PaymentMethodsPage {}
+        | Route::BadgesPage {}
         | Route::RegisterPage {}
         | Route::ForgotPasswordPage {}
         | Route::HelpPage {}

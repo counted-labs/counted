@@ -27,7 +27,6 @@ tracing = "0.1"
 dotenvy = "0.15"
 uuid = "1.6"
 # rust_decimal = "1.37.1"
-chrono = "0.4.41"
 sha2 = "0.10"
 
 # optional
@@ -35,7 +34,6 @@ sqlx = { version = "0.8.6", features = [
 	"runtime-tokio",
 	"postgres",
 	"uuid",
-	"chrono",
 	"rust_decimal",
 	"derive",
 ], optional = true }
@@ -67,6 +65,12 @@ ring = { version = "0.17", optional = true }
 # whose default backend is OpenSSL.
 hkdf = { version = "0.12", optional = true }
 aes-gcm = { version = "0.10", optional = true }
+# Login verifiers sealed at rest (server::auth::at_rest). The crate the client already seals with.
+chacha20poly1305 = { version = "0.10", optional = true }
+# Shown badges (docs/plans/gamification.md §4): the server signs each with Ed25519 and ML-DSA-65, both
+# must verify. Deterministic signing, so no RNG path; `crypto-bigint` stays out of the lock.
+ed25519-dalek = { version = "2.2", default-features = false, optional = true }
+ml-dsa = { version = "=0.1.2", default-features = false, features = ["alloc"], optional = true }
 dioxus-fullstack = { version = "0.7.10", optional = true }
 once_cell = "1.21.3"
 
@@ -86,6 +90,9 @@ server = [
 	"ring",
 	"hkdf",
 	"aes-gcm",
+	"chacha20poly1305",
 	"dioxus-fullstack",
 	"lettre",
+	"ed25519-dalek",
+	"ml-dsa",
 ]

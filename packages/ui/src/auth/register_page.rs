@@ -2,11 +2,14 @@ use dioxus::prelude::*;
 use crate::tid;
 
 use crate::auth::credentials::{account_key, nfc, password_error_key, sign_up};
-use crate::common::{error_message, next_paint, read_from_ls, AppHeader, Mascot, MascotPose};
+use crate::common::{
+    error_message, next_paint, read_from_ls, take_invited_email, AppHeader, AuthResolved, Mascot, MascotPose,
+};
 use crate::crypto::{encrypt_padded_json, generate_kdf_salt};
 use crate::i18n::current_lang;
-use crate::icons::{LockIcon, ICON_INLINE};
+use crate::icons::{CheckIcon, LockIcon, ICON_INLINE};
 use crate::route::Route;
+use shared::Account;
 
 #[component]
 pub fn RegisterPage() -> Element {
@@ -20,9 +23,32 @@ pub fn RegisterPage() -> Element {
     }
 }
 
+/// Fills the address an invitation link carried, once, after hydration and the session check.
+/// Already signed in, the request is waiting in Amis.
+fn use_invitation(mut email: Signal<String>) -> Signal<bool> {
+    let mut invited = use_signal(|| false);
+    let auth_ctx = use_context::<Signal<Option<Account>>>();
+    let auth_resolved = use_context::<Signal<AuthResolved>>();
+    let nav = use_navigator();
+    use_effect(move || {
+        if !auth_resolved().0 {
+            return;
+        }
+        let Some(address) = take_invited_email() else { return };
+        if auth_ctx.peek().is_some() {
+            nav.replace(Route::FriendsPage {});
+            return;
+        }
+        email.set(address);
+        invited.set(true);
+    });
+    invited
+}
+
 #[component]
 fn RegisterForm() -> Element {
     let mut email = use_signal(String::new);
+    let invited = use_invitation(email);
     let mut password = use_signal(String::new);
     let mut display_name = use_signal(String::new);
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
@@ -129,6 +155,13 @@ fn RegisterForm() -> Element {
                 back_button_route: Route::ProjectsPage {},
             }
 
+            if invited() {
+                div { id: "register-invited", class: "alert alert-success alert-soft flex flex-col items-start gap-1",
+                    p { class: "font-semibold", {tid!("register-invited-title")} }
+                    p { class: "text-sm", {tid!("register-invited-body")} }
+                }
+            }
+
             if let Some(err) = error_msg() {
                 div { id: "register-error", role: "alert", class: "alert alert-error", "{err}" }
             }
@@ -160,8 +193,14 @@ fn RegisterForm() -> Element {
                         required: true,
                         placeholder: tid!("field-email-placeholder"),
                         autocomplete: "email",
+                        aria_describedby: if invited() { "register-email-hint" },
                         value: "{email}",
                         oninput: move |e| email.set(e.value()),
+                    }
+                    if invited() {
+                        p { id: "register-email-hint", class: "text-xs text-base-content/70",
+                            {tid!("register-email-from-link")}
+                        }
                     }
 
                     label { class: "fieldset-legend", r#for: "register-password", {tid!("field-password")} }
@@ -214,6 +253,24 @@ fn RegisterForm() -> Element {
                 {tid!("register-terms-and")}
                 " "
                 Link { class: "link", to: Route::PrivacyPage {}, {tid!("register-privacy-link")} }
+            }
+
+            if invited() {
+                div { id: "register-perks", class: "rounded-box bg-base-200 p-4 flex flex-col gap-2 text-sm",
+                    p { class: "text-xs font-semibold uppercase tracking-wide text-base-content/60",
+                        {tid!("register-perks-title")}
+                    }
+                    for perk in [tid!("settings-upsell-title"), tid!("register-perk-friends"), tid!("register-perk-payment")] {
+                        div { class: "flex gap-2 items-start",
+                            span { class: "text-success", CheckIcon { size: ICON_INLINE } }
+                            span { "{perk}" }
+                        }
+                    }
+                }
+                div { class: "flex flex-col items-center gap-1 text-center text-xs text-base-content/60",
+                    Link { class: "link", to: Route::ProjectsPage {}, {tid!("register-continue-without")} }
+                    p { {tid!("register-continue-without-hint")} }
+                }
             }
         }
     }

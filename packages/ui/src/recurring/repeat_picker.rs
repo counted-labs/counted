@@ -1,5 +1,5 @@
-use chrono::NaiveDate;
 use dioxus::prelude::*;
+use shared::time::Date;
 
 use super::labels::{anchor_label, ends_label, frequency_label, lands_on_month_end, repeat_summary, PRESETS};
 use super::model::{Ends, Freq};
@@ -9,8 +9,8 @@ use crate::common::{format_date, SheetBar, SheetFooter, SHEET_TITLE};
 use crate::icons::{CheckIcon, RepeatIcon, RightArrowIcon, ICON_INLINE};
 use crate::tid;
 
-fn parse(date: &str) -> Option<NaiveDate> {
-    NaiveDate::parse_from_str(date, "%Y-%m-%d").ok()
+fn parse(date: &str) -> Option<Date> {
+    Date::parse_ymd(date)
 }
 
 /// The Repeat line of the expense form. `foreign` is the frozen project-currency amount when the
@@ -20,7 +20,7 @@ pub fn RepeatRow(
     repeat: Signal<Option<Repeat>>,
     date_str: ReadSignal<String>,
     online: bool,
-    today: NaiveDate,
+    today: Date,
     foreign: Option<(f64, String)>,
     #[props(default = true)] backfill: bool,
 ) -> Element {
@@ -104,7 +104,7 @@ enum Choice {
 #[component]
 pub fn RepeatPicker(
     initial: Option<Repeat>,
-    anchor: NaiveDate,
+    anchor: Date,
     on_done: EventHandler<Option<Repeat>>,
     on_close: EventHandler<()>,
 ) -> Element {
@@ -121,7 +121,7 @@ pub fn RepeatPicker(
     let mut ends = use_signal(|| start.ends);
     let mut until = use_signal(|| match start.ends {
         Ends::On(d) => d,
-        _ => anchor.checked_add_months(chrono::Months::new(12)).unwrap_or(anchor),
+        _ => anchor.checked_add_months(12).unwrap_or(anchor),
     });
     let mut count = use_signal(|| match start.ends {
         Ends::After(n) => n,

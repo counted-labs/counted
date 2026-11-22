@@ -16,6 +16,7 @@ pub mod register_page;
 pub mod reset_page;
 pub mod security_card;
 pub mod settings_page;
+pub mod unsent_sheet;
 pub mod verify_email_page;
 
 pub use payment_methods_page::PaymentMethodsPage;

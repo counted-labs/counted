@@ -1,6 +1,4 @@
-use std::time::Duration;
-
-use chrono::{DateTime, Utc};
+use std::time::{Duration, SystemTime};
 
 /// Information about the freshness of a rendered response
 #[derive(Debug, Clone, Copy)]
@@ -10,12 +8,12 @@ pub struct RenderFreshness {
     /// The maximum age of the rendered response
     max_age: Option<u64>,
     /// The time the response was rendered
-    timestamp: DateTime<Utc>,
+    timestamp: SystemTime,
 }
 
 impl RenderFreshness {
     /// Create new freshness information
-    pub(crate) fn new(age: u64, max_age: u64, timestamp: DateTime<Utc>) -> Self {
+    pub(crate) fn new(age: u64, max_age: u64, timestamp: SystemTime) -> Self {
         Self {
             age,
             max_age: Some(max_age),
@@ -24,7 +22,7 @@ impl RenderFreshness {
     }
 
     /// Create new freshness information with only the age
-    pub(crate) fn new_age(age: u64, timestamp: DateTime<Utc>) -> Self {
+    pub(crate) fn new_age(age: u64, timestamp: SystemTime) -> Self {
         Self {
             age,
             max_age: None,
@@ -33,12 +31,9 @@ impl RenderFreshness {
     }
 
     /// Create new freshness information from a timestamp
-    pub(crate) fn created_at(timestamp: DateTime<Utc>, max_age: Option<Duration>) -> Self {
+    pub(crate) fn created_at(timestamp: SystemTime, max_age: Option<Duration>) -> Self {
         Self {
-            age: timestamp
-                .signed_duration_since(Utc::now())
-                .num_seconds()
-                .unsigned_abs(),
+            age: signed_secs(timestamp, SystemTime::now()).unsigned_abs(),
             max_age: max_age.map(|d| d.as_secs()),
             timestamp,
         }
@@ -49,7 +44,7 @@ impl RenderFreshness {
         Self {
             age: 0,
             max_age: max_age.map(|d| d.as_secs()),
-            timestamp: Utc::now(),
+            timestamp: SystemTime::now(),
         }
     }
 
@@ -64,7 +59,7 @@ impl RenderFreshness {
     }
 
     /// Get the time the response was rendered
-    pub fn timestamp(&self) -> DateTime<Utc> {
+    pub fn timestamp(&self) -> SystemTime {
         self.timestamp
     }
 
@@ -78,5 +73,13 @@ impl RenderFreshness {
                 http::HeaderValue::from_str(&format!("max-age={}", max_age)).unwrap(),
             );
         }
+    }
+}
+
+/// `a - b` in whole seconds, truncated toward zero: chrono's `signed_duration_since(..).num_seconds()`.
+pub(crate) fn signed_secs(a: SystemTime, b: SystemTime) -> i64 {
+    match a.duration_since(b) {
+        Ok(ahead) => ahead.as_secs() as i64,
+        Err(behind) => -(behind.duration().as_secs() as i64),
     }
 }

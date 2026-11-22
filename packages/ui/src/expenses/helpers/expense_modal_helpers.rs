@@ -1,8 +1,7 @@
 //! Shared between `AddExpenseModal` and `EditExpenseModal`: the two differ only in which
 //! server function they call and what history summary they write.
-
-use chrono::NaiveDate;
 use crate::tid;
+use shared::time::Date;
 use shared::{sums_to_total, ExpensePayload, ExpenseShare, ExpenseType};
 
 use super::expense_form_helpers::UserEntry;
@@ -128,7 +127,7 @@ pub fn validate_expense_form(
     if debtors.is_empty() {
         return Err(FormError::NoDebtor);
     }
-    if NaiveDate::parse_from_str(date, "%Y-%m-%d").is_err() {
+    if Date::parse_ymd(date).is_none() {
         return Err(FormError::InvalidDate);
     }
     // Both sides must add up to the total, or the balances they produce never net to zero and the
@@ -170,7 +169,7 @@ pub fn with_shares(
     let side = |entries: &[(i32, f64)], is_debt: bool| {
         entries
             .iter()
-            .map(move |&(user_id, amount)| ExpenseShare { user_id, amount, is_debt })
+            .map(move |&(user_id, amount)| ExpenseShare { user_id, amount, is_debt, extra: Default::default() })
             .collect::<Vec<_>>()
     };
     ExpensePayload {
@@ -294,9 +293,9 @@ mod tests {
         assert_eq!(
             p.shares.unwrap(),
             vec![
-                ExpenseShare { user_id: 1, amount: 30.0, is_debt: false },
-                ExpenseShare { user_id: 1, amount: 15.0, is_debt: true },
-                ExpenseShare { user_id: 2, amount: 15.0, is_debt: true },
+                ExpenseShare { user_id: 1, amount: 30.0, is_debt: false, extra: Default::default() },
+                ExpenseShare { user_id: 1, amount: 15.0, is_debt: true, extra: Default::default() },
+                ExpenseShare { user_id: 2, amount: 15.0, is_debt: true, extra: Default::default() },
             ]
         );
     }

@@ -322,6 +322,7 @@ pub fn masked_tail(method: &PaymentMethod) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    use shared::time::Date;
     use super::*;
     use crate::crypto::encrypt_json;
 
@@ -364,7 +365,6 @@ mod tests {
         assert_eq!(masked_value(&phone), "06 12 34 56 78 90 12");
         assert_eq!(masked_tail(&phone), None);
     }
-    use chrono::NaiveDate;
     use uuid::Uuid;
 
     const KEY: [u8; 32] = [7u8; 32];
@@ -374,7 +374,7 @@ mod tests {
             id: Uuid::new_v4(),
             email: "a@b.c".to_string(),
             display_name: EncryptedPair::default(),
-            created_at: NaiveDate::from_ymd_opt(2026, 1, 1).unwrap().and_hms_opt(0, 0, 0).unwrap(),
+            created_at: Date::from_ymd_opt(2026, 1, 1).unwrap().and_hms_opt(0, 0, 0).unwrap(),
             email_verified: true,
             kdf_salt: vec![0; 16],
             kdf_version: 1,

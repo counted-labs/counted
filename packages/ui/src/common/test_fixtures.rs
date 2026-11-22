@@ -1,8 +1,7 @@
 //! Encrypted fixtures shared by the test modules. Every builder takes the key explicitly so a
 //! test can encrypt with one key and assert that a different one fails.
 #![cfg_attr(not(test), allow(dead_code))]
-
-use chrono::NaiveDateTime;
+use shared::time::DateTime;
 use shared::{
     Expense, ExpensePayload, ExpenseType, Payment, PaymentPayload, ProjectDto, ProjectPayload,
     ProjectStatus, User, UserPayload,
@@ -20,7 +19,7 @@ pub(crate) fn test_key() -> [u8; 32] {
 pub(crate) fn make_user(key: &[u8; 32], id: i32, name: &str) -> User {
     User {
         id,
-        payload: encrypt_json(key, &UserPayload { name: name.to_string(), removed: false }).unwrap(),
+        payload: encrypt_json(key, &UserPayload { name: name.to_string(), removed: false, extra: Default::default() }).unwrap(),
         ..Default::default()
     }
 }
@@ -40,7 +39,7 @@ pub(crate) fn make_project(key: &[u8; 32], id: Uuid, name: &str, currency: &str)
         )
         .unwrap(),
         status: ProjectStatus::Ongoing,
-        created_at: NaiveDateTime::default(),
+        created_at: DateTime::default(),
         has_admin: false,
         key_lifecycle: false,
         key_epoch: 0,
@@ -61,7 +60,7 @@ pub(crate) fn make_expense(
         id,
         author_id: Some(1),
         project_id: Uuid::nil(),
-        created_at: NaiveDateTime::default(),
+        created_at: DateTime::default(),
         payload: encrypt_json(
             key,
             &ExpensePayload {
@@ -96,7 +95,7 @@ pub(crate) fn make_expense_with_category(
         id,
         author_id: Some(1),
         project_id: Uuid::nil(),
-        created_at: NaiveDateTime::default(),
+        created_at: DateTime::default(),
         payload: encrypt_json(
             key,
             &ExpensePayload {
@@ -133,7 +132,7 @@ pub(crate) fn make_payment(
         expense_id,
         user_id,
         payload: encrypt_json(key, &PaymentPayload { amount, is_debt }).unwrap(),
-        created_at: NaiveDateTime::default(),
+        created_at: DateTime::default(),
     }
 }
 

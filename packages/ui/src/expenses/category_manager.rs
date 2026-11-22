@@ -3,7 +3,8 @@
 //! one history entry. Logic lives in `categories::custom` and the helpers below.
 
 use dioxus::prelude::*;
-use shared::{EditableProject, HistoryAction, HistoryContext, HistoryEntity, HistoryPayload, ProjectPayload};
+use shared::{EditableProject, HistoryAction, HistoryEntity, HistoryPayload, ProjectPayload};
+use crate::entity_ids::sealed_history;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
@@ -100,18 +101,18 @@ async fn save_edit(
             refused.set(Some(e));
             return Err(e.key().to_string());
         }
-        let history = encrypt_padded_json(
+        let history = sealed_history(
             &key,
-            &HistoryPayload {
+            HistoryPayload {
                 summary: summary.clone(),
                 actor_user_id,
                 action: Some(HistoryAction::Updated),
                 entity: Some(HistoryEntity::Project),
                 entity_id: None,
+                extra: Default::default(),
             },
         )
-        .ok()
-        .map(|p| HistoryContext { actor_user_id: None, payload: p });
+        .ok();
         Ok(EditableProject {
             id: project_id,
             payload: Some(encrypt_padded_json(&key, &payload)?),
@@ -177,6 +178,7 @@ pub fn CategoryManager(
         }
         let Some(key) = key_ctx() else { return };
         let summary = history_summary(&edit, label);
+        let created = matches!(edit, CategoryEdit::Create { .. });
         let (_, referenced) = current_usage();
         saving.set(true);
         error.set(None);
@@ -185,6 +187,9 @@ pub fn CategoryManager(
                 Ok(next) => {
                     haptic(Haptic::Success);
                     categories.set(next.clone());
+                    if created {
+                        crate::badges::award(crate::badges::SUR_MESURE);
+                    }
                     editing.set(None);
                     deleting.set(None);
                     if let Some(on_changed) = on_changed {

@@ -1,3 +1,4 @@
+use shared::time::DateTime;
 use api::account_projects::account_projects_controller::{
     batch_upsert_account_projects, get_account_projects,
 };
@@ -9,22 +10,23 @@ use crate::tid;
 use shared::{Account, AccountProject, EditableProject, ProjectDto, ProjectPayload, ProjectStatus};
 use uuid::Uuid;
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::HashSet;
 
 use crate::common::{
     apply_pull, clear_user_id, copy_missing, copy_text, error_message, haptic, is_offline_error, is_rate_limited, key_of,
     forget_left, leave_project_and_forget, left_elsewhere, mark_converted, mark_synced, pending,
     read_from_ls, set_cached_projects_list, share_link_for, share_text, sleep, to_push, update_ls,
-    update_project_fresh, use_device_cache, write_queue, QUICK_ADD,
+    update_project_fresh, use_device_cache, enqueue, Queue, QUICK_ADD,
     write_to_ls,
-    ConfirmModal, Mascot, MascotPose, PageTitle,
+    MeAnswered, MeRetry, ConfirmModal, Mascot, MascotPose, PageTitle,
     Flash, Haptic, LocalStorageState, OpKind, ProjectEdit, ProjectKey, ProjectTile, PullToRefresh,
-    QueuedOp, SpeedDialAction, SpeedDialFab, LEAVE_CONFIRM_MESSAGE, LEAVE_CONFIRM_TITLE,
+    QueuedOp, SpeedDialAction, SpeedDialFab, LEAVE_CONFIRM_MESSAGE, LEAVE_CONFIRM_TITLE, LEAVE_UNSENT,
 };
 use crate::common::fx_cache::read_fx;
+use crate::common::offline_queue::{dropped_with_project, forget_project};
 use crate::crypto::decrypt_json;
 use crate::conversion::{conversion_plan, rows_verdicts, Verdict};
-use crate::rotation_flow::{adopt_all, lost_projects, rotated_among, rotated_ids};
+use crate::rotation_flow::{adopt_all, lost_projects, rotated_among, rotated_ids, Holder};
 use crate::decrypted::{project_status, status_edit};
 use crate::expenses::helpers::my_spending::{cached_ledgers, sync_all, synced_ledgers};
 use crate::expenses::{EditProjectModal, OPEN_REIMBURSEMENTS};
@@ -37,7 +39,7 @@ use crate::projects::project_row_sheet::ProjectRowSheet;
 use crate::projects::personal_cards::{is_personal_dto, PersonalCard, PersonalCreateCard, PersonalCreateSheet};
 use crate::projects::{AddProjectModal, ImportTricountModal, JoinProjectModal};
 use crate::friends::friends_service::my_private_key;
-use crate::friends::{use_friends, InvitationsCard, NotificationsBell, NotificationsSheet};
+use crate::friends::{use_friends, use_requests_after_verification, InvitationsCard, NotificationsBell, NotificationsSheet};
 use crate::route::Route;
 
 /// Whether anything has been archived. The filter is noise until something has been, so the page
@@ -61,6 +63,16 @@ fn live_cached_list(state: &LocalStorageState) -> Option<Vec<ProjectDto>> {
     let live = |id: Uuid| state.projects.iter().any(|p| p.project_id == id && !p.key_rotated);
     let list = state.cached_projects_list.as_ref()?;
     Some(list.iter().filter(|p| live(p.id)).cloned().collect())
+}
+
+/// The sync's list, plus the cached row of each project whose switch waits on `me()`: its sync
+/// carried no project, and it is neither lost nor locked yet.
+fn with_deferred(mut fresh: Vec<ProjectDto>, state: &LocalStorageState, deferred: &[Uuid]) -> Vec<ProjectDto> {
+    let cached = state.cached_projects_list.iter().flatten();
+    let kept: Vec<ProjectDto> =
+        cached.filter(|p| deferred.contains(&p.id) && !fresh.iter().any(|f| f.id == p.id)).cloned().collect();
+    fresh.extend(kept);
+    fresh
 }
 
 const LIST_RESYNC_MS: i64 = 30_000;
@@ -87,7 +99,7 @@ const THROTTLES: bool = cfg!(any(target_arch = "wasm32", target_os = "android", 
 
 fn list_synced_recently(ids: &[Uuid], version: u64) -> bool {
     THROTTLES
-        && LAST_LIST_SYNC.with(|last| synced_within(last.borrow().as_ref(), ids, version, chrono::Utc::now().timestamp_millis()))
+        && LAST_LIST_SYNC.with(|last| synced_within(last.borrow().as_ref(), ids, version, DateTime::now_utc().unix_millis()))
 }
 
 /// The projects the last list sync could serve: from `KEY_LIFECYCLE_FROM` one held without its key
@@ -98,7 +110,7 @@ fn keyed_ids(state: &LocalStorageState) -> Vec<Uuid> {
 
 fn note_list_sync(ids: Vec<Uuid>, version: u64) {
     if THROTTLES {
-        let at_ms = chrono::Utc::now().timestamp_millis();
+        let at_ms = DateTime::now_utc().unix_millis();
         LAST_LIST_SYNC.with(|last| *last.borrow_mut() = Some(ListSync { at_ms, ids, version }));
     }
 }
@@ -126,7 +138,10 @@ fn ProjectListSkeleton() -> Element {
 pub fn ProjectsPage() -> Element {
     let auth_ctx = use_context::<Signal<Option<Account>>>();
     let account_key_ctx = use_context::<Signal<Option<[u8; 32]>>>();
+    let auth_answered = use_context::<Signal<MeAnswered>>();
+    let me_retry = use_context::<Signal<MeRetry>>();
     let ls_ctx = use_context::<Signal<LocalStorageState>>();
+    let pending_ops = use_context::<Signal<Queue>>();
     // False first so SSR and the first client render agree; the client-only effect corrects it
     // after hydration. `peek` stops the effect subscribing to its own write.
     let mut show_archived = use_signal(|| false);
@@ -143,6 +158,7 @@ pub fn ProjectsPage() -> Element {
     let mut show_personal_expense = use_signal(|| false);
     let mut show_personal_create = use_signal(|| false);
     let friends = use_friends();
+    use_requests_after_verification(friends);
     let bell_open = use_signal(|| false);
 
     // What the account and the list's sync each answered, for the conversion further down. It needs
@@ -170,7 +186,11 @@ pub fn ProjectsPage() -> Element {
             let left = if reset { vec![] } else { left_elsewhere(&read_from_ls(), &server, account.id) };
             if !left.is_empty() {
                 let Ok(rotated) = rotated_among(&read_from_ls(), &left).await else { return };
-                update_ls(ls_ctx, |state| forget_left(state, &left, &rotated));
+                let mut forgotten = Vec::new();
+                update_ls(ls_ctx, |state| forgotten = forget_left(state, &left, &rotated));
+                if !forgotten.is_empty() {
+                    forgotten.iter().for_each(|&project_id| forget_project(pending_ops, project_id));
+                }
             }
 
             // Push next: what this device holds and the account does not. Without it a project
@@ -280,16 +300,22 @@ pub fn ProjectsPage() -> Element {
             // D17: a rotated project switches through a box or the escrow, then syncs under the new
             // key; one nothing reaches keeps a row (`lost_projects`) that opens artboard T10.
             let rotated = result.as_ref().map(|(_, syncs)| rotated_ids(syncs)).unwrap_or_default();
-            let (account, account_key) = (auth_ctx.peek().clone(), *account_key_ctx.peek());
-            if !rotated.is_empty() && adopt_all(ls_ctx, &rotated, account, account_key).await {
-                result = sync_all(ids.clone()).await;
+            let mut deferred = vec![];
+            if !rotated.is_empty() {
+                let holder = Holder::current(auth_answered, auth_ctx, account_key_ctx, me_retry);
+                if holder == Holder::Unknown {
+                    deferred = rotated.clone();
+                }
+                if adopt_all(ls_ctx, &rotated, &holder).await {
+                    result = sync_all(ids.clone()).await;
+                }
             }
             synced.set(true);
             let (before, syncs) = result?;
             note_list_sync(keyed, version);
             ledgers.set(synced_ledgers(&before, &syncs, Uuid::nil()));
             verdicts.set(Some(rows_verdicts(&before, &syncs)));
-            let list: Vec<ProjectDto> = syncs.into_iter().filter_map(|s| s.project).collect();
+            let list = with_deferred(syncs.into_iter().filter_map(|s| s.project).collect(), &read_from_ls(), &deferred);
             // read_from_ls() and no `ls_ctx.set()` - deliberately *not* `update_ls`: this
             // closure reads `project_ids`, derived from `ls_ctx`, so refreshing the signal here
             // could re-run the resource. Safe as a disk-only write only because the cached list is read
@@ -741,7 +767,7 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
     let mut show_edit_modal = use_signal(|| false);
 
     let is_online = use_context::<Signal<bool>>();
-    let mut pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
+    let pending_ops = use_context::<Signal<Queue>>();
     let ls_ctx = use_context::<Signal<LocalStorageState>>();
     let mut flash = use_context::<Signal<Option<Flash>>>();
     let mut show_leave_confirm = use_signal(|| false);
@@ -810,7 +836,7 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
             .and_then(|e| e.payload);
         let on_change = props.on_change;
         if !is_online() {
-            pending_ops.write().push_back(QueuedOp::new(
+            let queued = enqueue(pending_ops, QueuedOp::new(
                 Uuid::new_v4(),
                 &queue_label,
                 OpKind::EditProject(ProjectEdit {
@@ -821,7 +847,9 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
                     emoji: None,
                 }),
             ));
-            write_queue(&pending_ops.read());
+            if !queued {
+                return;
+            }
             update_ls(ls_ctx, |state| {
                 if let Some(ref mut list) = state.cached_projects_list {
                     if let Some(p) = list.iter_mut().find(|p| p.id == project_id) {
@@ -964,14 +992,17 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
         if show_leave_confirm() {
             ConfirmModal {
                 title: tid!(LEAVE_CONFIRM_TITLE),
-                message: tid!(LEAVE_CONFIRM_MESSAGE),
+                message: match dropped_with_project(project_id) {
+                    0 => tid!(LEAVE_CONFIRM_MESSAGE),
+                    n => format!("{} {}", tid!(LEAVE_CONFIRM_MESSAGE), tid!(LEAVE_UNSENT, count: n as i64)),
+                },
                 confirm_label: tid!("leave"),
                 on_cancel: move |_| show_leave_confirm.set(false),
                 on_confirm: move |_| {
                     let on_change = props.on_change;
                     show_leave_confirm.set(false);
                     spawn(async move {
-                        match leave_project_and_forget(ls_ctx, project_id).await {
+                        match leave_project_and_forget(ls_ctx, pending_ops, project_id).await {
                             // `leave_project_and_forget` already refreshed `ls_ctx`.
                             Ok(_) => {}
                             // Membership survives on the server, so keep the local entry -
@@ -1032,6 +1063,19 @@ mod tests {
         let ids: Vec<Uuid> = live_cached_list(&s).unwrap().iter().map(|p| p.id).collect();
         assert_eq!(ids, vec![id(1)], "2 was left here, 3 lost its key");
         assert_eq!(live_cached_list(&state(&[1], None)), None, "never synced: the skeleton");
+    }
+
+    /// A rotated project waiting on `me()` is in none of the list's three kinds of row, so the list
+    /// it saves would lose it for good.
+    #[test]
+    fn a_project_whose_switch_waits_on_the_account_keeps_its_cached_row() {
+        let cached = vec![project(1, ProjectStatus::Ongoing), project(2, ProjectStatus::Ongoing), project(3, ProjectStatus::Ongoing)];
+        let s = state(&[1, 2, 3], Some(cached));
+        let ids = |list: Vec<ProjectDto>| list.iter().map(|p| p.id).collect::<Vec<Uuid>>();
+        let fresh = vec![project(1, ProjectStatus::Ongoing)];
+        assert_eq!(ids(with_deferred(fresh.clone(), &s, &[id(2)])), vec![id(1), id(2)], "2 waits, 3 is gone from the server");
+        assert_eq!(ids(with_deferred(fresh.clone(), &s, &[id(1)])), vec![id(1)], "never twice");
+        assert_eq!(ids(with_deferred(fresh, &state(&[1, 2], None), &[id(2)])), vec![id(1)], "nothing cached to keep");
     }
 
     #[test]

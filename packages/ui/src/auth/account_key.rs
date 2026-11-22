@@ -142,16 +142,16 @@ pub fn adopt_owner(state: &mut LocalStorageState, account_id: Uuid) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use shared::time::DateTime;
     use super::*;
     use crate::crypto::{encrypt_json, generate_key, wrap_amk, wrap_key};
-    use chrono::NaiveDateTime;
 
     fn account(epoch: i32, amk_wrap: Option<shared::EncryptedPair>, sk_key: &[u8; 32], sk: &[u8; 32]) -> Account {
         Account {
             id: Uuid::from_u128(7),
             email: "a@example.com".into(),
             display_name: encrypt_json(sk_key, &"A".to_string()).unwrap(),
-            created_at: NaiveDateTime::default(),
+            created_at: DateTime::default(),
             email_verified: true,
             kdf_salt: vec![0; 16],
             kdf_version: 1,

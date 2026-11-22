@@ -21,6 +21,7 @@ use crate::common::{
 };
 use crate::crypto::{claim_token, decrypt_json, encrypt_padded_json};
 use crate::decrypted::{decrypt_payment, project_status, status_edit};
+use crate::entity_ids::decrypt_row;
 use crate::recurring::model::RecurringPayload;
 
 const ATTEMPTS: usize = 3;
@@ -155,7 +156,7 @@ pub fn converted_expenses(key: &[u8; 32], expenses: &[Expense], payments: &[Paym
 }
 
 fn converted_expense(key: &[u8; 32], e: &Expense, rows: &[&Payment]) -> Option<ConvertedRow<i32>> {
-    let mut payload: ExpensePayload = decrypt_json(key, &e.payload).ok()?;
+    let mut payload: ExpensePayload = decrypt_row(key, &e.payload).ok()?;
     if payload.shares.is_some() && e.author_id.is_none() && rows.is_empty() {
         return None;
     }
@@ -166,7 +167,7 @@ fn converted_expense(key: &[u8; 32], e: &Expense, rows: &[&Payment]) -> Option<C
             .map(|p| {
                 decrypt_payment(key, p)
                     .ok()
-                    .map(|d| ExpenseShare { user_id: d.user_id, amount: d.amount, is_debt: d.is_debt })
+                    .map(|d| ExpenseShare { user_id: d.user_id, amount: d.amount, is_debt: d.is_debt, extra: Default::default() })
             })
             .collect::<Option<Vec<_>>>()?,
     };
@@ -174,7 +175,7 @@ fn converted_expense(key: &[u8; 32], e: &Expense, rows: &[&Payment]) -> Option<C
     payload.shares = Some(shares.clone());
     let pair = encrypt_padded_json(key, &payload).ok()?;
     // The rows are deleted once this lands: what goes up must read back as exactly what they held.
-    let back: ExpensePayload = decrypt_json(key, &pair).ok()?;
+    let back: ExpensePayload = decrypt_row(key, &pair).ok()?;
     (back.shares == Some(shares) && back.author_id == payload.author_id)
         .then_some(ConvertedRow { id: e.id, payload: pair })
 }
@@ -184,7 +185,7 @@ pub fn converted_rules(key: &[u8; 32], rules: &[RecurringExpense]) -> Vec<Conver
         .iter()
         .filter(|r| r.author_id.is_some() || r.listed_participants)
         .filter_map(|r| {
-            let mut payload: RecurringPayload = decrypt_json(key, &r.payload).ok()?;
+            let mut payload: RecurringPayload = decrypt_row(key, &r.payload).ok()?;
             payload.author_id = payload.author_id.or(r.author_id);
             Some(ConvertedRule {
                 id: r.id,
@@ -200,7 +201,7 @@ pub fn converted_history(key: &[u8; 32], entries: &[HistoryEntry]) -> Vec<Conver
         .iter()
         .filter(|h| h.actor_user_id.is_some())
         .filter_map(|h| {
-            let mut payload: HistoryPayload = decrypt_json(key, &h.payload).ok()?;
+            let mut payload: HistoryPayload = decrypt_row(key, &h.payload).ok()?;
             payload.actor_user_id = payload.actor_user_id.or(h.actor_user_id);
             Some(ConvertedRow { id: h.id, payload: encrypt_padded_json(key, &payload).ok()? })
         })
@@ -309,6 +310,7 @@ pub fn conversion_plan(
 
 #[cfg(test)]
 mod tests {
+    use shared::time::DateTime;
     use super::*;
     use crate::common::test_fixtures::{make_expense, make_payment, make_project, test_key};
     use crate::crypto::encrypt_json;
@@ -369,6 +371,28 @@ mod tests {
     }
 
     #[test]
+    fn a_converted_expense_keeps_eid_slot_its_unknown_keys_and_those_of_its_shares() {
+        use shared::entity::{read, Slot};
+        let key = test_key();
+        let eid = Uuid::new_v4();
+        let row = |slot: &str| Expense {
+            author_id: Some(7),
+            payload: crate::crypto::encrypt(&key, &format!(
+                r#"{{"name":"Pizza","amount":30.0,"expenseType":"expense","date":"2025-01-01","eid":"{eid}","slot":"{slot}","later":1,"shares":[{{"userId":7,"amount":30.0,"isDebt":false,"k":"paid"}},{{"userId":8,"amount":30.0,"isDebt":true}}]}}"#
+            )).unwrap(),
+            ..make_expense(&key, 1, "x", 1.0, ExpenseType::Expense, "2025-01-01")
+        };
+        let converted = converted_expenses(&key, &[row("expense"), Expense { id: 2, ..row("rule") }], &[]);
+        assert_eq!(converted.iter().map(|c| c.id).collect::<Vec<_>>(), [1], "the row served with another slot is left as it is");
+        let plain = crate::crypto::decrypt(&key, &converted[0].payload).unwrap();
+        assert_eq!(read(&plain, Slot::Expense), Ok(Some(eid)));
+        let back: ExpensePayload = serde_json::from_str(&plain).unwrap();
+        assert_eq!(back.extra["later"], 1);
+        assert_eq!(back.author_id, Some(7));
+        assert_eq!(back.shares.unwrap()[0].extra["k"], "paid");
+    }
+
+    #[test]
     fn a_history_row_takes_its_actor_inside() {
         let key = test_key();
         let entry = HistoryEntry {
@@ -379,8 +403,8 @@ mod tests {
             action: HistoryAction::Created,
             entity: HistoryEntity::Expense,
             entity_id: Some(1),
-            payload: encrypt_json(&key, &HistoryPayload { summary: "added".into(), actor_user_id: None, action: None, entity: None, entity_id: None }).unwrap(),
-            created_at: chrono::NaiveDateTime::default(),
+            payload: encrypt_json(&key, &HistoryPayload { summary: "added".into(), actor_user_id: None, action: None, entity: None, entity_id: None, extra: Default::default() }).unwrap(),
+            created_at: DateTime::default(),
         };
         let converted = converted_history(&key, std::slice::from_ref(&entry));
         let back: HistoryPayload = decrypt_json(&key, &converted[0].payload).unwrap();
@@ -388,6 +412,68 @@ mod tests {
 
         let done = HistoryEntry { actor_user_id: None, ..entry };
         assert!(converted_history(&key, &[done]).is_empty());
+    }
+
+    #[test]
+    fn the_conversion_keeps_both_keys_and_never_rewrites_an_unreadable_row() {
+        use crate::recurring::model::{Ends, Freq, Rule, Side, Template};
+        use shared::entity::{read, Slot};
+        let key = test_key();
+        let eid = Uuid::new_v4();
+        let rule = |slot: &str| {
+            let mut payload = RecurringPayload {
+                template: Template {
+                    name: "Rent".into(),
+                    expense_type: "expense".into(),
+                    category: None,
+                    amount: 10.0,
+                    payers: Side { exact: true, entries: vec![(1, 10.0)] },
+                    debtors: Side { exact: false, entries: vec![(1, 1.0)] },
+                    source_currency: None,
+                    source_amount: None,
+                    rate: None,
+                    rate_ack: None,
+                    variable: false,
+                    extra: Default::default(),
+                },
+                rule: Rule { freq: Freq::Monthly, interval: 1, anchor: shared::time::Date::from_ymd_opt(2026, 8, 1).unwrap(), ends: Ends::Never },
+                next: 0,
+                paused: false,
+                seed: Uuid::new_v4(),
+                author_id: None,
+                extra: Default::default(),
+            };
+            payload.extra.insert("eid".into(), eid.to_string().into());
+            payload.extra.insert("slot".into(), slot.into());
+            RecurringExpense {
+                id: Uuid::new_v4(),
+                project_id: Uuid::nil(),
+                author_id: Some(3),
+                payload: encrypt_json(&key, &payload).unwrap(),
+                version: 1,
+                created_at: DateTime::default(),
+                listed_participants: false,
+            }
+        };
+        let converted = converted_rules(&key, &[rule("rule"), rule("expense")]);
+        assert_eq!(converted.len(), 1, "the rule served with another slot is left as it is");
+        let plain = crate::crypto::decrypt(&key, &converted[0].payload).unwrap();
+        assert_eq!(read(&plain, Slot::Rule), Ok(Some(eid)));
+
+        let entry = |slot: &str| HistoryEntry {
+            id: 5,
+            project_id: Uuid::nil(),
+            actor_user_id: Some(3),
+            actor_account_id: None,
+            action: HistoryAction::Created,
+            entity: HistoryEntity::Expense,
+            entity_id: Some(1),
+            payload: crate::crypto::encrypt(&key, &format!(r#"{{"summary":"added","eid":"{eid}","slot":"{slot}"}}"#)).unwrap(),
+            created_at: DateTime::default(),
+        };
+        let converted = converted_history(&key, &[entry("history"), entry("rule")]);
+        assert_eq!(converted.len(), 1);
+        assert_eq!(read(&crate::crypto::decrypt(&key, &converted[0].payload).unwrap(), Slot::History), Ok(Some(eid)));
     }
 
     #[test]

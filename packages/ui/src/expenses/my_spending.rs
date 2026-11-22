@@ -1,8 +1,7 @@
 //! "Mes dépenses" on the personal project's page: the month and what it adds up to (R1, R2), the
 //! search pill (R1) and the groups it counts (R5).
-
-use chrono::{Datelike, NaiveDate};
 use dioxus::prelude::*;
+use shared::time::Date;
 use std::collections::HashSet;
 use uuid::Uuid;
 
@@ -27,12 +26,12 @@ impl From<&GroupLedger> for CountedGroup {
 use crate::icons::{BackArrowIcon, ChevronRightIcon, LockIcon, SearchIcon};
 use crate::tid;
 
-fn month_label(month: NaiveDate) -> String {
+fn month_label(month: Date) -> String {
     format!("{} {}", month_title(month.month0() as usize), month.year())
 }
 
 #[component]
-pub fn MonthSummary(month: Signal<NaiveDate>, totals: MonthTotals, currency: String) -> Element {
+pub fn MonthSummary(month: Signal<Date>, totals: MonthTotals, currency: String) -> Element {
     let spent = totals.spent();
     let personal_pct = if spent > 0.0 { totals.personal / spent * 100.0 } else { 0.0 };
     let balance = totals.balance();

@@ -124,6 +124,12 @@ pub fn erase() -> StoreKey {
     resolve()
 }
 
+#[cfg(test)]
+pub(crate) fn uninstall() {
+    *PROVIDER.write().unwrap_or_else(|e| e.into_inner()) = None;
+    set_state(StoreKey::Plain);
+}
+
 fn provider() -> Option<KeyProvider> {
     PROVIDER.read().unwrap_or_else(|e| e.into_inner()).clone()
 }

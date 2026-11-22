@@ -56,7 +56,7 @@ pub fn clear_demo() {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn web_storage() -> Option<web_sys::Storage> {
+pub fn web_storage() -> Option<web_sys::Storage> {
     match is_demo() {
         true => session_storage(),
         false => web_sys::window()?.local_storage().ok().flatten(),
@@ -77,7 +77,7 @@ pub fn read_json<T: DeserializeOwned + Default>(key: &str) -> T {
         let Some(raw) = storage.as_ref().and_then(|s| s.get_item(key).ok().flatten()) else {
             return T::default();
         };
-        return match serde_json::from_str(&raw) {
+        match serde_json::from_str(&raw) {
             Ok(v) => v,
             Err(e) => {
                 // Moved aside like native's rename, so the next write cannot destroy what may be the
@@ -92,7 +92,7 @@ pub fn read_json<T: DeserializeOwned + Default>(key: &str) -> T {
                 );
                 T::default()
             }
-        };
+        }
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -216,7 +216,7 @@ pub fn write_json<T: Serialize>(key: &str, label: &str, value: &T) -> bool {
             ),
             None => dioxus::logger::tracing::error!("counted: no localStorage for {label}"),
         }
-        return false;
+        false
     }
     #[cfg(not(target_arch = "wasm32"))]
     {

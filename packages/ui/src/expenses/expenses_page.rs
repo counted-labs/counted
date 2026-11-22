@@ -1,18 +1,17 @@
 use dioxus::prelude::*;
 use crate::tid;
 use shared::{ExpenseType, ProjectDto, ProjectStatus, ReimbursementSuggestion, User};
-use std::collections::VecDeque;
 use uuid::Uuid;
 
 use super::helpers::export;
 use crate::common::persist::is_demo;
 use crate::common::{
     copy_text, is_mobile, key_offer_shown, leave_project_and_forget, pending, read_from_ls, InviteRetry,
-    remove_project, scheme_link_for, share_link_for, share_text, update_ls, update_project_fresh, write_queue, write_to_ls, AppHeader, AvatarGroup, ConfirmModal, Flash,
-    LocalStorageState, ProjectKey, PullToRefresh, QueuedOp, SizeClass, LEAVE_CONFIRM_MESSAGE,
-    LEAVE_CONFIRM_TITLE,
+    remove_project, scheme_link_for, share_link_for, share_text, update_ls, update_project_fresh, write_to_ls, AppHeader, ConfirmModal, Flash,
+    LocalStorageState, ProjectKey, PullToRefresh, Queue, LEAVE_CONFIRM_MESSAGE,
+    LEAVE_CONFIRM_TITLE, LEAVE_UNSENT,
 };
-use crate::common::offline_queue::drop_project_ops;
+use crate::common::offline_queue::{dropped_with_project, forget_project};
 use crate::expenses::helpers::first_key::{dismiss_first_key_hint, first_key_hint_dismissed, first_key_prompt};
 use crate::expenses::rotation_sheets::{FirstKeyCard, ProjectRotation};
 use crate::expenses::helpers::my_spending::load_ledgers;
@@ -79,7 +78,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
     let mut show_leave_confirm = use_signal(|| false);
     let mut show_unlock_modal = use_signal(|| false);
     let mut rotation: Signal<Option<RotationTarget>> = use_signal(|| None);
-    let mut pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
+    let pending_ops = use_context::<Signal<Queue>>();
     let mut transfer = use_signal(|| None::<(String, f64, i32, i32)>);
 
     // "Ouvrir dans l'application" targets a phone *browser* - not the native app, not desktop.
@@ -100,6 +99,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
     let mut key_ctx = use_context::<ProjectKey>().0;
     let account_key_ctx = use_context::<Signal<Option<[u8; 32]>>>();
     let mut show_counted_groups = use_signal(|| false);
+    let mut show_members = use_signal(|| false);
 
     // "Mes dépenses" counts my share of every other project this device holds.
     let personal_id = use_memo(move || {
@@ -153,8 +153,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
         remove_project(&mut state, project_id);
         write_to_ls(&state);
         ls_ctx.set(state);
-        drop_project_ops(&mut pending_ops.write(), project_id);
-        write_queue(&pending_ops.read());
+        forget_project(pending_ops, project_id);
         nav.push(Route::ProjectsPage {});
     };
 
@@ -193,6 +192,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
         let Some(l) = snapshot.as_ref().filter(|l| l.project_id == project_id) else { return };
         let Some(proj) = l.project.as_ref() else { return };
         download(&key, proj, &l.users, &l.expenses, &l.payments);
+        crate::badges::award(crate::badges::ARCHIVISTE);
     };
 
     let security = {
@@ -293,6 +293,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                 counted,
                 on_counted: counted.is_some().then(|| EventHandler::new(move |on: bool| set_counted(project_id, on))),
                 on_counted_groups: personal.then(|| EventHandler::new(move |_| show_counted_groups.set(true))),
+                on_members: (!personal).then(|| EventHandler::new(move |_| show_members.set(true))),
                 security,
             }
 
@@ -434,7 +435,7 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                                     {tid!("demo-start-own")}
                                 }
                             }
-                        } else if uid.is_none() && key_offer_shown().is_none() {
+                        } else if uid.is_none() && key_offer_shown().is_none() && !pickable.is_empty() {
                             UserSelectionModal { users: pickable.clone(), project_id }
                         } else if show_switch() {
                             UserSelectionModal {
@@ -453,10 +454,19 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
 
                         if !personal {
                             div { class: "flex justify-center",
-                                AvatarGroup {
+                                crate::badges::members::MembersButton {
                                     users: pickable.clone(),
-                                    encryption_key: Some(key),
-                                    size: SizeClass::W10,
+                                    encryption_key: key,
+                                    on_open: move |_| show_members.set(true),
+                                }
+                            }
+                            if show_members() {
+                                crate::badges::members::MembersSheet {
+                                    users: pickable.clone(),
+                                    project_id,
+                                    encryption_key: key,
+                                    me: stored_user_id(),
+                                    on_close: move |_| show_members.set(false),
                                 }
                             }
                         }
@@ -612,13 +622,16 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
             if show_leave_confirm() {
                 ConfirmModal {
                     title: tid!(LEAVE_CONFIRM_TITLE),
-                    message: tid!(LEAVE_CONFIRM_MESSAGE),
+                    message: match dropped_with_project(project_id) {
+                        0 => tid!(LEAVE_CONFIRM_MESSAGE),
+                        n => format!("{} {}", tid!(LEAVE_CONFIRM_MESSAGE), tid!(LEAVE_UNSENT, count: n as i64)),
+                    },
                     confirm_label: tid!("leave"),
                     on_cancel: move |_| show_leave_confirm.set(false),
                     on_confirm: move |_| {
                         show_leave_confirm.set(false);
                         spawn(async move {
-                            match leave_project_and_forget(ls_ctx, project_id).await {
+                            match leave_project_and_forget(ls_ctx, pending_ops, project_id).await {
                                 // `leave_project_and_forget` already refreshed `ls_ctx`.
                                 Ok(_) => {
                                     nav.push(Route::ProjectsPage {});

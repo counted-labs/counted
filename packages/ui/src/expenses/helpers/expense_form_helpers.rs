@@ -305,6 +305,7 @@ pub fn debtors_label(t: &ExpenseType) -> &'static str {
 
 #[cfg(test)]
 mod tests {
+    use shared::time::DateTime;
     use super::*;
     use crate::categories::get_expense_emoji;
     use shared::EncryptedPair;
@@ -915,7 +916,7 @@ mod tests {
             user_id,
             is_debt,
             amount,
-            created_at: chrono::NaiveDateTime::default(),
+            created_at: DateTime::default(),
         };
         let users = vec![make_user(1), make_user(2)];
         let names = vec![String::new(); users.len()];

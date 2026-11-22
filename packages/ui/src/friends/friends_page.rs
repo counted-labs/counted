@@ -59,6 +59,19 @@ pub fn FriendsPage() -> Element {
         }
     });
 
+    // A new account arriving from an invitation has requests and no friends yet: open on them.
+    let mut first_load = use_signal(|| true);
+    use_effect(move || {
+        let Some(lists) = friends.current() else { return };
+        if !*first_load.peek() {
+            return;
+        }
+        first_load.set(false);
+        if lists.friends.is_empty() && !lists.incoming.is_empty() {
+            tab.set(Tab::Requests);
+        }
+    });
+
     let mut check_friend = use_context::<Signal<CheckFriend>>();
     use_effect(move || {
         let Some(id) = check_friend().0 else { return };

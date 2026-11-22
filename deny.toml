@@ -23,12 +23,6 @@ ignore = [
   # long-lived key. Re-check this if the Tricount client ever decrypts with the private key, or if
   # the key stops being per-request.
   "RUSTSEC-2023-0071",
-
-  # RUSTSEC-2026-0543 - chrono declared unmaintained, all versions, no upgrade (ignored 2026-11-17).
-  # A notice about the crate's future, not a known vulnerability. chrono is in 78 files and in
-  # sqlx's `chrono` feature, so leaving it is a migration to `time` or `jiff`, not a bump
-  # (backlog). Remove this entry with that migration, and re-check if a real chrono advisory lands.
-  "RUSTSEC-2026-0543",
 ]
 
 # Gated in CI since 2026-09-11 (the `audit` job). The workspace crates are `publish = false`, which

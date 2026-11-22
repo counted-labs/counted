@@ -82,6 +82,7 @@ fn main() {
         // `dioxus::launch` is `serve(router(app))` with nothing added; spelling it out is what
         // lets the version gate sit on every route. See docs/dioxus-overrides.md.
         dioxus::serve(|| async {
+            api::server::auth::at_rest::boot().await;
             Ok(dioxus::server::router(app)
                 .route(
                     &format!("{}{{token}}", api::app_version::ONE_CLICK_UNSUBSCRIBE),

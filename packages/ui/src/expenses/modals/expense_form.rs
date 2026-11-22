@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use shared::time::Date;
 use crate::tid;
 use shared::{sums_to_total, ExpenseType};
 
@@ -134,7 +135,7 @@ pub struct ExpenseFormProps {
 #[derive(Clone, Copy, PartialEq)]
 pub struct RepeatSlot {
     pub value: Signal<Option<Repeat>>,
-    pub today: chrono::NaiveDate,
+    pub today: Date,
     pub backfill: bool,
 }
 

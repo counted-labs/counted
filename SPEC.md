@@ -215,7 +215,9 @@ written as `null`.
 
 `ProjectPayload`, `ExpensePayload`, `Preferences`, `RecurringPayload` and `Template` keep the keys
 they do not know in a `#[serde(flatten)] extra` map and write them back, so an older client that
-edits a row does not drop a field added by a newer one.
+edits a row does not drop a field added by a newer one. `UserPayload`, `HistoryPayload` and
+`ExpenseShare` have no such map before 3.4.0. From 3.4.0 four payloads carry an entity id and the
+name of their slot (15.9.2).
 
 ### 5.3 Padding
 
@@ -263,7 +265,7 @@ The last column gives examples. Every writer outside tests follows its row's pad
 | Invitation box (project key for a friend), until floor 3.2.10 | X25519 pair | bare fragment | no (fixed size) | `box_project_key` in [`crypto.rs`](packages/ui/src/crypto.rs) |
 | Invitation box, from floor 3.2.10 | hybrid, sender-authenticated (9.1) | `{"use":"invite",..}` | no (fixed-length fields) | `box_for` in [`friends_service.rs`](packages/ui/src/friends/friends_service.rs) |
 | Rotation box (new project key for a member who stays) | hybrid (8.6) | `{"use":"rotate",..}` | no | `seal_box` in [`rotation.rs`](packages/ui/src/rotation.rs) |
-| Queued offline op: its label, and a project edit's name and description (local only, never sent) | project | string, tuple | no | [`offline_queue.rs`](packages/ui/src/common/offline_queue.rs), [`edit_project_modal.rs`](packages/ui/src/expenses/modals/edit_project_modal.rs) |
+| Queued offline op: its label, and a project edit's name, description and emoji (local only, never sent; the queue also holds the finished requests of 15.9.5 with their payload and history pairs) | project | string, tuple | no | [`offline_queue.rs`](packages/ui/src/common/offline_queue.rs), [`edit_project_modal.rs`](packages/ui/src/expenses/modals/edit_project_modal.rs) |
 | `PaymentPayload` (amount, direction), rows written by older clients only | project | `PaymentPayload` | no | no longer written |
 
 ### 5.5 Rows that do not open
@@ -278,7 +280,7 @@ that fail to decrypt; it sets them aside (8.5).
 A row that opens is still hostile input: a key holder controls the JSON every member's client
 parses. Property tests feed arbitrary strings to the project, participant, expense, payment,
 recurring-rule, history, payment-method and claim-label decoders. They also feed arbitrary rows,
-with any `f64` amount, ids at the `i32` bounds, dates at chrono's limits, junk types, and
+with any `f64` amount, ids at the `i32` bounds, dates at the limits of `shared::time` (-9999 to 9999) and past them, junk types, and
 participants carrying any claim label and payment-method copy, through what each page computes from them: the
 expenses page (totals, balances, settlement), the charts, my spending and budgets, the recurring
 rules (schedule, split, materialisation), the history and the exports. They check that nothing
@@ -660,7 +662,11 @@ nothing from one, since otherwise a hostile server could box any account a key f
 fresh device of the account fills its empty slot from escrow, as in 7.2. A device that switches
 moves K1 to a list of previous keys with its epoch, drops its cached rows, re-seals its queued
 writes under K2 (`rekey_value`: every `{ct, iv}` pair in a queued op that opens under K1), and, if
-the key came from a box, escrows K2 and deletes the box.
+the key came from a box, escrows K2 and deletes the box. The client does not follow 15.9.5 rule
+Q2 yet: it writes back the copy of the queue it holds in memory, which can put K1 pairs back on
+disk, so the replay checks each queued op again immediately before its request, with the
+current key's token: a pair under a previous key is re-sealed, and an op with a pair that opens
+under no key the device holds, or for a project it holds no key for, is not sent.
 
 A hostile server alone cannot build a row that passes this rule: it needs the hash of K1, which
 only holders of K1 or of a later key can compute or read. A former member alone cannot get one
@@ -1183,7 +1189,7 @@ scopes them.
 | `account-sk`, `display-name`, `preferences`, `payment-methods` | account | none (one blob of each per account) |
 | `friend-label` | account | a request id the client draws |
 
-The entity id is a UUID v4 the client draws before its first encryption of the row. Expenses have
+The entity id is 16 bytes the client draws before its first encryption of the row, or derives (15.9.1). Expenses have
 an optional `client_op_id`, set on every add that goes through the client's write queue (all of them since the native-feel build, older builds only offline) and on recurring occurrences; v2
 makes it mandatory. The other tables need a new column. The offline queue (local only) and
 `PaymentPayload` (no longer written) get no slot.
@@ -1232,6 +1238,9 @@ its genuine edit, and two writers at the same `rev` would fork. With it, an hone
 forks. A hostile server can still serve a lower `rev` (refused by a device that has seen the higher
 one), or accept two writes at the same `rev` and serve each to different devices; a device accepts an
 equal `rev`.
+
+What a v1 write does with `rev` from 3.4.1, and the refusal a stale write gets, are frozen in
+15.9.3. Rules start at 0 there, and a key change moves the `rev` of the rows it rewrites.
 
 ### 15.5 Rollout
 
@@ -1301,6 +1310,453 @@ except the invitation binding, still open. None of it is built.
   project is kept, cached row or not, and replaced only when the user confirms the new key
   (15.3, section 6). That closes the silent case of 9.1, and a wrong link stays correctable at the
   cost of one question.
+
+### 15.9 What 3.4.x already writes (frozen ahead of the rest of this section)
+
+v2 has to agree with three things clients write before it exists: two fields sealed inside v1 rows,
+the meaning of the revision a write names, and the shapes of the write queue, which two builds can
+hold on one device. They are fixed here, ahead of the rewrite of 15.1 to 15.8. Where those disagree
+with this subsection, this subsection holds until they are rewritten. A later version may add to
+what is frozen here and may not change it; the parts marked provisional are the exception. None of
+it is built. 15.9.1 and 15.9.2 are written from 3.4.0, 15.9.3 and 15.9.4 from 3.4.1; 3.4.0 follows
+the rules of 15.9.5 and 3.4.1 writes its new types.
+
+#### 15.9.1 Entity ids
+
+An entity id is 16 bytes. The client draws it at random before the row's first encryption, in the
+UUID v4 layout, or derives it: an occurrence of a recurring rule takes the id of section 10, a
+version 8 value, so that two devices materialising one occurrence write one id. A reader treats the
+16 bytes as opaque and never tests the version or variant bits. The all-zero value is not an entity
+id, and the server refuses a creation that names it.
+
+In JSON an entity id is exactly the 36-character hyphenated form in lower case. A reader accepts no
+other form.
+
+An entity id never changes for the life of its row. A client draws a new id for every new row:
+adding a deleted row back draws a new one. A derived id names one occurrence for good. Under v1 a
+creation replayed after its row was deleted, or an occurrence materialised again after its
+deletion, cannot be told from a new row and is stored again; v2 refuses both at the tombstone.
+
+From 3.4.0 the client sends the id in clear with the creation, and the server stores it:
+
+| Slot | Stored as | The server keeps it unique among |
+| --- | --- | --- |
+| `participant` | `users.entity_uuid` | the stored rows of the table |
+| `expense` | `expenses.client_op_id`, which exists and is now set on every creation path | the stored rows of its project |
+| `rule` | `recurring_expenses.id`, the row's own id, now drawn by the client | the stored rows of the table |
+| `history` | `project_history.entity_uuid`, the entry's own id, never the id of the row it is about | the stored rows of its project |
+| `project` | `projects.id`, now drawn by the client (15.8) | every project stored since it keeps the ids of deleted ones |
+
+**A project id names one project for good.** The server refuses a creation under the id of a stored
+project or of a project deleted since it accepts ids from clients, with the refusal of a taken id,
+and keeps the ids of deleted projects for that purpose and for no other. Without that, whoever holds
+a deleted project's id and one of its keys could create it again, and a device that still holds that
+key would open the copy without a question (section 6): today only the server can do that. Of the
+projects deleted before the server kept ids, only those that an account's retired key copy still
+named when it began are covered.
+
+The server never changes a stored id on its own; only a client's write names one. A creation that
+names a taken id is never stored twice. A history entry that names a taken id is left out, and the
+write it came with is applied without it: a replayed write carries its entry again. An expense add
+is answered with the row stored under that id in the same project, which is how a replayed add finds
+its first attempt, and the client takes the returned row, not its own copy, as what landed. A
+materialisation leaves out an occurrence whose id is taken, with its history entry, and an expense
+batch each expense whose id is taken; both apply the rest. One id twice in one request is refused
+with 400 `DUPLICATE_BATCH_ITEM`. A participant, rule or project creation that names a taken id is
+refused with 409 `ID_TAKEN` ("This id is already in use"). A client older than 3.4.0 sends no id
+where it sent none before: its participant, history entry or expense then has none, and its rule has
+the id the server drew, which is that rule's entity id.
+
+A client draws one id and one key for a project creation. Before the first send it keeps both on the
+device, with the account the creation goes under, or none, and the time of its last send. After a
+lost answer it sends the same creation once more under the same id, and it never sends the same key
+under a new id. On `ID_TAKEN` it reads the project under that id with that key's token: a project
+whose payload opens under the key is its own earlier delivery and counts as landed. Any other
+outcome it cannot tell is settled later by that read alone, never by sending again: at start, on
+reconnect, before a creation and before an erase of the device. It adopts the project only once the
+server has answered who is signed in: the recorded account, or anyone or no one for a creation made
+without an account. It believes an absence only once two minutes have passed since the last send, a
+send time ahead of the clock being reset to the time of the read. It sends no new creation while one
+that the signed-in account could adopt is inside those two minutes.
+
+On `ID_TAKEN` for a participant or a rule, a client reads the rows of the project. A participant
+whose payload opens under the project key and holds that id as `eid` (15.9.2), or a rule served
+under that id whose payload opens under the key, is its own earlier delivery and counts as landed; a
+participant batch is stored whole or not at all. If no such row is there, the id is taken elsewhere:
+the creation is refused for good, the user is told, and nothing sends it again. A new attempt by the
+user is a new row and draws a new id.
+
+**What a taken id tells.** Participant and rule ids are unique across the whole table. So whoever
+knows one can learn whether its row is still stored, by naming it in a creation in a project of
+their own: 409 while it is stored, accepted once it is gone. A former member knows these ids. The
+answer tells nothing of what the row holds, and a former member can already tell whether the project
+is still stored, by 403 `PROJECT_KEY_ROTATED` against 404. This is a limit of 3.4.x, taken up with
+the rewrite of 15.1 to 15.8.
+
+From 3.4.1 the server serves each row's clear id with the row. A client addresses a row by that
+served id and never by the id sealed in its payload (15.9.4).
+
+#### 15.9.2 `eid` and `slot` inside v1 payloads
+
+From 3.4.0 the payload of a participant, expense, rule or history row carries two more top-level
+keys:
+
+```
+"eid":  "<the row's own entity id>"
+"slot": "participant" | "expense" | "rule" | "history"
+```
+
+`slot` takes the names of the v2 labels (15.2); `eid` is the id sent in clear with the creation. In
+a history entry `eid` is the entry's own id, not its `entityId`. The project payload carries
+neither: there is one project row per key, and the conversion binds its id (15.8).
+
+**Writers.**
+
+- W1. A creation writes both keys.
+- W2. Every rewrite of a row keeps both as they were: an edit, the participant-links conversion of
+  an expense or a rule, and the rewrite of a removed participant's row by a key change
+  (`reseal_removed`, 8.5). The rest of a key change reseals byte for byte.
+- W3. A row built from another row's payload takes its own `eid`, never the source's: an expense
+  moved to another project, a copy, an occurrence built from a rule's template. A rule built from
+  another rule also draws its own `seed` (section 10). A kept `eid` would also let the server link
+  a moved expense across two projects.
+- W4. 3.4.x gives no id to a row that has none. That is the conversion's work.
+- W5. From 3.4.0 the participant payload and the history payload keep the keys they do not know, as
+  the other payloads do (5.2), and a participant edit starts from the decrypted payload, not from
+  the form alone. A share rebuilt by an edit keeps the unknown keys of the share it replaces for
+  the same participant on the same side, payer or debtor; a share the edit adds has none.
+
+Two shipped behaviours break W2 and W3, and readers are written for them. A build before 3.4.0 that
+removes or restores a participant rebuilds the payload from its form and loses both keys. A build
+before 3.4.0 that moves an expense to another project carries the whole payload over, `eid`
+included, under a new `client_op_id`.
+
+**Readers, from 3.4.0.**
+
+- R1. `slot` present and not the slot of the list the row was served in (`users` is
+  `participant`, `expenses` is `expense`, `recurring_expenses` is `rule`, `project_history` is
+  `history`): the row is unreadable (5.5). No build writes that: it is a blob served in the wrong
+  list.
+- R2. One key without the other, a key whose value is not a string, an `eid` that is not an
+  entity id in the form of 15.9.1, or a payload that names `eid` or `slot` more than once:
+  unreadable.
+
+**Readers that read v2: provisional, settled with the rewrite of 15.1 to 15.8.** Given here so that
+what 3.4.x writes can be judged against it. A row is *bound* to its `eid` when both keys are
+present, R1 and R2 pass, and `eid` equals the id the server serves in clear for that row.
+
+- R3. Neither key: an unbound row, read as v1 reads it.
+- R4. Both keys, well formed, and the clear id absent or different: an unbound row. The sealed id
+  is ignored, neither trusted nor an error. That is the moved expense above, and any row a 3.4.x
+  client created through a server that did not store its id, as after a rollback.
+- R5. Two bound rows of one project and slot with one `eid`: for a participant, an expense or a
+  rule the project is unreadable; for history the entry is shown once when the two payloads are
+  equal, and neither is shown otherwise.
+- R6. A reference that names an entity id resolves only to the bound row with that id and never
+  falls back to a row id. A reference that names only a row id, written before v2 readers exist,
+  resolves as v1 does.
+
+An unbound row has the guarantees of 5.1 and no more. The clear id is the server's to serve, so a
+server can unbind a row, which returns it to 5.1 and, by R6, leaves the references that name its
+entity id unresolved and not redirected; it can serve a payload under another row
+id, which moves the row whole; it cannot make a row bound to an id its payload does not carry.
+
+#### 15.9.3 Revisions under v1
+
+From 3.4.1 a project row, a participant row and an expense row each have a `rev`: an integer from
+1 to 2^63 - 1, in clear, served with the row. A row is created at 1, and a row that exists when the
+column arrives starts at 1. A recurring rule keeps its `version`, which plays the same part under
+its own name and starts at 0.
+
+A write of an existing row names `expected_rev`, the `rev` of the version its writer read and
+built on. The server applies it only if `expected_rev` equals the stored `rev`, and stores
+`rev` + 1 in the same transaction. Otherwise it changes nothing and answers 409 `STALE_REV`
+("This was changed elsewhere"), as it does for a write that would take `rev` past 2^63 - 1. That
+code is its own: not the 404 of a row that is gone, and not
+409 `PROJECT_ROTATING` (8.5), which means "the same write, later" where `STALE_REV` means "read
+the row again". A creation names no `expected_rev` and stores 1. A batch of participant writes is
+applied whole or not at all: one stale or missing row refuses it.
+
+A rule's writes keep `expected_version` and its refusal `RECURRING_STALE`, which shipped clients
+match.
+
+A write without `expected_rev`, from a client before 3.4.1, keeps the check and the refusal it has
+today: `expected_iv` and `PROJECT_STALE` for the project row, none for a participant or an
+expense. Applied, it stores `rev` + 1. Once the minimum client version reaches 3.4.1 the server
+refuses it with 409 `REV_REQUIRED` ("A newer version of the app is needed to save this change").
+The participant-links conversion is not refused: it keeps its own compare-and-swap on the project's
+`data_version`.
+
+`rev` counts the accepted writes of one row's payload, and only such a write moves it: an edit, the
+participant-links conversion for each row it rewrites, and the commit of a key change for the two
+rows it rewrites, the project row and a removed participant's row (8.5). The server does not know
+which participant row a key change rewrote unless the commit names it, which a client from 3.4.1
+does; a commit from an older client moves the project row's `rev` only. No trigger moves it, a
+write of clear columns alone does not, and the byte-for-byte reseal of the other rows does not.
+
+Under v1 nothing in the ciphertext carries `rev`: it orders honest writers, and a device takes no
+security decision on it. A replay compares payloads, never `rev` alone. v2 binds it, and its
+acceptance rule (15.4) has "stored + 1" as its honest case. Account blobs keep `expected_iv`
+(section 7), and under v1 a claim label and a payment copy have no `rev` of their own.
+
+#### 15.9.4 Addressing a row, and deletes
+
+From 3.4.1 a write or a delete of an existing project row, participant or expense names the row's
+id, `expected_rev`, and the clear entity id the server served with the row, null when it served
+none. That id is never taken from the payload: the moved expense of 15.9.2 carries another row's.
+The server applies the request only if the stored entity id and the stored `rev` both equal what
+it names. Otherwise it changes nothing and answers `STALE_REV`, and the client reads the row again.
+Only a row that is gone answers 404, which a delete reads as done.
+
+Rules keep their routes: a rule's write names `expected_version`, and its delete is unchanged.
+
+#### 15.9.5 The write queue
+
+The queue never leaves the device. What is sent is a request built from an entry; for the types up
+to 3.4.0 that is the stored request itself. The queue is specified because two builds can hold one
+queue, as two tabs do across a web release, or a device after a rollback. On the web it is the
+localStorage keys under the prefix `counted_q.`. On the phone it is one file of the sealed store of
+section 11, holding the same keys as one JSON object whose values are the strings the web stores
+under them; every change to it reads the file and writes it back in one synchronous step, and one
+replay runs in the process. The old key (Q0) stays in its own file, as builds before 3.4.0 keep it.
+The rules hold on both.
+
+In the keys below, `<id>` is an entry's `id`, `<rid>` a UUID drawn for the key, `<g>` a generation
+and `<seq>` an integer, both in decimal, and `<p>` a project id.
+
+| Key | Value |
+| --- | --- |
+| `counted_q.e.<id>` | The entry as made, generation 0 |
+| `counted_q.v.<id>.<rid>` | A later version of entry `<id>`, its `gen` 1 or more. Written from 3.4.1 |
+| `counted_q.l.<id>.<g>` | `{"seq": n, "row": <row id> or absent}`: generation `<g>` of `<id>` landed, as that row for a creation |
+| `counted_q.x.<id>.<g>` | `{"seq": n}`: `<id>` left at generation `<g>` without landing |
+| `counted_q.s.<id>.<g>` | `{"seq": n, "by": "<id>"}`: `<id>` left at generation `<g>`, replaced by the creation `by`. Written from 3.4.1 |
+| `counted_q.i.<id>` | `{"seq": n}`: `<id>` landed under a build before 3.4.0, as far as the move could tell (Q0) |
+| `counted_q.o.<id>` | `{"seq": n}`: the entry `<id>` of the old key was moved (Q0) |
+| `counted_q.t.<id>.<seq>` | `{}`: a stamp of the entry `<id>` of the old key. The smallest is its `seq` (Q0) |
+| `counted_q.p.<p>.<seq>` | `{}`: the project left the device |
+| `counted_q.z.<seq>` | `{}`: the device's data was erased |
+
+An entry is an object:
+
+| Key | Value |
+| --- | --- |
+| `id` | A UUID. For a creation, the new row's entity id (15.9.1) |
+| `op` | An object; its `type` names the operation |
+| `after` | An entry's `id`, or null, or absent in entries older builds wrote: this entry is replayed only once that one has landed (Q3) |
+| `seq` | An integer, its place in the queue (Q2). A version keeps the `seq` of its entry. Absent in entries older builds wrote, which take their smallest stamp (Q0) |
+| `gen` | In a `counted_q.v` key, one more than the generation it was written from; absent or 0 in a `counted_q.e` key |
+| `queued_at` | Seconds since the epoch, or null, or absent in entries older builds wrote |
+| `sealed_label` | A pair, or null, or absent in entries older builds wrote: a JSON string under the project key, the name the app shows for the entry. Never sent |
+| `label` | The same name in clear, in entries old builds wrote; the empty string since |
+| `state` | Absent: ready. `"needs_choice"`: parked, see below. Only on entries whose type was introduced from 3.4.1, since an older build ignores the key and would replay the entry |
+
+Every number in an entry or a marker is an integer within 64 signed bits.
+
+Every build from 3.4.0 follows these rules:
+
+- Q0. Builds before 3.4.0 keep their queue as one array under `counted_offline_queue`, written back
+  whole and without a lock. No build before 3.4.0 reads the prefix: those builds fail the whole read
+  on an entry they do not know and set the queue aside. A build from 3.4.0 never writes an entry
+  under the old key, and moves its entries. A move first writes the stamps, in the order of the
+  entries: for each entry it can read whose `id` has none of the keys `e`, `v`, `l`, `x`, `s`, `i`
+  or `o`, a stamp `counted_q.t.<id>.<seq>`, unless it reads one of that id. It stops at the first
+  stamp it cannot write. Then, for each entry that has a stamp, it writes `counted_q.e.<id>` with
+  the smallest `seq` among the stamps it reads, then `counted_q.o.<id>`; a write that fails here
+  leaves that entry, and each entry behind it that names it in `after`, for the next move, and stops
+  nothing else. An entry that has stamps takes the smallest as its `seq` in every rule here,
+  whatever its `e` key says. So a tab that missed a move and moves the entry again adds a greater
+  stamp, and changes neither the entry's place nor whether it is live. A tab that has not yet read
+  the first stamp orders the entry by the stamps it has. A build removes the stamps of an id once
+  none of its `e` or `v` keys is stored, its `o` key is, and one of its `l`, `x` or `s` keys is. An
+  element of the old key without a readable `id` stays where it is and stops nothing but the
+  emptying of the key. When an entry it moves names in `after` an id that is not among the entries
+  the move reads and has none of those keys, the move writes `counted_q.i` for that id before the
+  entry's `e` key: an older build removes an entry's dependents with it, so the named entry landed
+  there. A build moves the entries it sees at start, on a `storage` event for the old key, and in a
+  handler before that handler writes an entry (Q2d): online or not, and under no lock. A tab
+  receives these events only once it has read storage, so a build reads the old key at start. Once
+  every element it read, kept or in the key, is an entry that has its `o` key, it sets the old key
+  to `[ ]`, an empty array written with one space, which no older build writes, if the key still
+  holds the text it read, in the same step. An older build still running keeps its entries in
+  memory, writes them back and replays them itself. A write it makes at the moment the key is
+  emptied can be replaced by that `[ ]`. So a tab keeps, in its memory, the entries of the new value
+  of each `storage` event for the old key and the entries a move read from the key, and a move reads
+  the kept entries before those of the key. A kept entry is dropped once it has its `o` key. All of
+  them are dropped on an erase, and on a `storage` event that tells the old key was removed or
+  storage cleared: no build removes that key but to erase. A later write of the older build does not
+  stand for a kept entry: that build, opened again from the emptied key, no longer holds it. An
+  entry kept this way that the older build has landed since is sent again, as that build can send an
+  entry twice itself. Such an entry is lost only when the older tab closes before it writes or
+  replays again, and either no tab received that event, the tab that emptied the key having gone at
+  that moment with no other open, or every tab that kept the entry closed or loaded again before a
+  move of its own could write it, storage refusing its writes until then. An older build can also
+  replay an entry a second time, as two tabs of one build can today. After a rollback to such a
+  build, the entries under the prefix wait unseen, and replay on the return to 3.4.x.
+- Q1. Entries are read one by one. An entry the build cannot read is *held*: one whose `op.type` or
+  `state` it does not know, or a known type carrying a value it does not know. `"state": null` is a
+  value it does not know. A held entry is kept, never replayed, and counted as pending. An `e` value
+  whose `id` is not the one in its key, or whose `gen` is not 0, is held; one without a readable
+  `seq` comes last in the queue. A key under the prefix whose form the build does not know is kept
+  and never removed, except by an erase.
+- Q2. No key under the prefix is read and written back. Each key is written once, by one write, and
+  its value never changes. Two builds may write one key at the same moment only where both values
+  mean the same (the move of one entry, a marker), and a reader is right with either. The one
+  exception is an `o` key, which the move writes even when its own read missed it (Q0). Two moves of
+  one entry may write different `seq` under its `e` key; storage keeps either, the entry's `seq` is
+  its smallest stamp (Q0), and a build that removes the key removes whichever is stored. An entry of
+  the old key may survive an erase, which removes its stamps, when a tab that had not seen its move
+  moves it again; it survives a forget only until the tabs read its first stamp, unless no tab had
+  moved it before; and two entries of the old key may change order when two tabs move them from
+  different texts of that key. An entry written by a tab that has not yet read a `p` or `z` key
+  takes a `seq` at or below that key's when both are written in the same millisecond, or when the
+  clock stepped back between them, and is then ended by that key; for an entry of the old key, that
+  tab is the one that writes its smallest stamp. An entry is in storage before the handler that made
+  it returns. Every `seq`, in an entry, a marker, or the name of a `p`, `t` or `z` key, is the
+  milliseconds since the epoch when it is written, or one more than the greatest `seq` the build has
+  read or written, whichever is greater. Only the creation that adds a deleted row back takes
+  another: the parked entry's `seq`. The queue is the live entries, in the order of `seq`, then
+  `id`.
+- Q2a. A key of entry `<id>`, at generation g, is live when three things hold: no `l`, `x` or `s`
+  key of `<id>` has a generation of g or more; its `seq` is above that of every `z` key; and its
+  `seq` is above that of every `p` key of its project. The project of an entry is `op.projectId` for
+  `add_expense`, `edit_expense` and `delete_expense`, `op.id` for `update_project`, and
+  `op.project_id` for every other type. An entry whose project cannot be read is ended by no `p`
+  key. An entry is live when one of its keys is. Its live version is the one of the greatest `gen`,
+  then the greatest `seq`, then the greatest key, taken in byte order. Any build may remove a key
+  that is not live or not the live version. Before it removes the last key of an entry that a `p`
+  key ended, it writes that entry's `x` key at that key's generation.
+- Q2b. A change marks first and removes after. A landing writes `l` for the generation it sent, then
+  removes the keys of the entry up to that generation. A version is written before the keys it
+  supersedes are removed. A build may remove an `l`, `x`, `s` or `i` key whose `seq` is more than 30
+  days old, once no `e`, `v` or `t` key of its id is stored and no stored entry names its id in
+  `after`, directly or through an `s` key's `by`.
+- Q2c. If the write of a new entry throws, the build frees stored data the server can give back and
+  writes once more. If that throws too, the change is not made, and the user is told at once. When a
+  marker or a version cannot be written, the keys stay as they are and the replay stops with a
+  message; the entry is sent again later.
+- Q2d. The entries one handler makes are written in that handler, those that name others in `after`
+  first, once the handler has moved the entries of the old key it sees (Q0). If the move cannot
+  write a stamp, the handler's change is handled as Q2c handles a write that throws, and the stamps
+  already written stay. No other write of the move stops the handler. A move writes the delete that
+  names the add, then the add. If a later write throws, the handler removes what it wrote.
+- Q2e. On the web a tab sends only while it holds the Web Lock `counted-drain`. Once it is granted
+  the lock it reads the queue again in a later task before it sends, since the writes of another tab
+  can reach it late. It holds the lock from reading the entry it sends until it has written the
+  outcome: a marker, a version, or nothing when the entry stays. It holds it across the request
+  however long that takes, and never lets it go on a timeout, since a request it stopped waiting for
+  can land after the next one. When the page goes away (`pagehide`), it lets the lock go and sends
+  nothing more in that session; a page shown again takes the lock again before it sends. Where the
+  browser has no Web Locks, or refuses the request, a tab sends only while it is visible. The lock
+  decides who sends and nothing in storage: with two tabs sending, an entry can be sent twice, and
+  none is lost.
+- Q2f. A tab reads the queue again and replays on a `storage` event for a key under the prefix or
+  for the old key, and replays even after a replay that stopped. A tab that sees the device state
+  erased drops what it shows of the queue and writes no entry.
+- Q3. An entry leaves the queue only when it has landed, with its project, by an erase of the
+  device's data, or by its user's choice. An entry that leaves for any reason but its landing gets
+  its `x` key. Every entry that names it in `after` then leaves too, whenever a build reads it: no
+  build has to find them. An entry E that names another, N, in `after` is resolved by the first of
+  these that applies:
+  1. N has a live version: E waits, unless that version leaves by this rule, and then E leaves.
+  2. Otherwise, take the greatest generation among N's `l`, `x` and `s` keys and N's keys a `p` or
+     `z` key ended (each counting as an `x` at its generation). At that generation: an `s` key, E
+     is resolved as if it named `by`; an `l` key, it is replayed; otherwise it leaves.
+  3. Otherwise, an `i` key: it is replayed.
+  4. Otherwise, E waits and is listed (Q9).
+
+  A 404 is an answer of status 404 with the code `EXPENSE_NOT_FOUND` or `PROJECT_NOT_FOUND`. For the
+  types up to 3.4.0, a 404 is a landing for a `delete_expense`. For the other types, a 404, or the
+  legacy overwrite of an `update_project`, makes a build before 3.4.1 drop the entry with a notice,
+  as shipped builds do, and makes a build from 3.4.1 park it. A device that forgets a project writes
+  its `p` key, then the `x` key of each entry of that project it sees.
+
+  An erase writes the device state without the project keys first, then a `z` key, then removes
+  every key under the prefix but the `o` keys and that `z` key, and the old key. It reads the `p`
+  and `z` keys stored before it draws the `seq` of its `z` key. If that key cannot be written, the
+  erase removes the keys and then writes a `z` key under a new `seq`. On the phone the erase removes
+  the whole file. An entry is made only while the stored device state holds its project's key, read
+  in the same step as its write. An entry that another tab writes after the erase, before it has
+  seen it, opens under no key held here and is held (Q5). A write an older build makes while an
+  erase is on its way can be replaced by the removal of the old key, and is then lost as Q0 says of
+  a write replaced by `[ ]`.
+- Q4. A held or parked entry, an entry that waits (Q3), and an entry the server refuses for good
+  stop the entries behind it for the same project, and every entry that names it in `after`. When
+  its project cannot be read from it, it stops every entry behind it. A build that can tell two
+  entries are about different rows may let the later one pass: they are about different rows only if
+  both name a row id and the ids differ, or one of them creates a row and the other names one. A
+  build may stop more than this rule says, never less.
+  Refused for good means any refusal but a 404, a failure to reach the server, a status of 500 or
+  more, 426, 429, and 409 `PROJECT_ROTATING`.
+- Q5. Every ciphertext in an entry is an object with exactly the two keys `ct` and `iv`, a v1 pair
+  (5.1) whatever the format of the project's rows, at any depth. Nothing else in an entry depends on
+  a key. A switch of project key writes nothing to the queue. Before an entry is sent, each of its
+  pairs must open under the project's current key. A pair that opens under one of the project's
+  previous keys is resealed under the current key in what is sent, and the stored entry is left as
+  it is. An entry with a pair that opens under none of them is held until a key that opens it is
+  held. A device keeps every previous key of a project for as long as it holds the project.
+- Q6. An `op` of a type introduced from 3.4.1 names its project as `project_id` at its top level.
+- Q7. A reader keeps the keys it does not know at the top level of an entry and of an `op`, and a
+  version it writes from an entry keeps them; for an entry it holds it keeps the whole value.
+  Unknown keys are never sent. A key added to an existing type must be safe to ignore for a build
+  that replays that type; anything else takes a new type.
+- Q8. A type never changes meaning. A build that needs another shape uses another `type`.
+- Q9. A build lists as unsent the entries it will not send as things stand, each one its user may
+  discard (Q3). It lists exactly these: held ones; those no key held here opens; those waiting on an
+  id with no `e`, `v`, `l`, `x`, `s` or `i` key; those refused for good; and every entry of a cycle.
+  An entry stopped only by a listed entry is not listed.
+
+The types up to 3.4.0 are `add_expense`, `edit_expense`, `delete_expense`, `update_project` and
+`edit_project`. The first four hold a finished request, with the field names of the wire; an
+`edit_project` holds the fields that changed and is built against the stored project when it is
+replayed. A build from 3.4.1 keeps replaying them that way until the server refuses one with
+`REV_REQUIRED` (15.9.3) or a 404 (Q3). It then parks that entry for its user. It writes the entry's
+next version, with `"state": "needs_choice"` and no `base` or `base_rev`: an `add_expense` becomes a
+`write`, slot expense, no `row`, its `id` as `eid`, its payload as `intent`; an `edit_expense`
+becomes a `write`, slot expense, its `row` kept, `eid` null, its payload as `intent`; a
+`delete_expense` becomes a `remove`, its `row` kept; an `update_project` or `edit_project` becomes
+a `write`, slot project, whose `intent` is the project payload with the entry applied at the moment
+of the refusal. A `write` or a `remove` with a `row` and no `base` is replayed only once its user
+has chosen.
+
+From 3.4.1 a write of an expense or of the project row is queued as what the user meant, and is
+built only when it is replayed:
+
+```
+{ "type": "write",  "project_id": "<uuid>", "slot": "expense" | "project",
+  "eid": "<entity id>" | null, "row": <row id> | null,
+  "base_rev": <rev> | null, "base": <pair> | null, "intent": <pair> }
+
+{ "type": "remove", "project_id": "<uuid>", "slot": "expense",
+  "eid": "<entity id>" | null, "row": <row id> | null,
+  "base_rev": <rev> | null, "base": <pair> | null }
+```
+
+`intent` is the payload the form produced, sealed; `base` is the payload the form started from,
+sealed, and `base_rev` its `rev`. For an expense that exists, `row` is the server's row id and
+`eid` the clear id the server served with it, null when it served none (15.9.4). A creation has no
+`row`, no `base` and no `base_rev`, and its `eid` is the entry's `id`. For the project row, `eid`
+and `row` are null and the row is `project_id`; a project is never created through the queue.
+
+A `write` or a `remove` of an expense whose creation is still queued names that entry in `after`,
+has no `row`, and has the creation's `id` as `eid`. An edit of it has the creation's `intent` as
+`base`, or its `payload` for an `add_expense`, and 1 as `base_rev`. At replay it is addressed by the
+row and the clear id the creation landed as.
+
+The replay reads the row as it is now, carries over from `intent` what the user changed since
+`base`, seals the result at that moment and sends it under 15.9.4; the history entry is built then
+too. How the two versions are merged is the client's policy and no part of the format.
+
+An entry is parked when its replay cannot decide alone: the row and the user changed the same thing,
+or the row is gone. The replay then writes its next version with `"state": "needs_choice"`. A parked
+entry is replayed only after its user has chosen. The choice writes the next version, with `base`,
+`base_rev` and `intent` rewritten and no `state`. Adding a deleted row back first writes a creation
+with a fresh `id` and the parked entry's `seq`, then the parked entry's `s` key naming it; an entry
+that named the old id in `after` waits on the new one (Q3). A landing of a creation writes in its
+`l` key the row it landed as, by which the entries waiting on it are addressed.
+
+3.4.0 reads `write`, `remove`, `state`, `counted_q.v` keys and `s` keys, so as to list those entries
+as pending, to apply Q4 row by row and to resolve `after`. It holds them (Q1) and replays none.
 
 ## 16. Test vectors
 

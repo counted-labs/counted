@@ -3,12 +3,11 @@
 //! here is what stops the two paths drifting apart.
 
 use dioxus::prelude::*;
-use shared::{DeleteExpenseRequest, ExpenseType, HistoryAction, HistoryContext, HistoryEntity, HistoryPayload, ProjectStatus};
-use std::collections::VecDeque;
+use shared::{DeleteExpenseRequest, ExpenseType, HistoryAction, HistoryEntity, HistoryPayload, ProjectStatus};
 use uuid::Uuid;
 
-use crate::common::{write_queue, OpKind, QueuedOp};
-use crate::crypto::encrypt_padded_json;
+use crate::common::{enqueue, OpKind, Queue, QueuedOp};
+use crate::entity_ids::sealed_history;
 
 /// An archived project is frozen: nothing may be removed from it. Neither may the read-only demo.
 pub(crate) fn can_delete_expense(status: &ProjectStatus, read_only: bool) -> bool {
@@ -36,35 +35,36 @@ pub(crate) fn delete_expense_request(
     history_summary: String,
     actor_user_id: i32,
 ) -> DeleteExpenseRequest {
-    let history = encrypt_padded_json(
+    let history = sealed_history(
         key,
-        &HistoryPayload {
+        HistoryPayload {
             summary: history_summary,
             actor_user_id: Some(actor_user_id),
             action: Some(HistoryAction::Deleted),
             entity: Some(HistoryEntity::Expense),
             entity_id: Some(expense_id),
+            extra: Default::default(),
         },
     )
-    .ok()
-    .map(|payload| HistoryContext { actor_user_id: None, payload });
+    .ok();
     DeleteExpenseRequest { id: expense_id, project_id, history }
 }
 
 /// Queues the deletion, online or not, then runs `on_done` at once: the row leaves the list now and
-/// the queue sends the request. A refused delete surfaces as the queue's toast, the op kept.
+/// the queue sends the request. A refused delete surfaces as the queue's toast, the op kept; one the
+/// queue could not store runs nothing, the user told by the queue.
 ///
 /// `pending_ops` is passed in rather than read here: this runs from an event handler, and
 /// `use_context` is a hook.
 pub(crate) fn run_delete_expense(
     req: DeleteExpenseRequest,
     label: String,
-    mut pending_ops: Signal<VecDeque<QueuedOp>>,
+    pending_ops: Signal<Queue>,
     on_done: impl FnOnce() + 'static,
 ) {
-    pending_ops.write().push_back(QueuedOp::new(Uuid::new_v4(), &label, OpKind::DeleteExpense(req)));
-    write_queue(&pending_ops.read());
-    on_done();
+    if enqueue(pending_ops, QueuedOp::new(Uuid::new_v4(), &label, OpKind::DeleteExpense(req))) {
+        on_done();
+    }
 }
 
 #[cfg(test)]
@@ -121,5 +121,8 @@ mod tests {
             (Some(HistoryAction::Deleted), Some(HistoryEntity::Expense), Some(7)),
             "audit 2026-10-19 L5: what the columns say, inside the payload"
         );
+        let plain = crate::crypto::decrypt(&key, &history.payload).unwrap();
+        assert!(history.eid.is_some());
+        assert_eq!(shared::entity::read(&plain, shared::entity::Slot::History), Ok(history.eid));
     }
 }

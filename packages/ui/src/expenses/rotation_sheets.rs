@@ -53,6 +53,7 @@ pub fn ProjectRotation(
             match rotate(ls_ctx, project_id, k1, &account, account_key, my_user_id, removal).await {
                 Ok(rotated) => {
                     haptic(Haptic::Success);
+                    crate::badges::award(crate::badges::CLE_CHANGEE);
                     on_switched.call(rotated.k2);
                     done.set(Some(rotated));
                 }

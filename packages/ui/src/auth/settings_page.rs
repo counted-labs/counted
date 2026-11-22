@@ -2,19 +2,21 @@ use api::auth::auth_controller::{logout, me};
 use dioxus::prelude::*;
 use crate::tid;
 use shared::Account;
-use std::collections::VecDeque;
 
 use crate::common::{
     account_color_class, app_version, error_message, flush_session, read_from_ls, remove_quarantined_ls,
     unregister_push, write_to_ls, AppHeader, AuthResolved, Avatar, LanguagePicker, ListFooter, ListRow,
-    LocalStorageState, PullToRefresh, QueuedOp, RowTile, SizeClass, ThemePicker,
+    read_queue, Entry, LocalStorageState, PullToRefresh, Queue, RowTile, SizeClass, ThemePicker,
 };
 use crate::auth::delete_account_sheet::DeleteAccountSheet;
-use crate::auth::erase_device::{check_erase, erase_device_stores, EraseCheck};
+use crate::auth::erase_device::{check_erase, erase_device_stores, queue_check, EraseCheck};
 use crate::auth::erase_device_sheet::EraseDeviceSheet;
+use crate::auth::unsent_sheet::UnsentSheet;
+use crate::common::offline_queue::discard;
+use crate::common::REFUSED;
 use crate::crypto::{decrypt_json, forget_decrypted};
 use crate::friends::use_friends;
-use crate::icons::{EyeIcon, FileTextIcon, HelpIcon, LockIcon, ScaleIcon, UsersIcon, WalletIcon, ICON_INLINE};
+use crate::icons::{AwardIcon, EyeIcon, FileTextIcon, HelpIcon, LockIcon, ScaleIcon, UsersIcon, WalletIcon, ICON_INLINE};
 use crate::payment_methods::account_payment_methods;
 use crate::route::Route;
 
@@ -60,13 +62,15 @@ pub fn SettingsPage() -> Element {
     let account_enc_key_ctx = use_context::<Signal<Option<[u8; 32]>>>();
     let ls_ctx = use_context::<Signal<LocalStorageState>>();
     let auth_resolved = use_context::<Signal<AuthResolved>>();
+    let badges_ctx = use_context::<crate::badges::Badges>();
     let mut loading = use_signal(|| false);
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
     let mut show_delete_confirm = use_signal(|| false);
     let mut refreshing_me = use_signal(|| false);
-    let mut pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
+    let mut pending_ops = use_context::<Signal<Queue>>();
     let mut erase_check: Signal<Option<EraseCheck>> = use_signal(|| None);
     let mut erasing = use_signal(|| false);
+    let mut show_unsent = use_signal(|| false);
     let friends = use_friends();
 
     let account = auth_ctx();
@@ -104,10 +108,10 @@ pub fn SettingsPage() -> Element {
     let open_erase = move |_| {
         let Some(account) = auth_ctx() else { return };
         erase_check.set(Some(EraseCheck::Checking));
-        let pending = pending_ops.read().len();
+        let queued = queue_check(&read_queue(), &read_from_ls(), &REFUSED.peek());
         let account_key = account_enc_key_ctx();
         spawn(async move {
-            let check = check_erase(account, account_key, pending).await;
+            let check = check_erase(ls_ctx, account, account_key, queued).await;
             if erase_check.peek().is_some() {
                 erase_check.set(Some(check));
             }
@@ -115,6 +119,10 @@ pub fn SettingsPage() -> Element {
     };
 
     let on_erase = move |_| {
+        if let Some(queued) = queue_check(&read_queue(), &read_from_ls(), &REFUSED.peek()) {
+            erase_check.set(Some(queued));
+            return;
+        }
         spawn(async move {
             erasing.set(true);
             unregister_push().await;
@@ -122,7 +130,7 @@ pub fn SettingsPage() -> Element {
                 Ok(_) => {
                     flush_session();
                     erase_device_stores();
-                    pending_ops.set(VecDeque::new());
+                    pending_ops.set(read_queue());
                     clear_local_session(ls_ctx, account_enc_key_ctx, auth_ctx);
                     erase_check.set(None);
                     nav.replace(Route::ProjectsPage {});
@@ -141,6 +149,8 @@ pub fn SettingsPage() -> Element {
         clear_local_session(ls_ctx, account_enc_key_ctx, auth_ctx);
         nav.replace(Route::ProjectsPage {});
     };
+
+    let unsent = crate::common::unsent(&pending_ops.read(), &ls_ctx.read(), &REFUSED.read());
 
     let (incoming, changed) = friends.current().map(|l| (l.incoming.len(), l.changed_count())).unwrap_or_default();
 
@@ -169,6 +179,7 @@ pub fn SettingsPage() -> Element {
                     incoming,
                     changed,
                     methods: account_enc_key_ctx().map(|k| account_payment_methods(&account, &k).len()).unwrap_or(0),
+                    badges: { let b = badges_ctx.0(); (b.account == Some(account.id) && !b.off).then(|| b.count()) },
                 }
                 if account.key_lifecycle {
                     crate::auth::security_card::SecurityCard { account: account.clone() }
@@ -176,6 +187,25 @@ pub fn SettingsPage() -> Element {
             } else {
                 UpsellCard {}
                 LockedSharingGroup {}
+            }
+
+            // Read from storage, which the server render has not: gated like the account blocks,
+            // so the server render and the first client render agree.
+            if auth_resolved().0 && !unsent.is_empty() {
+                section { class: "flex flex-col",
+                    ul { class: "list-group",
+                        ListRow {
+                            id: "settings-unsent",
+                            title: tid!("unsent-title"),
+                            chevron: true,
+                            trailing: rsx! {
+                                span { class: "badge badge-sm badge-soft badge-primary font-semibold tabular-nums", "{unsent.len()}" }
+                            },
+                            onclick: move |_| show_unsent.set(true),
+                        }
+                    }
+                    ListFooter { {tid!("unsent-row-hint")} }
+                }
             }
 
             PreferencesGroup { synced: auth_resolved().0.then_some(account.is_some()) }
@@ -246,6 +276,17 @@ pub fn SettingsPage() -> Element {
                 }
             }
 
+            if show_unsent() && !unsent.is_empty() {
+                UnsentSheet {
+                    unsent: unsent.clone(),
+                    on_discard: move |entry: Entry| {
+                        discard(pending_ops, &entry);
+                        show_unsent.set(!crate::common::unsent(&read_queue(), &read_from_ls(), &REFUSED.peek()).is_empty());
+                    },
+                    on_close: move |_| show_unsent.set(false),
+                }
+            }
+
             if show_delete_confirm() {
                 DeleteAccountSheet {
                     on_close: move |_| show_delete_confirm.set(false),
@@ -273,7 +314,7 @@ fn ProfileGroup(name: String, email: String, tint: &'static str) -> Element {
 }
 
 #[component]
-fn SharingGroup(incoming: usize, changed: usize, methods: usize) -> Element {
+fn SharingGroup(incoming: usize, changed: usize, methods: usize, badges: Option<usize>) -> Element {
     rsx! {
         section { class: "flex flex-col",
             h2 { class: "list-header", {tid!("settings-group-sharing")} }
@@ -299,6 +340,15 @@ fn SharingGroup(incoming: usize, changed: usize, methods: usize) -> Element {
                         span { class: "text-base-content/70 tabular-nums", "{methods}" }
                     }),
                     RowTile { tint: "bg-tile-amber text-tile-amber-content", WalletIcon {} }
+                }
+                ListRow {
+                    id: "settings-badges",
+                    title: tid!("badges-title"),
+                    to: Route::BadgesPage {},
+                    trailing: badges.map(|earned| rsx! {
+                        span { class: "text-base-content/70 tabular-nums", {tid!("badges-row-count", earned: earned as i64, total: crate::badges::CATALOGUE.len() as i64)} }
+                    }),
+                    RowTile { tint: "bg-tile-green text-tile-green-content", AwardIcon {} }
                 }
             }
         }

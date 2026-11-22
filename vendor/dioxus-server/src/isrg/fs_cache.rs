@@ -1,6 +1,5 @@
 #![allow(non_snake_case)]
 
-use chrono::{DateTime, Utc};
 
 use super::{IncrementalRendererError, RenderFreshness};
 use std::{path::PathBuf, sync::Arc, time::SystemTime};
@@ -38,7 +37,7 @@ impl FileSystemCache {
     pub fn put(
         &mut self,
         route: String,
-        timestamp: DateTime<Utc>,
+        timestamp: SystemTime,
         data: Vec<u8>,
     ) -> Result<(), IncrementalRendererError> {
         use std::io::Write;
@@ -138,7 +137,7 @@ impl FileSystemCache {
         }
     }
 
-    fn route_as_path(&self, route: &str, timestamp: DateTime<Utc>) -> PathBuf {
+    fn route_as_path(&self, route: &str, timestamp: SystemTime) -> PathBuf {
         let mut file_path = (self.map_path)(route);
         if self.track_timestamps() {
             file_path.push("index");
@@ -176,7 +175,7 @@ impl ValidCachedPath {
     pub fn freshness(&self, max_age: Option<std::time::Duration>) -> Option<RenderFreshness> {
         let age = self.timestamp.elapsed().ok()?.as_secs();
         let max_age = max_age.map(|max_age| max_age.as_secs());
-        Some(RenderFreshness::new(age, max_age?, self.timestamp.into()))
+        Some(RenderFreshness::new(age, max_age?, self.timestamp))
     }
 }
 
@@ -185,9 +184,7 @@ fn decode_timestamp(timestamp: &str) -> Option<std::time::SystemTime> {
     Some(std::time::UNIX_EPOCH + std::time::Duration::from_secs(timestamp))
 }
 
-pub(crate) fn timestamp_to_string(timestamp: DateTime<Utc>) -> String {
-    let timestamp = timestamp
-        .signed_duration_since(DateTime::<Utc>::from(std::time::UNIX_EPOCH))
-        .num_seconds();
+pub(crate) fn timestamp_to_string(timestamp: SystemTime) -> String {
+    let timestamp = super::freshness::signed_secs(timestamp, std::time::UNIX_EPOCH);
     format!("{:x}", timestamp)
 }

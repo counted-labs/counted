@@ -11,4 +11,4 @@ pub use friends_page::FriendsPage;
 pub use invitations_card::InvitationsCard;
 pub use invite_friends_modal::{FriendPickerModal, InviteFriendsModal};
 pub use notifications_bell::{NotificationsBell, NotificationsSheet};
-pub use use_friends::use_friends;
+pub use use_friends::{use_friends, use_requests_after_verification, AFTER_VERIFICATION};

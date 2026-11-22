@@ -5,6 +5,7 @@
 pub mod account_projects;
 pub mod app_version;
 pub mod auth;
+pub mod distinctions;
 pub mod expenses;
 pub mod friends;
 pub mod fx;

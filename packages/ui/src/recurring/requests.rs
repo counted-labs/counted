@@ -1,13 +1,15 @@
-use chrono::NaiveDate;
+use shared::time::Date;
 use shared::{
     CreatableExpense, CreatableRecurringExpense, EditableRecurringExpense, ExpensePayload,
     HistoryAction, HistoryContext, HistoryEntity, HistoryPayload, MaterializeRecurringRequest,
 };
+use shared::entity::{self, Slot};
 use uuid::Uuid;
 
 use super::model::{DecryptedRule, RecurringPayload};
 use super::split::side_amounts;
 use crate::crypto::encrypt_padded_json;
+use crate::entity_ids::{new_expense, sealed_history};
 use crate::expenses::helpers::expense_modal_helpers::with_shares;
 
 /// A rule's history row. `None` without an actor to sign it, like an expense with no author. The
@@ -20,10 +22,12 @@ pub fn history(key: &[u8; 32], actor: Option<i32>, summary: String, action: Hist
         action: Some(action),
         entity: Some(HistoryEntity::Project),
         entity_id: None,
+        extra: Default::default(),
     };
-    Some(HistoryContext { actor_user_id: None, payload: encrypt_padded_json(key, &payload).ok()? })
+    sealed_history(key, payload).ok()
 }
 
+/// A new rule, with its own id and its own seed whatever `payload` was built from.
 pub fn create_request(
     key: &[u8; 32],
     project_id: Uuid,
@@ -31,15 +35,16 @@ pub fn create_request(
     payload: &RecurringPayload,
     history: Option<HistoryContext>,
 ) -> Result<CreatableRecurringExpense, String> {
+    let id = Uuid::new_v4();
+    let mut payload = RecurringPayload { author_id: Some(author_id), seed: Uuid::new_v4(), ..payload.clone() };
+    entity::bind(&mut payload.extra, Slot::Rule, id);
     Ok(CreatableRecurringExpense {
         project_id,
         author_id: None,
         participant_ids: Vec::new(),
-        payload: encrypt_padded_json(
-            key,
-            &RecurringPayload { author_id: Some(author_id), ..payload.clone() },
-        )?,
+        payload: encrypt_padded_json(key, &payload)?,
         history,
+        id: Some(id),
     })
 }
 
@@ -71,10 +76,10 @@ pub fn materialize_request(
     key: &[u8; 32],
     project_id: Uuid,
     rule: &DecryptedRule,
-    due: &[(u32, NaiveDate)],
-    server_date: NaiveDate,
+    due: &[(u32, Date)],
+    server_date: Date,
     actor_user_id: i32,
-    summary: impl Fn(NaiveDate) -> String,
+    summary: impl Fn(Date) -> String,
 ) -> Result<MaterializeRecurringRequest, String> {
     let (Some(first), Some(last)) = (due.first(), due.last()) else {
         return Err("nothing due".to_string());
@@ -91,7 +96,7 @@ pub fn materialize_request(
                 name: t.name.clone(),
                 amount: t.amount,
                 expense_type: t.expense_type.clone(),
-                date: date.format("%Y-%m-%d").to_string(),
+                date: date.ymd(),
                 description: None,
                 category: t.category.clone(),
                 source_currency: t.source_currency.clone(),
@@ -109,29 +114,20 @@ pub fn materialize_request(
                 &side_amounts(&t.payers, t.amount, *index),
                 &side_amounts(&t.debtors, t.amount, *index),
             );
-            Ok(CreatableExpense {
-                project_id,
-                author_id: None,
-                payload: encrypt_padded_json(key, &payload)?,
-                payers: Vec::new(),
-                debtors: Vec::new(),
-                history: Some(HistoryContext {
-                    actor_user_id: None,
-                    payload: encrypt_padded_json(
-                        key,
-                        &HistoryPayload {
-                            summary: summary(*date),
-                            actor_user_id: Some(author),
-                            action: Some(HistoryAction::Created),
-                            entity: Some(HistoryEntity::Expense),
-                            entity_id: None,
-                        },
-                    )?,
-                }),
-                client_op_id: Some(super::schedule::occurrence_id(rule.payload.seed, *date)),
-            })
+            let history = sealed_history(
+                key,
+                HistoryPayload {
+                    summary: summary(*date),
+                    actor_user_id: Some(author),
+                    action: Some(HistoryAction::Created),
+                    entity: Some(HistoryEntity::Expense),
+                    entity_id: None,
+                    extra: Default::default(),
+                },
+            )?;
+            new_expense(key, project_id, super::schedule::occurrence_id(rule.payload.seed, *date), payload, Some(history))
         })
-        .collect::<Result<Vec<_>, String>>()?;
+        .collect::<Result<Vec<CreatableExpense>, String>>()?;
     let advanced = RecurringPayload {
         next: last.0 + 1,
         author_id: rule.payload.author_id.or(rule.author_id),
@@ -148,7 +144,7 @@ pub fn materialize_request(
 }
 
 #[cfg(any(test, fuzzing))]
-pub(crate) fn rule_rows(payloads: &[RecurringPayload], author_id: Option<i32>, created_at: chrono::NaiveDateTime) -> Vec<shared::RecurringExpense> {
+pub(crate) fn rule_rows(payloads: &[RecurringPayload], author_id: Option<i32>, created_at: shared::time::DateTime) -> Vec<shared::RecurringExpense> {
     payloads
         .iter()
         .enumerate()
@@ -172,7 +168,7 @@ pub(crate) fn exercise_hostile(rows: &[shared::RecurringExpense], me: i32) {
     use crate::recurring::view::{monthly_total, my_monthly_share, next_date, progress, rate_drift, sorted, state};
 
     let rules = decrypt_rules(&TEST_KEY, rows);
-    let today = NaiveDate::from_ymd_opt(2026, 11, 1).unwrap();
+    let today = Date::from_ymd_opt(2026, 11, 1).unwrap();
     let _ = (sorted(&rules), monthly_total(&rules), my_monthly_share(&rules, me));
     for r in &rules {
         let p = &r.payload;
@@ -189,13 +185,14 @@ pub(crate) fn exercise_hostile(rows: &[shared::RecurringExpense], me: i32) {
 
 #[cfg(test)]
 mod tests {
+    use shared::time::DateTime;
     use super::*;
     use crate::common::test_fixtures::test_key;
     use crate::crypto::decrypt_json;
     use crate::recurring::model::{Ends, Freq, Rule, Side, Template};
 
-    fn d(y: i32, m: u32, day: u32) -> NaiveDate {
-        NaiveDate::from_ymd_opt(y, m, day).unwrap()
+    fn d(y: i32, m: u32, day: u32) -> Date {
+        Date::from_ymd_opt(y, m, day).unwrap()
     }
 
     fn rule(next: u32) -> DecryptedRule {
@@ -203,7 +200,7 @@ mod tests {
             id: Uuid::from_u128(1),
             version: 4,
             author_id: Some(1),
-            created_at: chrono::NaiveDateTime::default(),
+            created_at: DateTime::default(),
             payload: RecurringPayload {
                 template: Template {
                     name: "Rent".to_string(),
@@ -301,6 +298,102 @@ mod tests {
         assert!(e.participant_ids.is_empty());
         let p: RecurringPayload = decrypt_json(&key, &e.payload).unwrap();
         assert_eq!(p.author_id, Some(1), "a rule written before keeps the author its column held");
+    }
+
+    fn bound(mut payload: RecurringPayload, id: Uuid) -> RecurringPayload {
+        entity::bind(&mut payload.extra, Slot::Rule, id);
+        payload
+    }
+
+    fn sealed_id(key: &[u8; 32], pair: &shared::EncryptedPair, slot: Slot) -> Option<Uuid> {
+        entity::read(&crate::crypto::decrypt(key, pair).unwrap(), slot).unwrap()
+    }
+
+    #[test]
+    fn a_rule_creation_seals_the_id_it_sends_in_clear() {
+        let key = test_key();
+        let c = create_request(&key, Uuid::nil(), 1, &rule(0).payload, None).unwrap();
+        let id = c.id.expect("an id in clear");
+        assert_eq!(id.get_version_num(), 4);
+        assert_eq!(sealed_id(&key, &c.payload, Slot::Rule), Some(id));
+        assert_ne!(create_request(&key, Uuid::nil(), 1, &rule(0).payload, None).unwrap().id, Some(id));
+    }
+
+    #[test]
+    fn a_rule_built_from_another_rule_takes_its_own_id_and_its_own_seed() {
+        let key = test_key();
+        let source = bound(rule(3).payload, Uuid::from_u128(1));
+        let c = create_request(&key, Uuid::nil(), 1, &source, None).unwrap();
+        assert_ne!(c.id, Some(Uuid::from_u128(1)));
+        assert_eq!(sealed_id(&key, &c.payload, Slot::Rule), c.id);
+        let copy: RecurringPayload = crate::entity_ids::decrypt_row(&key, &c.payload).unwrap();
+        assert_ne!(copy.seed, source.seed);
+        assert_eq!((copy.template, copy.next), (source.template, source.next));
+    }
+
+    #[test]
+    fn every_rewrite_of_a_rule_keeps_both_keys() {
+        let key = test_key();
+        let id = Uuid::from_u128(1);
+        let mut r = rule(0);
+        r.payload = bound(r.payload, id);
+        let repeat = crate::recurring::view::repeat_of(&r.payload);
+        let re_anchored = crate::recurring::view::edited_payload(&r.payload, r.payload.template.clone(), repeat, d(2026, 10, 1));
+        for edited in [re_anchored, crate::recurring::actions::paused(&r.payload)] {
+            let e = edit_request(&key, Uuid::nil(), &r, &edited, None).unwrap();
+            assert_eq!(sealed_id(&key, &e.payload, Slot::Rule), Some(id));
+        }
+        let m = materialize_request(&key, Uuid::nil(), &r, &[(0, d(2026, 8, 1))], d(2026, 8, 1), 2, |_| String::new()).unwrap();
+        assert_eq!(sealed_id(&key, &m.payload, Slot::Rule), Some(id), "the advanced cursor");
+    }
+
+    #[test]
+    fn an_occurrence_seals_its_derived_id_never_its_rules_and_two_devices_write_one_id() {
+        let key = test_key();
+        let mut r = rule(0);
+        r.payload = bound(r.payload, Uuid::from_u128(1));
+        r.payload.template.extra.insert("eid".into(), Uuid::from_u128(2).to_string().into());
+        r.payload.template.extra.insert("slot".into(), "expense".into());
+        let due = [(0, d(2026, 8, 1)), (1, d(2026, 9, 1))];
+        let req = materialize_request(&key, Uuid::nil(), &r, &due, d(2026, 9, 20), 2, |_| String::new()).unwrap();
+        let other_device = materialize_request(&key, Uuid::nil(), &r, &due, d(2026, 9, 20), 3, |_| String::new()).unwrap();
+        for ((o, (_, date)), again) in req.occurrences.iter().zip(due).zip(&other_device.occurrences) {
+            let derived = crate::recurring::schedule::occurrence_id(r.payload.seed, date);
+            assert_eq!(o.client_op_id, Some(derived));
+            assert_eq!(sealed_id(&key, &o.payload, Slot::Expense), Some(derived));
+            assert_eq!(again.client_op_id, Some(derived));
+            assert_eq!(sealed_id(&key, &again.payload, Slot::Expense), Some(derived));
+        }
+    }
+
+    #[test]
+    fn a_rule_without_an_id_is_rewritten_without_one() {
+        let key = test_key();
+        let r = rule(0);
+        let e = edit_request(&key, Uuid::nil(), &r, &r.payload, None).unwrap();
+        assert_eq!(sealed_id(&key, &e.payload, Slot::Rule), None);
+    }
+
+    #[test]
+    fn every_history_entry_seals_an_id_of_its_own() {
+        let key = test_key();
+        let ctx = history(&key, Some(2), "Rent".to_string(), HistoryAction::Updated).unwrap();
+        assert_eq!(sealed_id(&key, &ctx.payload, Slot::History), ctx.eid);
+        assert!(ctx.eid.is_some());
+
+        let due = [(0, d(2026, 8, 1)), (1, d(2026, 9, 1))];
+        let req = materialize_request(&key, Uuid::nil(), &rule(0), &due, d(2026, 9, 20), 2, |_| String::new()).unwrap();
+        let ids: Vec<Uuid> = req
+            .occurrences
+            .iter()
+            .map(|o| {
+                let h = o.history.as_ref().unwrap();
+                assert_eq!(sealed_id(&key, &h.payload, Slot::History), h.eid);
+                assert_ne!(h.eid, o.client_op_id, "the entry's own id, not the occurrence's");
+                h.eid.unwrap()
+            })
+            .collect();
+        assert_ne!(ids[0], ids[1]);
     }
 
     #[test]

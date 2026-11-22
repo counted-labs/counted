@@ -16,7 +16,6 @@ tracing = "0.1.41"
 api = { workspace = true }
 shared = { workspace = true }
 uuid = { version = "1.17.0", features = ["v4", "serde"] }
-chrono = "0.4.41"
 # Fluent-based i18n. The Dioxus glue (context, `tid!`, per-locale lazy loading) is our own, in
 # src/i18n.rs - see DOCUMENTATION.md §11.
 fluent = "0.17"
@@ -39,6 +38,9 @@ unicode-normalization = "0.1.25"
 # `encapsulate_deterministic`, which that needs.
 ml-kem = { version = "=0.3.4", default-features = false, features = ["alloc", "hazmat"] }
 hkdf = "0.12"
+# Checks the server's signature on a shown badge (docs/plans/gamification.md §4). Verify only.
+ed25519-dalek = { version = "2.2", default-features = false }
+ml-dsa = { version = "=0.1.2", default-features = false, features = ["alloc"] }
 
 # Web only. dioxus-web implements document::eval with `new Function(...)`, which the app's CSP
 # forbids (script-src has 'wasm-unsafe-eval', not 'unsafe-eval' - see nginx/nginx.conf), and the
@@ -50,6 +52,10 @@ wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 js-sys = "0.3"
 gloo-timers = { version = "0.3", features = ["futures"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+jiff = "0.2.39"
+iana-time-zone = "0.1.65"
 
 # dioxus-desktop (aliased as dioxus::mobile) - DeepLinkListener subscribes to tao events through it.
 # Must stay target-scoped, not a cargo feature: `dx bundle --platform android` also builds a server

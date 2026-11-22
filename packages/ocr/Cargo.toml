@@ -20,7 +20,7 @@ rten-imageproc = { version = "0.26", optional = true }
 # `jpeg` alone, and default-features = false: that backend is zune-jpeg, pure Rust. Enabling
 # defaults would drag in codecs this never decodes, and the C-backed ones would break the above.
 image = { version = "0.25", default-features = false, features = ["jpeg"], optional = true }
-chrono = { version = "0.4.41", default-features = false, features = ["clock", "std"] }
+shared = { workspace = true }
 
 # Identical spec to the optional dependency above, so feature unification changes nothing in the
 # shipped binary - the `models` feature already enables exactly this. Integration tests link only

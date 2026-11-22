@@ -1,4 +1,4 @@
-use chrono::NaiveDateTime;
+use shared::time::DateTime;
 use shared::{
     EditableProject, Expense, ExpensePayload, ExpenseType, Payment, PaymentMethod, PaymentMethods, PaymentPayload,
     ProjectDto, ProjectPayload, ProjectStatus, User, UserPayload,
@@ -6,6 +6,7 @@ use shared::{
 use uuid::Uuid;
 
 use crate::crypto::{decrypt_json, encrypt_padded_json};
+use crate::entity_ids::decrypt_row;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DecryptedProject {
@@ -14,7 +15,7 @@ pub struct DecryptedProject {
     pub description: Option<String>,
     pub currency: String,
     pub status: ProjectStatus,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime,
     pub read_only: bool,
 }
 
@@ -22,7 +23,7 @@ pub struct DecryptedProject {
 pub struct DecryptedUser {
     pub id: i32,
     pub name: String,
-    pub created_at: Option<NaiveDateTime>,
+    pub created_at: Option<DateTime>,
     /// An account holds this participant as its identity in the project.
     pub claimed: bool,
     /// That account administers the project.
@@ -42,7 +43,7 @@ pub struct DecryptedExpense {
     pub id: i32,
     pub author_id: Option<i32>,
     pub project_id: Uuid,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime,
     pub name: String,
     pub description: Option<String>,
     /// Always in the project's currency - see `shared::ExpensePayload`. Every reader sums this and
@@ -77,7 +78,7 @@ pub struct DecryptedPayment {
     pub user_id: i32,
     pub is_debt: bool,
     pub amount: f64,
-    pub created_at: NaiveDateTime,
+    pub created_at: DateTime,
 }
 
 pub fn decrypt_project(key: &[u8; 32], p: &ProjectDto) -> Result<DecryptedProject, String> {
@@ -94,7 +95,7 @@ pub fn decrypt_project(key: &[u8; 32], p: &ProjectDto) -> Result<DecryptedProjec
 }
 
 pub fn decrypt_user(key: &[u8; 32], u: &User) -> Result<DecryptedUser, String> {
-    let up: UserPayload = decrypt_json(key, &u.payload)?;
+    let up: UserPayload = decrypt_row(key, &u.payload)?;
     Ok(DecryptedUser {
         id: u.id,
         name: up.name,
@@ -120,7 +121,7 @@ pub fn pickable_users(key: Option<&[u8; 32]>, users: &[User], keep: &[i32]) -> V
         .iter()
         .filter(|u| {
             keep.contains(&u.id)
-                || !key.and_then(|k| decrypt_json::<UserPayload>(k, &u.payload).ok()).is_some_and(|p| p.removed)
+                || !key.and_then(|k| decrypt_row::<UserPayload>(k, &u.payload).ok()).is_some_and(|p| p.removed)
         })
         .cloned()
         .collect()
@@ -129,7 +130,7 @@ pub fn pickable_users(key: Option<&[u8; 32]>, users: &[User], keep: &[i32]) -> V
 /// Empty when the payload cannot be decrypted: call sites render it directly, so a failure
 /// degrades to a blank name rather than an error.
 pub fn user_name(key: &[u8; 32], u: &User) -> String {
-    decrypt_json::<UserPayload>(key, &u.payload).map(|p| p.name).unwrap_or_default()
+    decrypt_row::<UserPayload>(key, &u.payload).map(|p| p.name).unwrap_or_default()
 }
 
 /// Same, for the call sites that only hold an optional key (the key context before it resolves).
@@ -181,7 +182,7 @@ fn decrypt_expense_and_shares(
     key: &[u8; 32],
     e: &Expense,
 ) -> Result<(DecryptedExpense, Option<Vec<DecryptedPayment>>), String> {
-    let ep: ExpensePayload = decrypt_json(key, &e.payload)?;
+    let ep: ExpensePayload = decrypt_row(key, &e.payload)?;
     let expense_type =
         ExpenseType::parse(&ep.expense_type).ok_or_else(|| format!("invalid expense type: {}", ep.expense_type))?;
     let share_amounts = ep.shares.iter().flatten().map(|s| s.amount);
@@ -294,11 +295,11 @@ pub(crate) fn decode_hostile(plain: &str) {
     use crate::crypto::{encrypt, open_wrap, WrapUse};
 
     let pair = encrypt(&TEST_KEY, plain).unwrap();
-    let _ = decrypt_json::<shared::ExpensePayload>(&TEST_KEY, &pair);
+    let _ = decrypt_row::<shared::ExpensePayload>(&TEST_KEY, &pair);
     let _ = decrypt_json::<shared::ProjectPayload>(&TEST_KEY, &pair);
-    let _ = decrypt_json::<UserPayload>(&TEST_KEY, &pair);
-    let _ = decrypt_json::<crate::recurring::model::RecurringPayload>(&TEST_KEY, &pair);
-    let _ = decrypt_json::<shared::HistoryPayload>(&TEST_KEY, &pair);
+    let _ = decrypt_row::<UserPayload>(&TEST_KEY, &pair);
+    let _ = decrypt_row::<crate::recurring::model::RecurringPayload>(&TEST_KEY, &pair);
+    let _ = decrypt_row::<shared::HistoryPayload>(&TEST_KEY, &pair);
     let _ = decrypt_json::<PaymentPayload>(&TEST_KEY, &pair);
     let _ = decrypt_json::<PaymentMethods>(&TEST_KEY, &pair);
     let _ = decrypt_json::<shared::Preferences>(&TEST_KEY, &pair);
@@ -323,7 +324,7 @@ mod tests {
             user_id: 0,
             is_debt,
             amount,
-            created_at: NaiveDateTime::default(),
+            created_at: DateTime::default(),
         }
     }
 
@@ -345,6 +346,28 @@ mod tests {
         let du = decrypt_user(&key, &u).unwrap();
         assert!(du.claimed, "the lock survives a label it cannot read");
         assert_eq!(du.claim_name, None);
+    }
+
+    #[test]
+    fn rows_that_fail_r1_or_r2_are_read_as_rows_that_do_not_open() {
+        let key = test_key();
+        let eid = Uuid::new_v4();
+        let sealed = |plain: String| crate::crypto::encrypt(&key, &plain).unwrap();
+        let expense = |keys: &str| Expense {
+            payload: sealed(format!(r#"{{"name":"Taxi","amount":12.5,"expenseType":"expense","date":"2025-01-01"{keys}}}"#)),
+            ..make_expense(&key, 1, "x", 1.0, ExpenseType::Expense, "2025-01-01")
+        };
+        let bound = expense(&format!(r#","eid":"{eid}","slot":"expense""#));
+        let wrong_slot = expense(&format!(r#","eid":"{eid}","slot":"participant""#));
+        let half = expense(&format!(r#","eid":"{eid}""#));
+        assert_eq!(decrypt_ledger(&key, &[bound, wrong_slot.clone(), half.clone()], &[]).0.len(), 1);
+        assert!(decrypt_expense(&key, &wrong_slot).is_err() && decrypt_expense(&key, &half).is_err());
+
+        let user = |keys: &str| User { payload: sealed(format!(r#"{{"name":"Ana"{keys}}}"#)), ..make_user(&key, 2, "x") };
+        assert_eq!(decrypt_user(&key, &user(&format!(r#","eid":"{eid}","slot":"participant""#))).unwrap().name, "Ana");
+        let unreadable = user(&format!(r#","eid":"{eid}","slot":"history""#));
+        assert!(decrypt_user(&key, &unreadable).is_err());
+        assert_eq!(user_name(&key, &unreadable), "", "left out of the names");
     }
 
     #[test]
@@ -405,7 +428,7 @@ mod tests {
             })
             .unwrap(),
             status: shared::ProjectStatus::Ongoing,
-            created_at: chrono::NaiveDateTime::default(),
+            created_at: DateTime::default(),
             has_admin: false,
             key_lifecycle: false,
             key_epoch: 0,
@@ -496,7 +519,7 @@ mod tests {
             id: 1,
             author_id: Some(1),
             project_id: Uuid::nil(),
-            created_at: chrono::NaiveDateTime::default(),
+            created_at: DateTime::default(),
             payload: encrypt_json(&key, &ExpensePayload {
                 name: "Lunch".to_string(),
                 amount: 20.0,
@@ -553,9 +576,9 @@ mod tests {
         let mut e = make_expense(&key, 1, "x", 0.0, ExpenseType::Expense, "2025-01-01");
         let mut ep: ExpensePayload = decrypt_json(&key, &e.payload).unwrap();
         ep.shares = Some(vec![
-            shared::ExpenseShare { user_id: 1, amount: 1e300, is_debt: false },
-            shared::ExpenseShare { user_id: 1, amount: 1e300, is_debt: false },
-            shared::ExpenseShare { user_id: 2, amount: 0.02, is_debt: true },
+            shared::ExpenseShare { user_id: 1, amount: 1e300, is_debt: false, extra: Default::default() },
+            shared::ExpenseShare { user_id: 1, amount: 1e300, is_debt: false, extra: Default::default() },
+            shared::ExpenseShare { user_id: 2, amount: 0.02, is_debt: true, extra: Default::default() },
         ]);
         e.payload = encrypt_json(&key, &ep).unwrap();
 
@@ -623,7 +646,7 @@ mod tests {
     }
 
     fn share(user_id: i32, is_debt: bool, amount: f64) -> shared::ExpenseShare {
-        shared::ExpenseShare { user_id, amount, is_debt }
+        shared::ExpenseShare { user_id, amount, is_debt, extra: Default::default() }
     }
 
     #[test]
@@ -716,7 +739,7 @@ mod tests {
     fn a_removed_participant_leaves_the_pickers_unless_kept() {
         let key = test_key();
         let mut removed = make_user(&key, 2, "Bob");
-        removed.payload = encrypt_json(&key, &UserPayload { name: "Bob".into(), removed: true }).unwrap();
+        removed.payload = encrypt_json(&key, &UserPayload { name: "Bob".into(), removed: true, extra: Default::default() }).unwrap();
         let users = vec![make_user(&key, 1, "Alice"), removed];
 
         let ids = |us: Vec<User>| us.iter().map(|u| u.id).collect::<Vec<_>>();

@@ -39,6 +39,9 @@ pub struct ProjectHeaderProps {
     pub on_counted: Option<EventHandler<bool>>,
     #[props(default)]
     pub on_counted_groups: Option<EventHandler<()>>,
+    /// The member sheet and its shown badges (docs/plans/gamification.md §5); `None` on Mes dépenses.
+    #[props(default)]
+    pub on_members: Option<EventHandler<()>>,
     #[props(default)]
     pub security: Option<GroupSecurity>,
     /// "Open a link" on the rotated screen: the join modal, for the new link a member sends.
@@ -144,6 +147,7 @@ pub fn ProjectHeader(props: ProjectHeaderProps) -> Element {
                     counted: props.counted,
                     on_counted: props.on_counted,
                     on_counted_groups: props.on_counted_groups,
+                    on_members: props.on_members,
                     security: props.security.clone(),
                 }
             }

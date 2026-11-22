@@ -36,6 +36,35 @@ pub fn push_language(mut auth: Signal<Option<Account>>, account: &Account, key: 
     });
 }
 
+/// The badges switch, a deliberate choice: written at once, with the earned badges merged in as on
+/// every write.
+pub fn push_badges(mut auth: Signal<Option<Account>>, account: &Account, key: [u8; 32]) {
+    let account = account.clone();
+    spawn(async move {
+        if let Ok(written) = save(account, key, |prefs| prefs).await {
+            auth.set(Some(written));
+        }
+    });
+}
+
+/// The one shown badge, or none (docs/plans/gamification.md §4): saved, then signed and published for
+/// every membership this device holds a key for, or taken down everywhere.
+pub fn push_shown(mut auth: Signal<Option<Account>>, account: &Account, key: [u8; 32], ls: LocalStorageState, shown: Option<String>) {
+    let account = account.clone();
+    spawn(async move {
+        let chosen = shown.clone();
+        if let Ok(written) = save(account, key, move |mut prefs| {
+            prefs.badges.shown = chosen.clone();
+            prefs
+        })
+        .await
+        {
+            auth.set(Some(written));
+        }
+        let _ = crate::badges::shown::publish(&ls, shown.as_deref()).await;
+    });
+}
+
 /// Writes `change` over the stored blob, on condition that it is still the stored one: an
 /// unconditional write let a device left open revert what another had switched since (audit
 /// 2026-10-19 L3). When another device did write in between, the account is read again and the
@@ -59,7 +88,9 @@ async fn write(
     key: &[u8; 32],
     change: &impl Fn(Preferences) -> Preferences,
 ) -> Result<Account, ServerFnError> {
-    let pair = encrypt_padded_json_within(key, &change(stored(account, key)), shared::MAX_PREFERENCES_LENGTH).map_err(ServerFnError::new)?;
+    let mut prefs = change(stored(account, key));
+    crate::badges::merge_into(&mut prefs, account.id);
+    let pair = encrypt_padded_json_within(key, &prefs, shared::MAX_PREFERENCES_LENGTH).map_err(ServerFnError::new)?;
     let expected_iv = account.preferences.as_ref().map(|p| p.iv.clone());
     let written = update_preferences(Json(UpdatePreferences { preferences: pair.clone(), expected_iv, amk_epoch: crate::auth::account_key::held_amk_epoch() })).await;
     crate::auth::account_key::note(&written);
@@ -101,7 +132,7 @@ pub fn adoptable_personal_project(state: &LocalStorageState) -> Option<Uuid> {
             .cached_users
             .iter()
             .flatten()
-            .filter(|u| decrypt_json::<UserPayload>(&key, &u.payload).is_ok_and(|up| !up.removed))
+            .filter(|u| crate::entity_ids::decrypt_row::<UserPayload>(&key, &u.payload).is_ok_and(|up| !up.removed))
             .map(|u| u.id)
             .collect();
         personal && present == [me]
@@ -176,9 +207,9 @@ pub fn push_counted(
 
 #[cfg(test)]
 mod tests {
+    use shared::time::Date;
     use super::*;
     use crate::crypto::encrypt_json;
-    use chrono::NaiveDate;
     use shared::EncryptedPair;
     use uuid::Uuid;
 
@@ -189,7 +220,7 @@ mod tests {
             id: Uuid::new_v4(),
             email: "a@b.c".to_string(),
             display_name: EncryptedPair::default(),
-            created_at: NaiveDate::from_ymd_opt(2026, 1, 1).unwrap().and_hms_opt(0, 0, 0).unwrap(),
+            created_at: Date::from_ymd_opt(2026, 1, 1).unwrap().and_hms_opt(0, 0, 0).unwrap(),
             email_verified: true,
             kdf_salt: vec![0; 16],
             kdf_version: 1,
@@ -304,7 +335,7 @@ mod tests {
         fn removed(id: i32) -> User {
             User {
                 id,
-                payload: encrypt_json(&test_key(), &UserPayload { name: "Bob".into(), removed: true }).unwrap(),
+                payload: encrypt_json(&test_key(), &UserPayload { name: "Bob".into(), removed: true, extra: Default::default() }).unwrap(),
                 ..Default::default()
             }
         }

@@ -1,14 +1,14 @@
 use api::friends::invitations_controller::get_sent_invitations;
-use api::users::users_controller::{add_user, edit_users};
+use api::users::users_controller::edit_users;
 use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use crate::tid;
-use shared::{Account, CreatableUser, CreatableUserBatch, EditableProject, EditableUser, HistoryAction, HistoryContext, HistoryEntity, HistoryPayload, ProjectDto, ProjectPayload, User, UserPayload};
-use std::collections::VecDeque;
+use shared::{Account, EditableProject, HistoryAction, HistoryEntity, HistoryPayload, ProjectDto, ProjectPayload, User, UserPayload};
+use crate::entity_ids::{add_participants, decrypt_row, new_participant, participant_edit, sealed_history};
 use uuid::Uuid;
 
 use crate::common::{
-    error_message, haptic, identity_locked, project_initial, update_ls, update_project_fresh, write_queue,
+    error_message, haptic, identity_locked, project_initial, update_ls, update_project_fresh, enqueue, Queue,
     Avatar, DiscardConfirm, EmojiGrid, Flash, Haptic, SheetBar, SheetFooter, SHEET_TITLE, InviteRetry, LocalStorageState, OpKind, ProjectEdit, ProjectKey, ProjectTile,
     QueuedOp, SizeClass,
 };
@@ -50,7 +50,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     let auth_ctx = use_context::<Signal<Option<Account>>>();
     let account_key_ctx = use_context::<Signal<Option<[u8; 32]>>>();
     let is_online = use_context::<Signal<bool>>();
-    let mut pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
+    let pending_ops = use_context::<Signal<Queue>>();
     let mut flash = use_context::<Signal<Option<Flash>>>();
     let mut invite_retry = use_context::<Signal<Option<InviteRetry>>>();
     let friend_list = use_friend_list();
@@ -86,6 +86,8 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     let mut removed_users: Signal<Vec<DecryptedUser>> =
         use_signal(|| initial_users.iter().filter(|u| u.removed).cloned().collect());
     let mut drafts: Signal<Vec<DraftParticipant>> = use_signal(Vec::new);
+    let initial_rows = props.users.clone();
+    let mut served_users: Signal<Vec<User>> = use_signal(move || initial_rows);
     let mut member_sheet: Signal<Option<i32>> = use_signal(|| None);
     let mut categories_now = use_signal(|| {
         initial_project.as_ref().map(crate::categories::ProjectCategories::from_payload).unwrap_or_default()
@@ -217,18 +219,18 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             diff.join(" • ")
         };
 
-        let history = encrypt_padded_json(
+        let history = sealed_history(
             &key,
-            &HistoryPayload {
+            HistoryPayload {
                 summary,
                 actor_user_id,
                 action: Some(HistoryAction::Updated),
                 entity: Some(HistoryEntity::Project),
                 entity_id: None,
+                extra: Default::default(),
             },
         )
-            .ok()
-            .map(|p| HistoryContext { actor_user_id: None, payload: p });
+            .ok();
 
         if !is_online() {
             let sealed = match encrypt_json(&key, &(&name_val, &desc)) {
@@ -239,7 +241,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                 Ok(v) => v,
                 Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
             };
-            pending_ops.write().push_back(QueuedOp::new(
+            let queued = enqueue(pending_ops, QueuedOp::new(
                 Uuid::new_v4(),
                 &name_val,
                 OpKind::EditProject(ProjectEdit {
@@ -250,7 +252,9 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                     emoji: sealed_emoji,
                 }),
             ));
-            write_queue(&pending_ops.read());
+            if !queued {
+                return;
+            }
             // Warn about anything that can't be applied offline.
             let existing_ids: HashSet<i32> = current_existing.iter().map(|u| u.id).collect();
             let has_deletions = orig_ids.iter().any(|id| !existing_ids.contains(id));
@@ -291,16 +295,11 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
 
             let mut created_users: Vec<User> = Vec::new();
             if !current_new.is_empty() {
-                let mut creatables: Vec<CreatableUser> = Vec::new();
-                for d in &current_new {
-                    let payload = match encrypt_padded_json(&key, &UserPayload { name: d.name.clone(), removed: false }) {
-                        Ok(v) => v,
-                        Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
-                    };
-                    creatables.push(CreatableUser { payload, project_id });
-                }
-                crate::common::project_token::scope(project_id);
-                match add_user(Json(CreatableUserBatch::Multiple(creatables))).await {
+                let creatables = match current_new.iter().map(|d| new_participant(&key, project_id, d.name.clone())).collect::<Result<Vec<_>, _>>() {
+                    Ok(v) => v,
+                    Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
+                };
+                match add_participants(&key, creatables).await {
                     // Moved into the existing list at once: a removal below can still fail (409
                     // for a participant with payments, the ordinary case), and a re-submit used to
                     // insert every new participant a second time.
@@ -309,6 +308,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                             .write()
                             .extend(users.iter().filter_map(|u| decrypt_user(&key, u).ok()));
                         drafts.write().clear();
+                        served_users.write().extend(users.iter().cloned());
                         created_users = users;
                     }
                     Err(e) => {
@@ -328,7 +328,7 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                     let user_id = created_users
                         .iter()
                         .find(|u| {
-                            decrypt_json::<UserPayload>(&key, &u.payload)
+                            decrypt_row::<UserPayload>(&key, &u.payload)
                                 .map(|p| same_name(&p.name, &d.name))
                                 .unwrap_or(false)
                         })
@@ -353,13 +353,15 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                 .map(|u| (u, true))
                 .chain(current_existing.iter().map(|u| (u, false)))
                 .filter(|(u, removed)| u.removed != *removed);
-            let mut edits = Vec::new();
-            for (u, removed) in changes {
-                match encrypt_padded_json(&key, &UserPayload { name: u.name.clone(), removed }) {
-                    Ok(payload) => edits.push(EditableUser { id: u.id, project_id, payload }),
-                    Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
-                }
-            }
+            let served = served_users.peek().clone();
+            let edit_of = |(u, removed): (&DecryptedUser, bool)| {
+                let row = served.iter().find(|s| s.id == u.id).ok_or("participant not served")?;
+                participant_edit(&key, project_id, row, removed)
+            };
+            let edits = match changes.map(edit_of).collect::<Result<Vec<_>, String>>() {
+                Ok(v) => v,
+                Err(_) => { error_msg.set(Some(tid!("error-generic"))); loading.set(false); return; }
+            };
             if !edits.is_empty() {
                 crate::common::project_token::scope(project_id);
                 if let Err(e) = edit_users(Json(edits)).await {
@@ -916,10 +918,10 @@ fn edited_project_payload(
 
 #[cfg(test)]
 mod tests {
+    use shared::time::DateTime;
     use super::*;
     use crate::crypto::{decrypt_json, encrypt_json};
     use crate::decrypted::decrypt_user;
-    use chrono::NaiveDateTime;
     use uuid::Uuid;
     use shared::{ProjectPayload, User, UserPayload};
 
@@ -1002,17 +1004,6 @@ mod tests {
         assert_eq!(emoji_change(&island, &None), Some(None));
     }
 
-    fn make_creatable_user(
-        key: &[u8; 32],
-        name: &str,
-        project_id: Uuid,
-    ) -> Result<CreatableUser, String> {
-        Ok(CreatableUser {
-            payload: encrypt_json(key, &UserPayload { name: name.to_string(), removed: false })?,
-            project_id,
-        })
-    }
-
     use crate::common::test_fixtures::{make_user, test_key};
 
     #[test]
@@ -1061,7 +1052,7 @@ mod tests {
     #[test]
     fn new_user_name_roundtrip() {
         let key = test_key();
-        let cu = make_creatable_user(&key, "Claire", Uuid::nil()).unwrap();
+        let cu = crate::entity_ids::new_participant(&key, Uuid::nil(), "Claire".into()).unwrap();
         let up: UserPayload = decrypt_json(&key, &cu.payload).unwrap();
         assert_eq!(up.name, "Claire");
     }
@@ -1069,7 +1060,7 @@ mod tests {
     #[test]
     fn new_user_wrong_key_fails() {
         let key = test_key();
-        let cu = make_creatable_user(&key, "Dave", Uuid::nil()).unwrap();
+        let cu = crate::entity_ids::new_participant(&key, Uuid::nil(), "Dave".into()).unwrap();
         let mut bad = key;
         bad[2] ^= 0x12;
         assert!(decrypt_json::<UserPayload>(&bad, &cu.payload).is_err());
@@ -1128,8 +1119,8 @@ mod tests {
         let key = test_key();
         let u = User {
             id: 99,
-            payload: encrypt_json(&key, &UserPayload { name: "Eve".to_string(), removed: false }).unwrap(),
-            created_at: Some(NaiveDateTime::default()),
+            payload: encrypt_json(&key, &UserPayload { name: "Eve".to_string(), removed: false, extra: Default::default() }).unwrap(),
+            created_at: Some(DateTime::default()),
             ..Default::default()
         };
         let du = decrypt_user(&key, &u).unwrap();

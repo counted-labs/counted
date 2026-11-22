@@ -1,8 +1,7 @@
 //! What a key holder or the server can put in front of every member's app: plaintext under the
 //! project key, and the ids and timestamps around it. The property tests feed these to each page.
-
-use chrono::{Datelike, NaiveDate, NaiveDateTime};
 use proptest::prelude::*;
+use shared::time::{Date, DateTime};
 use shared::{
     EncryptedPair, Expense, ExpensePayload, ExpenseShare, Payment, PaymentMethod, PaymentMethods, PaymentPayload, User, UserPayload,
 };
@@ -43,18 +42,18 @@ pub(crate) fn text() -> impl Strategy<Value = String> {
     ]
 }
 
-pub(crate) fn date() -> impl Strategy<Value = NaiveDate> {
-    let days = NaiveDate::MIN.num_days_from_ce()..=NaiveDate::MAX.num_days_from_ce();
+pub(crate) fn date() -> impl Strategy<Value = Date> {
+    let days = Date::MIN.num_days_from_ce()..=Date::MAX.num_days_from_ce();
     prop_oneof![
-        days.prop_map(|d| NaiveDate::from_num_days_from_ce_opt(d).unwrap_or_default()),
-        Just(NaiveDate::MIN),
-        Just(NaiveDate::MAX),
-        (0..2000i32).prop_map(|d| NaiveDate::from_ymd_opt(2025, 1, 1).unwrap() + chrono::Duration::days(d as i64)),
+        days.prop_map(|d| Date::from_num_days_from_ce_opt(d).unwrap_or_default()),
+        Just(Date::MIN),
+        Just(Date::MAX),
+        (0..2000i32).prop_map(|d| Date::from_ymd_opt(2025, 1, 1).unwrap().checked_add_days(d as i64).unwrap()),
     ]
 }
 
-pub(crate) fn timestamp() -> impl Strategy<Value = NaiveDateTime> {
-    prop_oneof![Just(NaiveDateTime::MIN), Just(NaiveDateTime::MAX), date().prop_map(|d| d.and_time(Default::default()))]
+pub(crate) fn timestamp() -> impl Strategy<Value = DateTime> {
+    prop_oneof![Just(DateTime::MIN), Just(DateTime::MAX), date().prop_map(|d| d.at_midnight())]
 }
 
 fn expense_type() -> impl Strategy<Value = String> {
@@ -62,7 +61,7 @@ fn expense_type() -> impl Strategy<Value = String> {
 }
 
 fn share() -> impl Strategy<Value = ExpenseShare> {
-    (id(), amount(), any::<bool>()).prop_map(|(user_id, amount, is_debt)| ExpenseShare { user_id, amount, is_debt })
+    (id(), amount(), any::<bool>()).prop_map(|(user_id, amount, is_debt)| ExpenseShare { user_id, amount, is_debt, extra: Default::default() })
 }
 
 pub(crate) fn expense_payload() -> impl Strategy<Value = ExpensePayload> {
@@ -115,7 +114,7 @@ pub(crate) fn payments() -> impl Strategy<Value = Vec<Payment>> {
                 expense_id,
                 user_id,
                 payload: encrypt_json(&TEST_KEY, &PaymentPayload { amount, is_debt }).unwrap(),
-                created_at: NaiveDateTime::default(),
+                created_at: DateTime::default(),
             })
             .collect()
     })
@@ -149,7 +148,7 @@ pub(crate) fn users() -> impl Strategy<Value = Vec<User>> {
         rows.into_iter()
             .map(|(id, name, removed, claimed, claim_label, payment_methods)| User {
                 id,
-                payload: encrypt_json(&TEST_KEY, &UserPayload { name, removed }).unwrap(),
+                payload: encrypt_json(&TEST_KEY, &UserPayload { name, removed, extra: Default::default() }).unwrap(),
                 claimed,
                 claim_label,
                 payment_methods,

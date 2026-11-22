@@ -1,12 +1,12 @@
 use api::history::history_controller::get_project_history;
-use chrono::NaiveDateTime;
+use shared::time::DateTime;
 use dioxus::prelude::*;
 use crate::tid;
 use shared::{HistoryAction, HistoryPayload};
 use uuid::Uuid;
 
 use crate::common::{error_message, format_date, pending, project_key, AppHeader, PullToRefresh};
-use crate::crypto::decrypt_json;
+use crate::entity_ids::decrypt_row;
 use crate::expenses::hooks::use_project_store::ProjectStore;
 use crate::icons::{PencilIcon, PlusIcon, TrashIcon, ICON_INLINE};
 use crate::route::Route;
@@ -16,7 +16,7 @@ struct DecryptedEntry {
     action: HistoryAction,
     actor_name: String,
     summary: String,
-    created_at: NaiveDateTime,
+    created_at: DateTime,
 }
 
 fn decrypt_history(
@@ -27,7 +27,7 @@ fn decrypt_history(
     history_list
         .iter()
         .map(|e| {
-            let payload = decrypt_json::<HistoryPayload>(key, &e.payload).ok();
+            let payload = decrypt_row::<HistoryPayload>(key, &e.payload).ok();
             let actor_name = payload
                 .as_ref()
                 .and_then(|p| p.actor_user_id)
@@ -176,7 +176,7 @@ struct HistoryItemProps {
 #[component]
 fn HistoryItem(props: HistoryItemProps) -> Element {
     let entry = &props.entry;
-    let time_str = entry.created_at.format("%H:%M").to_string();
+    let time_str = entry.created_at.hm();
 
     let (icon_bg, icon_color, badge_classes, badge_label) = match &entry.action {
         HistoryAction::Created => (
@@ -245,9 +245,37 @@ mod tests {
         prop_oneof![Just(HistoryAction::Created), Just(HistoryAction::Updated), Just(HistoryAction::Deleted)]
     }
 
+    #[test]
+    fn a_history_entry_that_fails_r1_or_r2_shows_no_summary() {
+        let key = crate::common::test_fixtures::test_key();
+        let eid = Uuid::new_v4();
+        let entry = |keys: String| shared::HistoryEntry {
+            id: 1,
+            project_id: Uuid::nil(),
+            actor_user_id: None,
+            actor_account_id: None,
+            action: HistoryAction::Updated,
+            entity: HistoryEntity::Expense,
+            entity_id: None,
+            payload: crate::crypto::encrypt(&key, &format!(r#"{{"summary":"edited"{keys}}}"#)).unwrap(),
+            created_at: DateTime::default(),
+        };
+        let shown = decrypt_history(
+            &key,
+            &[
+                entry(format!(r#","eid":"{eid}","slot":"history""#)),
+                entry(format!(r#","eid":"{eid}","slot":"expense""#)),
+                entry(r#","slot":"history""#.to_string()),
+            ],
+            None,
+        );
+        let summaries: Vec<&str> = shown.iter().map(|e| e.summary.as_str()).collect();
+        assert_eq!(summaries, ["edited", "", ""]);
+    }
+
     fn payload() -> impl Strategy<Value = HistoryPayload> {
         (any::<String>(), proptest::option::of(hostile::id()), proptest::option::of(action()), proptest::option::of(hostile::id()))
-            .prop_map(|(summary, actor_user_id, action, entity_id)| HistoryPayload { summary, actor_user_id, action, entity: Some(HistoryEntity::Expense), entity_id })
+            .prop_map(|(summary, actor_user_id, action, entity_id)| HistoryPayload { summary, actor_user_id, action, entity: Some(HistoryEntity::Expense), entity_id, extra: Default::default() })
     }
 
     proptest! {

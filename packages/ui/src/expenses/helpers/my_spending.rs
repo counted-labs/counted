@@ -2,8 +2,8 @@
 //! group this device holds, each group counted unless switched off in the encrypted preferences.
 
 use api::payments::payments_controller::sync_projects;
+use shared::time::Date;
 use dioxus::fullstack::{Json, ServerFnError};
-use chrono::{Datelike, NaiveDate};
 use shared::{
     BatchSync, Expense, ExpenseType, KnownProject, Payment, ProjectDto, ProjectPayload, ProjectSync, User,
     NO_CACHED_VERSION,
@@ -50,16 +50,16 @@ pub struct ShareRow {
     pub counted: bool,
 }
 
-pub fn first_of_month(date: NaiveDate) -> NaiveDate {
+pub fn first_of_month(date: Date) -> Date {
     date.with_day(1).unwrap_or(date)
 }
 
-pub fn shift_month(month: NaiveDate, by: i32) -> NaiveDate {
+pub fn shift_month(month: Date, by: i32) -> Date {
     let index = month.year() * 12 + month.month0() as i32 + by;
-    NaiveDate::from_ymd_opt(index.div_euclid(12), index.rem_euclid(12) as u32 + 1, 1).unwrap_or(month)
+    Date::from_ymd_opt(index.div_euclid(12), index.rem_euclid(12) as u32 + 1, 1).unwrap_or(month)
 }
 
-pub fn in_month(date: NaiveDate, month: NaiveDate) -> bool {
+pub fn in_month(date: Date, month: Date) -> bool {
     date.year() == month.year() && date.month() == month.month()
 }
 
@@ -121,7 +121,7 @@ impl MonthTotals {
     }
 }
 
-pub fn month_totals(own: &[RowExpense], shares: &[ShareRow], month: NaiveDate) -> MonthTotals {
+pub fn month_totals(own: &[RowExpense], shares: &[ShareRow], month: Date) -> MonthTotals {
     let mut totals = MonthTotals::default();
     for r in own.iter().filter(|r| in_month(r.date, month)) {
         match r.expense.expense_type {
@@ -154,7 +154,7 @@ pub fn month_glance(
     ledgers: &[GroupLedger],
     uncounted: &HashSet<Uuid>,
     fx: Option<&CachedFx>,
-    today: NaiveDate,
+    today: Date,
 ) -> Option<MonthGlance> {
     let p = state.projects.iter().find(|p| p.project_id == personal)?;
     let key = key_of(p)?;
@@ -355,7 +355,7 @@ pub(crate) fn exercise_hostile(
     let ledgers = [GroupLedger { project_id: group_id, name: "g".into(), emoji: None, me, members: 2, data: group_data }];
     let fx = CachedFx { day: "2026-11-01".into(), base: "EUR".into(), rates, fetched_at: 0 };
     let shares = share_rows(&ledgers, &HashSet::new(), "EUR", Some(&fx));
-    let month = first_of_month(NaiveDate::from_ymd_opt(2026, 11, 1).unwrap());
+    let month = first_of_month(Date::from_ymd_opt(2026, 11, 1).unwrap());
     let totals = month_totals(&personal_data.expenses, &shares, month);
     assert!(totals.spent().is_finite() && totals.balance().is_finite());
     let spent = spent_by_category(&personal_data.expenses, &shares, month);
@@ -374,8 +374,8 @@ mod tests {
     use super::*;
     use crate::common::test_fixtures::{make_expense, make_payment, make_project, make_user, test_key};
 
-    fn day(s: &str) -> NaiveDate {
-        NaiveDate::parse_from_str(s, "%Y-%m-%d").unwrap()
+    fn day(s: &str) -> Date {
+        Date::parse_ymd(s).unwrap()
     }
 
     fn ledger(name: &str, currency: &str, me: Option<i32>, expenses: Vec<Expense>, payments: Vec<Payment>) -> GroupLedger {

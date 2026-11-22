@@ -164,6 +164,14 @@ pub fn is_recurring_stale_error(e: &ServerFnError) -> bool {
     )
 }
 
+pub fn is_id_taken_error(e: &ServerFnError) -> bool {
+    matches!(
+        e,
+        ServerFnError::ServerError { message, code, .. }
+            if *code == 409 && message == shared::errors::ID_TAKEN
+    )
+}
+
 pub fn is_project_stale_error(e: &ServerFnError) -> bool {
     matches!(
         e,
@@ -309,6 +317,16 @@ mod tests {
         assert!(!is_identity_taken_error(&with_code(taken, 500)));
         assert!(!is_identity_taken_error(&with_code(shared::errors::TOO_MANY_MEMBERS, 409)));
         assert_eq!(error_key(&with_code(taken, 409)), "error-identity-taken");
+    }
+
+    /// Unlisted in `KEYS` on purpose: once the one retry is spent it reads as any failed creation.
+    #[test]
+    fn test_id_taken_requires_both_the_message_and_a_409() {
+        let taken = shared::errors::ID_TAKEN;
+        assert!(is_id_taken_error(&with_code(taken, 409)));
+        assert!(!is_id_taken_error(&with_code(taken, 500)));
+        assert!(!is_id_taken_error(&with_code(shared::errors::IDENTITY_TAKEN, 409)));
+        assert_eq!(error_key(&with_code(taken, 409)), "error-generic");
     }
 
     #[test]

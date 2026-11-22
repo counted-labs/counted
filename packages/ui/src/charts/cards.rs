@@ -1,5 +1,5 @@
-use chrono::{Datelike, NaiveDate};
 use dioxus::prelude::*;
+use shared::time::Date;
 
 use super::model::{
     expenses_in_category, is_child, money, percent, signed_money, Bucket, CategoryShare, ChartCategories,
@@ -120,9 +120,9 @@ pub fn CategoryShareCard(rows: Vec<CategoryShare>, currency: String) -> Element 
 const DRILL_PREVIEW: usize = 3;
 
 fn short_date(date: &str) -> String {
-    NaiveDate::parse_from_str(date, "%Y-%m-%d")
+    Date::parse_ymd(date)
         .map(|d| format!("{} {}", d.day(), month_abbrev(d.month0() as usize)))
-        .unwrap_or_else(|_| date.to_string())
+        .unwrap_or_else(|| date.to_string())
 }
 
 #[component]

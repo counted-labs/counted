@@ -3,15 +3,15 @@ use dioxus::prelude::*;
 use crate::tid;
 use shared::{
     EditableExpense, Expense, ExpensePayload, ExpenseType, ExpenseWithPayments, HistoryAction,
-    HistoryContext, HistoryEntity, HistoryPayload, Payment, User,
+    HistoryEntity, HistoryPayload, Payment, User,
 };
-use std::collections::VecDeque;
+use crate::entity_ids::{decrypt_row, edited_expense, sealed_history};
 use uuid::Uuid;
 
 use api::recurring::recurring_controller::edit_recurring_expense;
 
 use crate::common::{
-    format_date, fx_cache, write_queue, Flash, OpKind, ProjectKey, QueuedOp,
+    enqueue, format_date, fx_cache, Flash, OpKind, ProjectKey, Queue, QueuedOp,
 };
 use crate::expenses::hooks::use_project_store::ProjectStore;
 use crate::recurring::model::{RecurringPayload, Template};
@@ -26,7 +26,7 @@ use super::super::helpers::expense_modal_helpers::{
     with_shares, Conversion, ValidatedExpense,
 };
 use super::super::hooks::use_fx_rates::use_fx_rates;
-use crate::crypto::{decrypt_json, encrypt_padded_json};
+use crate::crypto::encrypt_padded_json;
 use crate::decrypted::{decrypt_expense_payments, pickable_users, user_names};
 
 #[derive(Props, Clone, PartialEq)]
@@ -52,7 +52,7 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
     // Decrypt initial expense values from single payload blob
     let decrypted_payload = key_snap
         .as_ref()
-        .and_then(|k| decrypt_json::<ExpensePayload>(k, &props.expense.payload).ok());
+        .and_then(|k| decrypt_row::<ExpensePayload>(k, &props.expense.payload).ok());
     let expense_author_id =
         decrypted_payload.as_ref().and_then(|ep| ep.author_id).or(props.expense.author_id);
 
@@ -131,7 +131,7 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
     let loading = use_signal(|| false);
     let is_online = use_context::<Signal<bool>>();
-    let mut pending_ops = use_context::<Signal<VecDeque<QueuedOp>>>();
+    let pending_ops = use_context::<Signal<Queue>>();
 
     // Same lazy gate as the add modal: an expense already in the project currency, staying there,
     // fetches nothing. An expense that *was* booked in a foreign currency does load the table, so
@@ -178,6 +178,10 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
                 return;
             }
         };
+        if original.is_none() {
+            error_msg.set(Some(tid!("error-generic")));
+            return;
+        }
 
         let form = match validate_expense_form(
             &expense_name(),
@@ -203,6 +207,7 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
             error_msg.set(Some(e.message()));
             return;
         }
+        let foreign = conversion.is_some();
 
         let name_val = form.name.clone();
         // The author is whoever entered the expense and never changes; the editor only signs the
@@ -245,8 +250,12 @@ pub fn EditExpenseModal(props: EditExpenseModalProps) -> Element {
         // Online or not, the edit goes through the queue and the sheet closes now, the row showing
         // the edit as pending until the replay answers with the server's row.
         let local = local_edit(&props_expense, &payload);
-        pending_ops.write().push_back(QueuedOp::new(Uuid::new_v4(), &name_val, OpKind::EditExpense(payload)));
-        write_queue(&pending_ops.read());
+        if !enqueue(pending_ops, QueuedOp::new(Uuid::new_v4(), &name_val, OpKind::EditExpense(payload))) {
+            return;
+        }
+        if foreign {
+            crate::badges::award(crate::badges::TOURISTE);
+        }
         match rule_update {
             Some(_) if !is_online() => flash.set(Some(Flash::err(tid!("apply-rule-failed")))),
             Some(req) => {
@@ -330,31 +339,33 @@ fn build_editable_expense(
     // No actor, no history row: this device knows of no participant it is acting as, and an entry
     // signed by nobody records nothing.
     let history = match actor_id {
-        Some(actor_user_id) => Some(HistoryContext {
-            actor_user_id: None,
-            payload: encrypt_padded_json(
-                key,
-                &HistoryPayload {
-                    summary: history_summary,
-                    actor_user_id: Some(actor_user_id),
-                    action: Some(HistoryAction::Updated),
-                    entity: Some(HistoryEntity::Expense),
-                    entity_id: Some(id),
-                },
-            )?,
-        }),
+        Some(actor_user_id) => Some(sealed_history(
+            key,
+            HistoryPayload {
+                summary: history_summary,
+                actor_user_id: Some(actor_user_id),
+                action: Some(HistoryAction::Updated),
+                entity: Some(HistoryEntity::Expense),
+                entity_id: Some(id),
+                extra: Default::default(),
+            },
+        )?),
         None => None,
     };
 
     let payload = ExpensePayload {
         recurring_id: original.and_then(|o| o.recurring_id),
         description: original.and_then(|o| o.description.clone()),
-        extra: original.map(|o| o.extra.clone()).unwrap_or_default(),
         ..expense_payload(&form.name, form.total, &form.date, expense_type, category, conversion)
+    };
+    let payload = with_shares(payload, author_id, &form.payers, &form.debtors);
+    let payload = match original {
+        Some(original) => edited_expense(original, payload),
+        None => payload,
     };
     Ok(EditableExpense {
         id,
-        payload: encrypt_padded_json(key, &with_shares(payload, author_id, &form.payers, &form.debtors))?,
+        payload: encrypt_padded_json(key, &payload)?,
         project_id,
         payers: Vec::new(),
         debtors: Vec::new(),
@@ -452,7 +463,11 @@ mod tests {
         let ep: ExpensePayload = decrypt_json(&test_key(), &ee.payload).unwrap();
         assert_eq!(ep.author_id, Some(1));
         assert_eq!(ee.author_id, None, "the author travels in the payload only");
-        let hp: HistoryPayload = decrypt_json(&test_key(), &ee.history.unwrap().payload).unwrap();
+        let history = ee.history.clone().unwrap();
+        let plain = crate::crypto::decrypt(&test_key(), &history.payload).unwrap();
+        assert!(history.eid.is_some());
+        assert_eq!(shared::entity::read(&plain, shared::entity::Slot::History), Ok(history.eid));
+        let hp: HistoryPayload = decrypt_json(&test_key(), &history.payload).unwrap();
         assert_eq!(hp.actor_user_id, Some(2));
         assert_eq!((hp.action, hp.entity, hp.entity_id), (Some(HistoryAction::Updated), Some(HistoryEntity::Expense), Some(ee.id)));
     }
@@ -511,6 +526,68 @@ mod tests {
         assert_eq!(ep["description"], "from Tricount");
         assert_eq!(ep["tags"], serde_json::json!(["home"]));
         assert_eq!(ep["accountId"], "card");
+    }
+
+    fn edit_of(original: &ExpensePayload, payers: &[(i32, f64)], debtors: &[(i32, f64)]) -> String {
+        let ee = build_editable_expense(
+            &test_key(),
+            1,
+            &validated("Groceries", 12.0, payers, debtors),
+            &ExpenseType::Expense,
+            None,
+            Uuid::nil(),
+            Some(1),
+            Some(1),
+            "edited".to_string(),
+            None,
+            Some(original),
+        )
+        .unwrap();
+        crate::crypto::decrypt(&test_key(), &ee.payload).unwrap()
+    }
+
+    #[test]
+    fn an_edit_keeps_eid_slot_and_the_keys_it_does_not_know() {
+        use shared::entity::{read, Slot};
+        let eid = Uuid::new_v4();
+        let original: ExpensePayload = serde_json::from_value(serde_json::json!({
+            "name": "Courses", "amount": 10.0, "expenseType": "expense", "date": "2025-02-01",
+            "eid": eid, "slot": "expense", "later": { "a": 1 },
+        }))
+        .unwrap();
+        let plain = edit_of(&original, &[(1, 12.0)], &[(2, 12.0)]);
+        assert_eq!(read(&plain, Slot::Expense), Ok(Some(eid)));
+        assert!(plain.contains(r#""later":{"a":1}"#));
+    }
+
+    #[test]
+    fn an_edit_of_an_expense_without_an_id_gives_it_none() {
+        use shared::entity::{read, Slot};
+        let original: ExpensePayload = serde_json::from_value(serde_json::json!({
+            "name": "Courses", "amount": 10.0, "expenseType": "expense", "date": "2025-02-01",
+        }))
+        .unwrap();
+        assert_eq!(read(&edit_of(&original, &[(1, 12.0)], &[(2, 12.0)]), Slot::Expense), Ok(None));
+    }
+
+    #[test]
+    fn a_rebuilt_share_keeps_the_unknown_keys_of_the_share_it_replaces_and_an_added_one_has_none() {
+        let original: ExpensePayload = serde_json::from_value(serde_json::json!({
+            "name": "Courses", "amount": 10.0, "expenseType": "expense", "date": "2025-02-01",
+            "shares": [
+                { "userId": 1, "amount": 10.0, "isDebt": false, "k": "paid" },
+                { "userId": 2, "amount": 10.0, "isDebt": true, "k": "owed" },
+            ],
+        }))
+        .unwrap();
+        let edited: ExpensePayload = serde_json::from_str(&edit_of(&original, &[(1, 12.0)], &[(2, 6.0), (3, 6.0)])).unwrap();
+        let k = |user_id: i32, is_debt: bool| {
+            let share = edited.shares.as_ref().unwrap().iter().find(|s| s.user_id == user_id && s.is_debt == is_debt).unwrap();
+            share.extra.get("k").and_then(|v| v.as_str()).map(str::to_string)
+        };
+        assert_eq!(k(1, false).as_deref(), Some("paid"));
+        assert_eq!(k(2, true).as_deref(), Some("owed"));
+        assert_eq!(k(3, true), None, "a share the edit adds has none");
     }
 
     #[test]

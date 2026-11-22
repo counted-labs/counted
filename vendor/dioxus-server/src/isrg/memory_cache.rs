@@ -2,8 +2,7 @@
 
 #![allow(non_snake_case)]
 
-use chrono::offset::Utc;
-use chrono::DateTime;
+use std::time::SystemTime;
 use rustc_hash::FxHasher;
 use std::{hash::BuildHasherDefault, num::NonZeroUsize};
 
@@ -11,7 +10,7 @@ use super::freshness::RenderFreshness;
 
 pub(crate) struct InMemoryCache {
     #[allow(clippy::type_complexity)]
-    lru: Option<lru::LruCache<String, (DateTime<Utc>, Vec<u8>), BuildHasherDefault<FxHasher>>>,
+    lru: Option<lru::LruCache<String, (SystemTime, Vec<u8>), BuildHasherDefault<FxHasher>>>,
     invalidate_after: Option<std::time::Duration>,
 }
 
@@ -30,7 +29,7 @@ impl InMemoryCache {
         }
     }
 
-    pub fn put(&mut self, route: String, timestamp: DateTime<Utc>, data: Vec<u8>) {
+    pub fn put(&mut self, route: String, timestamp: SystemTime, data: Vec<u8>) {
         if let Some(cache) = &mut self.lru {
             cache.put(route, (timestamp, data));
         }
@@ -42,7 +41,7 @@ impl InMemoryCache {
         }
     }
 
-    pub fn try_get_or_insert<'a, F: FnOnce() -> Result<(DateTime<Utc>, Vec<u8>), E>, E>(
+    pub fn try_get_or_insert<'a, F: FnOnce() -> Result<(SystemTime, Vec<u8>), E>, E>(
         &'a mut self,
         route: &str,
         or_insert: F,
@@ -50,13 +49,12 @@ impl InMemoryCache {
         if let Some(memory_cache) = self.lru.as_mut() {
             let (timestamp, _) = memory_cache.try_get_or_insert(route.to_string(), or_insert)?;
 
-            let now = Utc::now();
-            let elapsed = timestamp.signed_duration_since(now);
-            let age = elapsed.num_seconds();
+            let now = SystemTime::now();
+            let age = super::freshness::signed_secs(*timestamp, now);
             // The cache entry is out of date, so we need to remove it.
             if let Some(invalidate_after) = self.invalidate_after {
                 // If we can't convert to a std duration, the duration is negative and hasn't elapsed yet.
-                if let Ok(std_elapsed) = elapsed.to_std() {
+                if let Ok(std_elapsed) = timestamp.duration_since(now) {
                     if std_elapsed > invalidate_after {
                         tracing::trace!("memory cache out of date");
                         memory_cache.pop(route);

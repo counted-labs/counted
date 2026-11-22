@@ -35,6 +35,13 @@ test = false
 doc = false
 bench = false
 
+[[bin]]
+name = "store"
+path = "fuzz_targets/store.rs"
+test = false
+doc = false
+bench = false
+
 [workspace]
 
 [patch.crates-io]
