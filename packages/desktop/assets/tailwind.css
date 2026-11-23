@@ -4606,9 +4606,6 @@
   .text-base-content {
     color: var(--color-base-content);
   }
-  .text-base-content\! {
-    color: var(--color-base-content) !important;
-  }
   .text-base-content\/20 {
     color: var(--color-base-content);
     @supports (color: color-mix(in lab, red, red)) {
@@ -4985,6 +4982,11 @@
   }
   .radio-primary {
     --input-color: var(--color-primary);
+  }
+  .toggle-error {
+    &:checked, &[aria-checked="true"] {
+      --input-color: var(--color-error);
+    }
   }
   .toggle-primary {
     &:checked, &[aria-checked="true"] {

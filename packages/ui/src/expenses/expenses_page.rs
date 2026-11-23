@@ -7,13 +7,12 @@ use super::helpers::export;
 use crate::common::persist::is_demo;
 use crate::common::{
     copy_text, is_mobile, key_offer_shown, leave_project_and_forget, pending, read_from_ls, InviteRetry,
-    remove_project, scheme_link_for, share_link_for, share_text, update_ls, update_project_fresh, write_to_ls, AppHeader, ConfirmModal, Flash,
+    remove_project, scheme_link_for, share_link_for, share_text, update_project_fresh, write_to_ls, AppHeader, ConfirmModal, Flash,
     LocalStorageState, ProjectKey, PullToRefresh, Queue, LEAVE_CONFIRM_MESSAGE,
     LEAVE_CONFIRM_TITLE, LEAVE_UNSENT,
 };
 use crate::common::offline_queue::{dropped_with_project, forget_project};
-use crate::expenses::helpers::first_key::{dismiss_first_key_hint, first_key_hint_dismissed, first_key_prompt};
-use crate::expenses::rotation_sheets::{FirstKeyCard, ProjectRotation};
+use crate::expenses::rotation_sheets::ProjectRotation;
 use crate::expenses::helpers::my_spending::load_ledgers;
 use crate::expenses::my_spending::{CountedGroup, CountedGroupsSheet};
 use crate::preferences::{push_counted, uncounted_projects};
@@ -218,17 +217,6 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
     };
 
     let can_rotate = security.as_ref().is_some_and(|s| s.access == AdminAccess::Admin);
-    let first_key_users = {
-        let snapshot = live.read();
-        let dismissed = first_key_hint_dismissed(&ls_ctx.read(), project_id);
-        snapshot
-            .as_ref()
-            .filter(|l| l.project_id == project_id)
-            .and_then(|l| Some((l.project.as_ref()?.key_epoch, &l.users)))
-            .filter(|(epoch, users)| first_key_prompt(security.as_ref().map(|s| &s.access), *epoch, users, stored_user_id(), dismissed))
-            .map(|(_, users)| users.clone())
-    };
-    let dismiss_first_key = move || update_ls(ls_ctx, |state| dismiss_first_key_hint(state, project_id));
 
     // (message, server-unreachable) - the second drives the cache fallback.
     let body_err = sync_error(sync.read().as_ref().and_then(|r| r.as_ref()));
@@ -442,13 +430,6 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                                 users: pickable.clone(),
                                 project_id,
                                 on_close: move |_| show_switch.set(false),
-                            }
-                        }
-
-                        if let Some(users) = first_key_users.clone() {
-                            FirstKeyCard {
-                                on_later: move |_| dismiss_first_key(),
-                                on_rotate: move |_| rotation.set(Some(RotationTarget { k1: key, users: users.clone(), removee: None })),
                             }
                         }
 

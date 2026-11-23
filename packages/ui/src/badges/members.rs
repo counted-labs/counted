@@ -21,6 +21,14 @@ pub fn label(id: &str, years: u8) -> String {
     }
 }
 
+pub fn fact(id: &str, years: u8) -> String {
+    if id == ANNIVERSAIRE {
+        tid!("badge-anniversaire-how", years: years as i64)
+    } else {
+        tid!("badge-premiere-heure-how")
+    }
+}
+
 /// The project page's avatar group, made a button that opens the member sheet
 /// (docs/plans/gamification.md §5).
 #[component]
@@ -117,7 +125,7 @@ pub fn MembersSheet(users: Vec<User>, project_id: Uuid, encryption_key: [u8; 32]
 fn ShownBadgeSheet(id: &'static str, years: u8, on_close: EventHandler<()>) -> Element {
     use_modal_focus("shown-badge-sheet");
     let title = if id == ANNIVERSAIRE { tid!("badge-anniversaire") } else { tid!("badge-premiere-heure") };
-    let fact = if id == ANNIVERSAIRE { tid!("badge-anniversaire-how", years: years as i64) } else { tid!("badge-premiere-heure-how") };
+    let fact = fact(id, years);
     rsx! {
         div {
             id: "shown-badge-sheet",

@@ -5,22 +5,17 @@ use crate::auth::account_key::remember;
 use crate::auth::account_rotation::{change_password, compromise_rotation, Rotated};
 use crate::auth::credentials::password_error_key;
 use crate::common::{error_message, haptic, Flash, Haptic, ListFooter, ListRow, LocalStorageState, RowTile, SheetBar, SheetFooter, SHEET_TITLE};
-use crate::icons::{LockIcon, ShieldIcon};
+use crate::icons::LockIcon;
 use crate::tid;
 
 /// Password, recovery and key rotation (docs/plans/key-lifecycle.md). Shown only once the floor
 /// guarantees every client reads the account master key (`Account.key_lifecycle`).
-#[derive(Clone, Copy, PartialEq)]
-enum Sheet {
-    ChangePassword,
-    Compromised,
-}
-
 #[component]
 pub fn SecurityCard(account: Account) -> Element {
-    let mut sheet: Signal<Option<Sheet>> = use_signal(|| None);
+    let mut sheet_open = use_signal(|| false);
     let mut new_recovery_key: Signal<Option<String>> = use_signal(|| None);
     let email = account.email.clone();
+    let has_recovery_key = account.has_recovery_key;
 
     let footnote = match account.recovery_pending_at {
         Some(at) => Some(("recovery-key-pending", tid!("settings-recovery-key-pending", when: crate::auth::recovery_ui::format_moment(at)))),
@@ -37,33 +32,18 @@ pub fn SecurityCard(account: Account) -> Element {
                     id: "change-password-open",
                     title: tid!("settings-password"),
                     chevron: true,
-                    onclick: move |_| {
-                        haptic(Haptic::Light);
-                        sheet.set(Some(Sheet::ChangePassword));
-                    },
+                    onclick: move |_| sheet_open.set(true),
                     RowTile { tint: "bg-base-200 text-base-content/70", LockIcon {} }
-                }
-                ListRow {
-                    id: "compromised-open",
-                    title: tid!("settings-compromised-open"),
-                    subtitle: tid!("settings-compromised-short"),
-                    subtitle_class: "text-base-content/70",
-                    chevron: true,
-                    onclick: move |_| {
-                        haptic(Haptic::Light);
-                        sheet.set(Some(Sheet::Compromised));
-                    },
-                    RowTile { tint: "bg-base-200 text-base-content/70", ShieldIcon {} }
                 }
             }
             if let Some((id, footnote)) = footnote {
                 ListFooter { id, "{footnote}" }
             }
         }
-        if let Some(open) = sheet() {
+        if sheet_open() {
             ChangePasswordSheet {
-                compromise: open == Sheet::Compromised,
-                on_close: move |_| sheet.set(None),
+                has_recovery_key,
+                on_close: move |_| sheet_open.set(false),
                 on_new_recovery_key: move |key: String| new_recovery_key.set(Some(key)),
             }
         }
@@ -78,11 +58,12 @@ pub fn change_password_error(new: &str, confirm: &str) -> Option<&'static str> {
     password_error_key(new).or((new != confirm).then_some("change-password-mismatch"))
 }
 
-/// The same form for both: a compromise rotation is a password change that also replaces the
+/// The switch turns the password change into a compromise rotation, which also replaces the
 /// master key and the keypair.
 #[component]
-fn ChangePasswordSheet(compromise: bool, on_close: EventHandler<()>, on_new_recovery_key: EventHandler<String>) -> Element {
+fn ChangePasswordSheet(has_recovery_key: bool, on_close: EventHandler<()>, on_new_recovery_key: EventHandler<String>) -> Element {
     crate::common::use_modal_focus("change-password-sheet");
+    let mut compromise = use_signal(|| false);
     let auth = use_context::<Signal<Option<Account>>>();
     let key_ctx = use_context::<Signal<Option<[u8; 32]>>>();
     let ls_ctx = use_context::<Signal<LocalStorageState>>();
@@ -99,7 +80,7 @@ fn ChangePasswordSheet(compromise: bool, on_close: EventHandler<()>, on_new_reco
             error.set(Some(tid!(key)));
             return;
         }
-        let (current_val, new_val) = (current(), new());
+        let (current_val, new_val, compromise) = (current(), new(), compromise());
         spawn(async move {
             saving.set(true);
             error.set(None);
@@ -129,6 +110,7 @@ fn ChangePasswordSheet(compromise: bool, on_close: EventHandler<()>, on_new_reco
             }
         });
     };
+    let compromising = compromise();
 
     rsx! {
         div {
@@ -141,7 +123,7 @@ fn ChangePasswordSheet(compromise: bool, on_close: EventHandler<()>, on_new_reco
             div { class: "modal-box max-w-md p-0 flex flex-col",
                 SheetBar { close_id: "change-password-close", task: true, on_close: move |_| if !saving() { on_close.call(()) },
                     h2 { id: "change-password-title", class: SHEET_TITLE,
-                        if compromise {
+                        if compromising {
                             {tid!("compromised-title")}
                         } else {
                             {tid!("change-password-title")}
@@ -150,12 +132,6 @@ fn ChangePasswordSheet(compromise: bool, on_close: EventHandler<()>, on_new_reco
                 }
                 form { class: "flex flex-col flex-1 min-h-0", onsubmit: on_submit,
                     div { class: "flex-1 overflow-y-auto flex flex-col gap-3 px-5 pt-1 pb-4",
-                    if compromise {
-                        div { class: "flex flex-col gap-2 text-sm text-base-content/70",
-                            p { {tid!("compromised-body")} }
-                            p { {tid!("compromised-keeps")} }
-                        }
-                    }
                     if let Some(err) = error() {
                         div { id: "change-password-error", role: "alert", class: "alert alert-error text-sm", "{err}" }
                     }
@@ -191,8 +167,37 @@ fn ChangePasswordSheet(compromise: bool, on_close: EventHandler<()>, on_new_reco
                             value: "{confirm}",
                             oninput: move |e| confirm.set(e.value()),
                         }
-                        if !compromise {
+                        if !compromising {
                             p { class: "label whitespace-normal", {tid!("settings-change-password-hint")} }
+                        }
+                    }
+                    label {
+                        class: if compromising { "flex items-start gap-3 px-4 py-3 rounded-field cursor-pointer bg-tile-red" } else { "flex items-start gap-3 px-4 py-3 rounded-field cursor-pointer bg-base-200" },
+                        span { class: "flex-1 min-w-0",
+                            span { class: "block font-medium", {tid!("compromised-switch")} }
+                            span {
+                                id: "compromised-switch-hint",
+                                class: if compromising { "block text-sm leading-snug text-tile-red-content" } else { "block text-sm leading-snug text-base-content/70" },
+                                {tid!("compromised-switch-hint")}
+                            }
+                        }
+                        input {
+                            id: "compromised-switch",
+                            r#type: "checkbox",
+                            role: "switch",
+                            class: if compromising { "toggle toggle-error mt-0.5" } else { "toggle toggle-primary mt-0.5" },
+                            aria_describedby: "compromised-switch-hint",
+                            checked: compromising,
+                            disabled: saving(),
+                            onchange: move |e| compromise.set(e.checked()),
+                        }
+                    }
+                    div { id: "compromised-details", aria_live: "polite", class: "flex flex-col gap-2 text-sm text-base-content/70",
+                        if compromising {
+                            p { {tid!("compromised-body")} }
+                            if has_recovery_key {
+                                p { {tid!("compromised-recovery-note")} }
+                            }
                         }
                     }
                     }
@@ -201,12 +206,12 @@ fn ChangePasswordSheet(compromise: bool, on_close: EventHandler<()>, on_new_reco
                         button {
                             id: "change-password-submit",
                             r#type: "submit",
-                            class: if compromise { "btn btn-error" } else { "btn btn-primary" },
+                            class: if compromising { "btn btn-error" } else { "btn btn-primary" },
                             disabled: saving(),
                             if saving() {
                                 span { class: "loading loading-spinner loading-sm", role: "status", aria_label: tid!("loading") }
                                 {tid!("change-password-submitting")}
-                            } else if compromise {
+                            } else if compromising {
                                 {tid!("compromised-submit")}
                             } else {
                                 {tid!("change-password-submit")}

@@ -211,15 +211,15 @@ fn ShownChoice() -> Element {
         return rsx! {};
     }
     let chosen = super::shown::choice(&account, &key);
-    let mut options: Vec<(Option<&'static str>, String)> = vec![(None, tid!("badges-shown-none"))];
+    let mut options: Vec<(Option<&'static str>, String, Option<String>)> = vec![(None, tid!("badges-shown-none"), None)];
     for (id, years) in offered {
-        options.push((Some(id), super::members_label(id, years)));
+        options.push((Some(id), super::members_label(id, years), Some(super::members_fact(id, years))));
     }
     rsx! {
         section { class: "flex flex-col",
             h2 { class: "list-header", {tid!("badges-shown")} }
             div { class: "list-group", role: "radiogroup", aria_label: tid!("badges-shown"),
-                for (id , text) in options {
+                for (id , text , fact) in options {
                     {
                         let selected = chosen.as_deref() == id;
                         let account = account.clone();
@@ -238,7 +238,12 @@ fn ShownChoice() -> Element {
                                     haptic(Haptic::Selection);
                                     crate::preferences::push_shown(auth, &account, key, ls.peek().clone(), id.map(str::to_string));
                                 },
-                                span { class: "flex-1", "{text}" }
+                                span { class: "flex-1 min-w-0",
+                                    span { class: "block", "{text}" }
+                                    if let Some(fact) = fact {
+                                        span { class: "block text-xs text-base-content/70 leading-snug", "{fact}" }
+                                    }
+                                }
                                 if selected {
                                     span { class: "text-primary", aria_hidden: "true", crate::icons::CheckIcon { size: ICON_INLINE } }
                                 }

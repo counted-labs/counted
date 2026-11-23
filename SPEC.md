@@ -1100,9 +1100,8 @@ them.
 - **Classical invitation boxes fall to a quantum adversary** (3.1), and with them every project key
   sent in one, until that project rotates; they were written until the 3.2.10 floor. Hybrid
   invitation boxes and rotation boxes do not (9.1, 8.6). An accepted invitation leaves no row, so
-  no one can tell which projects got one: from 3.3.0 an admin is asked to change the key of every
-  project still on its first key (`key_epoch` 0) that another account holds a participant in, once
-  per device, and the project stays exposed until someone does.
+  no one can tell which projects got one, and such a project stays exposed until an admin changes
+  its key.
 - **The hybrid floor is the server's word for 3.2.10 installs** (9.1): a server can withhold
   `Account.hybrid_invitations` from a fresh or erased 3.2.10 install, which then writes classical
   boxes the server stores, and other 3.2.10 installs open them. 3.3.0 and the web build that ships

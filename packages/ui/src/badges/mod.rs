@@ -4,7 +4,7 @@
 
 pub mod page;
 pub mod members;
-pub use members::label as members_label;
+pub use members::{fact as members_fact, label as members_label};
 pub mod shown;
 use dioxus::prelude::*;
 use shared::time::Date;

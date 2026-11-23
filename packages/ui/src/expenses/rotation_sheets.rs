@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::common::{copy_text, error_message, haptic, share_link_for, share_text, Flash, Haptic, LocalStorageState, SheetBar, SheetFooter, SHEET_TITLE};
 use crate::decrypted::user_name;
-use crate::icons::{CheckIcon, ShieldIcon, ICON_HEADER, ICON_INLINE};
+use crate::icons::{CheckIcon, ICON_HEADER, ICON_INLINE};
 use crate::rotation_flow::{load_audience, names_and_others, rotate, short_link, Audience, Removal, Rotated};
 use crate::tid;
 
@@ -109,44 +109,6 @@ pub fn ProjectRotation(
             error: error().or(load_error),
             on_confirm,
             on_cancel: on_close,
-        }
-    }
-}
-
-/// The admin's prompt to change a project's first key (SPEC 14.3), styled as the guests card.
-#[component]
-pub fn FirstKeyCard(on_later: EventHandler<()>, on_rotate: EventHandler<()>) -> Element {
-    rsx! {
-        div { id: "first-key-hint", role: "status", class: "alert alert-warning alert-soft text-sm text-base-content! flex flex-col gap-2",
-            div { class: "flex items-start gap-2 w-full min-w-0",
-                span { class: "shrink-0 flex pt-0.5 text-warning", ShieldIcon { size: ICON_INLINE } }
-                span { class: "flex flex-col min-w-0",
-                    span { class: "font-semibold", {tid!("first-key-hint-title")} }
-                    span { class: "text-base-content/70", {tid!("first-key-hint-body")} }
-                }
-            }
-            div { class: "flex justify-end gap-2 w-full",
-                button {
-                    id: "first-key-hint-later",
-                    r#type: "button",
-                    class: "btn btn-ghost btn-sm",
-                    onclick: move |_| {
-                        haptic(Haptic::Light);
-                        on_later.call(());
-                    },
-                    {tid!("guests-hint-later")}
-                }
-                button {
-                    id: "first-key-hint-rotate",
-                    r#type: "button",
-                    class: "btn btn-primary btn-sm",
-                    onclick: move |_| {
-                        haptic(Haptic::Light);
-                        on_rotate.call(());
-                    },
-                    {tid!("rotation-confirm-rotate")}
-                }
-            }
         }
     }
 }

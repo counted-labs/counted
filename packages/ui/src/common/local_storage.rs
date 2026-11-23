@@ -235,9 +235,6 @@ pub struct LocalStorageProject {
     /// never in a link or a synced payload. Dropped once the server settles it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub creator_secret: Option<String>,
-    /// "Later" on the card asking an admin to change a first key (SPEC 14.3).
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub first_key_hint_dismissed: bool,
 }
 
 /// How many expenses are cached per project. **Web is the only target with a ceiling.**
