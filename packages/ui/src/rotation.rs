@@ -209,6 +209,7 @@ mod tests {
             read_only: false,
             key_epoch: 1,
             has_creator_proof: false,
+            rev: None,
         }
     }
 

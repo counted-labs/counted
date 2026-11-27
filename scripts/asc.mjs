@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // App Store Connect API client for the App Store version of `version` in packages/mobile/Cargo.toml:
-// its release notes, and the listing (text and iPhone screenshots). Submitting for review stays a
+// its release notes, and the listing (text, iPhone and iPad screenshots, the iOS 27 header and
+// search results images). Submitting for review stays a
 // click in App Store Connect. No dependencies - Node >= 20 (fetch, crypto).
 //
 //   node scripts/asc.mjs release-notes
@@ -202,23 +203,39 @@ function screenshots(device, language) {
         fail(`no ${dir} - run \`make store-shots\` then \`pwsh scripts/gen-store-screenshots.ps1\``);
     }
     if (files.length === 0 || files.length > 10) fail(`${dir} has ${files.length} panels, the App Store takes 1 to 10`);
-    const shots = files.map((name) => {
-        const bytes = readFileSync(`${ROOT}/${dir}/${name}`);
-        if (bytes.toString("latin1", 12, 16) !== "IHDR") fail(`${dir}/${name} is not a PNG`);
-        const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 12);
-        return {
-            name,
-            bytes,
-            hash,
-            width: bytes.readUInt32BE(16),
-            height: bytes.readUInt32BE(20),
-            referenceName: `${language}/${name} ${hash}`,
-        };
-    });
+    const shots = files.map((name) => png(dir, name, language));
     const odd = shots.find((s) => s.width !== shots[0].width || s.height !== shots[0].height);
     if (odd) fail(`${dir}/${odd.name} is ${odd.width}x${odd.height}, the others ${shots[0].width}x${shots[0].height}`);
     return shots;
 }
+
+function png(dir, name, prefix) {
+    let bytes;
+    try {
+        bytes = readFileSync(`${ROOT}/${dir}/${name}`);
+    } catch {
+        fail(`no ${dir}/${name} - run \`pwsh scripts/gen-store-screenshots.ps1\``);
+    }
+    if (bytes.toString("latin1", 12, 16) !== "IHDR") fail(`${dir}/${name} is not a PNG`);
+    const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 12);
+    return {
+        name,
+        bytes,
+        hash,
+        width: bytes.readUInt32BE(16),
+        height: bytes.readUInt32BE(20),
+        referenceName: `${prefix}/${name} ${hash}`,
+    };
+}
+
+// The iOS 27 header and search results images, one each per localization.
+const CREATIVES = [
+    { type: "PRODUCT_PAGE_HEADER_ASSET", dir: "header" },
+    { type: "APP_STORE_SEARCH_RESULTS_ASSET", dir: "search" },
+];
+const CREATIVE_GROUP = "DEFAULT_PROFILE";
+
+const creative = ({ dir }, language) => png(`marketing/store/out/ios-creative/${dir}`, `${language}.png`, dir);
 
 function screenshotGroups(refData, width, height) {
     const specs = new Set(refData.imageSpecs
@@ -232,14 +249,14 @@ function screenshotGroups(refData, width, height) {
     return groups;
 }
 
-async function uploadImage(library, shot) {
+async function uploadImage(library, shot, category = "APP_SCREENSHOTS_AND_PREVIEWS") {
     const { data: found } = await call("GET", `/appAssetLibraries/${library}/images?filter[referenceName]=${encodeURIComponent(shot.referenceName)}&limit=10`);
     const reusable = found.find((i) => i.attributes.referenceName === shot.referenceName && i.attributes.state !== "FAILED");
     if (reusable) return reusable.id;
     const { data: image } = await call("POST", "/appAssetLibraryImages", {
         data: {
             type: "appAssetLibraryImages",
-            attributes: { fileName: shot.name, fileSize: shot.bytes.length, category: "APP_SCREENSHOTS_AND_PREVIEWS", referenceName: shot.referenceName },
+            attributes: { fileName: shot.name, fileSize: shot.bytes.length, category, referenceName: shot.referenceName },
             relationships: { assetLibrary: { data: { type: "appAssetLibraries", id: library } } },
         },
     });
@@ -269,18 +286,18 @@ async function waitForProcessing(ids) {
     }
 }
 
-const placementsOf = (localization, group) =>
-    call("GET", `/appStoreVersionLocalizations/${localization}/placements?filter[placementType]=APP_SCREENSHOT&filter[placementGroup]=${group}&sort=placementGroupPosition&include=image&limit=50`);
+const placementsOf = (localization, group, type = "APP_SCREENSHOT") =>
+    call("GET", `/appStoreVersionLocalizations/${localization}/placements?filter[placementType]=${type}&filter[placementGroup]=${group}&sort=placementGroupPosition&include=image&limit=50`);
 
 // Only images this script uploaded carry the hash in their referenceName; any other one never matches.
-async function placedHashes(localization, group) {
-    const { data, included = [] } = await placementsOf(localization, group);
+async function placedHashes(localization, group, type) {
+    const { data, included = [] } = await placementsOf(localization, group, type);
     const names = Object.fromEntries(included.map((i) => [i.id, i.attributes.referenceName ?? ""]));
     return data.map((p) => names[p.relationships?.image?.data?.id]?.match(/ ([0-9a-f]{12})$/)?.[1] ?? `unknown ${p.id}`);
 }
 
-async function placeScreenshots(localization, group, imageIds) {
-    const { data: current } = await placementsOf(localization, group);
+async function placeImages(localization, group, imageIds, type = "APP_SCREENSHOT") {
+    const { data: current } = await placementsOf(localization, group, type);
     if (current.map((p) => p.relationships?.image?.data?.id).join() === imageIds.join()) return false;
     for (const placement of current) await call("DELETE", `/appAssetLibraryPlacements/${placement.id}`);
     const placements = [];
@@ -288,7 +305,7 @@ async function placeScreenshots(localization, group, imageIds) {
         const { data } = await call("POST", "/appAssetLibraryPlacements", {
             data: {
                 type: "appAssetLibraryPlacements",
-                attributes: { placementType: "APP_SCREENSHOT", placementGroup: group },
+                attributes: { placementType: type, placementGroup: group },
                 relationships: {
                     image: { data: { type: "appAssetLibraryImages", id } },
                     appStoreVersionLocalization: { data: { type: "appStoreVersionLocalizations", id: localization } },
@@ -297,6 +314,7 @@ async function placeScreenshots(localization, group, imageIds) {
         });
         placements.push({ type: "appAssetLibraryPlacements", id: data.id });
     }
+    if (placements.length < 2) return true;
     await call("POST", "/appAssetLibraryPlacementOrderingRequests", {
         data: {
             type: "appAssetLibraryPlacementOrderingRequests",
@@ -322,7 +340,9 @@ async function listing() {
             supportUrl: text(`${dir}/support_url.txt`, 255),
         };
     }
-    const shots = Object.fromEntries([...new Set(Object.values(LOCALES).map((l) => l.lang))].map((language) => [language, DEVICES.map((device) => screenshots(device, language))]));
+    const languages = [...new Set(Object.values(LOCALES).map((l) => l.lang))];
+    const shots = Object.fromEntries(languages.map((language) => [language, DEVICES.map((device) => screenshots(device, language))]));
+    const creatives = Object.fromEntries(languages.map((language) => [language, CREATIVES.map((c) => creative(c, language))]));
 
     const { data: versions } = await call("GET", `/apps/${APP_ID}/appStoreVersions?filter[platform]=IOS&limit=200`);
     const target = versions.find((v) => v.attributes.versionString === versionString)
@@ -355,6 +375,10 @@ async function listing() {
                 changed = screenshotChanges(`App Store ${locale} ${group}`, live, set) || changed;
             }
         }
+        for (const [i, { type }] of CREATIVES.entries()) {
+            const live = localization ? await placedHashes(localization.id, CREATIVE_GROUP, type) : [];
+            changed = screenshotChanges(`App Store ${locale} ${type}`, live, [creatives[language][i]]) || changed;
+        }
     }
     changed = showTextDiff(liveText, wantedText) || changed;
     if (!changed) {
@@ -382,16 +406,25 @@ async function listing() {
             imageIds[language].push(ids);
         }
     }
-    await waitForProcessing(Object.values(imageIds).flat(2));
+    const creativeIds = {};
+    for (const [language, images] of Object.entries(creatives)) {
+        creativeIds[language] = [];
+        for (const image of images) creativeIds[language].push(await uploadImage(library.id, image, "CREATIVE_ASSETS"));
+    }
+    await waitForProcessing([...Object.values(imageIds).flat(2), ...Object.values(creativeIds).flat()]);
 
     for (const locale of Object.keys(LOCALES)) {
         const language = LOCALES[locale].lang;
         for (const [i, set] of shots[language].entries()) {
             const ids = imageIds[language][i];
             for (const group of screenshotGroups(refData.attributes, set[0].width, set[0].height)) {
-                const changed = await placeScreenshots(localizations[locale], group, ids);
+                const changed = await placeImages(localizations[locale], group, ids);
                 console.error(`${locale} ${group}: ${changed ? `${ids.length} screenshots placed` : "unchanged"}`);
             }
+        }
+        for (const [i, { type }] of CREATIVES.entries()) {
+            const changed = await placeImages(localizations[locale], CREATIVE_GROUP, [creativeIds[language][i]], type);
+            console.error(`${locale} ${type}: ${changed ? "placed" : "unchanged"}`);
         }
     }
     console.log(`App Store ${versionString}: listing set - submit the version for review in App Store Connect`);

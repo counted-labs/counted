@@ -20,12 +20,24 @@ const FIELDS = [
   ['Participant name', 'add-project-user'],
 ];
 let session;
+let step = 'session';
+const lane = process.env.LANE || udid;
+const annotate = (title, message) =>
+  console.log(
+    `::error title=${`${lane}: ${title}`.replace(/[%\r\n:,]/g, encodeURIComponent)}::${String(message).replace(/[%\r\n]/g, encodeURIComponent)}`,
+  );
+setTimeout(() => {
+  annotate('keyboard', `no result after 8 min, stuck at ${step}`);
+  writeFileSync(`${out}/report.json`, JSON.stringify(report, null, 2));
+  process.exit(1);
+}, 8 * 60000).unref();
 
 async function call(method, path, body) {
   const res = await fetch(base + path, {
     method,
     headers: { 'content-type': 'application/json' },
     body: body && JSON.stringify(body),
+    signal: AbortSignal.timeout(path === '/session' ? 360000 : 120000),
   });
   const json = await res.json();
   if (!res.ok) throw new Error(`${method} ${path}: ${JSON.stringify(json.value)}`);
@@ -50,6 +62,20 @@ async function element(label, type, timeout = 30000) {
 const tap = async (label, type) => s('POST', `/element/${await element(label, type)}/click`);
 async function shot(name) {
   writeFileSync(`${out}/${name}.png`, Buffer.from(await s('GET', '/screenshot'), 'base64'));
+}
+
+async function dump(title) {
+  try {
+    const contexts = await s('GET', '/contexts');
+    const source = await s('GET', '/source');
+    const tree = [...source.matchAll(/<XCUIElementType(\w+)([^>]*)>/g)].map(([, type, attrs]) => {
+      const label = /\blabel="([^"]*)"/.exec(attrs) || /\bname="([^"]*)"/.exec(attrs);
+      return label ? `${type}:${label[1]}` : type;
+    });
+    annotate(`${title} screen`, `contexts ${JSON.stringify(contexts)}\n${tree.join('\n').slice(0, 6000) || source.slice(0, 6000)}`);
+  } catch (e) {
+    annotate(`${title} screen`, `no source: ${e}`);
+  }
 }
 
 async function inPage(script) {
@@ -81,17 +107,23 @@ try {
           'appium:locale': 'en_US',
           'appium:newCommandTimeout': 600,
           'appium:webviewConnectTimeout': 30000,
+          'appium:usePrebuiltWDA': true,
+          'appium:derivedDataPath': process.env.WDA_DERIVED_DATA,
+          'appium:wdaLaunchTimeout': 240000,
+          'appium:showXcodeLog': true,
         },
       },
     })
   ).sessionId;
 
+  step = 'open the sheet';
   await tap('Create a project', 'Button');
   await element('New project');
   await sleep(1000);
   await shot('sheet');
 
   for (const [label, id] of FIELDS) {
+    step = label;
     await tap(label, 'TextField');
     await sleep(1500);
     await shot(id);
@@ -102,10 +134,14 @@ try {
     const ok = page.offsetTop === 0 && keyboard === true && page.focused === id;
     failed ||= !ok;
     report.push({ label, id, keyboard, ...page, ok });
-    console.log(
-      `${ok ? 'ok  ' : 'FAIL'} ${label}: focused=${page.focused} keyboard=${keyboard} offsetTop=${page.offsetTop} vv.height=${page.height} innerHeight=${page.inner}`,
-    );
+    const line = `${label}: focused=${page.focused} keyboard=${keyboard} offsetTop=${page.offsetTop} vv.height=${page.height} innerHeight=${page.inner}`;
+    console.log(`${ok ? 'ok  ' : 'FAIL'} ${line}`);
+    if (!ok) annotate('keyboard', line);
   }
+} catch (e) {
+  failed = true;
+  annotate('keyboard', `${step}: ${e}${e?.cause ? ` (cause: ${e.cause.code || e.cause})` : ''}`);
+  if (session) await dump('keyboard');
 } finally {
   writeFileSync(`${out}/report.json`, JSON.stringify(report, null, 2));
   if (session) await s('DELETE', '').catch(() => {});

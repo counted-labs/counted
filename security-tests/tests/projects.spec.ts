@@ -108,15 +108,17 @@ test.describe('B - project boundaries', () => {
       'keyLifecycle',
       'payload',
       'readOnly',
+      'rev',
       'status',
     ]);
 
+    // `eid` only beside a row created under an entity id, which this fixture never names.
     for (const user of await usersOf(anon, p)) {
-      expect(keysOf(user)).toEqual(['admin', 'claimLabel', 'claimed', 'createdAt', 'id', 'payload', 'paymentMethods']);
+      expect(keysOf(user)).toEqual(['admin', 'claimLabel', 'claimed', 'createdAt', 'id', 'payload', 'paymentMethods', 'rev']);
     }
 
     const expense = await expenseOf(anon, p);
-    expect(keysOf(expense)).toEqual(['authorId', 'createdAt', 'id', 'payload', 'projectId']);
+    expect(keysOf(expense)).toEqual(['authorId', 'createdAt', 'id', 'payload', 'projectId', 'rev']);
 
     for (const payment of await json<unknown[]>(await anon.get(`/api/v1/projects/${p.id}/payments`, p.withKey), 'payments')) {
       expect(keysOf(payment)).toEqual(['createdAt', 'expenseId', 'id', 'payload', 'userId']);

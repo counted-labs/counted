@@ -120,6 +120,7 @@ async fn save_edit(
             history,
             expected_iv: None,
             notify_closed: false,
+            expected_rev: None,
         })
     })
     .await;

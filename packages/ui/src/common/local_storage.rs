@@ -611,6 +611,7 @@ mod tests {
             key_epoch: 0,
             has_creator_proof: false,
             read_only: false,
+            rev: None,
         };
         let mut state = LocalStorageState::default();
         upsert_project_key(&mut state, id, key_to_fragment(&good));
@@ -659,6 +660,7 @@ mod tests {
                 key_epoch: 0,
                 has_creator_proof: false,
                 read_only: false,
+                rev: None,
             }
         }
 
@@ -672,6 +674,8 @@ mod tests {
                 project_id: Uuid::nil(),
                 created_at: DateTime::EPOCH,
                 payload: EncryptedPair { ct: "ct".into(), iv: "iv".into() },
+                eid: None,
+                rev: None,
             }
         }
 

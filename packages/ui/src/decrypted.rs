@@ -169,6 +169,7 @@ pub fn status_edit(key: &[u8; 32], p: &ProjectDto, status: &ProjectStatus) -> Re
         history: None,
         expected_iv: None,
         notify_closed: *status == ProjectStatus::Closed,
+        expected_rev: None,
     })
 }
 
@@ -434,6 +435,7 @@ mod tests {
             key_epoch: 0,
             has_creator_proof: false,
             read_only: false,
+            rev: None,
         }
     }
 
@@ -537,6 +539,8 @@ mod tests {
                 extra: Default::default(),
             })
             .unwrap(),
+            eid: None,
+            rev: None,
         };
         let de = decrypt_expense(&key, &e).unwrap();
         assert_eq!(de.description.unwrap(), "Mediterranean restaurant");

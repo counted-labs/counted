@@ -189,7 +189,7 @@ mod tests {
                 sealed_label: None,
                 after: None,
                 queued_at: None,
-                op: crate::common::OpKind::DeleteExpense(shared::DeleteExpenseRequest { id: 3, project_id, history: None }),
+                op: crate::common::OpKind::DeleteExpense(shared::DeleteExpenseRequest { id: 3, project_id, history: None, eid: None, expected_rev: None }),
             })
         };
         let none = std::collections::BTreeMap::new();

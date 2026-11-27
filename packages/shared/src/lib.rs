@@ -2,6 +2,7 @@ pub mod api;
 pub mod balances;
 pub mod emoji;
 pub mod entity;
+pub mod merge;
 // The settlement before the 2026-10 rewrite, kept until no store serves it: a group on mixed
 // versions must see the same transfers (docs/plans/rust-correctness.md §2.4).
 #[cfg(test)]
@@ -714,6 +715,11 @@ pub const KEY_LIFECYCLE_FROM: &str = "3.2.9";
 /// reaches it, and no classical one after (docs/plans/security-fixes-2026-11-02.md §5).
 pub const HYBRID_INVITATIONS_FROM: &str = "3.2.10";
 
+/// The first build that names `expected_rev` on every write and delete of a project row, a
+/// participant or an expense (SPEC 15.9.3). A write without it is refused with `REV_REQUIRED` once
+/// `MIN_APP_VERSION` reaches it.
+pub const EXPECTED_REV_FROM: &str = "3.4.1";
+
 /// `POST /auth/account/delete`: the password's proof, as a login sends it, so a session alone (any
 /// script on the origin, an unlocked device) cannot erase the account (security review 2026-11-02 L3).
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1404,6 +1410,10 @@ pub struct ProjectDto {
     /// The public demo. Enforced by triggers in the database; the client only hides the controls.
     #[serde(default)]
     pub read_only: bool,
+    /// The row's revision (SPEC 15.9.3), what a write of it names as `expected_rev`. `None` from a
+    /// server before it. The project's entity id is `id`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rev: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1446,6 +1456,11 @@ pub struct EditableProject {
     /// cannot see the transition it rings the other account holders on.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub notify_closed: bool,
+    /// The `rev` of the row this write was built on (SPEC 15.9.3): written only while it is the
+    /// stored one, else 409 `STALE_REV`. Replaces `expected_iv` as the requirement of a payload;
+    /// builds before 3.4.1 send none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_rev: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1631,6 +1646,13 @@ pub struct User {
     /// the claimant encrypted under the **project** key. `None` when it shows none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub distinctions: Option<EncryptedPair>,
+    /// The row's revision (SPEC 15.9.3). `None` from a server before it, and in a cache it filled.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rev: Option<i64>,
+    /// The participant's entity id as the server stores it (SPEC 15.9.1), what a write names as
+    /// `eid`: `None` for a row created without one, and from a server before 3.4.1.
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "entity::optional_canonical")]
+    pub eid: Option<Uuid>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -1658,6 +1680,13 @@ pub struct EditableUser {
     pub id: i32,
     pub project_id: Uuid,
     pub payload: EncryptedPair,
+    /// The `rev` the write was built on (SPEC 15.9.3, 15.9.4). Builds before 3.4.1 send none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_rev: Option<i64>,
+    /// The entity id the server served with the row, `None` when it served none. Read beside
+    /// `expected_rev` only.
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "entity::optional_canonical")]
+    pub eid: Option<Uuid>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -1715,6 +1744,10 @@ pub struct HistoryEntry {
     pub entity_id: Option<i32>,
     pub payload: EncryptedPair,
     pub created_at: DateTime,
+    /// The entry's own entity id as the server stores it (SPEC 15.9.1). `None` for an entry
+    /// written without one, and from a server before 3.4.1.
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "entity::optional_canonical")]
+    pub eid: Option<Uuid>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
@@ -1729,6 +1762,13 @@ pub struct Expense {
     pub project_id: Uuid,
     pub created_at: DateTime,
     pub payload: EncryptedPair,
+    /// The row's revision (SPEC 15.9.3). `None` from a server before it, and in a cache it filled.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rev: Option<i64>,
+    /// The expense's entity id as the server stores it, its `client_op_id` (SPEC 15.9.1): `None`
+    /// for a row created without one, and from a server before 3.4.1.
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "entity::optional_canonical")]
+    pub eid: Option<Uuid>,
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -1809,6 +1849,11 @@ pub struct EditableExpense {
     pub debtors: Vec<EncryptedUserAmount>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub history: Option<HistoryContext>,
+    /// As on `EditableUser`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_rev: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "entity::optional_canonical")]
+    pub eid: Option<Uuid>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -1818,6 +1863,11 @@ pub struct DeleteExpenseRequest {
     pub project_id: Uuid,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub history: Option<HistoryContext>,
+    /// As on `EditableUser`: a delete of a row that is still there but not as named is `STALE_REV`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub expected_rev: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none", deserialize_with = "entity::optional_canonical")]
+    pub eid: Option<Uuid>,
 }
 
 /// A recurring expense rule. `payload` holds the rule, the expense template, the cursor and the
@@ -2107,6 +2157,214 @@ mod tests {
             history: None,
         };
         assert!(!serde_json::to_string(&rule).unwrap().contains(r#""id""#));
+    }
+
+    fn same_bytes<T: serde::Serialize + serde::de::DeserializeOwned>(json: &str) -> T {
+        let read: T = serde_json::from_str(json).unwrap();
+        assert_eq!(serde_json::to_string(&read).unwrap(), json, "sent differently once read");
+        read
+    }
+
+    /// The writes as 3.2.10 and 3.4.0 send them, the same shapes in both builds: they name no
+    /// revision and no entity id, and a write that names none goes out in the same bytes.
+    #[test]
+    fn the_writes_of_3_2_10_and_3_4_0_name_no_revision_and_keep_their_bytes() {
+        let pid = "11111111-2222-4333-8444-555555555555";
+        let pair = r#"{"ct":"Y3Q=","iv":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}"#;
+        let history = format!(r#"{{"payload":{pair}}}"#);
+
+        let project: super::EditableProject = same_bytes(&format!(
+            r#"{{"id":"{pid}","payload":{pair},"history":{history},"expectedIv":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}}"#
+        ));
+        let status: super::EditableProject = same_bytes(&format!(r#"{{"id":"{pid}","status":"closed","notifyClosed":true}}"#));
+        let user: super::EditableUser = same_bytes(&format!(r#"{{"id":4,"projectId":"{pid}","payload":{pair}}}"#));
+        let users: Vec<super::EditableUser> = same_bytes(&format!(r#"[{{"id":4,"projectId":"{pid}","payload":{pair}}}]"#));
+        let expense: super::EditableExpense = same_bytes(&format!(
+            r#"{{"id":9,"projectId":"{pid}","authorId":null,"payload":{pair},"payers":[],"debtors":[],"history":{history}}}"#
+        ));
+        let row_expense: super::EditableExpense = same_bytes(&format!(
+            r#"{{"id":9,"projectId":"{pid}","authorId":4,"payload":{pair},"payers":[{{"userId":4,"payload":{pair}}}],"debtors":[{{"userId":4,"payload":{pair}}}]}}"#
+        ));
+        let delete: super::DeleteExpenseRequest = same_bytes(&format!(r#"{{"id":9,"projectId":"{pid}","history":{history}}}"#));
+        let commit: super::CommitRotation = same_bytes(&format!(
+            r#"{{"projectId":"{pid}","rotationId":"{pid}","newVerifier":[1],"escrow":{pair},"amkEpoch":0,"memberKey":null,"boxes":[],"remove":[],"quarantine":[],"history":null}}"#
+        ));
+
+        assert_eq!((project.expected_rev, status.expected_rev), (None, None));
+        assert_eq!((user.expected_rev, user.eid), (None, None));
+        assert_eq!((users[0].expected_rev, users[0].eid), (None, None));
+        assert_eq!((expense.expected_rev, expense.eid, row_expense.expected_rev), (None, None, None));
+        assert_eq!((delete.expected_rev, delete.eid), (None, None));
+        assert_eq!(commit.hidden_user_id, None);
+    }
+
+    #[test]
+    fn a_write_names_its_revision_and_the_entity_id_in_the_canonical_form_only() {
+        let pid = "11111111-2222-4333-8444-555555555555";
+        let eid = "0f8e2c4a-6b1d-4e3f-9a7b-5c2d1e0f3a4b";
+        let pair = r#""payload":{"ct":"","iv":""}"#;
+        let user: super::EditableUser =
+            same_bytes(&format!(r#"{{"id":4,"projectId":"{pid}",{pair},"expectedRev":3,"eid":"{eid}"}}"#));
+        assert_eq!((user.expected_rev, user.eid.map(|e| e.to_string())), (Some(3), Some(eid.to_string())));
+        let delete: super::DeleteExpenseRequest = same_bytes(&format!(r#"{{"id":9,"projectId":"{pid}","expectedRev":1}}"#));
+        assert_eq!((delete.expected_rev, delete.eid), (Some(1), None));
+        for other in NON_CANONICAL {
+            let refused = serde_json::from_str::<super::EditableExpense>(&format!(
+                r#"{{"id":9,"projectId":"{pid}",{pair},"expectedRev":1,"eid":"{other}"}}"#
+            ));
+            assert!(refused.is_err(), "{other} was read");
+        }
+    }
+
+    /// What 3.4.0 reads a served row into, field for field (`git show v1.24.14`): the revision and
+    /// the entity id are fields it does not know, which serde passes over.
+    #[derive(serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    #[allow(dead_code)]
+    struct User340 {
+        id: i32,
+        payload: super::EncryptedPair,
+        created_at: Option<super::DateTime>,
+        #[serde(default)]
+        claimed: bool,
+        #[serde(default)]
+        claim_label: Option<super::EncryptedPair>,
+        #[serde(default)]
+        payment_methods: Option<super::EncryptedPair>,
+        #[serde(default)]
+        admin: bool,
+        #[serde(default)]
+        distinctions: Option<super::EncryptedPair>,
+    }
+
+    #[derive(serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    #[allow(dead_code)]
+    struct Expense340 {
+        id: i32,
+        #[serde(default)]
+        author_id: Option<i32>,
+        project_id: uuid::Uuid,
+        created_at: super::DateTime,
+        payload: super::EncryptedPair,
+    }
+
+    #[derive(serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    #[allow(dead_code)]
+    struct Project340 {
+        id: uuid::Uuid,
+        payload: super::EncryptedPair,
+        status: super::ProjectStatus,
+        created_at: super::DateTime,
+        #[serde(default)]
+        has_admin: bool,
+        #[serde(default)]
+        key_lifecycle: bool,
+        #[serde(default)]
+        key_epoch: i32,
+        #[serde(default)]
+        has_creator_proof: bool,
+        #[serde(default)]
+        read_only: bool,
+    }
+
+    #[derive(serde::Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    #[allow(dead_code)]
+    struct History340 {
+        id: i64,
+        project_id: uuid::Uuid,
+        actor_user_id: Option<i32>,
+        action: super::HistoryAction,
+        entity: super::HistoryEntity,
+        entity_id: Option<i32>,
+        payload: super::EncryptedPair,
+        created_at: super::DateTime,
+    }
+
+    #[test]
+    fn a_served_row_carries_its_revision_and_entity_id_which_a_build_before_ignores() {
+        use uuid::Uuid;
+        let eid = Uuid::parse_str("0f8e2c4a-6b1d-4e3f-9a7b-5c2d1e0f3a4b").unwrap();
+        let user = super::User { id: 4, rev: Some(3), eid: Some(eid), ..super::User::default() };
+        let expense = super::Expense {
+            id: 9,
+            author_id: None,
+            project_id: Uuid::nil(),
+            created_at: super::DateTime::EPOCH,
+            payload: super::EncryptedPair::default(),
+            rev: Some(2),
+            eid: Some(eid),
+        };
+        let project = super::ProjectDto {
+            id: eid,
+            payload: super::EncryptedPair::default(),
+            status: ProjectStatus::Ongoing,
+            created_at: super::DateTime::EPOCH,
+            has_admin: false,
+            key_lifecycle: false,
+            key_epoch: 0,
+            has_creator_proof: false,
+            read_only: false,
+            rev: Some(5),
+        };
+        let entry = super::HistoryEntry {
+            id: 1,
+            project_id: Uuid::nil(),
+            actor_user_id: None,
+            actor_account_id: None,
+            action: HistoryAction::Updated,
+            entity: HistoryEntity::Project,
+            entity_id: None,
+            payload: super::EncryptedPair::default(),
+            created_at: super::DateTime::EPOCH,
+            eid: Some(eid),
+        };
+
+        let user_json = serde_json::to_value(&user).unwrap();
+        let expense_json = serde_json::to_value(&expense).unwrap();
+        let project_json = serde_json::to_value(&project).unwrap();
+        let entry_json = serde_json::to_value(&entry).unwrap();
+        assert_eq!((user_json["rev"].as_i64(), user_json["eid"].as_str()), (Some(3), Some(eid.to_string().as_str())));
+        assert_eq!((expense_json["rev"].as_i64(), expense_json["eid"].as_str()), (Some(2), Some(eid.to_string().as_str())));
+        assert_eq!(project_json["rev"].as_i64(), Some(5));
+        assert_eq!(entry_json["eid"].as_str(), Some(eid.to_string().as_str()));
+
+        serde_json::from_value::<User340>(user_json.clone()).unwrap();
+        serde_json::from_value::<Expense340>(expense_json.clone()).unwrap();
+        serde_json::from_value::<Project340>(project_json.clone()).unwrap();
+        serde_json::from_value::<History340>(entry_json.clone()).unwrap();
+
+        assert_eq!(serde_json::from_value::<super::User>(user_json.clone()).unwrap(), user);
+        assert_eq!(serde_json::from_value::<super::Expense>(expense_json.clone()).unwrap(), expense);
+        assert_eq!(serde_json::from_value::<super::ProjectDto>(project_json.clone()).unwrap(), project);
+    }
+
+    /// A server rolled back to 1.24.14 serves neither field, and a cache filled before this build
+    /// holds neither: both read as unknown, never as a revision.
+    #[test]
+    fn a_row_served_without_a_revision_reads_as_unknown() {
+        let mut user = serde_json::to_value(super::User { rev: Some(3), ..super::User::default() }).unwrap();
+        user.as_object_mut().unwrap().retain(|k, _| k != "rev" && k != "eid");
+        let user: super::User = serde_json::from_value(user).unwrap();
+        assert_eq!((user.rev, user.eid), (None, None));
+
+        let pid = "11111111-2222-4333-8444-555555555555";
+        let created = serde_json::to_string(&super::DateTime::EPOCH).unwrap();
+        let expense: super::Expense =
+            serde_json::from_str(&format!(r#"{{"id":9,"projectId":"{pid}","createdAt":{created},"payload":{{"ct":"","iv":""}}}}"#)).unwrap();
+        assert_eq!((expense.rev, expense.eid), (None, None));
+        let project: super::ProjectDto = serde_json::from_str(&format!(
+            r#"{{"id":"{pid}","payload":{{"ct":"","iv":""}},"status":"ongoing","createdAt":{created}}}"#
+        ))
+        .unwrap();
+        assert_eq!(project.rev, None);
+
+        for other in NON_CANONICAL {
+            let served = format!(r#"{{"id":9,"projectId":"{pid}","createdAt":{created},"payload":{{"ct":"","iv":""}},"rev":1,"eid":"{other}"}}"#);
+            assert!(serde_json::from_str::<super::Expense>(&served).is_err(), "{other} was read");
+        }
     }
 
     #[test]
@@ -2670,6 +2928,11 @@ pub struct CommitRotation {
     /// The key change, or the removal, under the new key (D16), written in the commit.
     #[serde(default)]
     pub history: Option<HistoryContext>,
+    /// The participant row this commit hides as removed (D13), rewritten rather than resealed byte
+    /// for byte, so its `rev` moves with the project row's (SPEC 15.9.3). Builds before 3.4.1 name
+    /// none, and only the project row's moves.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hidden_user_id: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

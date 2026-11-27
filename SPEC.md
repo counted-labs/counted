@@ -1324,7 +1324,11 @@ the rules of 15.9.5 and 3.4.1 writes its new types.
 
 An entity id is 16 bytes. The client draws it at random before the row's first encryption, in the
 UUID v4 layout, or derives it: an occurrence of a recurring rule takes the id of section 10, a
-version 8 value, so that two devices materialising one occurrence write one id. A reader treats the
+version 8 value, so that two devices materialising one occurrence write one id. From 3.4.1 the
+history entry of a change replayed from the write queue (15.9.5) takes the first 16 bytes of
+SHA-256 over `counted.write_fresh.history.v1`, the 16 bytes of the queue entry's id and its
+generation as 8 bytes big-endian, in the version 4 layout: every attempt of one replay names one
+entry, the server leaves the repeats out, and the queue entry's id is never sent. A reader treats the
 16 bytes as opaque and never tests the version or variant bits. The all-zero value is not an entity
 id, and the server refuses a creation that names it.
 
@@ -1489,9 +1493,10 @@ The participant-links conversion is not refused: it keeps its own compare-and-sw
 `rev` counts the accepted writes of one row's payload, and only such a write moves it: an edit, the
 participant-links conversion for each row it rewrites, and the commit of a key change for the two
 rows it rewrites, the project row and a removed participant's row (8.5). The server does not know
-which participant row a key change rewrote unless the commit names it, which a client from 3.4.1
-does; a commit from an older client moves the project row's `rev` only. No trigger moves it, a
-write of clear columns alone does not, and the byte-for-byte reseal of the other rows does not.
+which participant row a key change rewrote unless the commit names it, and under v1 no client
+names it: a v1 key change moves the project row's `rev` only and the removed participant's row
+keeps its `rev`, so the server does not learn which participant was removed. No trigger moves it,
+a write of clear columns alone does not, and the byte-for-byte reseal of the other rows does not.
 
 Under v1 nothing in the ciphertext carries `rev`: it orders honest writers, and a device takes no
 security decision on it. A replay compares payloads, never `rev` alone. v2 binds it, and its

@@ -113,6 +113,7 @@ mod tests {
             key_epoch: 0,
             has_creator_proof,
             read_only: false,
+            rev: None,
         }
     }
 

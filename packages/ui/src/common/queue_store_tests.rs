@@ -133,13 +133,13 @@ pub fn add(n: u128, project: Uuid) -> Value {
 pub fn edit(n: u128, project: Uuid, row: i32) -> Value {
     op(
         n,
-        OpKind::EditExpense(shared::EditableExpense { id: row, project_id: project, author_id: None, payload: pair(), payers: vec![], debtors: vec![], history: None }),
+        OpKind::EditExpense(shared::EditableExpense { id: row, project_id: project, author_id: None, payload: pair(), payers: vec![], debtors: vec![], history: None, eid: None, expected_rev: None }),
         None,
     )
 }
 
 pub fn delete(n: u128, project: Uuid, row: i32, after: Option<Uuid>) -> Value {
-    op(n, OpKind::DeleteExpense(shared::DeleteExpenseRequest { id: row, project_id: project, history: None }), after)
+    op(n, OpKind::DeleteExpense(shared::DeleteExpenseRequest { id: row, project_id: project, history: None, eid: None, expected_rev: None }), after)
 }
 
 fn remove_op(n: u128, project: Uuid, row: Option<i64>) -> Value {

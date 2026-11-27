@@ -43,9 +43,9 @@ fn queued(label_key: &[u8; 32], op: OpKind) -> QueuedOp {
 /// sealed with the key held when the op is queued, the payload may come from an older draft.
 fn every_kind(stale: &[u8; 32], fresh: &[u8; 32]) -> Vec<QueuedOp> {
     let add = CreatableExpense { project_id: PROJECT, author_id: Some(1), payload: seal(stale, "add"), payers: shares(stale), debtors: shares(stale), history: history(stale), client_op_id: None };
-    let edit = EditableExpense { id: 3, project_id: PROJECT, author_id: Some(1), payload: seal(stale, "edit"), payers: shares(stale), debtors: shares(stale), history: history(stale) };
-    let delete = DeleteExpenseRequest { id: 3, project_id: PROJECT, history: history(stale) };
-    let status = EditableProject { id: PROJECT, payload: None, status: Some(ProjectStatus::Closed), history: history(stale), expected_iv: None, notify_closed: true };
+    let edit = EditableExpense { id: 3, project_id: PROJECT, author_id: Some(1), payload: seal(stale, "edit"), payers: shares(stale), debtors: shares(stale), history: history(stale), eid: None, expected_rev: None };
+    let delete = DeleteExpenseRequest { id: 3, project_id: PROJECT, history: history(stale), eid: None, expected_rev: None };
+    let status = EditableProject { id: PROJECT, payload: None, status: Some(ProjectStatus::Closed), history: history(stale), expected_iv: None, notify_closed: true, expected_rev: None };
     let project_edit = ProjectEdit {
         project_id: PROJECT,
         name_description: Some(encrypt_json(stale, &("Corse", Some("été"))).unwrap()),

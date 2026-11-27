@@ -20,6 +20,7 @@ use crate::{
       id, nil, CGFloat, CGPoint, CGRect, UIForceTouchCapability, UIInterfaceOrientationMask,
       UIRectEdge, UITouchPhase, UITouchType, BOOL, NO, YES,
     },
+    scene,
     window::PlatformSpecificWindowBuilderAttributes,
     DeviceId,
   },
@@ -434,6 +435,27 @@ unsafe fn get_window_class() -> &'static Class {
   CLASS.unwrap()
 }
 
+pub fn window_class() -> &'static Class {
+  unsafe { get_window_class() }
+}
+
+pub unsafe fn handle_deep_link(url: id) {
+  let absolute_url: id = msg_send![url, absoluteString];
+  if absolute_url.is_null() {
+    return;
+  }
+  let bytes: *const c_char = msg_send![absolute_url, UTF8String];
+  if bytes.is_null() {
+    return;
+  }
+  match CStr::from_ptr(bytes).to_str().map(url::Url::parse) {
+    Ok(Ok(url)) => {
+      app_state::handle_nonuser_event(EventWrapper::StaticEvent(Event::Opened { urls: vec![url] }))
+    }
+    _ => log::warn!("ignoring a deep link that is not a valid URL"),
+  }
+}
+
 // requires main thread
 pub unsafe fn create_view(
   _window_attributes: &WindowAttributes,
@@ -518,14 +540,26 @@ pub unsafe fn create_window(
   view_controller: id,
 ) -> id {
   let class = get_window_class();
+  let window_scene = scene::window_scene();
 
   let window: id = msg_send![class, alloc];
   assert!(!window.is_null(), "Failed to create `UIWindow` instance");
-  let window: id = msg_send![window, initWithFrame: frame];
+  let window: id = if window_scene.is_null() {
+    msg_send![window, initWithFrame: frame]
+  } else {
+    msg_send![window, initWithWindowScene: window_scene]
+  };
   assert!(
     !window.is_null(),
     "Failed to initialize `UIWindow` instance"
   );
+  if window_scene.is_null() {
+    if scene::scene_lifecycle_enabled() {
+      scene::adopt_on_next_scene(window, false);
+    }
+  } else if window_attributes.inner_size.is_some() {
+    let () = msg_send![window, setFrame: frame];
+  }
   let () = msg_send![window, setRootViewController: view_controller];
   match window_attributes.fullscreen {
     Some(Fullscreen::Exclusive(ref video_mode)) => {
@@ -558,24 +592,6 @@ pub fn create_delegate_class() {
     YES
   }
 
-  fn handle_deep_link(url: id) {
-    unsafe {
-      let absolute_url: id = msg_send![url, absoluteString];
-      let bytes = {
-        let bytes: *const c_char = msg_send![absolute_url, UTF8String];
-        bytes as *const u8
-      };
-
-      // 4 represents utf8 encoding
-      let len = msg_send![absolute_url, lengthOfBytesUsingEncoding: 4];
-      let bytes = std::slice::from_raw_parts(bytes, len);
-
-      let url = url::Url::parse(std::str::from_utf8(bytes).unwrap()).unwrap();
-
-      app_state::handle_nonuser_event(EventWrapper::StaticEvent(Event::Opened { urls: vec![url] }));
-    }
-  }
-
   // custom URL schemes
   // https://developer.apple.com/documentation/xcode/defining-a-custom-url-scheme-for-your-app
   extern "C" fn application_open_url(
@@ -585,7 +601,7 @@ pub fn create_delegate_class() {
     url: id,
     _options: id,
   ) -> BOOL {
-    handle_deep_link(url);
+    unsafe { handle_deep_link(url) };
 
     YES
   }
@@ -612,10 +628,16 @@ pub fn create_delegate_class() {
   }
 
   extern "C" fn did_become_active(_: &Object, _: Sel, _: id) {
+    if scene::did_first_scene_connect() {
+      return;
+    }
     unsafe { app_state::handle_nonuser_event(EventWrapper::StaticEvent(Event::Resumed)) }
   }
 
   extern "C" fn will_resign_active(_: &Object, _: Sel, _: id) {
+    if scene::did_first_scene_connect() {
+      return;
+    }
     unsafe { app_state::handle_nonuser_event(EventWrapper::StaticEvent(Event::Suspended)) }
   }
 
@@ -623,6 +645,9 @@ pub fn create_delegate_class() {
   extern "C" fn did_enter_background(_: &Object, _: Sel, _: id) {}
 
   extern "C" fn will_terminate(_: &Object, _: Sel, _: id) {
+    if !app_state::is_app_ready() {
+      return;
+    }
     unsafe {
       let app: id = msg_send![class!(UIApplication), sharedApplication];
       let windows: id = msg_send![app, windows];
@@ -653,11 +678,21 @@ pub fn create_delegate_class() {
   )
   .expect("Failed to declare class `AppDelegate`");
 
+  scene::scene_delegate_class();
+
   unsafe {
     decl.add_method(
       sel!(application:didFinishLaunchingWithOptions:),
       did_finish_launching as extern "C" fn(_, _, _, _) -> _,
     );
+
+    // UIKit treats an app delegate answering this as adopting scenes, manifest or not.
+    if scene::scene_lifecycle_enabled() {
+      decl.add_method(
+        sel!(application:configurationForConnectingSceneSession:options:),
+        scene::configuration_for_connecting_scene_session as extern "C" fn(_, _, _, _, _) -> _,
+      );
+    }
 
     decl.add_method(
       sel!(application:openURL:options:),

@@ -1,13 +1,13 @@
 [package]
 name = "mobile"
-version = "3.4.0"
+version = "3.4.1"
 edition = "2021"
 publish = false
 
 # F-Droid's versionCode: major*1000000 + minor*1000 + patch of `version` above, bumped with it.
 # Checked by `android-fdroid-apk` in android.mk. The Play build asks the Play API instead.
 [package.metadata.android]
-version_code = 3004000
+version_code = 3004001
 
 [dependencies]
 dioxus = { workspace = true, features = ["router"] }
@@ -83,6 +83,9 @@ objc2-ui-kit = { version = "0.3", features = [
 	"UIAlertController",
 	# openURL:options:completionHandler:, the only openURL iOS 18 still honours, is gated on it.
 	"block2",
+	# The key window through the connected window scene (the scene life cycle).
+	"UIScene",
+	"UIWindowScene",
 ] }
 objc2-foundation = { version = "0.3", features = [
 	"NSArray",
@@ -99,6 +102,9 @@ objc2-foundation = { version = "0.3", features = [
 	# The keyboard-frame observer: a block on NSNotificationCenter.
 	"NSOperation",
 	"block2",
+	# connectedScenes, walked for the key window.
+	"NSSet",
+	"NSEnumerator",
 ] }
 # Push: the permission prompt, the completion block it takes, and the hop back to the main queue
 # that registerForRemoteNotifications needs.

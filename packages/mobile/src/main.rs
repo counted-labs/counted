@@ -12,6 +12,8 @@ use ui::common::push_deep_link;
 mod push;
 #[cfg(any(target_os = "android", target_os = "ios"))]
 mod store_key;
+#[cfg(all(target_os = "ios", debug_assertions))]
+mod scene_probe;
 
 /// Where `UpdateRequiredScreen` sends the user. `webbrowser` - what an anchor click in the WebView
 /// goes through - only opens http(s), so the link is the store's web page, which hands off to the
@@ -557,13 +559,28 @@ fn platform_read_clipboard() -> Option<String> {
     unsafe { autoreleasepool(|_| UIPasteboard::generalPasteboard().string().map(|s| s.to_string())) }
 }
 
+/// Through the connected window scene, as the scene life cycle requires; `UIApplication.keyWindow`
+/// only when no scene answers, which keeps a build without the scene manifest working
+/// (docs/plans/ios-uiscene.md R4).
+#[cfg(target_os = "ios")]
+#[allow(deprecated)]
+fn key_window(mtm: objc2::MainThreadMarker) -> Option<objc2::rc::Retained<objc2_ui_kit::UIWindow>> {
+    use objc2_ui_kit::{UIApplication, UIWindowScene};
+
+    let app = UIApplication::sharedApplication(mtm);
+    app.connectedScenes()
+        .iter()
+        .filter_map(|scene| scene.downcast::<UIWindowScene>().ok())
+        .find_map(|scene| scene.keyWindow())
+        .or_else(|| app.keyWindow())
+}
+
 /// The window's interface style, which the status bar, the keyboard and the WebView's
 /// `prefers-color-scheme` all follow. Unspecified hands it back to the system.
 #[cfg(target_os = "ios")]
-#[allow(deprecated)]
 fn apply_native_theme(theme: ui::common::Theme) {
     use objc2::MainThreadMarker;
-    use objc2_ui_kit::{UIApplication, UIUserInterfaceStyle};
+    use objc2_ui_kit::UIUserInterfaceStyle;
     use ui::common::Theme;
 
     let Some(mtm) = MainThreadMarker::new() else {
@@ -574,7 +591,7 @@ fn apply_native_theme(theme: ui::common::Theme) {
         Theme::Dark => UIUserInterfaceStyle::Dark,
         Theme::System => UIUserInterfaceStyle::Unspecified,
     };
-    if let Some(window) = UIApplication::sharedApplication(mtm).keyWindow() {
+    if let Some(window) = key_window(mtm) {
         window.setOverrideUserInterfaceStyle(style);
     }
 }
@@ -777,19 +794,15 @@ fn share_text(text: &str) -> bool {
 }
 
 #[cfg(target_os = "ios")]
-#[allow(deprecated)]
 fn present_share_sheet(item: objc2::rc::Retained<objc2::runtime::AnyObject>) -> bool {
     use objc2::{MainThreadMarker, MainThreadOnly};
     use objc2_foundation::NSArray;
-    use objc2_ui_kit::{UIActivityViewController, UIApplication};
+    use objc2_ui_kit::UIActivityViewController;
 
     let Some(mtm) = MainThreadMarker::new() else {
         return false;
     };
-    let Some(root) = UIApplication::sharedApplication(mtm)
-        .keyWindow()
-        .and_then(|w| w.rootViewController())
-    else {
+    let Some(root) = key_window(mtm).and_then(|w| w.rootViewController()) else {
         return false;
     };
     let items = NSArray::from_retained_slice(&[item]);
@@ -832,14 +845,11 @@ fn centre_popover(vc: &objc2_ui_kit::UIViewController, root: &objc2_ui_kit::UIVi
 /// Cancel with `None`; the shared `Option` makes the reply single-use. False when there is no
 /// window, and the HTML dialog renders instead.
 #[cfg(target_os = "ios")]
-#[allow(deprecated)]
 fn present_confirm(request: ui::common::ConfirmRequest, reply: ui::common::ConfirmReply) -> bool {
     use block2::RcBlock;
     use objc2::MainThreadMarker;
     use objc2_foundation::NSString;
-    use objc2_ui_kit::{
-        UIAlertAction, UIAlertActionStyle, UIAlertController, UIAlertControllerStyle, UIApplication,
-    };
+    use objc2_ui_kit::{UIAlertAction, UIAlertActionStyle, UIAlertController, UIAlertControllerStyle};
     use std::cell::RefCell;
     use std::ptr::NonNull;
     use std::rc::Rc;
@@ -847,10 +857,7 @@ fn present_confirm(request: ui::common::ConfirmRequest, reply: ui::common::Confi
     let Some(mtm) = MainThreadMarker::new() else {
         return false;
     };
-    let Some(mut top) = UIApplication::sharedApplication(mtm)
-        .keyWindow()
-        .and_then(|w| w.rootViewController())
-    else {
+    let Some(mut top) = key_window(mtm).and_then(|w| w.rootViewController()) else {
         return false;
     };
     while let Some(presented) = top.presentedViewController() {
@@ -1316,6 +1323,8 @@ fn main() {
             .with_disable_context_menu(cfg!(not(debug_assertions)))
             .with_custom_event_handler(|event, _| {
                 use dioxus::mobile::tao::event::Event;
+                #[cfg(all(target_os = "ios", debug_assertions))]
+                scene_probe::count(event);
                 if ui::common::deep_link_listener_active() {
                     return;
                 }
@@ -1447,12 +1456,23 @@ fn UnlockedApp() -> Element {
             SplashScreen { logo: LOGO }
         }
         UpdateRequiredScreen { store_url: STORE_URL }
+        {scene_probe_slot()}
 
         main {
             class: "min-h-screen flex flex-col items-center",
             Router::<Route> {}
         }
     }
+}
+
+#[cfg(all(target_os = "ios", debug_assertions))]
+fn scene_probe_slot() -> Element {
+    rsx! { scene_probe::SceneProbe {} }
+}
+
+#[cfg(not(all(target_os = "ios", debug_assertions)))]
+fn scene_probe_slot() -> Element {
+    rsx! {}
 }
 
 /// `evaluateJavaScript:completionHandler:` from a UIKit callback, where no Dioxus runtime is current

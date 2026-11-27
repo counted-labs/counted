@@ -1,10 +1,8 @@
 use api::friends::invitations_controller::get_sent_invitations;
-use api::users::users_controller::edit_users;
-use dioxus::fullstack::Json;
 use dioxus::prelude::*;
 use crate::tid;
 use shared::{Account, EditableProject, HistoryAction, HistoryEntity, HistoryPayload, ProjectDto, ProjectPayload, User, UserPayload};
-use crate::entity_ids::{add_participants, decrypt_row, new_participant, participant_edit, sealed_history};
+use crate::entity_ids::{add_participants, decrypt_row, new_participant, sealed_history};
 use uuid::Uuid;
 
 use crate::common::{
@@ -20,6 +18,7 @@ use crate::icons::{CloseIcon, LockIcon, MoreIcon, UserPlusIcon, ICON_INLINE};
 use crate::participants::participants_service::{invite_count, same_name, DraftParticipant};
 use crate::participants::{use_friend_list, ParticipantsEditor};
 use crate::participants::participants_service::initial;
+use crate::participants::participant_write::{placement, reloaded, save_participants, Change, Saved};
 use crate::expenses::hooks::use_project_store::ProjectStore;
 use crate::expenses::group_security::{
     grant_admin, me_admin, member_actions, revoke_admin, step_down_admin, MemberAction, MemberSheet,
@@ -96,6 +95,9 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
     let mut stepped_down = use_signal(|| false);
     let mut loading = use_signal(|| false);
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
+    let mut notice: Signal<Option<String>> = use_signal(|| None);
+    let mut baseline = use_signal(|| Opened { name: initial_name.clone(), description: initial_description.clone(), emoji: initial_emoji.clone() });
+    let mut history_written = use_signal(|| false);
 
     let original_user_ids: Vec<i32> =
         initial_users.iter().filter(|u| !u.removed).map(|u| u.id).collect();
@@ -165,12 +167,21 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
         let desc_val = description();
         let desc: Option<String> =
             if desc_val.trim().is_empty() { None } else { Some(desc_val.trim().to_string()) };
-        let new_emoji = emoji_change(&initial_emoji, &emoji());
+        let base = baseline.peek().clone();
+        let change = project_change(&base, &name_val, desc.clone(), &emoji());
 
         let current_existing = existing_users();
         let current_removed = removed_users();
         let current_new = drafts();
         let orig_ids = original_user_ids.clone();
+        // `u.removed` is what the server holds, the list each one sits in is what it should.
+        let changes: Vec<Change> = current_removed
+            .iter()
+            .map(|u| (u, true))
+            .chain(current_existing.iter().map(|u| (u, false)))
+            .filter(|(u, removed)| u.removed != *removed)
+            .map(|(u, removed)| (u.id, removed))
+            .collect();
 
         let kept: HashSet<i32> = current_existing.iter().map(|u| u.id).collect();
         for uid in orig_ids.iter().filter(|id| !kept.contains(id)) {
@@ -196,19 +207,19 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
         // them. That is the honest record - the entry says what this person did - and it avoids a
         // payload migration for every summary already written.
         let mut diff: Vec<String> = Vec::new();
-        if name_val != initial_name {
-            diff.push(tid!("history-name-changed", from: initial_name.clone(), to: name_val.clone()));
+        if name_val != base.name {
+            diff.push(tid!("history-name-changed", from: base.name.clone(), to: name_val.clone()));
         }
         let new_desc_str = desc.as_deref().unwrap_or("");
-        if new_desc_str != initial_description.as_str() {
-            if initial_description.is_empty() {
+        if new_desc_str != base.description.as_str() {
+            if base.description.is_empty() {
                 diff.push(tid!("history-description-added", value: new_desc_str.to_string()));
             } else if new_desc_str.is_empty() {
-                diff.push(tid!("history-description-removed", value: initial_description.clone()));
+                diff.push(tid!("history-description-removed", value: base.description.clone()));
             } else {
                 diff.push(tid!(
                     "history-description-changed",
-                    from: initial_description.clone(),
+                    from: base.description.clone(),
                     to: new_desc_str.to_string()
                 ));
             }
@@ -233,27 +244,29 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
             .ok();
 
         if !is_online() {
-            let sealed = match encrypt_json(&key, &(&name_val, &desc)) {
-                Ok(v) => v,
-                Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
-            };
-            let sealed_emoji = match new_emoji.as_ref().map(|e| encrypt_json(&key, e)).transpose() {
-                Ok(v) => v,
-                Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
-            };
-            let queued = enqueue(pending_ops, QueuedOp::new(
-                Uuid::new_v4(),
-                &name_val,
-                OpKind::EditProject(ProjectEdit {
-                    project_id,
-                    name_description: Some(sealed),
-                    status: None,
-                    history,
-                    emoji: sealed_emoji,
-                }),
-            ));
-            if !queued {
-                return;
+            if let Some(change) = &change {
+                let sealed = match change.name_description.as_ref().map(|nd| encrypt_json(&key, nd)).transpose() {
+                    Ok(v) => v,
+                    Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
+                };
+                let sealed_emoji = match change.emoji.as_ref().map(|e| encrypt_json(&key, e)).transpose() {
+                    Ok(v) => v,
+                    Err(e) => { error_msg.set(Some(e)); loading.set(false); return; }
+                };
+                let queued = enqueue(pending_ops, QueuedOp::new(
+                    Uuid::new_v4(),
+                    &name_val,
+                    OpKind::EditProject(ProjectEdit {
+                        project_id,
+                        name_description: sealed,
+                        status: None,
+                        history,
+                        emoji: sealed_emoji,
+                    }),
+                ));
+                if !queued {
+                    return;
+                }
             }
             // Warn about anything that can't be applied offline.
             let existing_ids: HashSet<i32> = current_existing.iter().map(|u| u.id).collect();
@@ -275,22 +288,35 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
         loading.set(true);
         error_msg.set(None);
 
+        let write = project_write(change, !current_new.is_empty() || !changes.is_empty(), *history_written.peek());
+        notice.set(None);
+
         spawn(async move {
-            let edit = |stored: &ProjectDto| {
-                Ok(EditableProject {
-                    id: project_id,
-                    payload: Some(edited_project_payload(&key, stored, &name_val, desc.clone(), new_emoji.as_ref().map(|e| e.as_deref()))?),
-                    status: None,
-                    history: history.clone(),
-                    expected_iv: None,
-                    notify_closed: false,
-                })
-            };
-            if let Err(e) = update_project_fresh(project_id, edit).await
-            {
-                error_msg.set(Some(error_message(&e)));
-                loading.set(false);
-                return;
+            if write != ProjectWrite::Nothing {
+                let edit = |stored: &ProjectDto| {
+                    let payload = match &write {
+                        ProjectWrite::Lay(change) => Some(edited_project_payload(&key, stored, change)?),
+                        _ => None,
+                    };
+                    Ok(EditableProject {
+                        id: project_id,
+                        payload,
+                        status: None,
+                        history: history.clone(),
+                        expected_iv: None,
+                        notify_closed: false,
+                        expected_rev: None,
+                    })
+                };
+                if let Err(e) = update_project_fresh(project_id, edit).await {
+                    error_msg.set(Some(error_message(&e)));
+                    loading.set(false);
+                    return;
+                }
+                history_written.set(true);
+                if let ProjectWrite::Lay(change) = &write {
+                    baseline.set(base.after(change));
+                }
             }
 
             let mut created_users: Vec<User> = Vec::new();
@@ -346,32 +372,29 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
 
             // Removing and restoring both rewrite the payload's `removed`. Re-sending one that already
             // took is harmless, which is what makes a re-submit after a failure safe.
-            // `u.removed` is what the server holds, the list each one sits in is what it should.
-            // The ids the server did not rewrite are participants already gone, as before.
-            let changes = current_removed
-                .iter()
-                .map(|u| (u, true))
-                .chain(current_existing.iter().map(|u| (u, false)))
-                .filter(|(u, removed)| u.removed != *removed);
+            // A batch without `rev` skips participants already gone, as before; one with it answers
+            // 404 for them, and a row changed elsewhere reloads the form instead.
             let served = served_users.peek().clone();
-            let edit_of = |(u, removed): (&DecryptedUser, bool)| {
-                let row = served.iter().find(|s| s.id == u.id).ok_or("participant not served")?;
-                participant_edit(&key, project_id, row, removed)
-            };
-            let edits = match changes.map(edit_of).collect::<Result<Vec<_>, String>>() {
-                Ok(v) => v,
-                Err(_) => { error_msg.set(Some(tid!("error-generic"))); loading.set(false); return; }
-            };
-            if !edits.is_empty() {
-                crate::common::project_token::scope(project_id);
-                if let Err(e) = edit_users(Json(edits)).await {
+            match save_participants(&key, project_id, &served, &changes).await {
+                Ok(Saved::Written) => on_saved.call(()),
+                Ok(Saved::Reloaded(fresh)) => {
+                    let placed = placement(&existing_users.peek(), &removed_users.peek());
+                    match reloaded(&key, &served, &fresh, |id| placed.get(&id).copied()) {
+                        Some((kept, removed)) => {
+                            existing_users.set(kept);
+                            removed_users.set(removed);
+                            served_users.set(fresh);
+                            notice.set(Some(tid!("participants-reloaded")));
+                        }
+                        None => error_msg.set(Some(tid!("participants-reload-unreadable"))),
+                    }
+                    loading.set(false);
+                }
+                Err(e) => {
                     error_msg.set(Some(error_message(&e)));
                     loading.set(false);
-                    return;
                 }
             }
-
-            on_saved.call(());
         });
     });
 
@@ -717,6 +740,9 @@ pub fn EditProjectModal(props: EditProjectModalProps) -> Element {
                         }
                     }
 
+                    if let Some(msg) = notice() {
+                        div { id: "edit-project-reloaded", role: "status", class: "alert alert-warning text-sm", "{msg}" }
+                    }
                     if let Some(msg) = error_msg().filter(|_| name_error.is_none()) {
                         div { id: "edit-project-error", role: "alert", class: "alert alert-error text-sm", "{msg}" }
                     }
@@ -898,20 +924,74 @@ fn emoji_change(initial: &Option<String>, current: &Option<String>) -> Option<Op
     (initial != current).then(|| current.clone())
 }
 
-/// `stored` with the name and description the form owns, and the emoji when it changed. Everything
-/// else - currency, status and fields from newer builds - is kept as stored.
-fn edited_project_payload(
-    key: &[u8; 32],
-    stored: &ProjectDto,
-    name: &str,
-    description: Option<String>,
-    emoji: Option<Option<&str>>,
-) -> Result<shared::EncryptedPair, String> {
+/// What a save writes on the project row: name with description, and the emoji, each only when the
+/// user changed it since the sheet opened. Another device's change to a part left alone is kept; when
+/// both changed the same part, the last save wins until the queued project writes ask.
+#[derive(Clone, Debug, PartialEq)]
+struct ProjectChange {
+    name_description: Option<(String, Option<String>)>,
+    emoji: Option<Option<String>>,
+}
+
+/// The project fields as this opening of the sheet first showed them, then as its last write
+/// landed. Held in a signal: the props refresh under an open sheet, and comparing with them would
+/// take another device's change for this user's.
+#[derive(Clone, Debug, PartialEq)]
+struct Opened {
+    name: String,
+    description: String,
+    emoji: Option<String>,
+}
+
+impl Opened {
+    fn after(&self, change: &ProjectChange) -> Opened {
+        let mut next = self.clone();
+        if let Some((name, description)) = &change.name_description {
+            next.name = name.clone();
+            next.description = description.clone().unwrap_or_default();
+        }
+        if let Some(emoji) = &change.emoji {
+            next.emoji = emoji.clone();
+        }
+        next
+    }
+}
+
+/// `None` when the save changes nothing on the project row.
+fn project_change(opened: &Opened, name: &str, description: Option<String>, emoji: &Option<String>) -> Option<ProjectChange> {
+    let touched = name != opened.name || description.as_deref().unwrap_or("") != opened.description;
+    let name_description = touched.then(|| (name.to_string(), description));
+    let emoji = emoji_change(&opened.emoji, emoji);
+    (name_description.is_some() || emoji.is_some()).then_some(ProjectChange { name_description, emoji })
+}
+
+#[derive(Clone, Debug, PartialEq)]
+enum ProjectWrite {
+    Nothing,
+    Lay(ProjectChange),
+    /// The row as stored, written again only to carry the history entry of a save that changed
+    /// participants alone, as every save did before: once per save, never again on a resubmit.
+    Touch,
+}
+
+fn project_write(change: Option<ProjectChange>, participants_changed: bool, history_written: bool) -> ProjectWrite {
+    match change {
+        Some(change) => ProjectWrite::Lay(change),
+        None if participants_changed && !history_written => ProjectWrite::Touch,
+        None => ProjectWrite::Nothing,
+    }
+}
+
+/// `stored` with the parts of `change` laid over it. Everything else - currency, status and fields
+/// from newer builds - is kept as stored.
+fn edited_project_payload(key: &[u8; 32], stored: &ProjectDto, change: &ProjectChange) -> Result<shared::EncryptedPair, String> {
     let mut payload: ProjectPayload = decrypt_json(key, &stored.payload)?;
-    payload.name = name.to_string();
-    payload.description = description;
-    if let Some(emoji) = emoji {
-        payload.set_emoji(emoji);
+    if let Some((name, description)) = &change.name_description {
+        payload.name = name.clone();
+        payload.description = description.clone();
+    }
+    if let Some(emoji) = &change.emoji {
+        payload.set_emoji(emoji.as_deref());
     }
     encrypt_padded_json(key, &payload)
 }
@@ -944,6 +1024,7 @@ mod tests {
             history: None,
             expected_iv: None,
             notify_closed: false,
+            expected_rev: None,
         })
     }
 
@@ -960,7 +1041,8 @@ mod tests {
             ..crate::common::test_fixtures::make_project(&key, Uuid::nil(), "x", "EUR")
         };
 
-        let pair = edited_project_payload(&key, &project, "Flat", None, None).unwrap();
+        let change = project_change(&Opened { name: "Coloc".into(), description: "old".into(), emoji: None }, "Flat", None, &None).unwrap();
+        let pair = edited_project_payload(&key, &project, &change).unwrap();
 
         let edited: serde_json::Value = decrypt_json(&key, &pair).unwrap();
         assert_eq!(
@@ -982,8 +1064,9 @@ mod tests {
             payload: encrypt_json(&key, &stored).unwrap(),
             ..crate::common::test_fixtures::make_project(&key, Uuid::nil(), "x", "EUR")
         };
-        let edited = |emoji| -> serde_json::Value {
-            decrypt_json(&key, &edited_project_payload(&key, &project, "Coloc", None, emoji).unwrap()).unwrap()
+        let edited = |emoji: Option<Option<&str>>| -> serde_json::Value {
+            let change = ProjectChange { name_description: None, emoji: emoji.map(|e| e.map(str::to_string)) };
+            decrypt_json(&key, &edited_project_payload(&key, &project, &change).unwrap()).unwrap()
         };
 
         assert_eq!(
@@ -994,6 +1077,58 @@ mod tests {
         );
         assert_eq!(edited(Some(None)).get("emoji"), None, "back to the initial");
         assert_eq!(edited(None)["emoji"], "🏠", "untouched, it stays as stored");
+    }
+
+    #[test]
+    fn a_save_that_did_not_touch_the_name_keeps_the_one_written_elsewhere() {
+        let key = test_key();
+        let fresh = ProjectDto {
+            payload: encrypt_json(&key, &serde_json::json!({ "name": "Vacances 2027", "currency": "EUR", "description": "Lac" })).unwrap(),
+            ..crate::common::test_fixtures::make_project(&key, Uuid::nil(), "x", "EUR")
+        };
+        let change = project_change(&Opened { name: "Vacances".into(), description: "".into(), emoji: None }, "Vacances", None, &Some("🏝️".to_string())).unwrap();
+        let pair = edited_project_payload(&key, &fresh, &change).unwrap();
+        let edited: serde_json::Value = decrypt_json(&key, &pair).unwrap();
+        assert_eq!((edited["name"].as_str(), edited["description"].as_str(), edited["emoji"].as_str()), (Some("Vacances 2027"), Some("Lac"), Some("🏝️")));
+    }
+
+    #[test]
+    fn a_save_that_changes_nothing_on_the_project_row_writes_none() {
+        let opened = &Opened { name: "Vacances".into(), description: "Lac".into(), emoji: Some("🏝️".into()) };
+        assert_eq!(project_change(opened, "Vacances", Some("Lac".into()), &Some("🏝️".to_string())), None);
+        let renamed = project_change(opened, "Été", Some("Lac".into()), &Some("🏝️".to_string())).unwrap();
+        assert_eq!((renamed.name_description, renamed.emoji), (Some(("Été".to_string(), Some("Lac".to_string()))), None));
+        let cleared = project_change(opened, "Vacances", None, &Some("🏝️".to_string())).unwrap();
+        assert_eq!(cleared.name_description, Some(("Vacances".to_string(), None)), "a cleared description is a change");
+    }
+
+    /// The props moved to another device's rename while the sheet stayed open: the field still
+    /// shows what this user saw, which is no change of theirs.
+    #[test]
+    fn the_opening_values_are_the_baseline_not_the_refreshed_row() {
+        let opened = &Opened { name: "Vacances".into(), description: "".into(), emoji: None };
+        assert_eq!(project_change(opened, "Vacances", None, &None), None);
+    }
+
+    #[test]
+    fn going_back_to_the_opening_value_after_a_landed_write_is_a_change() {
+        let opened = Opened { name: "Vacances".into(), description: String::new(), emoji: None };
+        let first = project_change(&opened, "X", None, &None).unwrap();
+        let landed = opened.after(&first);
+        assert_eq!(landed.name, "X");
+        let back = project_change(&landed, "Vacances", None, &None).unwrap();
+        assert_eq!(back.name_description, Some(("Vacances".to_string(), None)));
+        let emoji = Opened { emoji: Some("🏝️".into()), ..landed.clone() }.after(&ProjectChange { name_description: None, emoji: Some(None) });
+        assert_eq!((emoji.name.as_str(), emoji.emoji), ("X", None));
+    }
+
+    #[test]
+    fn a_save_of_participants_alone_carries_its_history_once_and_nothing_writes_nothing() {
+        let change = ProjectChange { name_description: Some(("X".into(), None)), emoji: None };
+        assert_eq!(project_write(Some(change.clone()), true, true), ProjectWrite::Lay(change));
+        assert_eq!(project_write(None, true, false), ProjectWrite::Touch);
+        assert_eq!(project_write(None, true, true), ProjectWrite::Nothing, "a resubmit after a participant failure");
+        assert_eq!(project_write(None, false, false), ProjectWrite::Nothing);
     }
 
     #[test]

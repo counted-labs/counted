@@ -16,7 +16,7 @@ use std::collections::HashSet;
 use uuid::Uuid;
 
 use crate::common::{
-    is_project_stale_error, is_recurring_stale_error, key_of, update_project_fresh, LocalStorageProject,
+    is_project_stale_error, is_recurring_stale_error, is_stale_rev_error, key_of, update_project_fresh, LocalStorageProject,
     LocalStorageState,
 };
 use crate::crypto::{claim_token, decrypt_json, encrypt_padded_json};
@@ -53,7 +53,7 @@ pub async fn convert(key: [u8; 32], project_id: Uuid) -> Result<(), ServerFnErro
     let mut stale = None;
     for _ in 0..ATTEMPTS {
         match convert_once(&key, project_id).await {
-            Err(e) if is_project_stale_error(&e) || is_recurring_stale_error(&e) => stale = Some(e),
+            Err(e) if is_project_stale_error(&e) || is_stale_rev_error(&e) || is_recurring_stale_error(&e) => stale = Some(e),
             result => return result,
         }
     }
@@ -405,6 +405,7 @@ mod tests {
             entity_id: Some(1),
             payload: encrypt_json(&key, &HistoryPayload { summary: "added".into(), actor_user_id: None, action: None, entity: None, entity_id: None, extra: Default::default() }).unwrap(),
             created_at: DateTime::default(),
+            eid: None,
         };
         let converted = converted_history(&key, std::slice::from_ref(&entry));
         let back: HistoryPayload = decrypt_json(&key, &converted[0].payload).unwrap();
@@ -470,6 +471,7 @@ mod tests {
             entity_id: Some(1),
             payload: crate::crypto::encrypt(&key, &format!(r#"{{"summary":"added","eid":"{eid}","slot":"{slot}"}}"#)).unwrap(),
             created_at: DateTime::default(),
+            eid: None,
         };
         let converted = converted_history(&key, &[entry("history"), entry("rule")]);
         assert_eq!(converted.len(), 1);

@@ -137,6 +137,7 @@ impl ProjectEdit {
             history: self.history.clone(),
             expected_iv: None,
             notify_closed: self.status == Some(ProjectStatus::Closed),
+            expected_rev: None,
         })
     }
 }
@@ -316,6 +317,8 @@ fn queued_rows(queue: &[Entry], project_id: Uuid, now: DateTime) -> Vec<(Option<
                     project_id,
                     created_at: DateTime::from_unix_millis(entry.seq).filter(|_| entry.seq < i64::MAX).unwrap_or(now),
                     payload: c.payload.clone(),
+                    eid: None,
+                    rev: None,
                 },
             )),
             _ => None,
@@ -516,12 +519,14 @@ mod tests {
                 payers: vec![],
                 debtors: vec![],
                 history: None,
+                eid: None,
+                expected_rev: None,
             }))
         }
     }
 
     fn delete_expense_op() -> QueuedOp {
-        QueuedOp { label: "delete".into(), ..queued(OpKind::DeleteExpense(shared::DeleteExpenseRequest { id: 7, project_id: Uuid::nil(), history: None })) }
+        QueuedOp { label: "delete".into(), ..queued(OpKind::DeleteExpense(shared::DeleteExpenseRequest { id: 7, project_id: Uuid::nil(), history: None, eid: None, expected_rev: None })) }
     }
 
     fn update_project_op() -> QueuedOp {
@@ -534,6 +539,7 @@ mod tests {
                 history: None,
                 expected_iv: None,
                 notify_closed: false,
+                expected_rev: None,
             }))
         }
     }
@@ -878,7 +884,7 @@ mod tests {
         #[test]
         fn an_entry_queued_now_has_its_queued_at_and_an_empty_clear_label() {
             with_tmp_dir("queued_at", || {
-                let fresh = Entry::new(QueuedOp::new(Uuid::new_v4(), "Café", OpKind::DeleteExpense(shared::DeleteExpenseRequest { id: 1, project_id: P, history: None })));
+                let fresh = Entry::new(QueuedOp::new(Uuid::new_v4(), "Café", OpKind::DeleteExpense(shared::DeleteExpenseRequest { id: 1, project_id: P, history: None, eid: None, expected_rev: None })));
                 assert!(fresh.raw["queued_at"].is_i64());
                 assert_eq!(fresh.raw["label"], json!(""));
             });

@@ -5,7 +5,7 @@
 #![deny(unused_results)]
 
 use std::{
-  cell::{RefCell, RefMut},
+  cell::{Cell, RefCell, RefMut},
   collections::HashSet,
   mem,
   os::raw::c_void,
@@ -28,6 +28,7 @@ use crate::{
       CFRunLoopTimerRef, CFRunLoopTimerSetNextFireDate, CGRect, CGSize, NSInteger,
       NSOperatingSystemVersion, NSUInteger,
     },
+    scene,
   },
   window::WindowId as RootWindowId,
 };
@@ -537,6 +538,24 @@ pub unsafe fn will_launch(queued_event_handler: Box<dyn EventHandler>) {
 
 // requires main thread
 pub unsafe fn did_finish_launching() {
+  if !scene::scene_lifecycle_enabled() {
+    app_ready();
+  }
+}
+
+pub fn is_app_ready() -> bool {
+  APP_READY.with(Cell::get)
+}
+
+thread_local! {
+  static APP_READY: Cell<bool> = const { Cell::new(false) };
+}
+
+// requires main thread
+pub unsafe fn app_ready() {
+  if APP_READY.with(|ready| ready.replace(true)) {
+    return;
+  }
   let mut this = AppState::get_mut();
   let windows = match this.state_mut() {
     AppStateImpl::Launching { queued_windows, .. } => mem::take(queued_windows),

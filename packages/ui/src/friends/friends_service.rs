@@ -1005,6 +1005,7 @@ mod tests {
             key_epoch: 0,
             has_creator_proof: false,
             read_only: false,
+            rev: None,
         }
     }
 

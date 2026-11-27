@@ -848,12 +848,12 @@ fn add_op(id: Uuid, project: Uuid) -> Value {
 }
 
 fn edit_op(id: Uuid, project: Uuid, row: i32) -> Value {
-    let edit = shared::EditableExpense { id: row, project_id: project, author_id: None, payload: pair(), payers: vec![], debtors: vec![], history: None };
+    let edit = shared::EditableExpense { id: row, project_id: project, author_id: None, payload: pair(), payers: vec![], debtors: vec![], history: None, eid: None, expected_rev: None };
     raw(id, OpKind::EditExpense(edit), None)
 }
 
 fn delete_op(id: Uuid, project: Uuid, row: i32, after: Option<Uuid>) -> Value {
-    raw(id, OpKind::DeleteExpense(shared::DeleteExpenseRequest { id: row, project_id: project, history: None }), after)
+    raw(id, OpKind::DeleteExpense(shared::DeleteExpenseRequest { id: row, project_id: project, history: None, eid: None, expected_rev: None }), after)
 }
 
 /// What the user does in a tab: a list of entries the handler writes, those naming others first,

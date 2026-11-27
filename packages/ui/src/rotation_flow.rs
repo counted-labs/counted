@@ -258,6 +258,7 @@ pub async fn commit(
         remove,
         quarantine: scan.quarantine.clone(),
         history,
+        hidden_user_id: None,
     }))
     .await;
     crate::auth::account_key::note(&committed);

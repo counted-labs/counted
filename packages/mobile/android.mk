@@ -189,6 +189,19 @@ define patch_shortcuts
 		|| { echo "ERROR: shortcuts <meta-data> patch did not apply - dx's manifest template changed"; exit 1; }
 endef
 
+# Password managers saved logins under "dioxus.index.html", the WebView's origin: wry's
+# RustWebView.kt hands Chromium AppDomainStructure, which reports counted.fr instead. The grep
+# skips a project patched once already, as patch_shortcuts does. See docs/android.md.
+define patch_autofill_domain
+	cp packages/mobile/android-kotlin/AppDomainStructure.kt \
+		$(1)/app/app/src/main/kotlin/dev/dioxus/main/AppDomainStructure.kt
+	grep -q 'AppDomainStructure(it)' $(1)/app/app/src/main/kotlin/dev/dioxus/main/RustWebView.kt \
+		|| sed -i 's|^    private external fun shouldOverride(url: String): Boolean|    @androidx.annotation.RequiresApi(26)\n    override fun onProvideAutofillVirtualStructure(structure: android.view.ViewStructure?, flags: Int) =\n        super.onProvideAutofillVirtualStructure(structure?.let { AppDomainStructure(it) }, flags)\n\n&|' \
+			$(1)/app/app/src/main/kotlin/dev/dioxus/main/RustWebView.kt
+	@grep -q 'AppDomainStructure(it)' $(1)/app/app/src/main/kotlin/dev/dioxus/main/RustWebView.kt \
+		|| { echo "ERROR: autofill domain patch did not apply - wry's RustWebView.kt changed"; exit 1; }
+endef
+
 # Deep-link patches applied to the generated Android project. $(1) is the .../android directory.
 #
 # dx 0.7.9 renders the intent-filters from [deep_links] in packages/mobile/Dioxus.toml, but its
@@ -208,6 +221,7 @@ define patch_deep_links
 	$(call patch_file_provider,$(1))
 	$(call patch_push,$(1))
 	$(call patch_shortcuts,$(1))
+	$(call patch_autofill_domain,$(1))
 	@grep -q 'android:launchMode="singleTask"' $(1)/app/app/src/main/AndroidManifest.xml \
 		|| { echo "ERROR: launchMode patch did not apply - dx's manifest template changed"; exit 1; }
 	@grep -q 'android.intent.action.VIEW' $(1)/app/app/src/main/AndroidManifest.xml \

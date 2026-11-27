@@ -45,6 +45,7 @@ pub(crate) fn make_project(key: &[u8; 32], id: Uuid, name: &str, currency: &str)
         key_epoch: 0,
         has_creator_proof: false,
         read_only: false,
+        rev: None,
     }
 }
 
@@ -81,6 +82,8 @@ pub(crate) fn make_expense(
             },
         )
         .unwrap(),
+        eid: None,
+        rev: None,
     }
 }
 
@@ -116,6 +119,8 @@ pub(crate) fn make_expense_with_category(
             },
         )
         .unwrap(),
+        eid: None,
+        rev: None,
     }
 }
 

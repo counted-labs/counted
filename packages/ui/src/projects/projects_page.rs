@@ -423,7 +423,7 @@ pub fn ProjectsPage() -> Element {
         });
     };
 
-    // read_from_ls(), not `cached_list`: archiving while online goes through `update_project_by_id`
+    // read_from_ls(), not `cached_list`: archiving while online writes the project row on the server
     // and the resource writes the merged cache with `write_to_ls` alone - `ls_ctx` is never set on
     // that path, so it stays stale for the rest of the session and the filter would not appear
     // until a reload. Reading `projects` re-runs this once the resource has written.
@@ -874,9 +874,12 @@ fn ProjectCard(props: ProjectCardProps) -> Element {
                     history: None,
                     expected_iv: None,
                     notify_closed: false,
+                    expected_rev: None,
                 }),
             };
-            let _ = update_project_fresh(project_id, edit).await;
+            if let Err(e) = update_project_fresh(project_id, edit).await {
+                flash.set(Some(Flash::err(error_message(&e))));
+            }
             on_change.call(());
         });
     };

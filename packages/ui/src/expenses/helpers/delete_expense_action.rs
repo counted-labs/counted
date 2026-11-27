@@ -47,7 +47,7 @@ pub(crate) fn delete_expense_request(
         },
     )
     .ok();
-    DeleteExpenseRequest { id: expense_id, project_id, history }
+    DeleteExpenseRequest { id: expense_id, project_id, history, eid: None, expected_rev: None }
 }
 
 /// Queues the deletion, online or not, then runs `on_done` at once: the row leaves the list now and

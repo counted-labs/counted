@@ -12,7 +12,7 @@ use super::sleep;
 use super::local_storage::{key_of, previous_keys_of, read_from_ls, LocalStorageState};
 use super::offline_queue::{outgoing, read_queue, Entry, OpKind, Queue, QueuedOp, Status};
 use super::project_token::scope_key;
-use super::project_write::update_project_fresh_under;
+use super::project_write::update_project_fresh_legacy;
 use super::queue_store::{in_one_step, land, leave, move_old, next_to_send, tidy, Moved, Snapshot, Store, OLD_KEY};
 
 /// Why a replay could not finish, as data rather than a sentence.
@@ -380,7 +380,7 @@ async fn replay(op: &OpKind, key: [u8; 32]) -> Result<Option<Landed>, ServerFnEr
         // Rebuilt on the payload the server holds now, so a field written meanwhile - by
         // another device or a newer build - survives the replay.
         OpKind::EditProject(edit) => {
-            update_project_fresh_under(edit.project_id, key, |stored| edit.apply(&key, stored)).await.map(|_| None)
+            update_project_fresh_legacy(edit.project_id, key, |stored| edit.apply(&key, stored)).await.map(|_| None)
         }
     }
 }
@@ -450,6 +450,7 @@ mod tests {
             history: None,
             expected_iv: None,
             notify_closed: false,
+            expected_rev: None,
         })
     }
 

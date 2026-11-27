@@ -69,6 +69,8 @@ const KEYS: &[(&str, &str)] = &[
     (shared::errors::USER_NOT_ADMIN, "error-user-not-admin"),
     (shared::errors::CREATOR_PROOF_INVALID, "error-creator-proof-invalid"),
     (shared::errors::PROJECT_HAS_ADMIN, "error-project-has-admin"),
+    (shared::errors::STALE_REV, "error-stale-rev"),
+    (shared::errors::REV_REQUIRED, "error-rev-required"),
 ];
 
 fn is_network_error(e: &str) -> bool {
@@ -177,6 +179,24 @@ pub fn is_project_stale_error(e: &ServerFnError) -> bool {
         e,
         ServerFnError::ServerError { message, code, .. }
             if *code == 409 && message == shared::errors::PROJECT_STALE
+    )
+}
+
+/// The row is no longer the one the write named (SPEC 15.9.3): read it again.
+pub fn is_stale_rev_error(e: &ServerFnError) -> bool {
+    matches!(
+        e,
+        ServerFnError::ServerError { message, code, .. }
+            if *code == 409 && message == shared::errors::STALE_REV
+    )
+}
+
+/// The server wants `expected_rev` this write did not carry. Never retried: only an update helps.
+pub fn is_rev_required_error(e: &ServerFnError) -> bool {
+    matches!(
+        e,
+        ServerFnError::ServerError { message, code, .. }
+            if *code == 409 && message == shared::errors::REV_REQUIRED
     )
 }
 
@@ -327,6 +347,20 @@ mod tests {
         assert!(!is_id_taken_error(&with_code(taken, 500)));
         assert!(!is_id_taken_error(&with_code(shared::errors::IDENTITY_TAKEN, 409)));
         assert_eq!(error_key(&with_code(taken, 409)), "error-generic");
+    }
+
+    #[test]
+    fn test_the_two_revision_refusals_are_told_apart_and_need_a_409() {
+        let (stale, required) = (shared::errors::STALE_REV, shared::errors::REV_REQUIRED);
+        assert!(is_stale_rev_error(&with_code(stale, 409)));
+        assert!(!is_stale_rev_error(&with_code(stale, 500)));
+        assert!(!is_stale_rev_error(&with_code(required, 409)));
+        assert!(!is_stale_rev_error(&with_code(shared::errors::PROJECT_STALE, 409)));
+        assert!(is_rev_required_error(&with_code(required, 409)));
+        assert!(!is_rev_required_error(&with_code(required, 500)));
+        assert!(!is_rev_required_error(&with_code(stale, 409)));
+        assert_eq!(error_key(&with_code(stale, 409)), "error-stale-rev");
+        assert_eq!(error_key(&with_code(required, 409)), "error-rev-required");
     }
 
     #[test]

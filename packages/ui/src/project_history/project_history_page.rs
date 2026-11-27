@@ -259,6 +259,7 @@ mod tests {
             entity_id: None,
             payload: crate::crypto::encrypt(&key, &format!(r#"{{"summary":"edited"{keys}}}"#)).unwrap(),
             created_at: DateTime::default(),
+            eid: None,
         };
         let shown = decrypt_history(
             &key,
@@ -297,6 +298,7 @@ mod tests {
                     entity_id: None,
                     payload: if i % 2 == 0 { encrypt_json(&key, &p).unwrap() } else { crate::crypto::encrypt(&key, &raw).unwrap() },
                     created_at,
+                    eid: None,
                 })
                 .collect();
             exercise_hostile(&entries, &names);

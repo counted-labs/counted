@@ -267,7 +267,9 @@ pub fn ExpensesPage(project_id: Uuid) -> Element {
                 on_status: move |status: ProjectStatus| {
                     spawn(async move {
                         let edit = |stored: &ProjectDto| status_edit(&key, stored, &status);
-                        let _ = update_project_fresh(project_id, edit).await;
+                        if let Err(e) = update_project_fresh(project_id, edit).await {
+                            flash.set(Some(Flash::err(crate::common::error_message(&e))));
+                        }
                         sync.restart();
                     });
                 },

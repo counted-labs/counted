@@ -138,6 +138,11 @@ pub const RESET_UNDOABLE: &str = "This password was replaced by a recent reset";
 /// A creation under an id a stored row holds, or for a project, one a deleted project held (SPEC
 /// 15.9.1).
 pub const ID_TAKEN: &str = "This id is already in use";
+/// A write or a delete whose `expected_rev` or entity id is not the stored row's, or a write that
+/// would take `rev` past 2^63 - 1 (SPEC 15.9.3, 15.9.4): read the row again.
+pub const STALE_REV: &str = "This was changed elsewhere";
+/// A write without `expected_rev` once `MIN_APP_VERSION` reaches `EXPECTED_REV_FROM`.
+pub const REV_REQUIRED: &str = "A newer version of the app is needed to save this change";
 
 // -------- 429 --------
 pub const RESEND_COOLDOWN: &str = "Veuillez attendre 60 secondes avant de renvoyer l'email.";

@@ -174,6 +174,8 @@ impl Input<'_> {
             project_id: Uuid::nil(),
             created_at: i.timestamp(),
             payload: encrypt_json(&TEST_KEY, &i.expense_payload()).unwrap(),
+            eid: None,
+            rev: None,
         })
     }
 
@@ -290,6 +292,7 @@ impl Input<'_> {
             entity_id: None,
             payload,
             created_at: self.timestamp(),
+            eid: None,
         }
     }
 

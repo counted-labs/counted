@@ -119,18 +119,34 @@ fn parsed(values: &BTreeMap<String, String>, shown: &[ShownCategory]) -> Result<
     Ok(typed)
 }
 
-/// The stored payload with the ceilings of the shown categories replaced: a built-in's in
-/// `budgets.monthly`, a custom one's in `budgetsCustom`. Every key the sheet did not show is kept.
-fn with_ceilings(payload: &mut ProjectPayload, shown: &[ShownCategory], typed: &BTreeMap<String, f64>, alert: bool) {
-    let mut monthly = payload.budgets().monthly;
-    for category in shown.iter().filter(|c| !c.is_custom()) {
+/// The alert as the user set it, `None` when it shows what the sheet opened with.
+fn toggled(opened: bool, now: bool) -> Option<bool> {
+    (opened != now).then_some(now)
+}
+
+/// The categories whose field differs from what the sheet opened with.
+fn touched(shown: &[ShownCategory], opened: &BTreeMap<String, String>, values: &BTreeMap<String, String>) -> Vec<ShownCategory> {
+    let text = |m: &BTreeMap<String, String>, id: &str| m.get(id).map(|v| v.trim().to_string()).unwrap_or_default();
+    shown.iter().filter(|c| text(opened, &c.id) != text(values, &c.id)).cloned().collect()
+}
+
+/// The stored payload with the ceilings of the `touched` categories replaced: a built-in's in
+/// `budgets.monthly`, a custom one's in `budgetsCustom`. Every other ceiling is kept as stored, and
+/// the alert too unless `alert` says it was toggled: a value another device wrote while the sheet
+/// was open survives. When both changed the same ceiling, the last save wins until the queued
+/// project writes ask.
+fn with_ceilings(payload: &mut ProjectPayload, touched: &[ShownCategory], typed: &BTreeMap<String, f64>, alert: Option<bool>) {
+    let stored = payload.budgets();
+    let alert = alert.unwrap_or(stored.monthly.is_empty() || stored.alert);
+    let mut monthly = stored.monthly;
+    for category in touched.iter().filter(|c| !c.is_custom()) {
         monthly.remove(&category.id);
         if let Some(v) = typed.get(&category.id) {
             monthly.insert(category.id.clone(), *v);
         }
     }
     payload.set_budgets(&Budgets { monthly, alert });
-    let custom: Vec<String> = shown.iter().filter(|c| c.is_custom()).map(|c| c.id.clone()).collect();
+    let custom: Vec<String> = touched.iter().filter(|c| c.is_custom()).map(|c| c.id.clone()).collect();
     payload.merge_budgets_custom(&custom, typed);
 }
 
@@ -148,12 +164,14 @@ pub fn BudgetSheet(
     crate::common::use_modal_focus("budget-sheet");
     let key_ctx = use_context::<ProjectKey>().0;
     let is_online = use_context::<Signal<bool>>();
-    let initial = budgets.clone();
-    let mut values = use_signal(move || {
-        initial.monthly.iter().chain(custom.iter()).map(|(c, v)| (c.clone(), ceiling(*v))).collect::<BTreeMap<String, String>>()
+    let opened = use_hook(|| {
+        budgets.monthly.iter().chain(custom.iter()).map(|(c, v)| (c.clone(), ceiling(*v))).collect::<BTreeMap<String, String>>()
     });
+    let opened_alert = use_hook(|| budgets.monthly.is_empty() || budgets.alert);
+    let initial = opened.clone();
+    let mut values = use_signal(move || initial);
     let shown: Vec<ShownCategory> = averages.iter().map(|(c, _)| c.clone()).collect();
-    let mut alert = use_signal(|| budgets.monthly.is_empty() || budgets.alert);
+    let mut alert = use_signal(|| opened_alert);
     let mut error_msg: Signal<Option<String>> = use_signal(|| None);
     let mut saving = use_signal(|| false);
 
@@ -171,8 +189,8 @@ pub fn BudgetSheet(
             }
         };
         let any_ceiling = typed.values().any(|v| *v > 0.0);
-        let shown = shown.clone();
-        let alert = alert();
+        let shown = touched(&shown, &opened, &values.read());
+        let alert = toggled(opened_alert, alert());
         saving.set(true);
         error_msg.set(None);
         spawn(async move {
@@ -186,6 +204,7 @@ pub fn BudgetSheet(
                     history: None,
                     expected_iv: None,
                     notify_closed: false,
+                    expected_rev: None,
                 })
             };
             match update_project_fresh(project_id, edit).await {
@@ -355,11 +374,43 @@ mod tests {
         }))
         .unwrap();
         let typed = parsed(&typed(&[("Nourriture", "300"), ("c-0000000a", "40")]), &shown).unwrap();
-        with_ceilings(&mut payload, &shown, &typed, true);
+        with_ceilings(&mut payload, &shown, &typed, Some(true));
         let monthly = payload.budgets().monthly;
         assert_eq!(monthly.get("Nourriture"), Some(&300.0));
         assert_eq!((monthly.get("Loisirs"), monthly.get("Future"), monthly.get("Transport")), (Some(&50.0), Some(&7.0), None));
         assert_eq!(payload.budgets_custom(), BTreeMap::from([("c-0000000a".to_string(), 40.0), ("c-000000ff".to_string(), 20.0)]));
         assert!(payload.budgets().alert);
+    }
+
+    #[test]
+    fn saving_one_ceiling_keeps_the_others_and_the_alert_as_another_device_left_them() {
+        let shown = builtins();
+        let mut fresh: ProjectPayload = serde_json::from_value(serde_json::json!({
+            "name": "M", "currency": "EUR",
+            "budgets": { "monthly": { "Nourriture": 300.0, "Transport": 80.0 }, "alert": true },
+        }))
+        .unwrap();
+        let opened = typed(&[("Nourriture", "300"), ("Transport", "50")]);
+        let values = typed(&[("Nourriture", "400"), ("Transport", "50")]);
+        let changed = touched(&shown, &opened, &values);
+        assert_eq!(changed, [ShownCategory::builtin("Nourriture")]);
+        with_ceilings(&mut fresh, &changed, &parsed(&values, &shown).unwrap(), None);
+        let budgets = fresh.budgets();
+        assert_eq!(budgets.monthly.get("Nourriture"), Some(&400.0));
+        assert_eq!(budgets.monthly.get("Transport"), Some(&80.0), "untouched, it keeps the fresh row's value");
+        assert!(budgets.alert, "not toggled, it keeps the fresh row's value");
+    }
+
+    #[test]
+    fn an_untouched_alert_is_left_to_the_stored_row() {
+        assert_eq!(toggled(true, true), None);
+        assert_eq!(toggled(false, true), Some(true));
+        assert_eq!(toggled(true, false), Some(false));
+        let mut fresh: ProjectPayload = serde_json::from_value(serde_json::json!({
+            "name": "M", "currency": "EUR", "budgets": { "monthly": { "Nourriture": 300.0 }, "alert": false },
+        }))
+        .unwrap();
+        with_ceilings(&mut fresh, &[], &BTreeMap::new(), toggled(true, true));
+        assert!(!fresh.budgets().alert, "switched off elsewhere, an untouched toggle does not switch it back on");
     }
 }

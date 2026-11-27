@@ -177,7 +177,7 @@ pub use error_utils::{
     error_key, error_message, is_claim_proof_error, is_client_outdated_error,
     is_email_not_verified, is_id_taken_error, is_identity_taken_error, is_offline_error, is_participant_gone_error,
     is_payment_methods_stale_error, is_preferences_stale_error, is_project_gone_error, is_project_stale_error, is_rate_limited, RATE_LIMIT_RETRY_MS, REQUEST_PACE_MS,
-    is_recurring_stale_error,
+    is_recurring_stale_error, is_rev_required_error, is_stale_rev_error,
 };
 
 mod membership;
@@ -235,6 +235,8 @@ pub use queue_replay::{replay_queue, unsent, Landed, SyncFailure, REFUSED};
 
 mod project_write;
 pub use project_write::update_project_fresh;
+pub mod write_fresh;
+pub mod write_fresh_rows;
 
 pub(crate) mod project_create;
 pub use project_create::{add_project_fresh, resolve_pending, Unsent};
@@ -270,6 +272,9 @@ mod stylesheet_guard;
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod info_plist_guard;
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod rev_guard;
 
 #[cfg(test)]
 pub(crate) mod test_dom;

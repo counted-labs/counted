@@ -299,6 +299,7 @@ impl UIScreenOverscanCompensation {
 extern "C" {
   pub static kCFRunLoopDefaultMode: CFRunLoopMode;
   pub static kCFRunLoopCommonModes: CFRunLoopMode;
+  pub static UIWindowSceneSessionRoleApplication: id;
 
   pub fn UIApplicationMain(
     argc: c_int,

@@ -237,6 +237,27 @@ mod tests {
     }
 
     #[test]
+    fn every_key_of_a_rule_belongs_to_a_merge_group() {
+        let mut payload = RecurringPayload {
+            template: template(),
+            rule: Rule { freq: Freq::Monthly, interval: 1, anchor: Date::from_ymd_opt(2026, 8, 1).unwrap(), ends: Ends::After(12) },
+            next: 2,
+            paused: true,
+            seed: Uuid::new_v4(),
+            author_id: Some(1),
+            extra: Default::default(),
+        };
+        shared::entity::bind(&mut payload.extra, shared::entity::Slot::Rule, Uuid::new_v4());
+        let keys: std::collections::BTreeSet<String> =
+            serde_json::to_value(&payload).unwrap().as_object().unwrap().keys().cloned().collect();
+        let grouped: std::collections::BTreeSet<String> = shared::merge::groups(shared::merge::Kind::Rule)
+            .iter()
+            .flat_map(|(_, keys)| keys.iter().map(|k| k.to_string()))
+            .collect();
+        assert_eq!(keys, grouped);
+    }
+
+    #[test]
     fn participants_are_both_sides_without_duplicates() {
         assert_eq!(template().participant_ids(), vec![1, 2, 3]);
         assert!(template().involves(2));

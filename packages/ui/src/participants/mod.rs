@@ -1,6 +1,7 @@
 //! The participant block shared by the create and the edit modal - see `docs/plans/friends.md` §11.
 
 mod participants_editor;
+pub mod participant_write;
 pub mod participants_service;
 mod use_friend_list;
 

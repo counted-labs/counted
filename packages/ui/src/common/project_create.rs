@@ -378,7 +378,7 @@ impl World for Live {
 
     async fn reseal(&self, id: Uuid, key: [u8; 32], payload: EncryptedPair) -> Result<ProjectDto, ServerFnError> {
         let edit = |_: &ProjectDto| {
-            Ok(EditableProject { id, payload: Some(payload.clone()), status: None, history: None, expected_iv: None, notify_closed: false })
+            Ok(EditableProject { id, payload: Some(payload.clone()), status: None, history: None, expected_iv: None, notify_closed: false, expected_rev: None })
         };
         super::project_write::update_project_fresh_under(id, key, edit).await
     }

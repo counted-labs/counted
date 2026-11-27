@@ -1,9 +1,12 @@
-# Builds the app for an iPhone simulator on a GitHub-hosted Mac and taps the fields of the
-# create-project sheet through the real touch path, reading visualViewport.offsetTop from the page
-# after each one (.github/ios-sim.mjs). Run by hand from the Actions tab on the branch or tag to
-# check; nothing starts it. Debug build on purpose: wry marks the WKWebView inspectable only then,
-# which the webview context needs. The app is built against a closed local port, so the simulator
-# never reaches counted.fr.
+# Builds the app for the simulator on a GitHub-hosted Mac, once per Xcode: 26.6 (the store
+# toolchain) and 27.2 (the iOS 27 SDK, which refuses to launch an app whose scene adoption is
+# incomplete). On the newest iPhone runtime it taps the fields of the create-project sheet through
+# the real touch path, reading visualViewport.offsetTop after each one (.github/ios-sim.mjs). On the
+# newest iPhone, the newest iPad and the oldest iPhone runtime it checks the scene life cycle
+# (.github/ios-scenes.mjs, docs/plans/ios-uiscene.md §3.3). Run by hand from the Actions tab on the
+# branch or tag to check; nothing starts it. Debug build on purpose: wry marks the WKWebView
+# inspectable only then, which the webview context needs, and the scene probe exists only then.
+# The app is built against a closed local port, so the simulator never reaches counted.fr.
 name: ios-simulator
 
 on:
@@ -18,26 +21,42 @@ defaults:
     working-directory: src
 
 jobs:
-  tap:
-    runs-on: macos-26
-    timeout-minutes: 120
+  simulator:
+    runs-on: ${{ matrix.image }}
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - xcode: "26.6"
+            image: macos-26
+          - xcode: "27.2"
+            image: xcode-27
     env:
       DIOXUS_CLI_VERSION: "0.7.10"
       COUNTED_SERVER_URL: http://127.0.0.1:9
+      XCODE: ${{ matrix.xcode }}
     steps:
       - name: Clone the ref
         working-directory: ${{ github.workspace }}
         run: git clone -q --depth 1 --branch "$GITHUB_REF_NAME" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" src
 
-      - name: Cache cargo
-        uses: actions/cache@v4
+      - name: Select Xcode
+        run: |
+          [ -d "/Applications/Xcode_$XCODE.app" ] || { echo "no Xcode $XCODE on this image:" >&2; ls -d /Applications/Xcode* >&2; exit 1; }
+          sudo xcode-select -s "/Applications/Xcode_$XCODE.app"
+          xcodebuild -version
+
+      - name: Restore cargo
+        id: cargo
+        uses: actions/cache/restore@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin/dx
             src/target
-          key: ios-simulator-${{ runner.os }}-${{ hashFiles('src/Cargo.lock', 'src/rust-toolchain.toml') }}-${{ env.DIOXUS_CLI_VERSION }}
+          key: ios-simulator-${{ runner.os }}-xcode-${{ matrix.xcode }}-${{ hashFiles('src/Cargo.lock', 'src/rust-toolchain.toml') }}-${{ env.DIOXUS_CLI_VERSION }}
 
       - name: Toolchain
         run: |
@@ -46,7 +65,6 @@ jobs:
           if [ "$(dx --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)" != "$DIOXUS_CLI_VERSION" ]; then
             cargo install dioxus-cli --locked --version "$DIOXUS_CLI_VERSION"
           fi
-          xcodebuild -version
 
       - name: Build the simulator app
         id: app
@@ -56,36 +74,98 @@ jobs:
           [ -n "$APP" ] || { echo "dx build produced no Mobile.app" >&2; exit 1; }
           echo "path=$APP" >> "$GITHUB_OUTPUT"
 
-      - name: Boot a simulator
-        id: sim
+      - name: Save cargo
+        if: always() && steps.cargo.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/dx
+            src/target
+          key: ${{ steps.cargo.outputs.cache-primary-key }}
+
+      - name: Sign the app with a keychain entitlement
+        env:
+          APP: ${{ steps.app.outputs.path }}
         run: |
-          UDID=$(xcrun simctl list devices available -j | jq -r '
-            .devices | to_entries | map(select(.key | test("SimRuntime.iOS")))
-            | sort_by(.key | capture("iOS-(?<a>[0-9]+)-(?<b>[0-9]+)") | [(.a | tonumber), (.b | tonumber)])
-            | last.value | map(select(.name | startswith("iPhone"))) | first.udid')
-          [ -n "$UDID" ] && [ "$UDID" != null ] || { echo "no available iPhone simulator" >&2; xcrun simctl list devices available >&2; exit 1; }
-          defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false
-          xcrun simctl boot "$UDID"
-          xcrun simctl bootstatus "$UDID" -b
-          xcrun simctl install "$UDID" "${{ steps.app.outputs.path }}"
-          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Xcode $XCODE signature as built::$(codesign -d --entitlements - "$APP" 2>&1 | tr '\n' ' ' | cut -c1-2000)"
+          cat > "$RUNNER_TEMP/simulator.entitlements" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+          <key>application-identifier</key><string>SIMULATOR.fr.counted.app</string>
+          <key>keychain-access-groups</key><array><string>SIMULATOR.fr.counted.app</string></array>
+          </dict></plist>
+          PLIST
+          codesign --force --sign - --entitlements "$RUNNER_TEMP/simulator.entitlements" "$APP"
+          echo "::notice title=Xcode $XCODE signature as installed::$(codesign -d --entitlements - "$APP" 2>&1 | tr '\n' ' ' | cut -c1-2000)"
 
       - name: Start Appium
         run: |
           npm install -g appium
           appium driver install xcuitest
+          # Appium would otherwise build WebDriverAgent inside the first session, past its own launch timeout.
+          echo "WDA_DERIVED_DATA=$RUNNER_TEMP/wda" >> "$GITHUB_ENV"
+          xcodebuild build-for-testing -quiet \
+            -project "$HOME/.appium/node_modules/appium-xcuitest-driver/node_modules/appium-webdriveragent/WebDriverAgent.xcodeproj" \
+            -scheme WebDriverAgentRunner -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/wda" CODE_SIGNING_ALLOWED=NO
           appium --log "$GITHUB_WORKSPACE/appium.log" --log-level info >/dev/null 2>&1 &
           for i in $(seq 1 60); do curl -sf http://127.0.0.1:4723/status >/dev/null && break; sleep 1; done
           curl -sf http://127.0.0.1:4723/status
+          defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false
 
-      - name: Tap the create-project sheet
-        run: node .github/ios-sim.mjs "${{ steps.sim.outputs.udid }}" "$GITHUB_WORKSPACE/sim-out"
+      - name: Tap the create-project sheet, then check the scenes
+        timeout-minutes: 60
+        env:
+          APP: ${{ steps.app.outputs.path }}
+        run: |
+          status=0
+          limit() { perl -e '$t = shift; $p = fork // die "$!\n"; if (!$p) { exec @ARGV or die "$!\n" } $SIG{ALRM} = sub { kill "KILL", $p; exit 124 }; alarm $t; waitpid $p, 0; exit($? >> 8)' "$@"; }
+          sim() { limit "$1" xcrun simctl "${@:2}" || { echo "::error title=$LANE::simctl $2 failed or ran past $1 s (exit $?)"; return 1; }; }
+          # <device kind> <newest|oldest runtime that has one>
+          for run in "iPhone newest" "iPad newest" "iPhone oldest"; do
+            set -- $run
+            UDID=$(xcrun simctl list devices available -j | jq -r --arg kind "$1" --arg pick "$2" '
+              .devices | to_entries
+              | map(select(.key | test("SimRuntime.iOS")))
+              | map(select(.value | map(select(.name | startswith($kind))) | length > 0))
+              | sort_by(.key | capture("iOS-(?<a>[0-9]+)-(?<b>[0-9]+)") | [(.a | tonumber), (.b | tonumber)])
+              | (if $pick == "oldest" then first else last end)
+              | .key + " " + (.value | map(select(.name | startswith($kind))) | first.udid)')
+            RUNTIME=${UDID% *}; UDID=${UDID##* }
+            export LANE="Xcode $XCODE $1 ${RUNTIME##*SimRuntime.}"
+            if [ -z "$UDID" ] || [ "$UDID" = null ]; then
+              echo "::error title=Xcode $XCODE $1 $2::no $1 simulator for the $2 runtime"; xcrun simctl list devices available >&2; status=1; continue
+            fi
+            echo "== $1 on $RUNTIME ($UDID)"
+            OUT="$GITHUB_WORKSPACE/sim-out/xcode-$XCODE/$1-$2"
+            if sim 180 boot "$UDID" && sim 300 bootstatus "$UDID" -b && sim 180 install "$UDID" "$APP"; then
+              if [ "$run" = "iPhone newest" ]; then
+                node .github/ios-sim.mjs "$UDID" "$OUT/keyboard" || status=1
+              fi
+              node .github/ios-scenes.mjs "$UDID" "$1" "$OUT/scenes" || status=1
+            else
+              status=1
+            fi
+            sim 120 shutdown all || true
+          done
+          exit $status
+
+      - name: Post the end of the Appium log
+        if: failure()
+        working-directory: ${{ github.workspace }}
+        run: |
+          [ -f appium.log ] || { echo "::error title=Xcode $XCODE appium.log::no appium.log"; exit 0; }
+          tail -n 40 appium.log | cut -c1-300 | tr -d '\r' | sed 's/%/%25/g' | awk -v t="Xcode $XCODE appium.log tail" 'BEGIN{printf "::error title=%s::", t} {printf "%s%%0A", $0} END{print ""}'
+          grep -nE 'Error|error:|WARN|Failed|timed out' appium.log | tail -n 25 | cut -c1-300 | tr -d '\r' | sed 's/%/%25/g' | awk -v t="Xcode $XCODE appium.log errors" 'BEGIN{printf "::error title=%s::", t} {printf "%s%%0A", $0} END{print ""}'
 
       - name: Keep the screenshots and logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ios-simulator
+          name: ios-simulator-xcode-${{ matrix.xcode }}
           path: |
             sim-out
             appium.log

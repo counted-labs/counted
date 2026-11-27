@@ -371,6 +371,8 @@ fn build_editable_expense(
         debtors: Vec::new(),
         author_id: None,
         history,
+        eid: None,
+        expected_rev: None,
     })
 }
 

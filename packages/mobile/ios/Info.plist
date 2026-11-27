@@ -129,5 +129,30 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!--
+		The scene life cycle, which an iOS 27 SDK build needs to launch at all (TN3187). This key is
+		the switch: vendor/tao runs the scene path only when it is present, and reverting the commit
+		that added it is the rollback while the app still builds with an iOS 26 SDK
+		(docs/plans/ios-uiscene.md §3.5). One scene only: the app has one window over one set of stores.
+		The delegate is the class vendor/tao/src/platform_impl/ios/scene.rs declares;
+		info_plist_guard.rs pins both.
+	-->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>TaoSceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
 </dict>
 </plist>

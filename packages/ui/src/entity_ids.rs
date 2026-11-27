@@ -56,7 +56,7 @@ pub fn new_participant(key: &[u8; 32], project_id: Uuid, name: String) -> Result
 pub fn participant_edit(key: &[u8; 32], project_id: Uuid, served: &User, removed: bool) -> Result<EditableUser, String> {
     let mut payload: UserPayload = decrypt_row(key, &served.payload)?;
     payload.removed = removed;
-    Ok(EditableUser { id: served.id, project_id, payload: encrypt_padded_json(key, &payload)? })
+    Ok(EditableUser { id: served.id, project_id, payload: encrypt_padded_json(key, &payload)?, eid: None, expected_rev: None })
 }
 
 /// The expense takes `eid` whatever `payload` was built from, and sends it in clear as `client_op_id`.

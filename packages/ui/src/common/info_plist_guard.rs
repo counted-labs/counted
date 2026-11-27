@@ -174,6 +174,32 @@ mod tests {
         assert_eq!(plist_array(&plist, "UISupportedInterfaceOrientations~ipad").len(), 4);
     }
 
+    /// An iOS 27 SDK build without the scene manifest installs and never launches (TN3187). One
+    /// scene, whose delegate is the class vendor/tao declares: a second scene would open a second
+    /// window on the same stores, and a misspelt class leaves the scene with no window at all.
+    #[test]
+    fn the_scene_manifest_names_tao_s_delegate_and_one_scene() {
+        let plist = read(PLIST);
+        let at = plist.find("<key>UIApplicationSceneManifest</key>").expect("UIApplicationSceneManifest");
+        let manifest = &plist[at..];
+        let multiple = manifest.find("<key>UIApplicationSupportsMultipleScenes</key>").expect("multiple scenes flag");
+        assert!(manifest[multiple..].trim_start_matches("<key>UIApplicationSupportsMultipleScenes</key>").trim_start().starts_with("<false/>"));
+        assert!(manifest.contains("<key>UIWindowSceneSessionRoleApplication</key>"));
+        let delegate = plist_string(manifest, "UISceneDelegateClassName").expect("UISceneDelegateClassName");
+        let scene_rs = read("../../vendor/tao/src/platform_impl/ios/scene.rs");
+        assert!(scene_rs.contains(&format!("SCENE_DELEGATE_CLASS: &CStr = c\"{delegate}\"")), "tao declares no {delegate}");
+    }
+
+    /// Push adds its token callbacks to tao's app delegate by class name at run time. A rename on
+    /// tao's side leaves no push token and nothing but a log line (docs/plans/ios-uiscene.md R5).
+    #[test]
+    fn push_extends_the_app_delegate_class_tao_declares() {
+        let tao = "../../vendor/tao/src/platform_impl/ios";
+        assert!(read(&format!("{tao}/view.rs")).contains("CStr::from_bytes_with_nul(b\"AppDelegate\\0\")"));
+        assert!(read(&format!("{tao}/event_loop.rs")).contains("init_str(\"AppDelegate\")"));
+        assert!(read("../mobile/src/push.rs").contains("AnyClass::get(c\"AppDelegate\")"));
+    }
+
     /// The other branch of the same sheet: "Choose Photo" reads the library.
     #[test]
     fn the_photo_library_usage_description_is_present_and_meaningful() {

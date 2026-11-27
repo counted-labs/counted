@@ -101,6 +101,8 @@ pub(crate) fn expenses() -> impl Strategy<Value = Vec<Expense>> {
                 project_id: Uuid::nil(),
                 created_at,
                 payload: encrypt_json(&TEST_KEY, &p).unwrap(),
+                eid: None,
+                rev: None,
             })
             .collect()
     })
